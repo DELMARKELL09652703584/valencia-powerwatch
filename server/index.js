@@ -59,6 +59,13 @@ app.use('/vendor/leaflet', express.static(path.join(ROOT, 'node_modules', 'leafl
 app.use('/vendor/leaflet-heat', express.static(path.join(ROOT, 'node_modules', 'leaflet.heat', 'dist')));
 
 app.get('/', (req, res) => res.sendFile(path.join(ROOT, 'index.html')));
+app.get('/install', (req, res) => res.sendFile(path.join(ROOT, 'download.html')));
+app.get('/download', (req, res) => res.sendFile(path.join(ROOT, 'download.html')));
+app.get('/manifest.json', (req, res) => res.sendFile(path.join(ROOT, 'manifest.json')));
+app.get('/sw.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.sendFile(path.join(ROOT, 'sw.js'));
+});
 app.get('/admin', (req, res) => res.sendFile(path.join(ROOT, 'admin.html')));
 app.get('/community', (req, res) => res.sendFile(path.join(ROOT, 'community.html')));
 app.get('/style.css', (req, res) => res.sendFile(path.join(ROOT, 'style.css')));

@@ -48,34 +48,38 @@ function startTunnel() {
     if (match && !opened && !match[1].startsWith('api.')) {
       opened = true;
       const publicUrl = `https://${match[1]}`;
+      const installUrl = `${publicUrl}/install`;
       const communityUrl = `${publicUrl}/community`;
       const adminUrl = `${publicUrl}/admin`;
 
-      fs.writeFileSync(path.join(__dirname, 'public-url.txt'), communityUrl);
+      fs.writeFileSync(path.join(__dirname, 'public-url.txt'), installUrl);
 
       console.log('');
       console.log('========================================================================');
       console.log('   🎉 VALENCIA POWERWATCH IS NOW PUBLICLY LIVE ON THE INTERNET!         ');
       console.log('========================================================================');
       console.log('');
-      console.log('  📱 USER / COMMUNITY PORTAL (Para sa Cellphone / Residente):');
+      console.log('  📲 DOWNLOAD & INSTALL PAGE (Para sa QR Code / Android Phone Install):');
+      console.log(`     👉 ${installUrl}`);
+      console.log('');
+      console.log('  📱 USER / COMMUNITY WEB PORTAL (Direct Browser Access):');
       console.log(`     👉 ${communityUrl}`);
       console.log('');
       console.log('  🛡️  ADMIN PORTAL (Para sa Administrator):');
       console.log(`     👉 ${adminUrl}`);
       console.log('');
       console.log('========================================================================');
-      console.log('  ✓ Gikopya na sa imong Clipboard ang link (Pwede na nimo i-Ctrl+V)!');
-      console.log('  ✓ Gi-ablihan na pod nako diretso sa imong Chrome ang tinuod nga link!');
+      console.log('  ✓ Gikopya na sa imong Clipboard ang Download/Install link (Ctrl+V)!');
+      console.log('  ✓ Gi-ablihan na pod nako diretso sa imong Chrome ang Install Page!');
       console.log('');
       console.log('  ⚠️  AYAW I-CLOSE kining itom nga window samtang nag-test o nag-demo ka!');
       console.log('========================================================================');
 
       // Auto-open in Chrome
-      exec(`start "" "${communityUrl}"`);
+      exec(`start "" "${installUrl}"`);
 
       // Copy to clipboard
-      exec(`powershell -command "Set-Clipboard -Value '${communityUrl}'"`);
+      exec(`powershell -command "Set-Clipboard -Value '${installUrl}'"`);
     }
   };
 

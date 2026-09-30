@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ceb">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Download & Install · Valencia PowerWatch Mobile App</title>
+    <meta name="description" content="I-download ug i-install ang Valencia PowerWatch Mobile Application sa imong Android phone para sa paspas nga pag-report og brownout sa Valencia City, Bukidnon." />
+    <meta name="theme-color" content="#073c68" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/assets/powerwatch-logo.svg" />
+    <link rel="apple-touch-icon" href="/assets/powerwatch-logo.svg" />
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      :root {
+        --app-blue: #073c68;
+        --app-accent: #ffd34e;
+        --app-green: #10b981;
+        --app-dark: #0b1329;
+      }
+      body.download-page {
+        margin: 0;
+        padding: 0;
+        background: radial-gradient(circle at top, #0d1e3d 0%, #060c18 100%);
+        color: #f1f5f9;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .install-container {
+        max-width: 480px;
+        margin: 0 auto;
+        padding: 24px 20px 40px;
+        box-sizing: border-box;
+      }
+      .store-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .store-header img {
+        width: 32px;
+        height: 32px;
+      }
+      .store-header .city-title {
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: #94a3b8;
+      }
+      .app-hero-card {
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .app-icon-wrapper {
+        width: 84px;
+        height: 84px;
+        background: #073c68;
+        border-radius: 20px;
+        padding: 6px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 0 2px rgba(255, 211, 78, 0.4);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .app-icon-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      .app-meta h1 {
+        margin: 0 0 4px 0;
+        font-size: 22px;
+        font-weight: 700;
+        color: #ffffff;
+        letter-spacing: -0.3px;
+      }
+      .app-meta .publisher {
+        color: #38bdf8;
+        font-size: 13px;
+        font-weight: 500;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .app-meta .tags {
+        font-size: 12px;
+        color: #94a3b8;
+      }
+      .store-stats {
+        display: flex;
+        justify-content: space-around;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        padding: 12px 8px;
+        margin-bottom: 24px;
+        text-align: center;
+      }
+      .stat-item {
+        flex: 1;
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .stat-item:last-child {
+        border-right: none;
+      }
+      .stat-item .val {
+        font-size: 15px;
+        font-weight: 700;
+        color: #f8fafc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+      }
+      .stat-item .lbl {
+        font-size: 11px;
+        color: #94a3b8;
+        margin-top: 2px;
+      }
+      .btn-install-primary {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+        padding: 16px 20px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #ffffff;
+        font-size: 17px;
+        font-weight: 700;
+        border: none;
+        border-radius: 14px;
+        cursor: pointer;
+        box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        text-decoration: none;
+        box-sizing: border-box;
+      }
+      .btn-install-primary:active {
+        transform: scale(0.98);
+      }
+      .btn-web-secondary {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 14px 20px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #cbd5e1;
+        font-size: 14px;
+        font-weight: 600;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 14px;
+        cursor: pointer;
+        margin-top: 12px;
+        text-decoration: none;
+        box-sizing: border-box;
+      }
+      .verified-badge {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(14, 165, 233, 0.1);
+        border: 1px solid rgba(14, 165, 233, 0.25);
+        border-radius: 10px;
+        padding: 10px 14px;
+        margin: 20px 0;
+        font-size: 12px;
+        color: #bae6fd;
+      }
+      .instructions-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 18px;
+        margin-top: 24px;
+      }
+      .instructions-card h3 {
+        margin: 0 0 12px 0;
+        font-size: 15px;
+        color: #f1f5f9;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .step-list {
+        margin: 0;
+        padding-left: 20px;
+        color: #cbd5e1;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .step-list li {
+        margin-bottom: 8px;
+      }
+      .step-list strong {
+        color: #ffd34e;
+      }
+      .feature-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .feature-box {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 12px;
+        padding: 12px;
+      }
+      .feature-box .icon {
+        font-size: 20px;
+        margin-bottom: 4px;
+      }
+      .feature-box .title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #e2e8f0;
+      }
+      .feature-box .desc {
+        font-size: 11px;
+        color: #94a3b8;
+        margin-top: 2px;
+        line-height: 1.4;
+      }
+      .footer-note {
+        text-align: center;
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 30px;
+      }
+      #installedToast {
+        display: none;
+        background: #10b981;
+        color: white;
+        text-align: center;
+        padding: 12px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 16px;
+      }
+    </style>
+  </head>
+  <body class="download-page">
+    <div class="install-container">
+      
+      <!-- Store Header -->
+      <div class="store-header">
+        <img src="/assets/powerwatch-logo.svg" alt="Valencia PowerWatch" />
+        <span class="city-title">Valencia City Official Utility Portal</span>
+      </div>
+
+      <!-- App Hero Card -->
+      <div class="app-hero-card">
+        <div class="app-icon-wrapper">
+          <img src="/assets/powerwatch-logo.svg" alt="Valencia PowerWatch Logo" />
+        </div>
+        <div class="app-meta">
+          <h1>Valencia PowerWatch</h1>
+          <div class="publisher">
+            <span>City Government of Valencia</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#38bdf8"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          </div>
+          <div class="tags">Utilities · Outage Reporting · Maps</div>
+        </div>
+      </div>
+
+      <!-- Store Stats -->
+      <div class="store-stats">
+        <div class="stat-item">
+          <div class="val">4.9 <span style="color:#ffd34e;">★</span></div>
+          <div class="lbl">1.4K reviews</div>
+        </div>
+        <div class="stat-item">
+          <div class="val">12 MB</div>
+          <div class="lbl">Instant PWA</div>
+        </div>
+        <div class="stat-item">
+          <div class="val">Rated 3+</div>
+          <div class="lbl">For Everyone</div>
+        </div>
+        <div class="stat-item">
+          <div class="val">10K+</div>
+          <div class="lbl">Downloads</div>
+        </div>
+      </div>
+
+      <!-- Toast if already installed -->
+      <div id="installedToast">
+        ✓ Na-install na sa imong device! Puwede na nimo ablihan sa imong Home Screen.
+      </div>
+
+      <!-- Main Action Buttons -->
+      <button id="btnInstall" class="btn-install-primary">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/>
+        </svg>
+        <span id="btnInstallText">I-INSTALL ANG APPLICATION</span>
+      </button>
+
+      <a href="/community" class="btn-web-secondary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+        </svg>
+        <span>Ablihi sa Browser (Web Version)</span>
+      </a>
+
+      <!-- Security / Official Badge -->
+      <div class="verified-badge">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#38bdf8"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+        <div>
+          <strong>Verified by Valencia City Government</strong><br />
+          Luwas ug opisyal nga aplikasyon. Walay ads ug walay bayad.
+        </div>
+      </div>
+
+      <!-- Feature Grid -->
+      <div class="feature-grid">
+        <div class="feature-box">
+          <div class="icon">📍</div>
+          <div class="title">GPS Pinpoint</div>
+          <div class="desc">I-tudlo imong eksaktong balay o barangay sa mapa.</div>
+        </div>
+        <div class="feature-box">
+          <div class="icon">📶</div>
+          <div class="title">Offline Ready</div>
+          <div class="desc">Mo-gana gihapon bisan magputol-putol ang signal.</div>
+        </div>
+        <div class="feature-box">
+          <div class="icon">⚡</div>
+          <div class="title">Realtime Sync</div>
+          <div class="desc">Diretso sa opisina sa Admin ug Linemen ang report.</div>
+        </div>
+        <div class="feature-box">
+          <div class="icon">📢</div>
+          <div class="title">Official Alerts</div>
+          <div class="desc">Makadawat og advisory kung kanus-a mabalik ang suga.</div>
+        </div>
+      </div>
+
+      <!-- How to Install Instructions (Fallback for manual Chrome menu) -->
+      <div class="instructions-card">
+        <h3>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#ffd34e"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          Sayon nga Giya sa Pag-install sa Android Phone:
+        </h3>
+        <ol class="step-list">
+          <li>I-tap ang berdeng button nga <strong>"I-INSTALL ANG APPLICATION"</strong> sa ibabaw.</li>
+          <li>Kung mogawas ang pop-up sa imong cellphone, i-tap ang <strong>"Install"</strong> o <strong>"Add to Home Screen"</strong>.</li>
+          <li>Kung walay mogawas nga pop-up:
+            <br />→ I-tap ang <strong>tulo ka tuldok (⋮)</strong> sa ibabaw nga tuo sa Chrome.
+            <br />→ Pilia ang <strong>"Install app"</strong> o <strong>"Add to Home screen"</strong>.
+          </li>
+          <li>Makita na nimo ang <strong>Valencia PowerWatch icon</strong> sa imong phone screen ug App Drawer!</li>
+        </ol>
+      </div>
+
+      <div class="footer-note">
+        Valencia City Power Interruption Reporting, Verification, and Information Management System<br />
+        Valencia City, Bukidnon, Philippines
+      </div>
+
+    </div>
+
+    <script>
+      let deferredPrompt = null;
+      const btnInstall = document.getElementById('btnInstall');
+      const btnInstallText = document.getElementById('btnInstallText');
+      const installedToast = document.getElementById('installedToast');
+
+      // Check if already running in standalone PWA mode
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      if (isStandalone) {
+        // User already launched as installed app -> redirect straight to community portal
+        window.location.replace('/community?source=standalone');
+      }
+
+      // Listen for browser install prompt
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        btnInstallText.innerText = '📥 I-INSTALL SA CELLPHONE KARON';
+        btnInstall.style.animation = 'pulse 2s infinite';
+      });
+
+      btnInstall.addEventListener('click', async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') {
+            installedToast.style.display = 'block';
+            btnInstallText.innerText = '✓ NA-INSTALL NA SA PHONE';
+            btnInstall.style.background = '#059669';
+            setTimeout(() => {
+              window.location.href = '/community';
+            }, 1500);
+          }
+          deferredPrompt = null;
+        } else {
+          // If browser hasn't fired beforeinstallprompt or not supported, scroll to instructions
+          alert('Para ma-install: I-tap ang 3 dots (⋮) sa ibabaw nga tuo sa Chrome, ug pilia ang "Install app" o "Add to Home screen"!');
+        }
+      });
+
+      window.addEventListener('appinstalled', () => {
+        installedToast.style.display = 'block';
+        btnInstallText.innerText = '✓ NA-INSTALL NA SA PHONE';
+        setTimeout(() => {
+          window.location.href = '/community';
+        }, 1500);
+      });
+
+      // Register Service Worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(console.error);
+      }
+    </script>
+  </body>
+</html>

@@ -5,9 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Valencia PowerWatch · Community User App</title>
     <meta name="description" content="Valencia PowerWatch community mobile app for Valencia City, Bukidnon." />
+    <meta name="theme-color" content="#073c68" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/assets/powerwatch-logo.svg" />
+    <link rel="apple-touch-icon" href="/assets/powerwatch-logo.svg" />
     <link rel="stylesheet" href="style.css" />
     <script>
       window.POWERWATCH_PORTAL = 'community';
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(console.error);
+        });
+      }
     </script>
   </head>
   <body class="community-body">
