@@ -1,0 +1,8 @@
+.env
+.env.*
+!.env.example
+node_modules/
+cloudflared.exe
+*.log
+public-url.txt
+*.bak

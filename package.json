@@ -1,0 +1,23 @@
+{
+  "name": "valencia-powerwatch",
+  "version": "1.0.0",
+  "description": "Valencia PowerWatch - Community Power Interruption Reporting, Verification, and Information Management System for Valencia City, Bukidnon",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "compression": "^1.8.2",
+    "dotenv": "^18.0.4",
+    "express": "^4.21.2",
+    "leaflet": "^1.9.4",
+    "leaflet.heat": "^0.2.0",
+    "multer": "^2.4.0",
+    "nodemailer": "^10.0.12"
+  }
+}

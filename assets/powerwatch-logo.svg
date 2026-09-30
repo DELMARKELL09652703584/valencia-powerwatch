@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">Valencia PowerWatch</title>
+  <defs>
+    <linearGradient id="ring" x1="12" y1="18" x2="112" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffd34e"/>
+      <stop offset=".58" stop-color="#f4bd2d"/>
+      <stop offset=".59" stop-color="#22bde2"/>
+      <stop offset="1" stop-color="#0879bc"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="56" fill="#073c68" stroke="url(#ring)" stroke-width="8"/>
+  <path d="m18 75 19-22 11 11 17-22 17 22 10-11 19 22v18H18z" fill="#f8fbff"/>
+  <path d="m67 52-16 30h13l-4 24 22-35H68l8-19z" fill="#ffd34e" stroke="#e4a923" stroke-linejoin="round" stroke-width="2"/>
+  <path d="m25 89 13-15 10 10 17-20 17 20 10-10 13 15" fill="none" stroke="#9eddf0" stroke-linecap="round" stroke-width="3"/>
+</svg>
