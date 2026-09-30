@@ -47,6 +47,7 @@ const getUserByToken = (token) => {
 const publicUser = (u) => ({
   id: u.id,
   full_name: u.full_name,
+  username: u.username || null,
   email: u.email,
   contact_number: u.contact_number,
   address: u.address,

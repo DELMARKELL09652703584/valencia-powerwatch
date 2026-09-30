@@ -1,0 +1,301 @@
+================================================================================
+                    VALENCIA POWERWATCH - PROPOSAL DEFENSE GUIDE
+================================================================================
+Titulo sa Sistema:
+Community Power Interruption Reporting, Verification, and Information Management
+System for Valencia City, Bukidnon
+================================================================================
+
+1. 1-MINUTE ELEVATOR PITCH (PAMBUNGAD NGA LINYA SA PANEL)
+--------------------------------------------------------------------------------
+"Maayong adlaw sa atong mga tinahod nga panelist. Ang among proposed system
+gi-ulohan og Valencia PowerWatch: Community Power Interruption Reporting,
+Verification, and Information Management System for Valencia City, Bukidnon.
+
+Kini usa ka modernong digital platform nga nagsumpay sa mga residente sa
+Valencia City ug sa power utility management aron mapadali ang pag-report,
+pag-verify, ug pag-monitor sa mga brownout pinaagi sa real-time interactive
+mapping ug mobile technology."
+
+
+2. BACKGROUND & MAIN PROBLEM STATEMENT (ANG PROBLEMA SA VALENCIA CITY)
+--------------------------------------------------------------------------------
+Karon nga Sitwasyon:
+Kung mag-brownout sa Valencia City, ang mga residente magsalig ra sa pagtawag
+sa busy nga hotline, mag-comment sa Facebook page nga dili ma-track, o mag-antos
+sa paghulat nga walay klarong opisyal nga update.
+
+• Problema sa mga Residente:
+  1. Dili makabalo kung scheduled brownout ba o naay emergency nga guba o
+     aksidente sa linya.
+  2. Walay sayon nga paagi sa pag-report sa ilang eksaktong lokasyon o guba
+     nga poste ug transformer.
+
+• Problema sa Power Utility & Linemen:
+  1. Nagkatag ug nagbalik-balik ang mga reklamo sa social media nga lisod
+     kolektahon ug i-track.
+  2. Dugay matultolan ang eksaktong dapit sa naguba nga linya kay walay
+     GPS coordinates.
+  3. Walay centralized visual dashboard nga nagpakita kung asang mga barangay
+     ang labing apektado.
+
+
+3. PROPOSED SOLUTION (ANG SOLUSYON: VALENCIA POWERWATCH)
+--------------------------------------------------------------------------------
+Ang Valencia PowerWatch naghatag og duha (2) ka integrated nga portal nga
+nagkonektar sa usa ka sentral nga database:
+
+1. User / Community Mobile App (PWA):
+   Usa ka installable application para sa cellphone sa mga residente diin
+   makapa-abot dayon sila og brownout report gamit ang interactive GPS Map
+   sulod lang sa pipila ka segundo.
+
+2. Administrator & Utility Dispatch Portal:
+   Usa ka secured web dashboard para sa mga enhinyero ug opisyales aron makita
+   ang Outage GIS Heatmap, ma-verify ang mga insidente, ug makapadala dayon
+   og maintenance crew.
+
+
+4. TARGET USERS (KINSA ANG MOGAMIT)
+--------------------------------------------------------------------------------
+1. Mga Residente (Community):
+   Mag-report og brownout gamit ang GPS Pinpoint, mag-monitor sa live status
+   sa restoration, ug magbasa sa official emergency advisories.
+
+2. Utility Engineers / Linemen:
+   Mo-dawat sa verified dispatch, mosusi sa teknikal nga guba sa field, ug
+   mo-update sa repair status padulong sa "Resolved".
+
+3. System Administrator / LGU Officials:
+   Mo-dumala sa user accounts, magpagawas og emergency advisories, mag-monitor
+   sa GIS heatmap, ug mag-generate og official incident reports.
+
+
+================================================================================
+5. KOMPLETONG MGA MODULES SA SISTEMA (USER SIDE UG ADMIN SIDE)
+================================================================================
+
+--------------------------------------------------------------------------------
+A. MGA MODULES SA USER / COMMUNITY SIDE (MOBILE APPLICATION - PWA)
+--------------------------------------------------------------------------------
+
+1. HOME & DASHBOARD MODULE
+   • City Grid Power Status: Makita dayon kung pila ka porsyento sa Valencia City
+     ang naay kuryente ug pila ka active outages ang kasamtangang gi-ayo.
+   • Live Weather Monitoring: Automatic nga nagpakita sa panahon (temperature,
+     ulan, thunderstorm warning) sa Valencia City pinaagi sa live weather API.
+   • Quick Action Buttons: 1-tap button para sa dinaliang pag-report og brownout.
+   • Emergency Advisories Carousel: Makita ang mga bag-ong pahibalo gikan sa
+     utility management.
+
+2. OUTAGE REPORTING & GPS PINPOINT MODULE
+   • Interactive Map Picker: Makapili og eksaktong lokasyon sa balay o poste
+     gamit ang GPS o pag-drag sa pin sa mapa sa Valencia City.
+   • Barangay Selector: Naka-lista ang tanang 31 ka barangay sa Valencia City.
+   • Categorized Outage Types:
+     - Total Blackout (Walay kuryente sa tibuok balay/linya)
+     - Partial / Low Voltage (Nagsiga-palong o hinay ang boltahe)
+     - Line Down / Sparking Transformer (Delikadong poste nga nagspark o nahagbong)
+   • Photo & Video Evidence Upload: Makakuha ug maka-attach og litrato o video sa guba isip ebidensya (maximum 5-10 minutes ang video duration aron mapabilin ang paspas nga bandwidth ug storage efficiency).
+   • Offline Report Queue: Kung mawad-an og cellular data panahon sa bagyo,
+     i-save sa app ang report ug awtomatikong i-upload inig balik sa signal.
+
+3. INTERACTIVE GIS OUTAGE MAP MODULE
+   • Real-Time Map View: Makita sa residente ang mapa sa Valencia City nga may
+     color-coded markers (Pending, Verified, Under Repair, Restored).
+   • Heatmap View: Makita kung asang mga parte sa siyudad ang daghang report.
+
+4. NOTIFICATIONS & STATUS TRACKING MODULE
+   • Real-time Ticket Status: Makit-an sa user ang dagan sa ilang report:
+     [Submitted] ➔ [Verified by Engineer] ➔ [Linemen Dispatched] ➔ [Restored]
+   • Scheduled Interruption Alerts: Makadawat og abiso sa scheduled brownout
+     (oras, apektadong barangay, ug rason sa maintenance).
+   • Notification History: Listahan sa tanang nadawat nga advisories.
+
+5. USER PROFILE & SETTINGS MODULE
+   • Personal Profile: Ngalan, Contact Number, Email, ug Home Barangay.
+   • Notification Preferences: Makapili kung unsa nga alerts ang gustong madawat
+     (Emergency Outages, Scheduled Maintenance, o Status Updates).
+   • Security: Pag-ilis og password ug pag-secure sa account.
+
+6. PWA STANDALONE INSTALLATION MODULE (/install)
+   • Play Store-Style Download Page: Nindot nga landing page para sa Android.
+   • 1-Tap Home Screen & App Drawer Installer: Ma-install sa phone nga walay
+     browser URL bar, murag normal nga application gikan sa Play Store.
+
+
+--------------------------------------------------------------------------------
+B. MGA MODULES SA ADMINISTRATOR & UTILITY MANAGEMENT SIDE (WEB PORTAL)
+--------------------------------------------------------------------------------
+
+1. EXECUTIVE DASHBOARD MODULE
+   • Real-Time Key Performance Indicators (KPIs):
+     - Total Active Outages
+     - Reports Received Today
+     - Average Restoration Time (MTTR)
+     - Verification Accuracy Rate
+   • City-Wide Grid Health Meter: Visual graph sa kalidad sa kuryente sa siyudad.
+   • Live Recent Activity Stream: Tinuod nga dagan sa mga aksyon sa linemen.
+
+2. REPORTS MANAGEMENT MODULE
+   • Centralized Citizen Reports Table: Listahan sa tanang report nga naggikan sa
+     cellphone sa mga residente.
+   • Advanced Filters: Filter base sa Barangay, Outage Type, Petsa, ug Status.
+   • Report Details Modal: Makita ang kompleto nga detalye lakip ang GPS
+     coordinates, cellphone number sa nag-report, litrato, ug timestamp.
+   • Duplicate Detection: Gi-grupo ang parehas nga reports sa parehas nga poste.
+
+3. TECHNICAL VERIFICATION MODULE
+   • Triage Station: Pagsusi sa mga enhinyero kung tinuod ba nga brownout o
+     trip-off lang sa sulod sa balay sa residente.
+   • 1-Click Verification Actions:
+     - Verify & Escalate: Himuon kining opisyal nga incident.
+     - Reject with Note: Kung prank report o nasayop ang user.
+     - Merge with Existing Incident: Kung bahin kini sa nag-unang blackout.
+
+4. INCIDENTS & DISPATCH MANAGEMENT MODULE
+   • Master Incident Tracker: Pag-dumala sa mga opisyal nga outage incidents.
+   • Linemen Crew Dispatch: Pag-assign og field maintenance team sa partikular
+     nga linya o feeder.
+   • Live Stage Progression:
+     [Investigating] ➔ [Crew Dispatched] ➔ [Repair in Progress] ➔ [Power Restored]
+
+5. OUTAGE MONITORING & SMART CLUSTERING MODULE
+   • Spatial Clustering Algorithm: Awtomatikong mo-detect kung naay 3 o labaw pa
+     nga reports sulod sa 500 meters.
+   • Transformer / Feeder Fault Isolation: Makatabang sa pagtagna kung asang
+     transformer o lateral fuse ang nibuto.
+
+6. GIS MAP WORKSTATION MODULE
+   • Fullscreen GIS Mapping: Espesyal nga interactive mapping para sa dispatchers.
+   • Outage Heatmap Layer: Visual heat map nga nagpakita sa intensity sa brownout.
+   • Feeder & Substation Overlay: Makita ang correlation sa guba sa linya.
+
+7. SCHEDULED OUTAGES & MAINTENANCE MODULE
+   • Preventive Maintenance Scheduler: Pag-plano sa maintenance works.
+   • Affected Area Selector: Pag-pili sa mga barangay nga mapalongan og kuryente.
+   • Auto-Broadcast Alert: Awtomatikong magpadala og advisory sa mga apektadong
+     residente sa maong barangay.
+
+8. PUBLIC ANNOUNCEMENTS & ADVISORIES MODULE
+   • Emergency Advisory Broadcaster: Pagpagawas og official typhoon updates,
+     generation deficiency advisories, ug safety warnings.
+   • Rich Content Editor: Paspas nga pag-post nga may priority tags (Urgent, Info).
+
+9. NOTIFICATIONS DISPATCHER MODULE
+   • Targeted Notification Dispatch: Makapadala og alert sa tibuok siyudad o sa
+     usa lamang ka barangay.
+
+10. OUTAGE HISTORY & ARCHIVES MODULE
+    • Historical Outage Database: Kompleto nga rekord sa tanang naagi nga brownout.
+    • Filter by Date Range: Pagsusi sa mga brownout sa miaging mga bulan.
+    • Exportable Data: Puwede i-export sa spreadsheet para sa opisyal nga audit.
+
+11. USER MANAGEMENT & ACCESS CONTROL MODULE
+    • Role-Based Access Control (RBAC):
+      - System Administrator (Full Access)
+      - Utility Engineer (Technical & Verification Access)
+      - Linemen / Dispatch Staff (Incident Updates)
+      - Citizen / Resident (Reporting & Viewing Only)
+    • Account Approval & Activation: Pagdumala sa mga staff ug resident accounts.
+
+12. BARANGAYS MANAGEMENT MODULE
+    • Valencia City 31 Barangays Directory: Pagdumala sa datos sa matag barangay,
+      substation feeder connections, ug lokal nga hotline numbers.
+
+13. ANALYTICS, METRICS & AUDIT-READY REPORTING MODULE
+    • Grid Reliability Indices Calculation: Awtomatikong pagkwenta sa SAIFI
+      (System Average Interruption Frequency Index) ug SAIDI (System Average
+      Interruption Duration Index).
+    • Frequent Outage Hotspot Analysis: Makita kung asang barangay ang kanunay
+      maguba ang linya.
+    • 1-Click Official Printable PDF Report Generator: Paspas nga pag-generate
+      og pormal nga incident report para sa City Hall, DOE, o Management meetings.
+
+14. AUDIT TRAILS & SYSTEM SECURITY MODULE
+    • Tamper-Proof Audit Logging: Naka-rekord ang matag lihok sa sistema—kinsay
+      nag-verify, kanus-a gi-dispatch ang crew, kinsay nag-ilis og status, lakip
+      ang timestamp ug IP address para sa transparency.
+
+15. SYSTEM SETTINGS MODULE
+    • Branding & Localization: Logo sa Valencia City, kontak nga hotline,
+      emergency contact numbers, ug system backup options.
+
+
+================================================================================
+6. SYSTEM WORKFLOW (GIUNSA PAGDAGAN SA DATOS)
+================================================================================
+Step 1: Paghimo og Report
+Ang residente mag-abli sa app sa ilang phone ug mo-submit og report nga naay
+GPS coordinates, barangay, litrato, ug detalye sa blackout.
+
+Step 2: Sentral nga Pagtipig
+Ang report moagi sa secure HTTPS connection ug mosulod diretso sa Central
+SQLite Database (data/powerwatch.db).
+
+Step 3: Pagsusi ug Dispatch
+Motungha dayon ang report sa dashboard sa Admin. Makita kini sa GIS Heatmap,
+i-verify sa Engineer, ug i-dispatch ang maintenance crew.
+
+Step 4: Restoration & Notification
+Inig kaayo sa linya, i-mark sa Admin ang insidente isip "Resolved", ug makadawat
+dayon og status update ang tanang residente sa ilang phone.
+
+
+================================================================================
+7. BENEFITS & LIMITATIONS
+================================================================================
+Mga Kaayohan (Benefits):
+• Paspas nga Response Time: Dili na magtagna-tagna ang linemen kung asa ang guba
+  kay may eksaktong GPS coordinates ug Barangay.
+• Transparency: Makabalo ang publiko kung unsa na ang kahimtang sa pag-ayo sa
+  kuryente.
+• Data-Driven Planning: Makatabang sa City Hall ug Utility nga mahibal-an kung
+  asang mga linya ang karaan ug kinahanglan nang ilisan og bag-ong transformer.
+
+Mga Limitasyon (Limitations):
+• Nagkinahanglan og Internet Connection: Bisan naay offline report queue ang app,
+  kinahanglan gihapon og data o Wi-Fi aron maabot ang report sa opisina sa Admin.
+• Citizen-Driven (Crowdsourced): Ang datos naggikan sa report sa mga tawo, dili
+  gikan sa automated hardware sensor sa poste (apan nasulbad kini pinaagi sa
+  Admin Verification module).
+• Geographical Scope: Nakatutok kining maong prototype sa 31 ka barangay sa
+  Valencia City, Bukidnon.
+
+
+================================================================================
+8. TOP 5 ANTICIPATED PANEL QUESTIONS & BEST ANSWERS (CHEAT SHEET)
+================================================================================
+Q1: Ngano nga PWA (Progressive Web App) inyong gigamit ug dili native APK sa
+    Google Play Store?
+Tubag:
+Sir/Ma'am, ang PWA mas gaan, dali i-deploy, ug accessible sa tanang klase sa
+cellphone. Dili na kinahanglan mag-download og bug-at nga 50MB nga file o
+magbayad sa Google Play Store. I-scan lang ang QR code, ma-install na dayon kini
+sa ilang home screen ug app drawer sulod sa 5 ka segundo.
+
+Q2: Unsaon ninyo pagpugong kung naay mag-binuang o mag-spam og fake reports?
+Tubag:
+Una, kinahanglan mag-register ang user nga may tinuod nga contact number.
+Ikaduha, ang sistema naggamit og Smart Clustering—kung usa ra ka tawo ang
+nag-report unya ang tibuok silingan walay report, makit-an kini dayon sa Admin.
+Ikatulo, dili dayon ma-post sa public status hangtod dili ma-verify sa engineer.
+
+Q3: Unsaon kung mawad-an og cellular signal samtang nag-bagyo?
+Tubag:
+Gibutangan namo ang sistema og Offline Report Queue gamit ang Service Worker ug
+local cache. Makahimo gihapon ang residente sa pag-fill up sa report bisan walay
+internet. Inig balik sa signal o data, awtomatiko kining i-sync ug i-upload sa server.
+
+Q4: Unsay kalainan niini sa Facebook page sa utility company karon?
+Tubag:
+Sa Facebook, magkatag ang reklamo sa comment section ug walay GPS coordinates
+o status tracking. Sa among sistema, structured ang datos: naay database, naay
+heatmap, naay timestamp, ug naay opisyal nga ticket status.
+
+Q5: Asa gitipigan ang mga datos ug unsaon pag-seguro niini?
+Tubag:
+Gitipigan ang tanang impormasyon sa usa ka Centralized Database gamit ang
+SQLite/Relational Database nga may session security ug access restrictions
+tali sa Admin ug Residente.
+================================================================================

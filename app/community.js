@@ -17,11 +17,6 @@ const MOBILE_TABS = [
     icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
   },
   {
-    key: 'notifications',
-    label: 'Notifications',
-    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>',
-  },
-  {
     key: 'profile',
     label: 'Profile',
     icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
@@ -124,6 +119,104 @@ async function requestCurrentWeather() {
   }
 }
 
+function notificationTypeIcon(type) {
+  switch (type) {
+    case 'incident':
+      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>';
+    case 'report':
+      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><path d="M9 14l2 2 4-4"/></svg>';
+    case 'scheduled':
+      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>';
+    case 'announcement':
+      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v3a2 2 0 002 2h2l3 5h3l-2-7 8 3V7l-8 3H5a2 2 0 00-2 1z"></path></svg>';
+    default:
+      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>';
+  }
+}
+
+function mobileNotificationBell() {
+  const count = Number(state.unread || 0);
+  const badgeLabel = count > 99 ? '99+' : String(count);
+  return `<button type="button" class="mobile-bell" data-action="toggle-mobile-notification-panel" aria-label="Notifications${count ? `, ${count} unread` : ''}" aria-haspopup="dialog" aria-expanded="${Boolean(state.mobileNotificationPanelOpen)}" aria-controls="mobile-notification-panel" title="Notifications">
+    <svg class="mobile-bell-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </svg>
+    ${count > 0 ? `<span class="mobile-bell-dot" aria-hidden="true">${badgeLabel}</span>` : ''}
+  </button>`;
+}
+
+function mobileNotificationPanelMarkup() {
+  if (!state.mobileNotificationPanelOpen) return '';
+  const notices = (state.mobileNotificationPreview || []).slice(0, 6);
+  const unreadCount = Number(state.unread || 0);
+  return `
+    <div class="mobile-notification-backdrop" data-action="close-mobile-notification-panel" aria-hidden="true"></div>
+    <section class="mobile-notification-panel" id="mobile-notification-panel" role="dialog" aria-modal="true" aria-label="Recent notifications">
+      <header class="mobile-notification-panel-head">
+        <div class="notif-panel-title-wrap">
+          <div class="notif-panel-title-row">
+            <strong>${t('notifications', 'Notifications')}</strong>
+            ${unreadCount > 0 ? `<span class="notif-badge-pill">${unreadCount} new</span>` : '<span class="notif-badge-pill notif-badge-done">All read</span>'}
+          </div>
+          <span class="notif-panel-sub">${unreadCount > 0 ? `${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}` : 'You are all caught up'}</span>
+        </div>
+        <div class="notif-panel-head-actions">
+          ${unreadCount > 0 ? '<button type="button" class="mobile-notification-mark-all" data-action="mark-all-read" title="Mark all notifications as read">Mark all read</button>' : ''}
+          <button type="button" class="mobile-notification-panel-close" data-action="close-mobile-notification-panel" aria-label="Close notifications" title="Close">✕</button>
+        </div>
+      </header>
+      <div class="mobile-notification-panel-list" aria-live="polite">
+        ${notices.length ? notices.map((notice) => `
+          <article class="mobile-notification-preview ${notice.read ? 'read' : 'unread'}">
+            <span class="mobile-notif-type-icon ${escapeHtml(notice.type || 'general')}">
+              ${notificationTypeIcon(notice.type)}
+            </span>
+            <button type="button" class="mobile-notification-preview-open" data-action="view-notification" data-id="${notice.id}">
+              <div class="notif-item-top">
+                <strong class="notif-item-title">${escapeHtml(notice.title)}</strong>
+                <time class="notif-item-time">${escapeHtml(formatRelativeTime(notice.created_at))}</time>
+              </div>
+              <span class="notif-item-msg">${escapeHtml(notice.message || '')}</span>
+            </button>
+            <div class="notif-item-actions">
+              ${!notice.read ? `
+                <button type="button" class="mobile-notification-preview-read" data-action="mark-mobile-notification-read" data-id="${notice.id}" aria-label="Mark ${escapeHtml(notice.title)} as read" title="Mark as read">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </button>
+              ` : `
+                <span class="notif-item-read-icon" title="Read" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </span>
+              `}
+            </div>
+          </article>
+        `).join('') : `
+          <div class="mobile-notification-panel-empty">
+            <div class="notif-empty-icon">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+            </div>
+            <strong>No notifications yet</strong>
+            <p>You'll see alerts, report verification updates, and advisories here.</p>
+          </div>
+        `}
+      </div>
+      <footer class="mobile-notification-panel-footer">
+        <button type="button" class="notif-view-all-link" data-action="view-all-mobile-notifications">
+          <span>View all notifications</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+        <button type="button" class="notif-settings-link" data-action="open-notification-settings" title="Notification Preferences" aria-label="Notification Preferences">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </button>
+      </footer>
+    </section>
+  `;
+}
+
 function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, homeHeader = false, subpageHeader = null } = {}) {
   const info = state.config.system_info || {};
   const unread = state.unread;
@@ -163,9 +256,8 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
           </svg>
         </button>
         <h1 class="mobile-header-title">${escapeHtml(subpageHeader.title)}</h1>
-        <div class="mobile-header-right">
-          ${subpageHeader.rightAction || ''}
-        </div>
+        <div class="mobile-header-right">${subpageHeader.rightAction || mobileNotificationBell()}</div>
+        ${mobileNotificationPanelMarkup()}
       </header>`;
   } else if (homeHeader) {
     headerMarkup = `
@@ -174,10 +266,13 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
           ${user.profile_photo_path ? `<img class="dashboard-avatar" src="${escapeHtml(user.profile_photo_path)}" alt="">` : `<span class="dashboard-avatar">${escapeHtml((user.full_name || '?').charAt(0).toUpperCase())}</span>`}
           <span class="mobile-home-greeting"><span>${greeting}</span><strong>${escapeHtml(user.full_name || 'Resident')}</strong></span>
         </div>
-        <button class="mobile-bell" data-mobile-tab="notifications" aria-label="Notifications${unread ? `, ${unread} unread` : ''}">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-          ${unread ? '<span class="mobile-bell-dot"></span>' : ''}
-        </button>
+        <div class="mobile-header-actions">
+          <button type="button" class="mobile-lang-chip" data-action="toggle-mobile-language" title="English / Sinugbuanong Binisaya">
+            <span>${getLanguage() === 'ceb' ? '🇵🇭 CEB' : '🇺🇸 EN'}</span>
+          </button>
+          ${mobileNotificationBell()}
+        </div>
+        ${mobileNotificationPanelMarkup()}
       </header>`;
   } else {
     headerMarkup = `
@@ -186,10 +281,13 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
           ${info.logoData ? `<img class="mobile-logo" src="${escapeHtml(info.logoData)}" alt="System logo">` : '<img class="mobile-logo" src="/assets/powerwatch-logo.svg" alt="Valencia PowerWatch logo">'}
           <div><strong>Valencia</strong><b>PowerWatch</b></div>
         </div>
-        <button class="mobile-bell" data-mobile-tab="notifications" aria-label="Notifications${unread ? `, ${unread} unread` : ''}">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-          ${unread ? '<span class="mobile-bell-dot"></span>' : ''}
-        </button>
+        <div class="mobile-header-actions">
+          <button type="button" class="mobile-lang-chip" data-action="toggle-mobile-language" title="English / Sinugbuanong Binisaya">
+            <span>${getLanguage() === 'ceb' ? '🇵🇭 CEB' : '🇺🇸 EN'}</span>
+          </button>
+          ${mobileNotificationBell()}
+        </div>
+        ${mobileNotificationPanelMarkup()}
       </header>`;
   }
 
@@ -198,7 +296,7 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
     ${headerMarkup}
     <main class="mobile-content ${subpageHeader ? 'mobile-content-subpage' : ''}" id="mobile-content">${content}</main>
     ${showTabs ? `<nav class="mobile-tabs">${MOBILE_TABS.map((tab) => `<button class="mobile-tab ${activeTab === tab.key ? 'active' : ''}" data-mobile-tab="${tab.key}">
-      <span class="mobile-tab-icon">${tab.icon}</span><span>${escapeHtml(tab.label)}</span>
+      <span class="mobile-tab-icon">${tab.icon}</span><span>${escapeHtml(t(tab.key, tab.label))}</span>
     </button>`).join('')}</nav>` : ''}
   </div>
   ${dialogMarkup()}
@@ -231,16 +329,17 @@ function formatRelativeTime(value) {
 
 async function renderMobileHome() {
   const cachedWeather = readWeatherCache();
-  const [{ stats }, { notifications }] = await Promise.all([
+  const [{ stats }, { notifications }, { announcements }] = await Promise.all([
     api('/api/analytics/dashboard'),
     api('/api/notifications'),
+    api('/api/announcements').catch(() => ({ announcements: [] })),
   ]);
   state.mobileNotifications = notifications;
   const dashboardCards = [
-    { label: 'Active Outages', value: stats.active_incidents, icon: '🔔', tone: 'danger', tab: 'outages' },
-    { label: 'Pending Reports', value: stats.reports_pending, icon: '▣', tone: 'warning', action: 'dashboard-pending-reports' },
-    { label: 'Resolved Today', value: stats.resolved_today, icon: '⬡', tone: 'success', tab: 'history' },
-    { label: 'Total Reports', value: stats.reports_total, icon: '✦', tone: 'primary', tab: 'reports' },
+    { label: t('active_outages', 'Active Outages'), value: stats.active_incidents, icon: '🔔', tone: 'danger', tab: 'outages' },
+    { label: t('pending_reports', 'Pending Reports'), value: stats.reports_pending, icon: '▣', tone: 'warning', action: 'dashboard-pending-reports' },
+    { label: t('resolved_today', 'Resolved Today'), value: stats.resolved_today, icon: '⬡', tone: 'success', tab: 'history' },
+    { label: t('total_reports', 'Total Reports'), value: stats.reports_total, icon: '✦', tone: 'primary', tab: 'reports' },
   ];
   const updates = notifications.slice(0, 3);
 
@@ -256,7 +355,7 @@ async function renderMobileHome() {
       </button>`).join('')}
     </div>
     <section class="recent-updates">
-      <header class="recent-updates-head"><h2>Recent Updates</h2><button type="button" class="link-button" data-mobile-tab="notifications">View All</button></header>
+      <header class="recent-updates-head"><h2>${t('recent_updates', 'Recent Updates')}</h2><button type="button" class="link-button" data-mobile-tab="notifications">${t('view_all', 'View All')}</button></header>
       ${updates.length ? updates.map((notice) => {
         const restored = /restor|resolved|complete/i.test(`${notice.title} ${notice.message || ''}`);
         const scheduledNotice = notice.type === 'scheduled' || /scheduled/i.test(notice.title);
@@ -267,7 +366,16 @@ async function renderMobileHome() {
           <span class="recent-update-copy"><strong>${escapeHtml(notice.title)}</strong><small>${escapeHtml(notice.message || '')}</small><time>${escapeHtml(formatRelativeTime(notice.created_at))}</time></span>
           <span class="recent-update-chevron" aria-hidden="true">›</span>
         </button>`;
-      }).join('') : `<p class="recent-updates-empty">No recent updates.</p>`}
+      }).join('') : `<p class="recent-updates-empty">${t('no_recent_updates', 'No recent updates.')}</p>`}
+    </section>
+    <section class="recent-updates home-announcements">
+      <header class="recent-updates-head"><h2>Announcements</h2><button type="button" class="link-button" data-mobile-tab="announcements">View all</button></header>
+      ${announcements.length ? announcements.slice(0, 3).map((announcement) => `
+        <button type="button" class="recent-update-row" data-action="view-announcement" data-id="${announcement.id}">
+          <span class="recent-update-icon announcement-update-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a2 2 0 0 0 2 2h2l3 5h3l-2-6 8 3V7l-8 3H5a2 2 0 0 0-2 1z"></path></svg></span>
+          <span class="recent-update-copy"><strong>${escapeHtml(announcement.title)}</strong><small>${escapeHtml(announcement.category)}</small><time>${escapeHtml(formatRelativeTime(announcement.published_at || announcement.created_at))}</time></span>
+          <span class="recent-update-chevron" aria-hidden="true">›</span>
+        </button>`).join('') : '<p class="recent-updates-empty">No announcements right now.</p>'}
     </section>
   `, { activeTab: 'home', homeHeader: true });
 
@@ -321,19 +429,22 @@ async function renderMobileReportForm() {
       <div class="dual-action-row"><button type="button" class="button ghost" data-action="previous-report-step">Back</button><button type="button" class="button primary" data-action="next-report-step">Next</button></div>`;
   } else if (step === 3) {
     formBody = `<h2>Add Evidence</h2>
-      <p class="report-step-hint">Upload up to five photos or MP4 videos (10 MB each).</p>
+      <p class="report-step-hint">Add photos or videos of the power interruption. Evidence is optional (up to five files).</p>
       <div class="report-attachment-previews">${attachments.map((attachment, index) => `
         <div class="report-attachment-preview">
           ${attachment.type.startsWith('video/')
-            ? `<video src="${escapeHtml(attachment.data)}" controls aria-label="${escapeHtml(attachment.name)}"></video>`
+            ? `<video src="${escapeHtml(attachment.data)}" muted playsinline preload="metadata" aria-label="${escapeHtml(attachment.name)}"></video>`
             : `<img src="${escapeHtml(attachment.data)}" alt="${escapeHtml(attachment.name)}">`}
           <button type="button" data-action="remove-report-attachment" data-index="${index}" aria-label="Remove ${escapeHtml(attachment.name)}">×</button>
-          <span>${escapeHtml(attachment.name)}</span>
         </div>`).join('')}</div>
-      <label class="mobile-photo-field">Add photos or videos<input type="file" name="attachments" accept="image/jpeg,image/png,video/mp4" multiple></label>
-      <div id="resident-evidence-preview" class="mobile-photo-preview"></div>
-      <p class="muted small">Supported: JPG, PNG, MP4. Up to five files, 10 MB each.</p>
-      <div class="dual-action-row"><button type="button" class="button ghost" data-action="previous-report-step">Back</button><button type="button" class="button primary" data-action="next-report-step">Next</button></div>`;
+      <div class="report-evidence-pickers">
+        <button type="button" class="report-evidence-picker" data-action="pick-report-attachment" data-value="photo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg><span>Add Photo</span></button>
+        <button type="button" class="report-evidence-picker" data-action="pick-report-attachment" data-value="video"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m10 9 5 3-5 3z"></path></svg><span>Add Video</span></button>
+      </div>
+      <input class="visually-hidden" type="file" name="attachments" data-attachment-kind="photo" accept="image/jpeg,image/png,image/webp" capture="environment" multiple tabindex="-1" aria-hidden="true">
+      <input class="visually-hidden" type="file" name="attachments" data-attachment-kind="video" accept="video/mp4,video/quicktime" capture="environment" multiple tabindex="-1" aria-hidden="true">
+      <p class="report-evidence-hint">Supported: JPG, PNG, WebP, MP4, MOV (Video: 5–10 mins max, up to 50 MB)</p>
+      <button type="button" class="button primary block report-evidence-next" data-action="next-report-step">Next</button>`;
   } else {
     formBody = `<h2>Review Your Report</h2>
       <div class="review-list">
@@ -353,11 +464,15 @@ async function renderMobileReportForm() {
   }
 
   mobileShell(`
-    ${mobileHero('Report Power Interruption', 'Share accurate details so your report can be verified.')}
-    ${stepper}
-    <form class="mobile-form report-step-form" data-form="report" ${step === 4 ? 'hidden' : ''}>${step === 4 ? '' : formBody}</form>
+    ${step === 3 ? '' : mobileHero('Report Power Interruption', 'Share accurate details so your report can be verified.')}
+    ${step === 3 ? '' : stepper}
+    <form class="mobile-form report-step-form ${step === 3 ? 'report-evidence-step' : ''}" data-form="report" ${step === 4 ? 'hidden' : ''}>${step === 4 ? '' : formBody}</form>
     ${step === 4 ? formBody : ''}
-  `, { activeTab: 'reports' });
+  `, {
+    activeTab: 'reports',
+    showTabs: step !== 3,
+    subpageHeader: step === 3 ? { title: 'Add Evidence (Optional)', backAction: 'previous-report-step' } : null,
+  });
 
   if (state.reportLocationMap) {
     state.reportLocationMap.remove();
@@ -404,17 +519,50 @@ async function renderMobileReportForm() {
   }
 }
 
+function getVideoDuration(file) {
+  return new Promise((resolve) => {
+    if (!file || !file.type.startsWith('video/')) return resolve(null);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    const objectUrl = URL.createObjectURL(file);
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(video.duration);
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(null);
+    };
+    video.src = objectUrl;
+  });
+}
+
 async function moveMobileReportStep(direction) {
   const form = document.querySelector('form[data-form="report"]');
   if (!form) return;
   if (direction > 0 && !form.reportValidity()) return;
   const values = Object.fromEntries([...new FormData(form).entries()].filter(([name, value]) => name !== 'attachments' && !(value instanceof File)));
-  const files = [...(form.querySelector('input[name="attachments"]')?.files || [])];
+  const files = [...form.querySelectorAll('input[name="attachments"]')].flatMap((input) => [...input.files]);
   const currentAttachments = state.mobileReportDraft?.attachments || [];
   if (currentAttachments.length + files.length > 5) throw new Error('You can attach up to five files.');
   for (const file of files) {
-    if (!['image/jpeg', 'image/png', 'video/mp4'].includes(file.type)) throw new Error('Choose JPG, PNG, or MP4 files.');
-    if (file.size > 10 * 1024 * 1024) throw new Error(`${file.name} exceeds the 10 MB limit.`);
+    if (!['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime'].includes(file.type)) {
+      throw new Error('Palihog pagpili og JPG, PNG, WebP, MP4, o MOV nga files.');
+    }
+    if (file.type.startsWith('video/')) {
+      if (file.size > 50 * 1024 * 1024) {
+        throw new Error(`${file.name} exceeds the 50 MB limit. Palihog gamita ang mas mubo o compressed nga video.`);
+      }
+      const duration = await getVideoDuration(file);
+      if (duration && duration > 600) {
+        const mins = Math.ceil(duration / 60);
+        throw new Error(`Ang gi-upload nga video (${mins} mins) milapas sa 10 minutos nga limit. Ang gitugot nga video duration kay hangtod 5-10 minutos lamang.`);
+      }
+    } else {
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error(`${file.name} exceeds the 10 MB limit.`);
+      }
+    }
   }
   const addedAttachments = await Promise.all(files.map(async (file) => ({
     name: file.name,
@@ -475,6 +623,7 @@ async function renderMobileAnnouncements() {
     </div>
     ${mobileCard('', visibleAnnouncements.length ? visibleAnnouncements.map((a) => `
       <div class="mobile-announcement">
+        ${a.image_path ? `<img class="mobile-announcement-image" src="${escapeHtml(a.image_path)}" alt="${escapeHtml(a.title)}">` : ''}
         <span class="tag">${escapeHtml(a.category)}</span>
         <strong>${escapeHtml(a.title)}</strong>
         <p>${escapeHtml(a.content)}</p>
@@ -541,10 +690,10 @@ async function renderMobileReports() {
     : reports;
 
   mobileShell(`
-    ${mobileHero('My Reports', 'Track reports you have submitted and their verification status.')}
+    ${mobileHero(t('my_reports', 'My Reports'), t('my_reports_sub', 'Track reports you have submitted and their verification status.'))}
     <div class="mobile-report-actions">
-      <button class="button primary block" data-action="compose-report">＋ Report an interruption</button>
-      <button class="button ghost block" data-mobile-tab="history">View outage history</button>
+      <button class="button primary block" data-action="compose-report">${t('report_interruption', '＋ Report an interruption')}</button>
+      <button class="button ghost block" data-mobile-tab="history">${t('outage_history', 'View outage history')}</button>
     </div>
     <div class="mobile-segments" role="group" aria-label="Filter reports">
       ${['', 'pending', 'Verified', 'Resolved'].map((status) => `
@@ -580,9 +729,63 @@ async function renderMobileReportDetail() {
     ['In Progress', report.incident?.status === 'Ongoing' || report.incident?.status === 'Restoration in Progress' ? report.updated_at : null],
     ['Resolved', report.status === 'Resolved' || report.incident?.status === 'Closed' ? report.updated_at : null],
   ];
+
+  const etrTime = report.incident?.estimated_restoration || report.estimated_restoration;
+  const isResolved = report.status === 'Resolved' || report.incident?.status === 'Closed';
+  const etrMarkup = isResolved ? `
+    <div class="mobile-etr-badge" style="background:#ecfdf5;border:1.5px solid #10b981;border-radius:10px;padding:12px;margin:12px 0;">
+      <div style="display:flex;align-items:center;gap:8px;font-weight:700;color:#047857;">
+        <span>⚡</span>
+        <span>${t('etr_label', 'Estimated Restoration (ETR)')}: Restored</span>
+      </div>
+      <p style="margin:4px 0 0;font-size:0.82rem;color:#065f46;">Power restoration completed and verified.</p>
+    </div>` : `
+    <div class="mobile-etr-badge" style="background:#eef7ff;border:1.5px solid #0284c7;border-radius:10px;padding:12px;margin:12px 0;">
+      <div style="display:flex;align-items:center;gap:8px;font-weight:700;color:#0369a1;">
+        <span>⏱️</span>
+        <span>${t('etr_label', 'Estimated Restoration (ETR)')}: ${etrTime ? formatDateTime(etrTime) : 'Calculating (~2 to 3 hrs)'}</span>
+      </div>
+      <p style="margin:4px 0 0;font-size:0.82rem;color:#334155;">
+        ${escapeHtml(report.incident?.etr_reason || 'Automated restoration estimate calculated by Valencia PowerWatch AI/ETR engine based on fault severity and weather.')}
+      </p>
+    </div>`;
+
+  const feedbackCardMarkup = isResolved ? `
+    <section class="mobile-card" style="border:1.5px solid #10b981;background:#f8fafc;border-radius:12px;padding:16px;margin-top:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+      <header style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-size:1.3rem;">⭐</span>
+        <h3 style="margin:0;font-size:1rem;color:#0f172a;">${t('rate_service', 'Rate Restoration Service')}</h3>
+      </header>
+      <p style="margin:0 0 12px 0;font-size:0.85rem;color:#475569;">${t('power_restored_q', 'Was electrical power restored at your residence?')}</p>
+      <form class="mobile-form" data-form="citizen-report-feedback" data-report-id="${report.id}" data-incident-id="${report.incident_id || ''}">
+        <div style="display:flex;gap:16px;margin-bottom:12px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;cursor:pointer;font-weight:600;color:#059669;">
+            <input type="radio" name="restoration_confirmed" value="1" checked> ${t('yes_restored', 'Yes, Power Restored')}
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;cursor:pointer;font-weight:600;color:#dc2626;">
+            <input type="radio" name="restoration_confirmed" value="0"> ${t('not_yet', 'Not Yet Restored')}
+          </label>
+        </div>
+        <div class="feedback-star-control" style="margin-bottom:10px;">
+          <span style="font-size:0.85rem;font-weight:600;color:#334155;margin-bottom:4px;display:block;">Satisfaction Rating:</span>
+          <div class="feedback-stars" role="group" aria-label="Choose a rating">
+            ${[1, 2, 3, 4, 5].map((rating) => `<button type="button" class="feedback-star ${rating <= (state.citizenRating || 5) ? 'selected' : ''}" data-action="citizen-feedback-star" data-value="${rating}" aria-label="${rating} star${rating === 1 ? '' : 's'}">★</button>`).join('')}
+          </div>
+          <input type="hidden" name="rating" value="${state.citizenRating || 5}">
+        </div>
+        <label style="margin-bottom:12px;display:block;">
+          <textarea name="feedback_text" class="input" rows="2" placeholder="${t('comments_optional', 'Additional comments or feedback (optional)…')}" style="width:100%;margin-top:4px;border-radius:8px;font-size:0.85rem;"></textarea>
+        </label>
+        <button class="button primary block" type="submit" style="background:#059669;border-color:#059669;font-weight:700;">
+          ${t('send_feedback', 'Submit Feedback & Rating')}
+        </button>
+      </form>
+    </section>` : '';
+
   mobileShell(`
     <section class="mobile-card report-detail-card">
       <div class="mobile-detail-top"><span class="mobile-report-pin large">⌖</span><div><strong>${escapeHtml(report.report_code)}</strong><span>${escapeHtml(formatDateTime(report.date_time_noticed))}</span></div>${statusPill(report.status)}</div>
+      ${etrMarkup}
       <div class="mobile-detail-row"><strong>Interruption Type</strong><span>${escapeHtml(report.possible_outage_type || 'Power outage')}</span></div>
       <div class="mobile-detail-row"><strong>Barangay</strong><span>${escapeHtml(report.barangay)}</span></div>
       <div class="mobile-detail-row"><strong>Location</strong><span>${escapeHtml(report.location || (hasCoordinates(report) ? `${report.latitude}, ${report.longitude}` : 'Not provided'))}</span></div>
@@ -598,6 +801,7 @@ async function renderMobileReportDetail() {
         <div class="mobile-timeline-item ${date ? 'complete' : ''}"><span class="timeline-marker">${date ? '✓' : ''}</span><strong>${escapeHtml(label)}</strong><time>${date ? escapeHtml(formatDateTime(date)) : 'Pending'}</time></div>
       `).join('')}</div>
     </section>
+    ${feedbackCardMarkup}
   `, {
     activeTab: 'reports',
     subpageHeader: {
@@ -706,27 +910,64 @@ async function renderMobileMap() {
   window.requestAnimationFrame(() => map.invalidateSize());
 }
 
-async function renderMobileNotifications() {
-  const { notifications } = await api('/api/notifications');
+function filterMobileNotifications(notifications) {
   const preferences = readNotificationPreferences();
-  const visibleNotifications = notifications.filter((notice) => {
+  return notifications.filter((notice) => {
     if (notice.type === 'report') return preferences.reportUpdates;
     if (notice.type === 'incident') return preferences.outageAlerts;
     if (notice.type === 'scheduled') return preferences.scheduledOutages;
     if (notice.type === 'announcement') return preferences.announcements;
     return preferences.general;
   });
+}
+
+async function renderMobileNotifications() {
+  const { notifications } = await api('/api/notifications');
+  const visibleNotifications = filterMobileNotifications(notifications);
   state.mobileNotifications = visibleNotifications;
   mobileShell(`
-    ${mobileHero('Notifications', 'Updates about your reports and local power interruptions.')}
-    ${mobileCard('Alerts', visibleNotifications.length ? visibleNotifications.map((notice) => `
-      <button type="button" class="mobile-list-item mobile-notification-item ${notice.read ? '' : 'unread'}" data-action="view-notification" data-id="${notice.id}">
-        <span class="mobile-notice-icon">${notice.type === 'report' ? '⌖' : notice.type === 'incident' ? '⚡' : 'i'}</span>
-        <div class="mobile-list-main"><strong>${escapeHtml(notice.title)}</strong><span>${escapeHtml(notice.message)}</span><span class="muted small">${escapeHtml(formatDateTime(notice.created_at))}</span></div>
-        ${notice.read ? '' : '<span class="unread-dot"></span>'}
-      </button>`).join('') : '<p class="muted small">No notifications yet.</p>',
-    visibleNotifications.some((notice) => !notice.read) ? '<button class="link-button" data-action="mark-all-read">Mark all read</button>' : '')}
-  `, { activeTab: 'notifications' });
+    ${mobileHero('Notifications', 'Updates about your reports, power advisories, and outages.')}
+    <div class="mobile-notification-full-wrap">
+      ${mobileCard('Alerts & Updates', visibleNotifications.length ? visibleNotifications.map((notice) => `
+        <article class="mobile-notification-full-row ${notice.read ? 'read' : 'unread'}">
+          <span class="mobile-notif-type-icon ${escapeHtml(notice.type || 'general')}">
+            ${notificationTypeIcon(notice.type)}
+          </span>
+          <button type="button" class="mobile-notif-full-main" data-action="view-notification" data-id="${notice.id}">
+            <div class="notif-item-top">
+              <strong class="notif-item-title">${escapeHtml(notice.title)}</strong>
+              <time class="notif-item-time">${escapeHtml(formatRelativeTime(notice.created_at))}</time>
+            </div>
+            <p class="notif-full-msg">${escapeHtml(notice.message || '')}</p>
+          </button>
+          <div class="notif-item-actions">
+            ${!notice.read ? `
+              <button type="button" class="mobile-notification-preview-read" data-action="mark-mobile-notification-read" data-id="${notice.id}" aria-label="Mark ${escapeHtml(notice.title)} as read" title="Mark as read">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </button>
+            ` : `
+              <span class="notif-item-read-icon" title="Read" aria-hidden="true">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </span>
+            `}
+          </div>
+        </article>
+      `).join('') : '<p class="muted small" style="text-align: center; padding: 24px 0;">No notifications found.</p>',
+      visibleNotifications.some((notice) => !notice.read) ? '<button class="link-button" data-action="mark-all-read">Mark all as read</button>' : '')}
+    </div>
+  `, {
+    showTabs: false,
+    subpageHeader: {
+      title: 'Notifications',
+      backAction: 'back-home',
+      rightAction: `<button type="button" class="mobile-bell" data-action="open-notification-settings" aria-label="Notification Preferences" title="Notification Preferences">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>`,
+    },
+  });
 }
 
 async function renderMobileScheduled() {
@@ -822,38 +1063,38 @@ function renderMobileSettings() {
 
       <button type="button" class="mobile-settings-row" data-action="open-language-dialog">
         <span class="mobile-settings-icon-wrap">${icons.language}</span>
-        <span class="mobile-settings-label">Language 🌐</span>
-        <span class="mobile-settings-val-link">English ${chevronSvg}</span>
+        <span class="mobile-settings-label">${t('language', 'Language / Pinulongan')}</span>
+        <span class="mobile-settings-val-link">${getLanguage() === 'ceb' ? 'Sinugbuanong Binisaya 🇵🇭' : 'English 🇺🇸'} ${chevronSvg}</span>
       </button>
 
       <button type="button" class="mobile-settings-row static" data-action="show-version-info">
         <span class="mobile-settings-icon-wrap">${icons.version}</span>
-        <span class="mobile-settings-label">App Version</span>
+        <span class="mobile-settings-label">${t('app_version', 'App Version')}</span>
         <span class="mobile-settings-version">v1.0.0</span>
       </button>
 
       <button type="button" class="mobile-settings-row" data-action="show-support">
         <span class="mobile-settings-icon-wrap">${icons.support}</span>
-        <span class="mobile-settings-label">Help &amp; Support</span>
+        <span class="mobile-settings-label">${t('help_support', 'Help & Support')}</span>
         ${chevronSvg}
       </button>
 
       <button type="button" class="mobile-settings-row" data-action="show-about">
         <span class="mobile-settings-icon-wrap">${icons.about}</span>
-        <span class="mobile-settings-label">About Valencia PowerWatch</span>
+        <span class="mobile-settings-label">${t('about_powerwatch', 'About Valencia PowerWatch')}</span>
         ${chevronSvg}
       </button>
     </div>
 
     <button type="button" class="mobile-logout-pill-btn" data-action="logout">
       ${icons.logout}
-      <span>Log Out</span>
+      <span>${t('logout', 'Log Out')}</span>
     </button>
   `, {
     activeTab: 'profile',
     showTabs: false,
     subpageHeader: {
-      title: 'Settings',
+      title: t('settings', 'Settings'),
       backAction: 'back-to-profile',
     },
   });

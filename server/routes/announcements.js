@@ -1,5 +1,8 @@
 const express = require('express');
-const { db, now } = require('../db');
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const { db, now, UPLOAD_DIR } = require('../db');
 const { requireAuth, requireRole, audit, notifyAllActive } = require('../auth');
 
 const router = express.Router();
@@ -8,6 +11,24 @@ const CATEGORIES = [
   'Scheduled Outage', 'Restoration Update', 'Emergency Advisory',
   'Service Advisory', 'General Information', 'System Announcement',
 ];
+
+const saveAnnouncementImage = async (imageData) => {
+  if (!imageData) return null;
+  const match = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(imageData);
+  if (!match) throw Object.assign(new Error('Choose a JPG, PNG, or WebP announcement image.'), { status: 400 });
+  const buffer = Buffer.from(match[2], 'base64');
+  if (buffer.length > 4 * 1024 * 1024) throw Object.assign(new Error('Announcement images must be 4 MB or smaller.'), { status: 400 });
+  const extension = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[match[1]];
+  const filename = `announcement_${crypto.randomUUID()}.${extension}`;
+  await fs.promises.writeFile(path.join(UPLOAD_DIR, filename), buffer, { flag: 'wx' });
+  return `/uploads/${filename}`;
+};
+
+const removeAnnouncementImage = async (imagePath) => {
+  const filename = path.basename(String(imagePath || ''));
+  if (!/^announcement_[\w-]+\.(?:jpg|png|webp)$/.test(filename)) return;
+  await fs.promises.unlink(path.join(UPLOAD_DIR, filename)).catch(() => {});
+};
 
 const rowById = (id) => {
   const row = db.prepare(`
@@ -49,36 +70,54 @@ router.get('/:id', requireAuth, (req, res) => {
 });
 
 // Create announcement (personnel / administrator / utility)
-router.post('/', requireAuth, requireRole('personnel', 'administrator', 'utility'), (req, res) => {
-  const { title, content, category, publish } = req.body || {};
+router.post('/', requireAuth, requireRole('personnel', 'administrator', 'utility'), async (req, res, next) => {
+  const { title, content, category, publish, imageData } = req.body || {};
   if (!title || !String(title).trim()) return res.status(400).json({ error: 'Announcement title is required.' });
   if (!content || !String(content).trim()) return res.status(400).json({ error: 'Announcement content is required.' });
 
+  let imagePath;
   const ts = now();
   const status = publish ? 'Published' : 'Draft';
-  const info = db.prepare(`
-    INSERT INTO announcements (title, content, category, status, published_at, created_by, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(String(title).trim(), String(content).trim(), category || 'General Information', status, publish ? ts : null, req.user.id, ts);
+  let info;
+  try {
+    imagePath = await saveAnnouncementImage(imageData);
+    info = db.prepare(`
+      INSERT INTO announcements (title, content, category, status, image_path, published_at, created_by, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(String(title).trim(), String(content).trim(), category || 'General Information', status, imagePath, publish ? ts : null, req.user.id, ts);
+  } catch (error) {
+    if (imagePath) await removeAnnouncementImage(imagePath);
+    next(error);
+    return;
+  }
 
   const row = rowById(info.lastInsertRowid);
   audit(req.user, status === 'Published' ? 'Announcement published' : 'Announcement drafted', `Announcement "${row.title}" ${status}.`);
-
   if (status === 'Published') {
     notifyAllActive('New announcement', `${row.title} (${row.category})`, 'announcement');
   }
-
   res.status(201).json({ announcement: row, message: status === 'Published' ? 'Announcement published and residents notified.' : 'Announcement saved as draft.' });
 });
 
 // Edit
-router.put('/:id', requireAuth, requireRole('personnel', 'administrator', 'utility'), (req, res) => {
+router.put('/:id', requireAuth, requireRole('personnel', 'administrator', 'utility'), async (req, res, next) => {
   const row = rowById(req.params.id);
   if (!row) return res.status(404).json({ error: 'Announcement not found.' });
-  const { title, content, category } = req.body || {};
-  db.prepare(`
-    UPDATE announcements SET title = COALESCE(?, title), content = COALESCE(?, content), category = COALESCE(?, category) WHERE id = ?
-  `).run(title || null, content || null, category || null, row.id);
+  const { title, content, category, imageData, removeImage } = req.body || {};
+  let newImagePath;
+  let imagePath;
+  try {
+    newImagePath = imageData ? await saveAnnouncementImage(imageData) : null;
+    imagePath = newImagePath || (removeImage ? null : row.image_path);
+    db.prepare(`
+      UPDATE announcements SET title = COALESCE(?, title), content = COALESCE(?, content), category = COALESCE(?, category), image_path = ? WHERE id = ?
+    `).run(title || null, content || null, category || null, imagePath, row.id);
+  } catch (error) {
+    if (newImagePath) await removeAnnouncementImage(newImagePath);
+    next(error);
+    return;
+  }
+  if (row.image_path && row.image_path !== imagePath) await removeAnnouncementImage(row.image_path);
   audit(req.user, 'Announcement edited', `Announcement "${row.title}" edited.`);
   res.json({ announcement: rowById(row.id), message: 'Announcement updated.' });
 });
@@ -102,11 +141,12 @@ router.put('/:id/status', requireAuth, requireRole('personnel', 'administrator',
   res.json({ announcement: updated, message });
 });
 
-router.delete('/:id', requireAuth, requireRole('personnel', 'administrator', 'utility'), (req, res) => {
+router.delete('/:id', requireAuth, requireRole('personnel', 'administrator', 'utility'), async (req, res) => {
   const row = rowById(req.params.id);
   if (!row) return res.status(404).json({ error: 'Announcement not found.' });
 
   db.prepare('DELETE FROM announcements WHERE id = ?').run(row.id);
+  await removeAnnouncementImage(row.image_path);
   audit(req.user, 'Announcement deleted', `Announcement "${row.title}" was deleted.`);
   res.json({ message: 'Announcement deleted successfully.' });
 });

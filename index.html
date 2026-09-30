@@ -5,20 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Valencia PowerWatch</title>
     <meta name="description" content="Community Power Interruption Reporting, Verification, and Information Management System for Valencia City, Bukidnon." />
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="/style.css" />
     <script>
       window.POWERWATCH_PORTAL = 'auto';
     </script>
   </head>
   <body>
     <div id="app"></div>
-    <script src="app/core.js"></script>
+    <script src="/app/core.js"></script>
     <script>
       const portalScript = document.createElement('script');
-      portalScript.src = window.matchMedia('(max-width: 780px)').matches ? 'app/community.js' : 'app/admin.js';
+      portalScript.src = window.matchMedia('(max-width: 780px)').matches ? '/app/community.js' : '/app/admin.js';
       portalScript.onload = () => {
         const routerScript = document.createElement('script');
-        routerScript.src = 'app/main.js';
+        routerScript.src = '/app/main.js';
         document.body.append(routerScript);
       };
       document.body.append(portalScript);

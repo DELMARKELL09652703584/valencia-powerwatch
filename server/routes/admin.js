@@ -10,7 +10,7 @@ const {
 const router = express.Router();
 
 const userPublic = (u) => ({
-  id: u.id, full_name: u.full_name, email: u.email, contact_number: u.contact_number,
+  id: u.id, full_name: u.full_name, username: u.username || null, email: u.email, contact_number: u.contact_number,
   address: u.address, barangay: u.barangay, role: u.role, status: u.status,
   created_at: u.created_at, last_login: u.last_login,
 });
@@ -79,6 +79,9 @@ router.put('/users/:id/status', requireAuth, requireRole('administrator'), (req,
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(req.params.id));
   if (!user) return res.status(404).json({ error: 'User not found.' });
   if (user.id === req.user.id) return res.status(400).json({ error: 'You cannot deactivate your own account.' });
+  if (user.username === 'DELMARKEL2003' || user.email === 'DELMARKEL2003') {
+    return res.status(400).json({ error: 'The primary system administrator account cannot be deactivated.' });
+  }
   const { status } = req.body || {};
   if (!['Active', 'Inactive'].includes(status)) return res.status(400).json({ error: 'Invalid status.' });
   db.prepare('UPDATE users SET status = ? WHERE id = ?').run(status, user.id);
@@ -91,6 +94,9 @@ router.delete('/users/:id', requireAuth, requireRole('administrator'), (req, res
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(req.params.id));
   if (!user) return res.status(404).json({ error: 'User not found.' });
   if (user.id === req.user.id) return res.status(400).json({ error: 'You cannot delete your own administrator account.' });
+  if (user.username === 'DELMARKEL2003' || user.email === 'DELMARKEL2003') {
+    return res.status(400).json({ error: 'The primary system administrator account cannot be deleted.' });
+  }
 
   db.prepare("UPDATE users SET status = 'Deleted' WHERE id = ?").run(user.id);
   db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
@@ -103,6 +109,9 @@ router.put('/users/:id/role', requireAuth, requireRole('administrator'), (req, r
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(req.params.id));
   if (!user) return res.status(404).json({ error: 'User not found.' });
   if (user.id === req.user.id) return res.status(400).json({ error: 'You cannot change your own role.' });
+  if (user.username === 'DELMARKEL2003' || user.email === 'DELMARKEL2003') {
+    return res.status(400).json({ error: 'The primary system administrator role cannot be altered.' });
+  }
   const { role } = req.body || {};
   if (!ROLES[role]) return res.status(400).json({ error: 'Invalid role.' });
   db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, user.id);

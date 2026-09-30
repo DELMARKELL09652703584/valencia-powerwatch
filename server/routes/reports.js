@@ -9,12 +9,12 @@ const { requireAuth, requireRole, audit, notifyRole, notifyUsers } = require('..
 const router = express.Router();
 
 const STATUS_FLOW = ['Submitted', 'Under Review', 'Verified', 'Officially Confirmed', 'Unverified', 'Duplicate', 'Rejected', 'Resolved'];
-const ATTACHMENT_TYPES = new Set(['image/jpeg', 'image/png', 'video/mp4']);
+const ATTACHMENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime']);
 const reportUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { files: 5, fileSize: 10 * 1024 * 1024 },
+  limits: { files: 5, fileSize: 50 * 1024 * 1024 },
   fileFilter: (req, file, callback) => {
-    if (!ATTACHMENT_TYPES.has(file.mimetype)) return callback(new Error('Use JPG, PNG, or MP4 attachments.'));
+    if (!ATTACHMENT_TYPES.has(file.mimetype)) return callback(new Error('Use JPG, PNG, WebP, MP4, or MOV attachments.'));
     return callback(null, true);
   },
 });
@@ -27,11 +27,13 @@ const parseReportAttachments = (req, res, next) => reportUpload.array('attachmen
 const validMediaSignature = (file) => {
   if (file.mimetype === 'image/jpeg') return file.buffer[0] === 0xff && file.buffer[1] === 0xd8 && file.buffer[2] === 0xff;
   if (file.mimetype === 'image/png') return file.buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
-  return file.mimetype === 'video/mp4' && file.buffer.toString('ascii', 4, 8) === 'ftyp';
+  if (file.mimetype === 'image/webp') return file.buffer.toString('ascii', 0, 4) === 'RIFF' && file.buffer.toString('ascii', 8, 12) === 'WEBP';
+  return ['video/mp4', 'video/quicktime'].includes(file.mimetype) && file.buffer.toString('ascii', 4, 8) === 'ftyp';
 };
 
 const storeReportAttachment = async (file, reportId) => {
-  const extension = file.mimetype === 'image/jpeg' ? 'jpg' : file.mimetype === 'image/png' ? 'png' : 'mp4';
+  const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'video/mp4': 'mp4', 'video/quicktime': 'mov' };
+  const extension = extensions[file.mimetype];
   const filename = `report_${reportId}_${crypto.randomUUID()}.${extension}`;
   const filePath = path.join(UPLOAD_DIR, filename);
   const publicPath = `/uploads/${filename}`;

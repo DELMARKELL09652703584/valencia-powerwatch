@@ -5,6 +5,10 @@ function renderWelcomeScreen() {
     <div class="mobile-welcome-brand"><img class="welcome-logo" src="/assets/powerwatch-logo.svg" alt="Valencia PowerWatch logo"><h1>Valencia</h1><strong>PowerWatch</strong></div>
     <p>Community Power Interruption Reporting, Verification, and Information Management System for Valencia City, Bukidnon</p>
     <button class="button primary mobile-welcome-start" type="button" data-action="get-started">Get Started <span aria-hidden="true">→</span></button>
+    <a href="/install" class="button ghost full mobile-welcome-install" style="margin-top:10px;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+      <span>I-install sa Cellphone (App)</span>
+    </a>
     <div class="toast" role="status" hidden></div>
   </main>`;
 }
@@ -26,10 +30,22 @@ function renderLogin(message = '') {
         </form>
         <div class="auth-divider"><span>or continue with</span></div>
         <div class="social-row">
-          <button type="button" class="social-btn" data-action="start-oauth" data-provider="google"><span class="social-google">G</span>Google</button>
-          <button type="button" class="social-btn" data-action="start-oauth" data-provider="facebook"><span class="social-facebook">f</span>Facebook</button>
+          <button type="button" class="social-btn social-google-btn" data-action="start-oauth" data-provider="google" title="Continue with Google">
+            <svg class="social-icon-svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span>Google</span>
+          </button>
+          <button type="button" class="social-btn social-facebook-btn" data-action="start-oauth" data-provider="facebook" title="Continue with Facebook">
+            <svg class="social-icon-svg" viewBox="0 0 24 24" width="20" height="20" fill="#1877F2" aria-hidden="true">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+            <span>Facebook</span>
+          </button>
         </div>
-        ${!state.oauthProviders?.google || !state.oauthProviders?.facebook ? '<p class="auth-configuration-note">Social sign-in is unavailable until the server is configured.</p>' : ''}
         <p class="mobile-auth-switch">New here? <button type="button" data-action="go-register">Create an account</button></p>
       </section>
       <footer class="login-footer">Valencia City, Bukidnon</footer>
@@ -51,12 +67,12 @@ function renderLogin(message = '') {
         ${message ? `<div class="inline-alert">${escapeHtml(message)}</div>` : ''}
         <form class="form-stack" data-form="login">
           <label>Username or Email<input name="email" type="text" autocomplete="username" required></label>
-          <label>Password<span class="password-control"><input name="password" type="password" autocomplete="current-password" required><button type="button" data-action="toggle-password" aria-label="Show password">â—‰</button></span></label>
+          <label>Password<span class="password-control"><input name="password" type="password" autocomplete="current-password" required><button type="button" data-action="toggle-password" aria-label="Show password">&#9673;</button></span></label>
           <div class="admin-login-options"><label><input type="checkbox" name="remember" checked> Remember me</label><button type="button" data-action="forgot-password">Forgot password?</button></div>
           <button class="button primary full" type="submit">Login</button>
         </form>
       </div>
-      <footer class="login-footer">Â© ${new Date().getFullYear()} Valencia PowerWatch. All rights reserved.</footer>
+      <footer class="login-footer">&copy; ${new Date().getFullYear()} Valencia PowerWatch. All rights reserved.</footer>
       <div class="toast" role="status" hidden></div>
     </section>
   </main>`;
@@ -137,6 +153,24 @@ function renderRegister(message = '') {
           <label>Confirm Password<span class="mobile-password-field"><input name="confirm_password" type="password" minlength="6" autocomplete="new-password" required><button type="button" data-action="toggle-password" aria-label="Show password">&#9673;</button></span></label>
           <button class="button primary mobile-auth-submit" type="submit">Register</button>
         </form>
+        <div class="auth-divider"><span>or sign up with</span></div>
+        <div class="social-row">
+          <button type="button" class="social-btn social-google-btn" data-action="start-oauth" data-provider="google" title="Register with Google">
+            <svg class="social-icon-svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span>Google</span>
+          </button>
+          <button type="button" class="social-btn social-facebook-btn" data-action="start-oauth" data-provider="facebook" title="Register with Facebook">
+            <svg class="social-icon-svg" viewBox="0 0 24 24" width="20" height="20" fill="#1877F2" aria-hidden="true">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+            <span>Facebook</span>
+          </button>
+        </div>
         <p class="mobile-auth-switch">Already have an account? <button type="button" data-action="back-login">Login</button></p>
       </section>
       <div class="toast" role="status" hidden></div>
@@ -294,6 +328,14 @@ function updateIncidentChipPicker(picker, values) {
   list.innerHTML = [...selected].map((value) => `<span class="incident-selection-chip">${escapeHtml(labels.get(value) || value)}<button type="button" data-action="remove-incident-chip" data-value="${escapeHtml(value)}" aria-label="Remove ${escapeHtml(labels.get(value) || value)}">×</button></span>`).join('');
 }
 
+async function readAnnouncementImage(form) {
+  const file = form.querySelector('[data-announcement-image]')?.files?.[0];
+  if (!file) return null;
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) throw new Error('Choose a JPG, PNG, or WebP announcement image.');
+  if (file.size > 4 * 1024 * 1024) throw new Error('Announcement images must be 4 MB or smaller.');
+  return readPhoto(file);
+}
+
 async function submitForm(form) {
   const type = form.dataset.form;
   if (!type) return;
@@ -365,8 +407,31 @@ async function submitForm(form) {
     return;
   }
   if (type === 'feedback') {
-    await send('/api/feedback', 'POST', { rating: Number(values.rating), comments: values.comments });
+    await send('/api/feedback', 'POST', { rating: Number(values.rating), feedback_text: values.comments, restoration_confirmed: 1 });
     setToast('Thank you for your feedback.');
+    return;
+  }
+  if (type === 'citizen-report-feedback') {
+    const reportId = form.dataset.reportId;
+    const incidentId = form.dataset.incidentId || null;
+    await send('/api/feedback', 'POST', {
+      report_id: reportId ? Number(reportId) : null,
+      incident_id: incidentId ? Number(incidentId) : null,
+      rating: Number(values.rating || 5),
+      restoration_confirmed: values.restoration_confirmed === '1' ? 1 : 0,
+      feedback_text: values.feedback_text || '',
+    });
+    setToast(t('feedback_success', 'Thank you for your feedback!'));
+    await render();
+    return;
+  }
+  if (type === 'test-sms') {
+    const result = await send('/api/sms/test', 'POST', {
+      phone_number: values.phone_number,
+      message: values.message,
+    });
+    setToast(result.simulated ? 'SMS simulated & logged in database (Demo mode)!' : 'SMS successfully dispatched via Semaphore!');
+    await render();
     return;
   }
   if (type === 'report') {
@@ -613,8 +678,9 @@ async function submitForm(form) {
     return;
   }
   if (type === 'new-announcement') {
+    const imageData = await readAnnouncementImage(target);
     await send('/api/announcements', 'POST', {
-      title: values.title, content: values.content, category: values.category, publish: values.publish === 'on',
+      title: values.title, content: values.content, category: values.category, publish: values.publish === 'on', imageData,
     });
     setToast('Announcement saved.');
     closeDialog();
@@ -622,8 +688,9 @@ async function submitForm(form) {
     return;
   }
   if (type === 'edit-announcement') {
+    const imageData = await readAnnouncementImage(target);
     await send(`/api/announcements/${target.dataset.id}`, 'PUT', {
-      title: values.title, content: values.content, category: values.category,
+      title: values.title, content: values.content, category: values.category, imageData, removeImage: values.remove_image === 'on',
     });
     setToast('Announcement updated.');
     closeDialog();
@@ -692,12 +759,12 @@ async function handleClick(event) {
         renderForgotPassword();
         return;
       case 'start-oauth':
-        if (!state.oauthProviders?.[value]) {
-          setToast(`${value === 'google' ? 'Google' : 'Facebook'} sign-in is not configured on this server.`);
+        {
+          const provider = actionButton.dataset.provider;
+          if (!['google', 'facebook'].includes(provider)) return;
+          startOAuthFlow(provider);
           return;
         }
-        window.location.assign(`/api/auth/oauth/${encodeURIComponent(value)}`);
-        return;
       case 'back-login':
         state.mobileAuthScreen = 'login';
         renderLogin();
@@ -736,16 +803,85 @@ async function handleClick(event) {
       case 'mark-all-read':
         await send('/api/notifications/read-all', 'PUT');
         await refreshUnread();
+        state.notificationPreview = (state.notificationPreview || []).map((notice) => ({ ...notice, read: 1 }));
+        state.adminNotifications = (state.adminNotifications || []).map((notice) => ({ ...notice, read: 1 }));
+        state.mobileNotificationPreview = (state.mobileNotificationPreview || []).map((notice) => ({ ...notice, read: 1 }));
+        state.mobileNotifications = (state.mobileNotifications || []).map((notice) => ({ ...notice, read: 1 }));
         setToast('All alerts marked as read.');
+        await render();
+        return;
+      case 'toggle-mobile-notification-panel':
+        if (state.mobileNotificationPanelOpen) {
+          state.mobileNotificationPanelOpen = false;
+          await render();
+          document.querySelector('[data-action="toggle-mobile-notification-panel"]')?.focus();
+          return;
+        }
+        {
+          const { notifications } = await api('/api/notifications');
+          state.mobileNotifications = filterMobileNotifications(notifications);
+          state.mobileNotificationPreview = state.mobileNotifications.slice(0, 5);
+          await refreshUnread();
+          state.mobileNotificationPanelOpen = true;
+          await render();
+          document.querySelector('#mobile-notification-panel [data-action="close-mobile-notification-panel"]')?.focus();
+          return;
+        }
+      case 'close-mobile-notification-panel':
+        state.mobileNotificationPanelOpen = false;
+        await render();
+        document.querySelector('[data-action="toggle-mobile-notification-panel"]')?.focus();
+        return;
+      case 'mark-mobile-notification-read':
+        await send(`/api/notifications/${id}`, 'PUT', { read: true });
+        state.mobileNotificationPreview = (state.mobileNotificationPreview || []).map((notice) => String(notice.id) === String(id) ? { ...notice, read: 1 } : notice);
+        state.mobileNotifications = (state.mobileNotifications || []).map((notice) => String(notice.id) === String(id) ? { ...notice, read: 1 } : notice);
+        await refreshUnread();
+        await render();
+        return;
+      case 'view-all-mobile-notifications':
+        state.mobileNotificationPanelOpen = false;
+        state.mobileTab = 'notifications';
+        await render();
+        return;
+      case 'toggle-notification-panel':
+        if (state.notificationPanelOpen) {
+          state.notificationPanelOpen = false;
+          await render();
+          document.querySelector('[data-action="toggle-notification-panel"]')?.focus();
+          return;
+        }
+        {
+          const { notifications } = await api('/api/notifications');
+          state.notificationPreview = notifications.slice(0, 6);
+          await refreshUnread();
+          state.notificationPanelOpen = true;
+          await render();
+          document.querySelector('.notification-panel-close')?.focus();
+          return;
+        }
+      case 'close-notification-panel':
+        state.notificationPanelOpen = false;
+        await render();
+        document.querySelector('[data-action="toggle-notification-panel"]')?.focus();
+        return;
+      case 'view-all-notifications':
+        state.notificationPanelOpen = false;
+        state.page = 'notifications';
         await render();
         return;
       case 'view-notification': {
         const notice = (state.mobileNotifications || []).find((item) => String(item.id) === String(id));
         if (!notice) return;
         if (!notice.read) {
-          await send(`/api/notifications/${id}/read`, 'PUT');
-          notice.read = 1;
+          await send(`/api/notifications/${id}`, 'PUT', { read: true });
+          state.mobileNotifications = (state.mobileNotifications || []).map((item) => String(item.id) === String(id) ? { ...item, read: 1 } : item);
+          state.mobileNotificationPreview = (state.mobileNotificationPreview || []).map((item) => String(item.id) === String(id) ? { ...item, read: 1 } : item);
           await refreshUnread();
+        }
+        if (state.mobileNotificationPanelOpen) {
+          state.mobileNotificationPanelOpen = false;
+          await render();
         }
         const reportCode = notice.type === 'report' ? String(notice.message || '').match(/\bVPR-\d+\b/)?.[0] : null;
         const { reports = [] } = reportCode ? await api('/api/reports/mine') : {};
@@ -787,6 +923,7 @@ async function handleClick(event) {
       case 'view-announcement': {
         const { announcement } = await api(`/api/announcements/${id}`);
         openDialog(announcement.title, `
+          ${announcement.image_path ? `<img class="announcement-detail-image" src="${escapeHtml(announcement.image_path)}" alt="${escapeHtml(announcement.title)}">` : ''}
           <p class="tag">${escapeHtml(announcement.category)}</p>
           <div class="detail-block"><p>${escapeHtml(announcement.content)}</p></div>
           <p class="muted small">${escapeHtml(formatDateTime(announcement.published_at || announcement.created_at))}</p>
@@ -810,6 +947,18 @@ async function handleClick(event) {
         const form = actionButton.closest('form');
         form.querySelector('input[name="rating"]').value = String(rating);
         form.querySelectorAll('[data-action="feedback-star"]').forEach((star) => {
+          const selected = Number(star.dataset.value) <= rating;
+          star.classList.toggle('selected', selected);
+          star.setAttribute('aria-pressed', String(Number(star.dataset.value) === rating));
+        });
+        return;
+      }
+      case 'citizen-feedback-star': {
+        const rating = Math.max(1, Math.min(5, Number(value)));
+        state.citizenRating = rating;
+        const form = actionButton.closest('form');
+        form.querySelector('input[name="rating"]').value = String(rating);
+        form.querySelectorAll('[data-action="citizen-feedback-star"]').forEach((star) => {
           const selected = Number(star.dataset.value) <= rating;
           star.classList.toggle('selected', selected);
           star.setAttribute('aria-pressed', String(Number(star.dataset.value) === rating));
@@ -848,27 +997,41 @@ async function handleClick(event) {
         openDialog('About Valencia PowerWatch', '<p>Community Power Interruption Reporting, Verification, and Information Management System for Valencia City, Bukidnon.</p><p>Version 1.0.0</p>', 'Close');
         setDialogFooter('<button type="button" class="button ghost" data-action="close-dialog">Close</button>');
         return;
-      case 'open-language-dialog':
+      case 'toggle-mobile-language': {
+        const nextLang = getLanguage() === 'ceb' ? 'en' : 'ceb';
+        setLanguage(nextLang);
+        setToast(nextLang === 'ceb' ? 'Sinugbuanong Binisaya 🇵🇭' : 'English 🇺🇸');
+        await render();
+        return;
+      }
+      case 'open-language-dialog': {
+        const currentLang = getLanguage();
         openDialog('Language / Pinulongan', `
           <div style="display:grid;gap:9px;padding:6px 0;">
-            <button type="button" class="button block" style="display:flex;justify-content:space-between;align-items:center;background:#edf5fd;color:#0366a6;font-weight:700;border:1.5px solid #0366a6;padding:12px 16px;border-radius:10px;" data-action="set-app-language" data-value="en">
-              <span>English (Current)</span>
-              <span>✓</span>
+            <button type="button" class="button ${currentLang === 'en' ? '' : 'ghost'} block" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:10px;${currentLang === 'en' ? 'background:#edf5fd;color:#0366a6;font-weight:700;border:1.5px solid #0366a6;' : ''}" data-action="set-app-language" data-value="en">
+              <span>English (US / PH)</span>
+              <span>${currentLang === 'en' ? '✓' : ''}</span>
             </button>
-            <button type="button" class="button ghost block" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:10px;" data-action="set-app-language" data-value="ceb">
-              <span>Sinugbuanong Binisaya</span>
-              <span class="muted small">(Default / Local)</span>
-            </button>
-            <button type="button" class="button ghost block" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:10px;" data-action="set-app-language" data-value="fil">
-              <span>Filipino / Tagalog</span>
+            <button type="button" class="button ${currentLang === 'ceb' ? '' : 'ghost'} block" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:10px;${currentLang === 'ceb' ? 'background:#edf5fd;color:#0366a6;font-weight:700;border:1.5px solid #0366a6;' : ''}" data-action="set-app-language" data-value="ceb">
+              <span>Sinugbuanong Binisaya (Valencia)</span>
+              <span>${currentLang === 'ceb' ? '✓' : ''}</span>
             </button>
           </div>
         `, 'Close');
         setDialogFooter('<button type="button" class="button ghost" data-action="close-dialog">Close</button>');
         return;
-      case 'set-app-language':
+      }
+      case 'set-app-language': {
+        const newLang = value === 'ceb' ? 'ceb' : 'en';
+        setLanguage(newLang);
         closeDialog();
-        setToast('Language preference updated.');
+        setToast(newLang === 'ceb' ? 'Gibalhin ngadto sa Sinugbuanong Binisaya 🇵🇭' : 'Language set to English 🇺🇸');
+        await render();
+        return;
+      }
+      case 'refresh-sms-logs':
+        await render();
+        setToast('SMS logs refreshed.');
         return;
       case 'show-version-info':
         setToast('Valencia PowerWatch Mobile App v1.0.0 (Valencia City)');
@@ -876,6 +1039,11 @@ async function handleClick(event) {
       case 'next-report-step':
         await moveMobileReportStep(1);
         return;
+      case 'pick-report-attachment': {
+        const kind = value === 'video' ? 'video' : 'photo';
+        actionButton.closest('form')?.querySelector(`input[name="attachments"][data-attachment-kind="${kind}"]`)?.click();
+        return;
+      }
       case 'remove-report-attachment':
         state.mobileReportDraft.attachments = (state.mobileReportDraft.attachments || []).filter((attachment, index) => index !== Number(actionButton.dataset.index));
         await render();
@@ -1000,6 +1168,10 @@ async function handleClick(event) {
         state.filters.announcementFilter = value;
         await render();
         return;
+      case 'reset-announcement-filters':
+        state.filters = { ...state.filters, announcementFilter: '', announcementCategory: '', announcementSearch: '' };
+        await render();
+        return;
       case 'filter-verification':
         state.filters.verificationStatus = value;
         state.verificationReportId = null;
@@ -1109,14 +1281,27 @@ async function handleClick(event) {
           </div>`, 'Send notification', { form: 'admin-notification' });
         return;
       case 'view-admin-notification': {
-        const notice = (state.adminNotifications || []).find((item) => String(item.id) === String(id));
+        const notice = [...(state.adminNotifications || []), ...(state.notificationPreview || [])]
+          .find((item) => String(item.id) === String(id));
         if (!notice) return;
+        if (!notice.read) {
+          await send(`/api/notifications/${id}`, 'PUT', { read: true });
+          state.notificationPreview = (state.notificationPreview || []).map((item) => String(item.id) === String(id) ? { ...item, read: 1 } : item);
+          state.adminNotifications = (state.adminNotifications || []).map((item) => String(item.id) === String(id) ? { ...item, read: 1 } : item);
+          await refreshUnread();
+        }
+        if (state.notificationPanelOpen) {
+          state.notificationPanelOpen = false;
+          await render();
+        }
         openDialog(notice.title, `<p>${escapeHtml(notice.message)}</p><p class="muted small">${escapeHtml(formatDateTime(notice.created_at))}</p>`, 'Close');
         setDialogFooter('<button type="button" class="button ghost" data-action="close-dialog">Close</button>');
         return;
       }
       case 'toggle-admin-notification':
         await send(`/api/notifications/${id}`, 'PUT', { read: value === 'read' });
+        state.notificationPreview = (state.notificationPreview || []).map((notice) => String(notice.id) === String(id) ? { ...notice, read: value === 'read' ? 1 : 0 } : notice);
+        state.adminNotifications = (state.adminNotifications || []).map((notice) => String(notice.id) === String(id) ? { ...notice, read: value === 'read' ? 1 : 0 } : notice);
         await refreshUnread();
         await render();
         return;
@@ -1139,33 +1324,6 @@ async function handleClick(event) {
         }
         const rows = [['Date & Time', 'User', 'Action', 'Module', 'IP Address']];
         logs.forEach((log) => rows.push([formatDateTime(log.created_at), log.user_name, log.action, auditModuleName(log.action), log.ip_address]));
-        const csv = rows.map((row) => row.map((item) => `"${String(item ?? '').replaceAll('"', '""')}"`).join(',')).join('\r\n');
-        const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }));
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `powerwatch-audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
-        link.click();
-        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-        setToast(`Exported ${logs.length} audit log${logs.length === 1 ? '' : 's'}.`);
-        return;
-      }
-      case 'reset-audit-filters':
-        state.filters = { ...state.filters, auditSearch: '', auditFrom: '', auditTo: '' };
-        state.auditPage = 1;
-        await render();
-        return;
-      case 'export-audit-logs': {
-        const filters = { q: state.filters.auditSearch, from: state.filters.auditFrom, to: state.filters.auditTo };
-        const firstPage = await api(`/api/admin/audit-logs${query({ ...filters, limit: 5000, offset: 0 })}`);
-        const logs = [...firstPage.logs];
-        for (let offset = logs.length; offset < firstPage.total; offset += 5000) {
-          const next = await api(`/api/admin/audit-logs${query({ ...filters, limit: 5000, offset })}`);
-          logs.push(...next.logs);
-        }
-        const rows = [['Date & Time', 'User', 'Action', 'Module', 'IP Address']];
-        logs.forEach((log) => rows.push([
-          formatDateTime(log.created_at), log.user_name, log.action, auditModuleName(log.action), log.ip_address,
-        ]));
         const csv = rows.map((row) => row.map((item) => `"${String(item ?? '').replaceAll('"', '""')}"`).join(',')).join('\r\n');
         const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }));
         const link = document.createElement('a');
@@ -1377,6 +1535,8 @@ async function handleClick(event) {
             <label>Title<input class="input" name="title" required></label>
             <label>Category<select class="input" name="category">${(state.config.announcement_categories || []).map((c) => `<option>${escapeHtml(c)}</option>`).join('')}</select></label>
             <label class="wide-field">Content<textarea class="input" name="content" rows="5" required></textarea></label>
+            <label class="wide-field announcement-image-field">Cover image (optional)<input class="input" type="file" name="image" data-announcement-image accept="image/jpeg,image/png,image/webp"><span>JPG, PNG, or WebP. Maximum 4 MB.</span></label>
+            <div class="wide-field announcement-image-preview" data-announcement-preview hidden><img alt="Announcement image preview"></div>
             <label class="checkbox-field"><input type="checkbox" name="publish" checked> Publish immediately and notify all users</label>
           `, 'Save announcement', { form: 'new-announcement' });
         return;
@@ -1387,6 +1547,9 @@ async function handleClick(event) {
             <label>Title<input class="input" name="title" value="${escapeHtml(announcement.title)}" required></label>
             <label>Category<select class="input" name="category">${(state.config.announcement_categories || []).map((c) => `<option ${announcement.category === c ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}</select></label>
             <label class="wide-field">Content<textarea class="input" name="content" rows="5" required>${escapeHtml(announcement.content)}</textarea></label>
+            <label class="wide-field announcement-image-field">Cover image<input class="input" type="file" name="image" data-announcement-image accept="image/jpeg,image/png,image/webp"><span>JPG, PNG, or WebP. Maximum 4 MB.</span></label>
+            <div class="wide-field announcement-image-preview" data-announcement-preview ${announcement.image_path ? '' : 'hidden'}><img src="${escapeHtml(announcement.image_path || '')}" alt="Current announcement image"></div>
+            ${announcement.image_path ? '<label class="wide-field checkbox-field"><input type="checkbox" name="remove_image"> Remove current image</label>' : ''}
           `, 'Save changes', { form: 'edit-announcement', id });
         return;
       }
@@ -1539,6 +1702,248 @@ async function handleClick(event) {
   }
 }
 
+function startOAuthFlow(provider) {
+  if (state.oauthProviders?.[`${provider}Live`]) {
+    window.location.assign(`/api/auth/oauth/${encodeURIComponent(provider)}`);
+    return;
+  }
+
+  const width = 480;
+  const height = 620;
+  const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
+  const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
+  const url = `/auth/oauth-dialog?provider=${encodeURIComponent(provider)}`;
+
+  try {
+    const popup = window.open(
+      url,
+      'ValenciaPowerWatchOAuth',
+      `width=${width},height=${height},left=${left},top=${top},status=0,toolbar=0,menubar=0,location=0,resizable=yes,scrollbars=yes`
+    );
+
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      openSocialAuthModal(provider);
+    } else {
+      popup.focus();
+    }
+  } catch (e) {
+    openSocialAuthModal(provider);
+  }
+}
+
+window.addEventListener('message', async (event) => {
+  if (event.data && event.data.type === 'OAUTH_AUTH_SUCCESS') {
+    state.user = event.data.user;
+    setToast(event.data.message || `Signed in with ${event.data.provider === 'google' ? 'Google' : 'Facebook'} successfully.`);
+    await afterLogin();
+  }
+});
+
+function openSocialAuthModal(provider) {
+  const existing = document.getElementById('social-auth-overlay');
+  if (existing) existing.remove();
+
+  const isGoogle = provider === 'google';
+  const providerLabel = isGoogle ? 'Google' : 'Facebook';
+  const isLiveConfigured = Boolean(state.oauthProviders?.[`${provider}Live`]);
+
+  const overlay = document.createElement('div');
+  overlay.id = 'social-auth-overlay';
+  overlay.className = 'social-auth-overlay';
+
+  overlay.innerHTML = `
+    <div class="social-auth-modal" role="dialog" aria-modal="true" aria-labelledby="social-modal-title">
+      <div class="social-modal-header ${isGoogle ? 'google-header' : 'facebook-header'}">
+        <div class="social-modal-branding">
+          ${isGoogle ? `
+            <svg class="social-modal-logo" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+          ` : `
+            <svg class="social-modal-logo" viewBox="0 0 24 24" width="28" height="28" fill="#1877F2" aria-hidden="true">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+          `}
+          <div>
+            <h2 id="social-modal-title">${isGoogle ? 'Sign in with Google' : 'Log in with Facebook'}</h2>
+            <p class="social-modal-sub">${isGoogle ? 'Choose an account to continue to <b>Valencia PowerWatch</b>' : 'Connect your Facebook account to <b>Valencia PowerWatch</b>'}</p>
+          </div>
+        </div>
+        <button type="button" class="social-modal-close" data-social-action="close" aria-label="Close dialog">&times;</button>
+      </div>
+
+      <div class="social-modal-body">
+        <div class="social-modal-alert" hidden></div>
+
+        <div class="social-quick-accounts-section">
+          <p class="social-section-title">Select registered account:</p>
+          <div class="social-accounts-list">
+            <button type="button" class="social-account-card" data-social-action="select-user" data-name="Armiralyn Suello" data-email="suelloalmiralyn@gmail.com">
+              <div class="social-user-avatar">AS</div>
+              <div class="social-user-info">
+                <strong>Armiralyn Suello</strong>
+                <span>suelloalmiralyn@gmail.com</span>
+              </div>
+              <span class="social-user-badge">Resident</span>
+            </button>
+            <button type="button" class="social-account-card" data-social-action="select-user" data-name="Lui Gie Aguimbag" data-email="luigie.aguimbag@gmail.com">
+              <div class="social-user-avatar">LA</div>
+              <div class="social-user-info">
+                <strong>Lui Gie Aguimbag</strong>
+                <span>luigie.aguimbag@gmail.com</span>
+              </div>
+              <span class="social-user-badge">Resident</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="auth-divider" style="margin: 14px 0;"><span>or enter ${providerLabel} details</span></div>
+
+        <form class="social-custom-form" data-social-form="custom">
+          <label class="social-input-group">
+            <span>Full Name</span>
+            <input type="text" name="full_name" placeholder="${isGoogle ? 'e.g. Maria Santos' : 'e.g. Juan Dela Cruz'}" required autocomplete="name">
+          </label>
+          <label class="social-input-group">
+            <span>${providerLabel} Email Address</span>
+            <input type="email" name="email" placeholder="${isGoogle ? 'name@gmail.com' : 'name@facebook.com'}" required autocomplete="email">
+          </label>
+          <div class="social-permission-notice">
+            <span class="social-lock-icon">🔒</span>
+            <span>${isGoogle ? 'Google shares your name and email with Valencia PowerWatch to securely authenticate your resident session.' : 'PowerWatch receives your name and email. This does not grant posting permissions.'}</span>
+          </div>
+          <div class="social-modal-actions">
+            <button type="button" class="button ghost social-cancel-btn" data-social-action="close">Cancel</button>
+            <button type="submit" class="button primary social-submit-btn ${isGoogle ? 'google-submit' : 'facebook-submit'}">
+              <span class="submit-text">Continue with ${providerLabel}</span>
+              <span class="submit-spinner" hidden></span>
+            </button>
+          </div>
+        </form>
+
+        ${isLiveConfigured ? `
+          <div class="social-live-redirect-row">
+            <a href="/api/auth/oauth/${encodeURIComponent(provider)}" class="social-live-link">
+              🔗 Proceed with official ${providerLabel} OAuth redirect &rarr;
+            </a>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  let closed = false;
+  const handleKeydown = (e) => {
+    if (e.key === 'Escape') {
+      closeModal(true);
+    }
+  };
+
+  const closeModal = (wasCancelled = false) => {
+    if (closed) return;
+    closed = true;
+    document.removeEventListener('keydown', handleKeydown);
+    overlay.classList.add('closing');
+    setTimeout(() => {
+      overlay.remove();
+      if (wasCancelled) {
+        setToast(`${providerLabel} sign-in was cancelled.`);
+      }
+    }, 180);
+  };
+
+  const executeSocialSignIn = async (email, name, triggerButton) => {
+    const alertBox = overlay.querySelector('.social-modal-alert');
+    const submitBtn = overlay.querySelector('.social-submit-btn');
+    const allButtons = overlay.querySelectorAll('button, input');
+
+    alertBox.hidden = true;
+    alertBox.textContent = '';
+
+    allButtons.forEach(b => b.disabled = true);
+    if (triggerButton) {
+      triggerButton.classList.add('loading');
+    }
+    const submitText = submitBtn.querySelector('.submit-text');
+    const submitSpinner = submitBtn.querySelector('.submit-spinner');
+    if (submitText) submitText.textContent = `Connecting to ${providerLabel}...`;
+    if (submitSpinner) submitSpinner.hidden = false;
+
+    try {
+      const response = await fetch('/api/auth/oauth/social-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider,
+          email: String(email).trim(),
+          name: String(name).trim() || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `${providerLabel} authentication failed. Please try again.`);
+      }
+
+      closeModal(false);
+      state.user = data.user;
+      setToast(data.message || `Signed in with ${providerLabel} successfully.`);
+      await afterLogin();
+    } catch (err) {
+      allButtons.forEach(b => b.disabled = false);
+      if (triggerButton) triggerButton.classList.remove('loading');
+      if (submitText) submitText.textContent = `Continue with ${providerLabel}`;
+      if (submitSpinner) submitSpinner.hidden = true;
+
+      alertBox.textContent = err.message || 'Authentication failed. Please try again.';
+      alertBox.hidden = false;
+    }
+  };
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      closeModal(true);
+      return;
+    }
+
+    const closeBtn = e.target.closest('[data-social-action="close"]');
+    if (closeBtn) {
+      closeModal(true);
+      return;
+    }
+
+    const selectUserBtn = e.target.closest('[data-social-action="select-user"]');
+    if (selectUserBtn) {
+      const name = selectUserBtn.dataset.name;
+      const email = selectUserBtn.dataset.email;
+      executeSocialSignIn(email, name, selectUserBtn);
+      return;
+    }
+  });
+
+  const form = overlay.querySelector('[data-social-form="custom"]');
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = form.full_name.value.trim();
+    const email = form.email.value.trim();
+    if (!email) {
+      const alertBox = overlay.querySelector('.social-modal-alert');
+      alertBox.textContent = 'Please enter your email address.';
+      alertBox.hidden = false;
+      return;
+    }
+    executeSocialSignIn(email, name, overlay.querySelector('.social-submit-btn'));
+  });
+
+  document.addEventListener('keydown', handleKeydown);
+}
+
 async function afterLogin() {
   await refreshConfig();
   await refreshUnread();
@@ -1582,6 +1987,11 @@ async function boot() {
 
     const { user } = await api('/api/auth/me');
     state.user = user;
+    if (IS_ADMIN && !STAFF_ROLES.includes(user?.role)) {
+      state.user = null;
+      renderLogin('Social and resident accounts cannot access the Admin Portal. Please sign in with administrator credentials.');
+      return;
+    }
     await refreshConfig();
     await refreshUnread();
     await render();
@@ -1601,6 +2011,43 @@ async function boot() {
     </div></section></main>`;
   }
 }
+
+document.addEventListener('click', (event) => {
+  if (state.notificationPanelOpen && !event.target.closest('.notification-menu')) {
+    state.notificationPanelOpen = false;
+    const panel = document.getElementById('admin-notification-panel');
+    if (panel) panel.hidden = true;
+    document.querySelector('[data-action="toggle-notification-panel"]')?.setAttribute('aria-expanded', 'false');
+  }
+  if (state.mobileNotificationPanelOpen
+    && !event.target.closest('.mobile-notification-panel')
+    && !event.target.closest('[data-action="toggle-mobile-notification-panel"]')) {
+    state.mobileNotificationPanelOpen = false;
+    const panel = document.getElementById('mobile-notification-panel');
+    if (panel) panel.hidden = true;
+    document.querySelector('[data-action="toggle-mobile-notification-panel"]')?.setAttribute('aria-expanded', 'false');
+  }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  if (state.notificationPanelOpen) {
+    state.notificationPanelOpen = false;
+    const panel = document.getElementById('admin-notification-panel');
+    if (panel) panel.hidden = true;
+    const trigger = document.querySelector('[data-action="toggle-notification-panel"]');
+    trigger?.setAttribute('aria-expanded', 'false');
+    trigger?.focus();
+  }
+  if (state.mobileNotificationPanelOpen) {
+    state.mobileNotificationPanelOpen = false;
+    const panel = document.getElementById('mobile-notification-panel');
+    if (panel) panel.hidden = true;
+    const trigger = document.querySelector('[data-action="toggle-mobile-notification-panel"]');
+    trigger?.setAttribute('aria-expanded', 'false');
+    trigger?.focus();
+  }
+});
 
 document.addEventListener('click', async (event) => {
   if (event.target.closest('[data-action="reload"]')) {
@@ -1635,6 +2082,37 @@ document.addEventListener('submit', async (event) => {
   }
 });
 
+document.addEventListener('change', async (event) => {
+  const reportAttachmentInput = event.target.closest('form[data-form="report"] input[name="attachments"]');
+  if (reportAttachmentInput) {
+    try {
+      await moveMobileReportStep(0);
+    } catch (error) {
+      reportAttachmentInput.value = '';
+      setToast(error.message);
+    }
+    return;
+  }
+  const input = event.target.closest('[data-announcement-image]');
+  if (!input) return;
+  const file = input.files?.[0];
+  if (!file) return;
+  try {
+    const imageData = await readAnnouncementImage(input.closest('form'));
+    const preview = input.closest('form').querySelector('[data-announcement-preview]');
+    const image = preview?.querySelector('img');
+    if (image && preview) {
+      image.src = imageData;
+      preview.hidden = false;
+    }
+    const removeImage = input.closest('form').querySelector('[name="remove_image"]');
+    if (removeImage) removeImage.checked = false;
+  } catch (error) {
+    input.value = '';
+    setToast(error.message);
+  }
+});
+
 let filterTimer = null;
 document.addEventListener('input', (event) => {
   const el = event.target;
@@ -1644,7 +2122,7 @@ document.addEventListener('input', (event) => {
       state.reportLocationMap.setView([Number(barangay.latitude), Number(barangay.longitude)], 14);
     }
   }
-  if (el.dataset && el.dataset.filter) {
+  if (el.dataset && el.dataset.filter && el.tagName !== 'SELECT') {
     const filterName = el.dataset.filter;
     const filterValue = el.value;
     const restoreSearchFocus = el.type === 'search';

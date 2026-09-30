@@ -76,6 +76,63 @@ const signInWithProvider = (provider, profile, req, res) => {
   return res.redirect('/community');
 };
 
+router.post('/auth/oauth/social-login', (req, res) => {
+  const { provider, email, name, provider_user_id } = req.body || {};
+  if (!provider || !['google', 'facebook'].includes(provider)) {
+    return res.status(400).json({ error: 'Unsupported social sign-in provider.' });
+  }
+
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    return res.status(400).json({ error: 'Please enter a valid email address.' });
+  }
+
+  const defaultName = provider === 'google' ? 'Google Resident' : 'Facebook Resident';
+  const cleanName = String(name || '').trim() || defaultName;
+  const cleanProviderId = String(provider_user_id || `${provider}_${crypto.createHash('sha256').update(cleanEmail).digest('hex').slice(0, 16)}`);
+
+  // Check if account is linked or user exists
+  const linked = db.prepare('SELECT user_id FROM oauth_accounts WHERE provider = ? AND provider_user_id = ?').get(provider, cleanProviderId);
+  let user = linked ? db.prepare('SELECT * FROM users WHERE id = ?').get(linked.user_id) : null;
+
+  if (!user) {
+    user = db.prepare('SELECT * FROM users WHERE LOWER(email) = ?').get(cleanEmail);
+    if (!user) {
+      const timestamp = now();
+      const info = db.prepare(`
+        INSERT INTO users (full_name, email, password_hash, role, status, created_at, last_login)
+        VALUES (?, ?, ?, 'resident', 'Active', ?, ?)
+      `).run(cleanName, cleanEmail, hashPassword(crypto.randomBytes(48).toString('base64url')), timestamp, timestamp);
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(info.lastInsertRowid));
+    }
+  }
+
+  if (user.role !== 'resident') {
+    return res.status(403).json({ error: 'Social sign-in is reserved for resident community accounts. Administrators and staff must use the Admin Portal.' });
+  }
+
+  if (user.status !== 'Active') {
+    return res.status(403).json({ error: 'This account has been deactivated. Please contact an administrator.' });
+  }
+
+  // Link account if not yet linked
+  db.prepare('INSERT OR IGNORE INTO oauth_accounts (provider, provider_user_id, user_id, created_at) VALUES (?, ?, ?, ?)')
+    .run(provider, cleanProviderId, user.id, now());
+
+  // Update last login
+  db.prepare('UPDATE users SET last_login = ? WHERE id = ?').run(now(), user.id);
+
+  setSessionCookie(res, user.id);
+  const providerLabel = provider === 'google' ? 'Google' : 'Facebook';
+  audit({ ...user, ip_address: req.ip || req.socket.remoteAddress || null }, 'OAuth login', `${user.full_name} signed in with ${providerLabel}.`);
+
+  return res.json({
+    success: true,
+    user: publicUser(user),
+    message: `Signed in with ${providerLabel} successfully.`,
+  });
+});
+
 router.get('/auth/oauth/:provider', (req, res) => {
   const { provider } = req.params;
   const config = providerConfig(provider);

@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ceb">
+<head>
+  <meta charset="UTF-8">
+  <title>Valencia PowerWatch · Proposal Defense Presentation Guide & Modules</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #1e293b;
+      background-color: #f8fafc;
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .paper-container {
+      max-width: 860px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 50px 60px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      border-radius: 8px;
+    }
+    .print-bar {
+      max-width: 860px;
+      margin: 0 auto 20px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    .btn-print {
+      background: #073c68;
+      color: #ffffff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+    }
+    .btn-print:hover {
+      background: #0a4d85;
+    }
+    h1.doc-title {
+      font-size: 26px;
+      color: #073c68;
+      text-align: center;
+      margin: 0 0 8px 0;
+      font-weight: 800;
+    }
+    .doc-subtitle {
+      font-size: 15px;
+      color: #475569;
+      text-align: center;
+      margin: 0 0 8px 0;
+      font-weight: 600;
+      font-style: italic;
+    }
+    .doc-meta {
+      font-size: 13px;
+      color: #64748b;
+      text-align: center;
+      margin: 0 0 35px 0;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    h2 {
+      font-size: 18px;
+      color: #073c68;
+      border-left: 4px solid #ffd34e;
+      padding-left: 10px;
+      margin-top: 30px;
+      margin-bottom: 12px;
+    }
+    h3 {
+      font-size: 15px;
+      color: #0c4a6e;
+      margin-top: 20px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 4px;
+    }
+    p, li {
+      font-size: 14px;
+      color: #334155;
+    }
+    .pitch-box {
+      background: #f0f7ff;
+      border: 1px solid #bae6fd;
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-style: italic;
+      color: #0369a1;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 13.5px;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 10px 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #f1f5f9;
+      color: #0f172a;
+      font-weight: 600;
+    }
+    .module-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 14px;
+    }
+    .module-title {
+      font-weight: 700;
+      color: #073c68;
+      font-size: 14.5px;
+      margin-bottom: 6px;
+    }
+    .module-desc {
+      font-size: 13.5px;
+      color: #475569;
+      margin: 0;
+    }
+    .module-features {
+      margin: 8px 0 0 0;
+      padding-left: 20px;
+      font-size: 13px;
+      color: #334155;
+    }
+    .qa-box {
+      background: #fffbeb;
+      border: 1px solid #fef3c7;
+      border-left: 4px solid #f59e0b;
+      border-radius: 6px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+    .qa-question {
+      font-weight: 700;
+      color: #92400e;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+    .qa-answer {
+      color: #1e293b;
+      font-size: 13.5px;
+      margin: 0;
+    }
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .print-bar {
+        display: none;
+      }
+      .paper-container {
+        box-shadow: none;
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="print-bar">
+    <button class="btn-print" onclick="window.print()">🖨️ I-Print / I-Save as PDF</button>
+  </div>
+
+  <div class="paper-container">
+    <h1 class="doc-title">Valencia PowerWatch</h1>
+    <div class="doc-subtitle">Community Power Interruption Reporting, Verification, and Information Management System for Valencia City, Bukidnon</div>
+    <div class="doc-meta">Official Proposal Defense Summary, Detailed System Modules, & Panel Q&A Guide</div>
+
+    <h2>1. 1-Minute Elevator Pitch (Pambungad sa Panel)</h2>
+    <div class="pitch-box">
+      “Maayong adlaw sa atong mga tinahod nga panelist. Ang among proposed system gi-ulohan og <strong>Valencia PowerWatch: Community Power Interruption Reporting, Verification, and Information Management System for Valencia City, Bukidnon</strong>.<br><br>
+      Kini usa ka modernong digital platform nga nagsumpay sa mga residente sa Valencia City ug sa power utility management aron mapadali ang pag-report, pag-verify, ug pag-monitor sa mga brownout pinaagi sa real-time interactive mapping ug mobile technology.”
+    </div>
+
+    <h2>2. Background & Main Problem Statement (Ang Problema)</h2>
+    <p><strong>Karon nga Sitwasyon:</strong> Kung mag-brownout sa Valencia City, ang mga residente magsalig ra sa pagtawag sa busy nga hotline, mag-comment sa Facebook page nga dili ma-track, o mag-antos sa paghulat nga walay klarong opisyal nga update.</p>
+    <ul>
+      <li><strong>Problema sa mga Residente:</strong>
+        <ol>
+          <li>Dili makabalo kung scheduled brownout ba o naay emergency nga guba o aksidente sa linya.</li>
+          <li>Walay sayon nga paagi sa pag-report sa ilang eksaktong lokasyon o guba nga poste ug transformer.</li>
+        </ol>
+      </li>
+      <li><strong>Problema sa Power Utility & Linemen:</strong>
+        <ol>
+          <li>Nagkatag ug nagbalik-balik ang mga reklamo sa social media nga lisod kolektahon ug i-track.</li>
+          <li>Dugay matultolan ang eksaktong dapit sa naguba nga linya kay walay GPS coordinates.</li>
+          <li>Walay centralized visual dashboard nga nagpakita kung asang mga barangay ang labing apektado.</li>
+        </ol>
+      </li>
+    </ul>
+
+    <h2>3. Proposed Solution & Architecture</h2>
+    <p>Ang <strong>Valencia PowerWatch</strong> naghatag og duha (2) ka integrated nga portal nga nagkonektar sa usa ka sentral nga database:</p>
+    <ol>
+      <li><strong>User / Community Mobile App (PWA):</strong> Usa ka installable application para sa cellphone sa mga residente diin makapa-abot dayon sila og brownout report gamit ang interactive GPS Map sulod lang sa pipila ka segundo.</li>
+      <li><strong>Administrator & Utility Dispatch Portal:</strong> Usa ka secured web dashboard para sa mga enhinyero ug opisyales aron makita ang Outage GIS Heatmap, ma-verify ang mga insidente, ug makapadala dayon og maintenance crew.</li>
+    </ol>
+
+    <h2>4. Target Users (Kinsa ang Mogamit)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 30%;">User Role</th>
+          <th>Deskripsyon ug Gamit sa Sistema</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Mga Residente (Community)</strong></td>
+          <td>Mag-report og brownout gamit ang GPS Pinpoint, mag-monitor sa live status sa restoration, ug magbasa sa official emergency advisories.</td>
+        </tr>
+        <tr>
+          <td><strong>Utility Engineers / Linemen</strong></td>
+          <td>Mo-dawat sa verified dispatch, mosusi sa teknikal nga guba sa field, ug mo-update sa repair status padulong sa "Resolved".</td>
+        </tr>
+        <tr>
+          <td><strong>System Administrator / LGU</strong></td>
+          <td>Mo-dumala sa user accounts, magpagawas og emergency advisories, mag-monitor sa GIS heatmap, ug mag-generate og official incident reports.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>5. Kompleto nga mga Modules sa Sistema</h2>
+
+    <h3>A. MGA MODULES SA USER / COMMUNITY SIDE (MOBILE APP - PWA)</h3>
+
+    <div class="module-card">
+      <div class="module-title">1. Home & City Grid Dashboard Module</div>
+      <p class="module-desc">Ang sentro nga dashboard sa residente inig abli sa mobile app.</p>
+      <ul class="module-features">
+        <li><strong>City Power Grid Health:</strong> Real-time status kung pila ka barangay ang may kuryente ug pila ka active outages.</li>
+        <li><strong>Live Weather Monitoring:</strong> Live temperature, ulan, ug thunderstorm alert para sa Valencia City.</li>
+        <li><strong>Quick 1-Tap Outage Report:</strong> Dinaliang button para mo-report og blackout.</li>
+        <li><strong>Latest Emergency Advisories:</strong> Carousel sa pinakabag-ong pahibalo gikan sa utility management.</li>
+      </ul>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">2. Outage Reporting & GPS Pinpointing Module</div>
+      <p class="module-desc">Ang kasingkasing sa reporting diin ma-pinpoint ang eksaktong lokasyon sa brownout.</p>
+      <ul class="module-features">
+        <li><strong>Interactive Map Picker:</strong> Paggamit sa GPS o pag-drag sa pin sa balay o poste sa mapa sa Valencia City.</li>
+        <li><strong>Barangay Directory:</strong> Kompleto nga 31 ka barangay sa Valencia City.</li>
+        <li><strong>Outage Severity Categorization:</strong> Total Blackout, Low Voltage / Fluctuating, o Line Down / Sparking Transformer.</li>
+        <li><strong>Photo & Video Evidence Upload:</strong> Pag-attach og litrato o video sa guba nga linya/poste (maximum 5-10 minutes nga video aron dili mabug-at ang bandwidth).</li>
+        <li><strong>Offline Report Queue:</strong> Kung walay signal sa bagyo, i-save sa phone ug awtomatikong i-upload inig balik sa signal.</li>
+      </ul>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">3. Interactive Outage Map Module</div>
+      <p class="module-desc">Interactive nga mapa para masusi sa residente ang kahimtang sa tibuok siyudad.</p>
+      <ul class="module-features">
+        <li><strong>Color-Coded Outage Pins:</strong> Makita ang Pending, Verified, Repairing, ug Restored outages.</li>
+        <li><strong>Outage Heatmap Layer:</strong> Makita kung asang barangay ang daghang naapektuhan sa brownout.</li>
+      </ul>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">4. Notifications & Incident Tracker Module</div>
+      <p class="module-desc">Transparent nga pagpahibalo sa kahimtang sa restoration.</p>
+      <ul class="module-features">
+        <li><strong>Live Ticket Progress:</strong> [Submitted] ➔ [Verified] ➔ [Linemen Dispatched] ➔ [Restored].</li>
+        <li><strong>Scheduled Interruption Advisories:</strong> Abiso sa schedule sa pagpalong sa kuryente lakip ang oras ug apektadong linya.</li>
+      </ul>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">5. User Profile & Settings Module</div>
+      <p class="module-desc">Pagdumala sa personal nga account sa residente.</p>
+      <ul class="module-features">
+        <li>Personal Info, Contact Number, Home Barangay, ug Notification Preferences.</li>
+      </ul>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">6. PWA Standalone Mobile Installation Module (/install)</div>
+      <p class="module-desc">Play Store-styled installer para sa Android phones.</p>
+      <ul class="module-features">
+        <li>1-Tap direct install sa Android Home Screen ug App Drawer nga walay URL bar.</li>
+      </ul>
+    </div>
+
+    <h3>B. MGA MODULES SA ADMINISTRATOR & UTILITY MANAGEMENT SIDE (WEB PORTAL)</h3>
+
+    <div class="module-card">
+      <div class="module-title">1. Executive Dashboard Module</div>
+      <p class="module-desc">Executive summary para sa mga opisyales ug managers.</p>
+      <ul class="module-features">
+        <li>Real-time KPIs: Active Outages, Today's Reports, Mean Time to Restore (MTTR), ug Verification Rate.</li>
+        <li>Live Feed sa mga pinakabag-ong insidente sa Valencia City.</li>
+      </ul>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">2. Citizen Reports Management Module</div>
+      <p class="module-desc">Centralized repository sa tanang reports nga naggikan sa mga residente.</p>
+      <ul class="module-features">
+        <li>Table filters base sa Barangay, Status, Petsa, ug Severity.</li>
+        <li>Report details modal nga may GPS coordinates, citizen contact info, ug uploaded photos.</li>
+        <li>Automatic duplicate report grouping.</li>
+      </ul>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">3. Technical Verification & Triage Module</div>
+      <p class="module-desc">Pagsusi sa mga utility engineers aron mapugngan ang false alarms.</p>
+      <ul class="module-features">
+        <li>1-Click actions: Verify & Escalate, Reject with Reason, o Merge to Existing Outage.</li>
+      </ul>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">4. Incidents & Linemen Dispatch Module</div>
+      <p class="module-desc">Pag-organisar sa official repair operations sa field.</p>
+      <ul class="module-features">
+        <li>Pag-dispatch ug pag-assign og field crews sa specific barangays/feeders.</li>
+        <li>Stage progression tracker hangtod sa pormal nga pag-restore sa kuryente.</li>
+      </ul>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">5. Smart Outage Clustering Module</div>
+      <p class="module-desc">Spatial intelligence nga mo-detect og transformer ug feeder faults.</p>
+      <ul class="module-features">
+        <li>Awtomatikong pag-grupo sa 3 o labaw pa nga reports sulod sa 500 meters aron maila ang guba nga transformer.</li>
+      </ul>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">6. Dispatch GIS Mapping Workstation Module</div>
+      <p class="module-desc">Propesyonal nga mapa para sa emergency dispatchers.</p>
+      <ul class="module-features">
+        <li>Dynamic Outage Heatmap Layer, Feeder line overlays, ug satellite view.</li>
+      </ul>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">7. Scheduled Outages & Maintenance Planner Module</div>
+      <p class="module-desc">Pag-plano sa preventive maintenance sa linya.</p>
+      <ul class="module-features">
+        <li>Target barangay selection, affected feeder selection, ug automatic notification broadcast.</li>
+      </ul>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">8. Public Announcements & Emergency Advisories Module</div>
+      <p class="module-desc">Official communication channel ngadto sa katawhan.</p>
+      <ul class="module-features">
+        <li>Pagpagawas og typhoon warnings, energy alerts, ug emergency safety advisories.</li>
+      </ul>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">9. Targeted Notifications Dispatcher Module</div>
+      <p class="module-desc">Direct alert broadcasting per barangay o city-wide.</p>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">10. Outage History & Audit Archive Module</div>
+      <p class="module-desc">Kompletong historical records sa mga brownout.</p>
+      <ul class="module-features">
+        <li>Date-range filtering ug exportable spreadsheet logs para sa mga audit ug documentation.</li>
+      </ul>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">11. User Management & Role-Based Access Control Module</div>
+      <p class="module-desc">Seguridad ug access levels.</p>
+      <ul class="module-features">
+        <li>Separation of roles: System Administrator, Utility Engineer, Dispatch Staff, ug Resident.</li>
+      </ul>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">12. Valencia City Barangays Directory Module</div>
+      <p class="module-desc">Pagdumala sa 31 ka barangay, assigned feeders, ug emergency hotlines.</p>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">13. Analytics, Reliability Indices & Official Report Generator Module</div>
+      <p class="module-desc">Pang-management ug pormal nga auditing tools.</p>
+      <ul class="module-features">
+        <li>Awtomatikong pagkwenta sa SAIFI ug SAIDI grid reliability metrics.</li>
+        <li><strong>1-Click Printable Incident PDF Report Generator:</strong> Pormal nga dokumento para sa City Hall ug management meetings.</li>
+      </ul>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">14. Tamper-Proof Audit Trail Module</div>
+      <p class="module-desc">Seguridad ug transparency sa tanang lihok sa admin (kinsa, kanus-a, unsa nga aksyon, ug IP address).</p>
+    </div>
+
+    <div class="module-card">
+      <div class="module-title">15. System Configuration & Settings Module</div>
+      <p class="module-desc">Pag-configure sa utility logo, city seal, contact hotline, ug database backups.</p>
+    </div>
+
+    <div class="module-card" style="border-left: 4px solid #10b981; background: #f0fdf4;">
+      <div class="module-title" style="color: #065f46;">16. SMS Gateway Notification Engine (Semaphore API &amp; Live Monitor)</div>
+      <p class="module-desc">Direktang text blast sa mga cellphone sa residente para sa offline alert:</p>
+      <ul class="module-features">
+        <li><strong>Automatic Outage &amp; Restoration SMS:</strong> Teksan ang mga apektadong residente inig ka-verify sa report, inig dispatch sa linemen, ug inig balik sa suga.</li>
+        <li><strong>Dual Mode Architecture:</strong> Suportado ang live production Semaphore API ug automated local demo simulator para sa live presentation.</li>
+        <li><strong>SMS Gateway Transmission Monitor:</strong> Makita sa Admin settings ang real-time logs sa tanang SMS nga gipangpadala.</li>
+      </ul>
+    </div>
+
+    <div class="module-card" style="border-left: 4px solid #0284c7; background: #f0f9ff;">
+      <div class="module-title" style="color: #0369a1;">17. Dual-Language Switcher (English ⇄ Sinugbuanong Binisaya)</div>
+      <p class="module-desc">1-click language switcher sa mobile portal para mas daling masabtan sa mga residente sa Valencia:</p>
+      <ul class="module-features">
+        <li><strong>One-Tap Language Chip:</strong> Naa sa taas nga header sa mobile app (🇵🇭 CEB / 🇺🇸 EN).</li>
+        <li><strong>Localized Cebuano Terms:</strong> Ang mga termino sama sa "Kasamtangang Brownout", "Gahulat nga Report", "Pahibalo", ug "Gilauman nga Pag-ayo" awtomatikong mag-ilis.</li>
+      </ul>
+    </div>
+
+    <div class="module-card" style="border-left: 4px solid #f59e0b; background: #fffbeb;">
+      <div class="module-title" style="color: #b45309;">18. Automated Estimated Time of Restoration (ETR) Engine</div>
+      <p class="module-desc">Intelihenteng kalkulasyon sa oras sa pag-ayo sa kuryente base sa matang sa deperensya ug panahon:</p>
+      <ul class="module-features">
+        <li><strong>Fault Severity Modeling:</strong> Nagkalkula base sa Transformer replacement, Feeder trip, Line down, o Substation maintenance.</li>
+        <li><strong>Weather Safety Protocol:</strong> Modugang og +30% buffer sa ulan o +50% sa kilat/thunderstorm alinsunod sa lineman safety guidelines.</li>
+        <li><strong>Citizen Visibility:</strong> Makita dayon sa residente sa ilang report detalye ang ETR orasan ug ang hinungdan sa pag-ayo.</li>
+      </ul>
+    </div>
+
+    <div class="module-card" style="border-left: 4px solid #8b5cf6; background: #faf5ff;">
+      <div class="module-title" style="color: #6d28d9;">19. Citizen Feedback &amp; Post-Restoration Satisfaction Rating Module</div>
+      <p class="module-desc">Pagsusi sa kalidad sa serbisyo human ma-restore ang kuryente:</p>
+      <ul class="module-features">
+        <li><strong>5-Star Interactive Rating &amp; Power Confirmation:</strong> Mangutana sa residente kon nibalik na ba gyud ang kuryente sa ilang balay ug pila ka bituon ang serbisyo.</li>
+        <li><strong>Admin Citizen Satisfaction Dashboard:</strong> Makita sa Admin Analytics ang Average Rating (e.g. 4.8 / 5.0 ⭐), Power Confirmation Rate (%), ug mga testimonya sa mga residente sa Valencia.</li>
+      </ul>
+    </div>
+
+    <h2>6. System Workflow (Giunsa Pagdagan sa Datos)</h2>
+    <ol>
+      <li><strong>Paghimo og Report:</strong> Ang residente mag-abli sa app sa ilang phone ug mo-submit og report nga naay GPS coordinates, barangay, litrato, ug detalye sa blackout.</li>
+      <li><strong>Sentral nga Pagtipig:</strong> Ang report moagi sa secure HTTPS connection ug mosulod diretso sa Central SQLite Database (<code>data/powerwatch.db</code>).</li>
+      <li><strong>Pagsusi, ETR &amp; Dispatch:</strong> Motungha dayon ang report sa dashboard sa Admin. Makita sa GIS Heatmap, kalkulahon sa ETR Engine ang gilauman nga pag-ayo, i-verify sa Engineer, ug i-dispatch ang maintenance crew samtang makadawat og SMS text blast ang residente.</li>
+      <li><strong>Restoration &amp; Citizen Feedback:</strong> Inig kaayo sa linya, i-mark sa Admin ang insidente isip "Resolved". Makadawat og SMS ang residente, ug mangutana ang app sa 5-star satisfaction rating ug kumpirmasyon sa pagbalik sa kuryente.</li>
+    </ol>
+
+    <h2>7. Benefits & Limitations</h2>
+    <p><strong>Mga Kaayohan (Benefits):</strong></p>
+    <ul>
+      <li><strong>Paspas nga Response Time:</strong> Dili na magtagna-tagna ang linemen kung asa ang guba kay may eksaktong GPS coordinates ug Barangay.</li>
+      <li><strong>Transparency & ETR:</strong> Makabalo ang publiko kung unsa na ang kahimtang ug pila ka oras gilauman nga mabalik ang kuryente.</li>
+      <li><strong>Data-Driven Planning & Citizen Accountability:</strong> Makatabang sa City Hall ug Utility nga masusi ang performance pinaagi sa SAIDI/SAIFI reliability indices ug Citizen Satisfaction ratings.</li>
+    </ul>
+    <p><strong>Mga Limitasyon (Limitations):</strong></p>
+    <ul>
+      <li><strong>Nagkinahanglan og Internet Connection:</strong> Bisan naay offline report queue ang app, kinahanglan gihapon og data o Wi-Fi aron maabot ang report sa opisina sa Admin (apan may SMS fallback notifications alang sa advisory).</li>
+      <li><strong>Citizen-Driven (Crowdsourced):</strong> Ang datos naggikan sa report sa mga tawo, dili gikan sa automated hardware sensor sa poste (apan nasulbad kini pinaagi sa Admin Verification module).</li>
+      <li><strong>Geographical Scope:</strong> Nakatutok kining maong prototype sa 31 ka barangay sa Valencia City, Bukidnon.</li>
+    </ul>
+
+    <h2>8. Top Anticipated Panel Questions & Best Answers</h2>
+    <div class="qa-box">
+      <div class="qa-question">Q1: Ngano nga PWA (Progressive Web App) inyong gigamit ug dili native APK gikan sa Google Play Store?</div>
+      <p class="qa-answer"><strong>Tubag:</strong> Sir/Ma'am, ang PWA mas gaan, dali i-deploy, ug accessible sa tanang klase sa cellphone. Dili na kinahanglan mag-download og bug-at nga 50MB nga file o magbayad sa Google Play Store. I-scan lang ang QR code, ma-install na dayon kini sa ilang home screen ug app drawer sulod sa 5 ka segundo.</p>
+    </div>
+
+    <div class="qa-box">
+      <div class="qa-question">Q2: Unsaon ninyo pagpugong kung naay mag-binuang o mag-spam og fake reports?</div>
+      <p class="qa-answer"><strong>Tubag:</strong> Una, kinahanglan mag-register ang user nga may tinuod nga contact number. Ikaduha, ang sistema naggamit og Smart Clustering—kung usa ra ka tawo ang nag-report unya ang tibuok silingan walay report, makit-an kini dayon sa Admin. Ikatulo, dili dayon ma-post sa public status hangtod dili ma-verify sa engineer.</p>
+    </div>
+
+    <div class="qa-box">
+      <div class="qa-question">Q3: Unsaon kung mawad-an og cellular signal samtang nag-bagyo?</div>
+      <p class="qa-answer"><strong>Tubag:</strong> Gibutangan namo ang sistema og Offline Report Queue gamit ang Service Worker ug local cache. Makahimo gihapon ang residente sa pag-fill up sa report bisan walay internet. Inig balik sa signal o data, awtomatiko kining i-sync ug i-upload sa server. Dugang pa, naay SMS Gateway aron matuparan ang mga walay internet.</p>
+    </div>
+
+    <div class="qa-box">
+      <div class="qa-question">Q4: Giunsa pagkalkula sa inyong sistema ang Estimated Time of Restoration (ETR)?</div>
+      <p class="qa-answer"><strong>Tubag:</strong> Naggamit kami og Automated ETR Engine nga may mathematical base duration matag matang sa fault (pananglitan: 60 mins sa Feeder Trip, 360 mins sa Transformer Replacement). Awtomatiko kining mag-check sa real-time Open-Meteo weather API sa Valencia City—kung may ulan o kilat, modugang kini og safety buffer time (30% hangtod 50%) tungod kay peligroso sa mga lineman ang pagsaka sa poste panahon sa bagyo.</p>
+    </div>
+
+    <div class="qa-box">
+      <div class="qa-question">Q5: Giunsa pag-verify sa utility nga tinuod nga naayo na ang kuryente sa maong lugar?</div>
+      <p class="qa-answer"><strong>Tubag:</strong> Human i-mark sa utility personnel ang insidente isip "Resolved", mo-trigger ang among Citizen Feedback &amp; Verification module sa cellphone sa mga nag-report. Tubagon sa residente kung "Oo, Nibalik na ang Kuryente" o "Wala pa", ug mohatag sila og 1–5 star rating. Makita kini sa Admin Analytics aron masubay ang tinuod nga kalidad sa serbisyo.</p>
+    </div>
+
+  </div>
+
+</body>
+</html>

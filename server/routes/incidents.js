@@ -1,6 +1,8 @@
 const express = require('express');
 const { db, now, nextCode } = require('../db');
 const { requireAuth, requireRole, audit, notifyUsers } = require('../auth');
+const { sendSMS } = require('../sms');
+const { calculateETR } = require('../etr');
 
 const router = express.Router();
 
@@ -51,11 +53,18 @@ const notifyIncidentReporters = (incident, title, message, type = 'incident') =>
   }
 
   const rows = db.prepare(`
-    SELECT u.id FROM incident_links l
+    SELECT u.id, u.contact_number, u.full_name FROM incident_links l
     JOIN outage_reports r ON r.id = l.report_id JOIN users u ON u.id = r.reporter_id
     WHERE l.incident_id = ? AND u.status = 'Active'
   `).all(incident.id);
   notifyUsers(rows.map((r) => Number(r.id)), title, message, type);
+
+  // Trigger SMS Gateway to reporter mobile numbers
+  for (const r of rows) {
+    if (r.contact_number) {
+      sendSMS(r.contact_number, `${title}: ${message}`, type).catch(() => {});
+    }
+  }
 };
 
 const canSetCause = (req) => ['utility', 'administrator'].includes(req.user.role);
@@ -155,17 +164,19 @@ router.post('/incidents', requireAuth, requireRole('personnel', 'administrator')
   const code = nextCode('OUT');
   const ts = now();
   const status = INCIDENT_STATUSES.includes(initial_status) ? initial_status : 'Reported';
+  const autoEtr = calculateETR(outage_type || incident_type);
+  const finalEtr = estimated_restoration || autoEtr.displayTime;
 
   const incidentId = db.transaction(() => {
     const info = db.prepare(`
       INSERT INTO outage_incidents (incident_code, title, barangay, location, latitude, longitude, incident_type, outage_type,
-        priority, customers_affected, restoration_progress, description, cause_category, status, start_time, estimated_restoration, affected_area, remarks,
+        priority, customers_affected, restoration_progress, description, cause_category, status, start_time, estimated_restoration, etr_reason, affected_area, remarks,
         scheduled_id, created_by, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       code, String(title).trim(), barangay, location || null, latitude ?? null, longitude ?? null,
       incident_type || 'Unexpected', outage_type || null, priority || 'Medium', customers_affected ?? null, restoration_progress ?? null, description || null, cause_category || null,
-      status, start_time, estimated_restoration || null, affected_area || null, remarks || null,
+      status, start_time, finalEtr, autoEtr.reason, affected_area || null, remarks || null,
       scheduled_id === undefined ? null : Number(scheduled_id), req.user.id, ts, ts
     );
     const createdId = Number(info.lastInsertRowid);

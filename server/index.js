@@ -15,6 +15,7 @@ const notificationRoutes = require('./routes/notifications');
 const historyRoutes = require('./routes/history');
 const analyticsRoutes = require('./routes/analytics');
 const adminRoutes = require('./routes/admin');
+const feedbackRoutes = require('./routes/feedback');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -52,25 +53,27 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api', feedbackRoutes);
 
 app.use('/uploads', express.static(UPLOAD_DIR));
 app.use('/assets', express.static(path.join(ROOT, 'assets')));
 app.use('/vendor/leaflet', express.static(path.join(ROOT, 'node_modules', 'leaflet', 'dist')));
 app.use('/vendor/leaflet-heat', express.static(path.join(ROOT, 'node_modules', 'leaflet.heat', 'dist')));
 
-app.get('/', (req, res) => res.sendFile(path.join(ROOT, 'index.html')));
-app.get('/install', (req, res) => res.sendFile(path.join(ROOT, 'download.html')));
-app.get('/download', (req, res) => res.sendFile(path.join(ROOT, 'download.html')));
+app.get(['/install', '/install.html', '/download', '/download.html'], (req, res) => res.sendFile(path.join(ROOT, 'download.html')));
 app.get('/manifest.json', (req, res) => res.sendFile(path.join(ROOT, 'manifest.json')));
 app.get('/sw.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.sendFile(path.join(ROOT, 'sw.js'));
 });
-app.get('/admin', (req, res) => res.sendFile(path.join(ROOT, 'admin.html')));
-app.get('/community', (req, res) => res.sendFile(path.join(ROOT, 'community.html')));
-app.get('/style.css', (req, res) => res.sendFile(path.join(ROOT, 'style.css')));
-app.get('/script.js', (req, res) => res.sendFile(path.join(ROOT, 'script.js')));
-app.use('/app', express.static(path.join(ROOT, 'app')));
+app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(ROOT, 'admin.html')));
+app.get(['/community', '/community.html'], (req, res) => res.sendFile(path.join(ROOT, 'community.html')));
+app.get(['/auth/oauth-dialog', '/auth/oauth-popup'], (req, res) => res.sendFile(path.join(ROOT, 'oauth-dialog.html')));
+app.get(['/style.css', '/community/style.css', '/admin/style.css', '/install/style.css'], (req, res) => res.sendFile(path.join(ROOT, 'style.css')));
+app.get(['/script.js', '/community/script.js', '/admin/script.js'], (req, res) => res.sendFile(path.join(ROOT, 'script.js')));
+app.use(['/app', '/community/app', '/admin/app', '/install/app'], express.static(path.join(ROOT, 'app')));
+app.use(express.static(ROOT));
+app.get('/', (req, res) => res.sendFile(path.join(ROOT, 'index.html')));
 
 // Error handler
 app.use((err, req, res, next) => {

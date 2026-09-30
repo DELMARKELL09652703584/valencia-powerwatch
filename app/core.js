@@ -28,14 +28,120 @@ const state = {
   oauthProviders: {},
   passwordRecoveryEnabled: false,
   unread: 0,
+  notificationPanelOpen: false,
+  notificationPreview: [],
   filters: {},
   analyticsRange: { from: '', to: '' },
   reportPage: 1,
   auditPage: 1,
   auditPageSize: 5,
   mobileTab: 'home',
+  mobileNotificationPanelOpen: false,
+  mobileNotificationPreview: [],
   bootError: '',
+  language: localStorage.getItem('powerwatch.language') || 'en',
 };
+
+const LANG_STORAGE_KEY = 'powerwatch.language';
+const TRANSLATIONS = {
+  en: {
+    home: 'Home',
+    reports: 'Reports',
+    map: 'Map',
+    notifications: 'Notifications',
+    profile: 'Profile',
+    active_outages: 'Active Outages',
+    pending_reports: 'Pending Reports',
+    resolved_today: 'Resolved Today',
+    total_reports: 'Total Reports',
+    recent_updates: 'Recent Updates',
+    view_all: 'View All',
+    no_recent_updates: 'No recent updates.',
+    report_interruption: '＋ Report an Interruption',
+    outage_history: 'Outage History',
+    my_reports: 'My Reports',
+    my_reports_sub: 'Track reports you have submitted and their verification status.',
+    announcements: 'Announcements',
+    scheduled_outages: 'Scheduled Outages',
+    settings: 'Settings',
+    account_security: 'Account Security',
+    notification_settings: 'Notification Settings',
+    location_services: 'Location Services',
+    language: 'Language / Pinulongan',
+    app_version: 'App Version',
+    help_support: 'Help & Support',
+    about_powerwatch: 'About Valencia PowerWatch',
+    logout: 'Log Out',
+    etr_label: 'Estimated Restoration (ETR)',
+    rate_service: 'Rate Restoration Service',
+    power_restored_q: 'Was electrical power restored at your residence?',
+    yes_restored: 'Yes, Power Restored',
+    not_yet: 'Not Yet Restored',
+    comments_optional: 'Additional comments or feedback (optional)…',
+    send_feedback: 'Submit Feedback & Rating',
+    feedback_success: 'Thank you for your feedback! Help us keep Valencia powered.',
+    outage_map: 'Power Outage Map',
+    outage_map_sub: 'Explore active interruptions and outage density across Valencia City.',
+    pins: '📍 Outage Pins',
+    heatmap: '🔥 Hotspot Heatmap',
+  },
+  ceb: {
+    home: 'Panimalay',
+    reports: 'Mga Report',
+    map: 'Mapa',
+    notifications: 'Pahibalo',
+    profile: 'Akawnt',
+    active_outages: 'Kasamtangang Brownout',
+    pending_reports: 'Gahulat nga Report',
+    resolved_today: 'Naayo Karon',
+    total_reports: 'Tanan nga Report',
+    recent_updates: 'Bag-ong mga Update',
+    view_all: 'Tan-awa Tanan',
+    no_recent_updates: 'Walay bag-ong mga pahibalo.',
+    report_interruption: '＋ Mag-report og Brownout',
+    outage_history: 'Kaagi sa Brownout',
+    my_reports: 'Akong mga Report',
+    my_reports_sub: 'Bantayi ang mga report nga imong gipadala ug ang status sa pag-verify.',
+    announcements: 'Mga Pahibalo sa Komunidad',
+    scheduled_outages: 'Naka-eskedyul nga Brownout',
+    settings: 'Mga Setting',
+    account_security: 'Seguridad sa Akawnt',
+    notification_settings: 'Setting sa Pahibalo',
+    location_services: 'Serbisyo sa Lokasyon (GPS)',
+    language: 'Pinulongan (Language)',
+    app_version: 'Bersyon sa App',
+    help_support: 'Tabang ug Suporta',
+    about_powerwatch: 'Mahitungod sa Valencia PowerWatch',
+    logout: 'Gawas sa Akawnt',
+    etr_label: 'Gilauman nga Pag-ayo (ETR)',
+    rate_service: 'I-rate ang Serbisyo sa Pag-ayo',
+    power_restored_q: 'Nibalik na ba ang kuryente sa inyong panimalay?',
+    yes_restored: 'Oo, Nibalik na ang Kuryente',
+    not_yet: 'Wala pa nibalik',
+    comments_optional: 'Dugang komento o kasinatian (opsyonal)…',
+    send_feedback: 'Ipadala ang Rating ug Feedback',
+    feedback_success: 'Daghang salamat sa imong feedback ug kooperasyon!',
+    outage_map: 'Mapa sa Brownout sa Valencia',
+    outage_map_sub: 'Susiha ang mga apektadong lugar ug density sa brownout sa tibuok Valencia.',
+    pins: '📍 Mga Lokasyon sa Outage',
+    heatmap: '🔥 Hotspot Heatmap',
+  }
+};
+
+function getLanguage() {
+  return localStorage.getItem(LANG_STORAGE_KEY) || state.language || 'en';
+}
+
+function setLanguage(lang) {
+  const code = lang === 'ceb' ? 'ceb' : 'en';
+  localStorage.setItem(LANG_STORAGE_KEY, code);
+  state.language = code;
+}
+
+function t(key, fallback = '') {
+  const lang = getLanguage();
+  return (TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) || (TRANSLATIONS.en && TRANSLATIONS.en[key]) || fallback || key;
+}
 
 const canManage = () => !!state.user && STAFF_ROLES.includes(state.user.role);
 const isAdmin = () => state.user?.role === 'administrator';

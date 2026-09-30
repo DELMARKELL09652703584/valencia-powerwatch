@@ -9,7 +9,6 @@ const ADMIN_NAV = [
   { key: 'map', label: 'Map / GIS', roles: STAFF_ROLES },
   { key: 'scheduled', label: 'Scheduled Outages', roles: STAFF_ROLES },
   { key: 'announcements', label: 'Announcements', roles: STAFF_ROLES },
-  { key: 'notifications', label: 'Notifications', roles: STAFF_ROLES },
   { key: 'history', label: 'Outage History' },
   { key: 'users', label: 'Users', roles: ['administrator'] },
   { key: 'barangays', label: 'Barangays', roles: ['administrator'] },
@@ -47,7 +46,6 @@ function adminShell(content) {
   const groups = nav.map((item) => {
     return `<button type="button" class="nav-item ${state.page === item.key ? 'active' : ''}" data-page="${item.key}" aria-current="${state.page === item.key ? 'page' : 'false'}">
       <span class="nav-icon">${adminNavIcon(item.key)}</span><span>${escapeHtml(item.label)}</span>
-      ${item.key === 'announcements' && state.unread ? `<span class="nav-badge">${state.unread}</span>` : ''}
     </button>`;
   }).join('');
 
@@ -69,13 +67,25 @@ function adminShell(content) {
     <main class="admin-main">
       <header class="admin-topbar">
         <div>
-          <h1>${escapeHtml(nav.find((n) => n.key === state.page)?.label || (state.page === 'profile' ? 'My Profile' : 'Dashboard'))}</h1>
+          <h1>${escapeHtml(nav.find((n) => n.key === state.page)?.label || (state.page === 'notifications' ? 'Notifications' : state.page === 'profile' ? 'My Profile' : 'Dashboard'))}</h1>
           <p class="topbar-sub">${escapeHtml(info.locality || 'Valencia City, Bukidnon')}</p>
         </div>
         <div class="topbar-right">
-          <button class="icon-button" data-page="notifications" title="Notifications">
-            🔔${state.unread ? `<span class="dot">${state.unread}</span>` : ''}
-          </button>
+          <div class="notification-menu">
+            <button type="button" class="icon-button notification-bell" data-action="toggle-notification-panel" aria-label="Notifications${state.unread ? `, ${state.unread} unread` : ''}" aria-haspopup="dialog" aria-expanded="${Boolean(state.notificationPanelOpen)}" aria-controls="admin-notification-panel" title="Notifications">
+              ${adminNavIcon('notifications')}${state.unread ? `<span class="notification-badge">${state.unread > 99 ? '99+' : state.unread}</span>` : ''}
+            </button>
+            ${state.notificationPanelOpen ? `<section class="admin-notification-panel" id="admin-notification-panel" role="dialog" aria-label="Recent notifications">
+              <header class="notification-panel-heading"><div><h2>Notifications</h2><span>${state.unread ? `${state.unread} unread` : 'You are all caught up'}</span></div><button type="button" class="notification-panel-close" data-action="close-notification-panel" aria-label="Close notifications">×</button></header>
+              ${state.unread ? '<button type="button" class="notification-panel-mark-all" data-action="mark-all-read">Mark all as read</button>' : ''}
+              <div class="notification-panel-list" aria-live="polite">${state.notificationPreview.length ? state.notificationPreview.map((notice) => `<article class="notification-panel-item ${notice.read ? 'read' : 'unread'}">
+                <span class="notification-panel-type ${escapeHtml(notice.type || 'general')}" aria-hidden="true"></span>
+                <button type="button" class="notification-panel-open" data-action="view-admin-notification" data-id="${notice.id}"><strong>${escapeHtml(notice.title)}</strong><span>${escapeHtml(notice.message || '')}</span><time datetime="${escapeHtml(notice.created_at || '')}">${escapeHtml(formatDateTime(notice.created_at))}</time></button>
+                ${!notice.read ? '<button type="button" class="notification-panel-read" data-action="toggle-admin-notification" data-id="' + notice.id + '" data-value="read" aria-label="Mark ' + escapeHtml(notice.title) + ' as read" title="Mark as read">✓</button>' : ''}
+              </article>`).join('') : '<p class="notification-panel-empty">No notifications yet.</p>'}</div>
+              <footer class="notification-panel-footer"><button type="button" data-action="view-all-notifications">View all notifications</button></footer>
+            </section>` : ''}
+          </div>
         </div>
       </header>
       <section class="admin-content" id="admin-content">${content}</section>
@@ -1082,38 +1092,55 @@ async function renderAdminAnnouncements() {
   const manage = canManage();
   const { announcements, categories } = await api(manage ? '/api/announcements/manage' : '/api/announcements');
   const statusFilter = state.filters.announcementFilter || '';
+  const categoryFilter = state.filters.announcementCategory || '';
   const search = String(state.filters.announcementSearch || '').trim().toLowerCase();
   const visibleAnnouncements = announcements.filter((announcement) => (!statusFilter || announcement.status === statusFilter)
-    && (!search || `${announcement.title} ${announcement.category} ${announcement.content}`.toLowerCase().includes(search)));
+    && (!categoryFilter || announcement.category === categoryFilter)
+    && (!search || `${announcement.title} ${announcement.category} ${announcement.content} ${announcement.author_name || ''}`.toLowerCase().includes(search)));
+  const statusCounts = Object.fromEntries(['Published', 'Draft', 'Archived'].map((status) => [status, announcements.filter((row) => row.status === status).length]));
+  const hasFilters = Boolean(statusFilter || categoryFilter || search);
+  const statusTabs = [
+    { label: 'All', value: '', count: announcements.length },
+    { label: 'Published', value: 'Published', count: statusCounts.Published },
+    { label: 'Drafts', value: 'Draft', count: statusCounts.Draft },
+    { label: 'Archived', value: 'Archived', count: statusCounts.Archived },
+  ];
 
-  adminShell(`<div class="toolbar">
-    <input class="input" type="search" placeholder="Search Announcement..." value="${escapeHtml(state.filters.announcementSearch || '')}" data-filter="announcementSearch">
-    <div class="segmented">
-      <button class="seg ${!statusFilter ? 'active' : ''}" data-action="filter-announcements" data-value="">All</button>
-      <button class="seg ${statusFilter === 'Published' ? 'active' : ''}" data-action="filter-announcements" data-value="Published">Published</button>
-      <button class="seg ${statusFilter === 'Draft' ? 'active' : ''}" data-action="filter-announcements" data-value="Draft">Drafts</button>
-      <button class="seg ${statusFilter === 'Archived' ? 'active' : ''}" data-action="filter-announcements" data-value="Archived">Archived</button>
+  adminShell(`<section class="announcement-management">
+    <div class="announcement-toolbar">
+      <label class="announcement-search">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+        <input type="search" aria-label="Search announcements" placeholder="Search title, description, or author" value="${escapeHtml(state.filters.announcementSearch || '')}" data-filter="announcementSearch">
+      </label>
+      <label class="announcement-category-filter"><span class="visually-hidden">Filter by category</span>
+        <select class="input" aria-label="Filter by category" data-filter="announcementCategory"><option value="">All categories</option>${categories.map((category) => `<option value="${escapeHtml(category)}" ${categoryFilter === category ? 'selected' : ''}>${escapeHtml(category)}</option>`).join('')}</select>
+      </label>
+      ${manage ? '<button type="button" class="button primary announcement-create" data-action="new-announcement"><span aria-hidden="true">+</span> New announcement</button>' : ''}
     </div>
-    ${manage ? '<button class="button primary" data-action="new-announcement">+ New announcement</button>' : ''}
-  </div>
-  ${visibleAnnouncements.length
-    ? `<div class="panel"><div class="table-scroll"><table class="data-table announcement-table">
-        <thead><tr><th>Title</th><th>Type</th><th>Status</th><th>Publish Date</th><th>Actions</th></tr></thead>
-        <tbody>${visibleAnnouncements.map((row) => `<tr>
-          <td><button class="link-button announcement-title" data-action="view-announcement" data-id="${row.id}">${escapeHtml(row.title)}</button><div class="muted small">${escapeHtml(row.author_name || 'System')}</div></td>
-          <td><span class="tag">${escapeHtml(row.category)}</span></td>
-          <td>${statusPill(row.status)}</td>
-          <td>${escapeHtml(formatDateTime(row.published_at || row.created_at))}</td>
-          <td class="row-actions"><button class="link-button" data-action="view-announcement" data-id="${row.id}">View</button>
-            ${manage ? `<button class="link-button" data-action="edit-announcement" data-id="${row.id}">Edit</button>
-            ${row.status !== 'Published' ? `<button class="link-button" data-action="announcement-status" data-id="${row.id}" data-value="Published">Publish</button>` : ''}
-            ${row.status !== 'Archived' ? `<button class="link-button" data-action="announcement-status" data-id="${row.id}" data-value="Archived">Archive</button>` : ''}
-            <button class="link-button danger" data-action="delete-announcement" data-id="${row.id}">Delete</button>` : ''}
-          </td>
-        </tr>`).join('')}</tbody>
-      </table></div></div>`
-    : `<div class="panel">${emptyState('No announcements', 'Published advisories for residents appear here.', '📢')}</div>`}`);
-  void categories;
+    <div class="announcement-list-heading">
+      <div class="segmented announcement-status-tabs" role="group" aria-label="Filter announcements by status">
+        ${statusTabs.map((tab) => `<button type="button" class="seg ${statusFilter === tab.value ? 'active' : ''}" data-action="filter-announcements" data-value="${tab.value}" aria-pressed="${statusFilter === tab.value}">${tab.label}<span>${tab.count}</span></button>`).join('')}
+      </div>
+      <span class="announcement-result-count" aria-live="polite">${visibleAnnouncements.length} of ${announcements.length} announcement${announcements.length === 1 ? '' : 's'}</span>
+      ${hasFilters ? '<button type="button" class="announcement-clear-filters" data-action="reset-announcement-filters">Clear filters</button>' : ''}
+    </div>
+    ${visibleAnnouncements.length
+      ? `<div class="announcement-card-grid">${visibleAnnouncements.map((row) => `<article class="announcement-manage-card">
+          ${row.image_path ? `<img class="announcement-card-image" src="${escapeHtml(row.image_path)}" alt="${escapeHtml(row.title)}">` : ''}
+          <div class="announcement-card-topline"><span class="tag">${escapeHtml(row.category)}</span>${statusPill(row.status)}</div>
+          <button type="button" class="announcement-card-title" data-action="view-announcement" data-id="${row.id}">${escapeHtml(row.title)}</button>
+          <p class="announcement-card-description">${escapeHtml(row.content)}</p>
+          <div class="announcement-card-meta"><span>By ${escapeHtml(row.author_name || 'System')}</span><time datetime="${escapeHtml(row.published_at || row.created_at || '')}">${escapeHtml(formatDateTime(row.published_at || row.created_at))}</time></div>
+          <div class="announcement-card-actions">
+            <button type="button" class="link-button" data-action="view-announcement" data-id="${row.id}">View</button>
+            ${manage ? `<button type="button" class="link-button" data-action="edit-announcement" data-id="${row.id}">Edit</button>
+              ${row.status !== 'Published' ? `<button type="button" class="link-button" data-action="announcement-status" data-id="${row.id}" data-value="Published">Publish</button>` : ''}
+              ${row.status !== 'Archived' ? `<button type="button" class="link-button" data-action="announcement-status" data-id="${row.id}" data-value="Archived">Archive</button>` : ''}
+              <button type="button" class="link-button danger" data-action="delete-announcement" data-id="${row.id}">Delete</button>` : ''}
+          </div>
+        </article>`).join('')}</div>`
+      : `<div class="announcement-empty-state"><span class="announcement-empty-mark" aria-hidden="true">!</span><h3>${hasFilters ? 'No matching announcements' : 'No announcements yet'}</h3><p>${hasFilters ? 'Try another search or clear the selected filters.' : 'Published advisories and service updates will appear here.'}</p>${hasFilters ? '<button type="button" class="button ghost" data-action="reset-announcement-filters">Clear filters</button>' : (manage ? '<button type="button" class="button primary" data-action="new-announcement">Create announcement</button>' : '')}</div>`}
+  </section>`);
 }
 
 async function renderAdminHistory() {
@@ -1145,12 +1172,13 @@ async function renderAdminHistory() {
 
 async function renderAdminAnalytics() {
   const range = query(state.analyticsRange);
-  const [summary, monthly, barangay, types, status] = await Promise.all([
+  const [summary, monthly, barangay, types, status, feedbackData] = await Promise.all([
     api(`/api/analytics/summary${range}`),
     api(`/api/analytics/monthly${range}`),
     api(`/api/analytics/barangay${range}`),
     api(`/api/analytics/types${range}`),
     api(`/api/analytics/status${range}`),
+    api('/api/feedback/summary').catch(() => ({ total: 0, average: 5.0, breakdown: {}, confirmed_rate: 100, recent: [] })),
   ]);
   state.analyticsExportData = { summary: summary.summary, monthly: monthly.data, barangay: barangay.data, types: types.data.categories || [], status: status.data };
   const summaryValues = summary.summary;
@@ -1201,6 +1229,58 @@ async function renderAdminAnalytics() {
       </section>
     </div>
     <div class="analytics-metrics-grid">${cards.map((card) => `<article class="analytics-metric-card ${card.tone}"><span>${escapeHtml(card.label)}</span><strong>${escapeHtml(Number(card.value || 0).toLocaleString())}</strong></article>`).join('')}</div>
+    <section class="panel" style="margin-top:20px;padding:20px;border-radius:12px;background:#fff;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div>
+          <h3 style="margin:0;font-size:1.15rem;color:#0f2942;display:flex;align-items:center;gap:8px;">
+            <span>⭐</span> Citizen Satisfaction &amp; Restoration Verification
+          </h3>
+          <p class="muted small" style="margin:4px 0 0 0;">Community ratings and post-restoration power verification directly from Valencia residents.</p>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:1.6rem;font-weight:800;color:#f59e0b;">★ ${feedbackData.average.toFixed(1)} <small style="font-size:0.9rem;color:#64748b;">/ 5.0</small></div>
+          <span class="muted small">${feedbackData.total} reviews recorded</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin-bottom:16px;">
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;">
+          <span class="muted small" style="text-transform:uppercase;font-weight:700;">Power Return Rate</span>
+          <strong style="display:block;font-size:1.4rem;color:#10b981;margin-top:4px;">${feedbackData.confirmed_rate}%</strong>
+          <small class="muted">Residents confirmed lights on</small>
+        </div>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;">
+          <span class="muted small" style="text-transform:uppercase;font-weight:700;">5-Star Reviews</span>
+          <strong style="display:block;font-size:1.4rem;color:#f59e0b;margin-top:4px;">${feedbackData.breakdown['5'] || 0}</strong>
+          <small class="muted">Highest satisfaction</small>
+        </div>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;">
+          <span class="muted small" style="text-transform:uppercase;font-weight:700;">4-Star Reviews</span>
+          <strong style="display:block;font-size:1.4rem;color:#3b82f6;margin-top:4px;">${feedbackData.breakdown['4'] || 0}</strong>
+          <small class="muted">Good experience</small>
+        </div>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px;">
+          <span class="muted small" style="text-transform:uppercase;font-weight:700;">Critical (1-2 Stars)</span>
+          <strong style="display:block;font-size:1.4rem;color:#ef4444;margin-top:4px;">${(feedbackData.breakdown['1'] || 0) + (feedbackData.breakdown['2'] || 0)}</strong>
+          <small class="muted">Follow-up needed</small>
+        </div>
+      </div>
+      <h4 style="font-size:0.9rem;margin:16px 0 8px 0;color:#334155;">Recent Resident Reviews &amp; Testimonials</h4>
+      <div style="display:grid;gap:8px;max-height:220px;overflow-y:auto;">
+        ${feedbackData.recent?.length ? feedbackData.recent.slice(0, 6).map((f) => `
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:10px 14px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <strong style="font-size:0.88rem;color:#0f2942;">${escapeHtml(f.user_name)}</strong>
+              <span class="muted small"> · ${escapeHtml(f.barangay)}</span>
+              <p style="margin:3px 0 0 0;font-size:0.82rem;color:#475569;">"${escapeHtml(f.feedback_text || 'Power restored successfully. Salamat!')}"</p>
+            </div>
+            <div style="text-align:right;">
+              <span style="color:#f59e0b;font-weight:700;">${'★'.repeat(f.rating)}${'☆'.repeat(5 - f.rating)}</span>
+              <span style="display:block;font-size:0.72rem;color:#64748b;">${escapeHtml(formatDateTime(f.created_at))}</span>
+            </div>
+          </div>
+        `).join('') : '<p class="muted small">No citizen reviews recorded yet.</p>'}
+      </div>
+    </section>
   </section>`);
 }
 
@@ -1412,16 +1492,47 @@ async function renderAdminSettings() {
   ${selectedTab === 'status' ? `<div class="panel settings-status-panel"><div class="panel-head"><h2>Current status values</h2></div>
     ${statusSection('Report status', reportData.statuses)}${statusSection('Incident status', incidentData.statuses)}${statusSection('Scheduled outage status', scheduleData.statuses)}
   </div>` : ''}
-  ${selectedTab === 'notifications' ? `<div class="panel settings-channel-panel"><div class="panel-head"><h2>Notification delivery settings</h2></div>
-    <form class="form-stack" data-form="notification-settings">
-      <label class="checkbox-field"><input type="checkbox" name="inApp" ${notifications.inApp === 'on' ? 'checked' : ''}> In-app notifications</label>
-      <label class="checkbox-field"><input type="checkbox" name="web" ${notifications.web === 'on' ? 'checked' : ''}> Web notifications</label>
-      <label class="checkbox-field"><input type="checkbox" name="email" ${notifications.email === 'on' ? 'checked' : ''}> Email notifications</label>
-      <label class="checkbox-field"><input type="checkbox" name="sms" ${notifications.sms === 'on' ? 'checked' : ''}> SMS notifications</label>
-      <p class="muted small">Email and SMS delivery require their respective server integrations.</p>
-      <button class="button primary" type="submit">Save Changes</button>
-    </form>
-  </div>` : ''}
+  ${selectedTab === 'notifications' ? `
+    <div class="panel-row wrap" style="display:grid;grid-template-columns:1fr 1.3fr;gap:20px;">
+      <div class="panel settings-channel-panel">
+        <div class="panel-head"><h2>Notification Channels</h2></div>
+        <form class="form-stack" data-form="notification-settings">
+          <label class="checkbox-field"><input type="checkbox" name="inApp" ${notifications.inApp === 'on' ? 'checked' : ''}> In-app notifications</label>
+          <label class="checkbox-field"><input type="checkbox" name="web" ${notifications.web === 'on' ? 'checked' : ''}> Web notifications</label>
+          <label class="checkbox-field"><input type="checkbox" name="email" ${notifications.email === 'on' ? 'checked' : ''}> Email notifications</label>
+          <label class="checkbox-field"><input type="checkbox" name="sms" ${notifications.sms === 'on' ? 'checked' : ''}> SMS notifications</label>
+          <p class="muted small">SMS Gateway supports Semaphore API with local test-simulation fallback.</p>
+          <button class="button primary" type="submit">Save Changes</button>
+        </form>
+        <hr style="margin:20px 0;border:none;border-top:1px solid #e2e8f0;">
+        <div class="panel-head"><h3>Broadcast Test SMS</h3></div>
+        <form class="form-stack" data-form="test-sms">
+          <label>Recipient Mobile Number<input class="input" name="phone_number" placeholder="09171234567" required></label>
+          <label>Message Content<textarea class="input" name="message" rows="2" required placeholder="Valencia PowerWatch: Power restored in Barangay Poblacion."></textarea></label>
+          <button class="button ghost" type="submit">🚀 Dispatch Test SMS</button>
+        </form>
+      </div>
+      <div class="panel">
+        <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <h2>SMS Gateway Transmission Monitor</h2>
+            <span class="muted small">Engine: <strong>Semaphore API + Demo Gateway</strong></span>
+          </div>
+          <button class="button ghost small" data-action="refresh-sms-logs">↻ Refresh</button>
+        </div>
+        <div class="table-container" style="max-height:380px;overflow-y:auto;margin-top:12px;">
+          <table class="data-table" style="font-size:0.82rem;">
+            <thead>
+              <tr><th>Date/Time</th><th>Phone Number</th><th>Event</th><th>Status</th><th>Message</th></tr>
+            </thead>
+            <tbody id="sms-logs-tbody">
+              <tr><td colspan="5" class="muted small">Loading SMS Gateway transmission logs…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  ` : ''}
   ${selectedTab === 'map' ? `<div class="panel settings-map-panel"><div class="panel-head"><h2>Map / GIS defaults</h2></div>
     <form class="form-stack" data-form="map-settings">
       <div class="form-grid"><label>Default latitude<input class="input" type="number" step="any" name="latitude" value="${escapeHtml(String(map.latitude))}" required></label><label>Default longitude<input class="input" type="number" step="any" name="longitude" value="${escapeHtml(String(map.longitude))}" required></label><label>Default zoom<input class="input" type="number" min="3" max="18" name="zoom" value="${escapeHtml(String(map.zoom))}" required></label></div>
@@ -1436,6 +1547,26 @@ async function renderAdminSettings() {
     <div class="detail-grid"><div><span>Account role</span><strong>${escapeHtml(roleLabel(state.user.role))}</strong></div><div><span>Password recovery</span><strong>${state.passwordRecoveryEnabled ? 'Email recovery configured' : 'SMTP not configured'}</strong></div><div><span>Access control</span><strong>Role-based permissions enabled</strong></div><div><span>Password policy</span><strong>Minimum 6 characters</strong></div></div>
     <button class="button ghost" data-page="profile">Manage account password</button>
   </div>` : ''}`);
+
+  if (selectedTab === 'notifications') {
+    api('/api/sms/logs').then(({ logs }) => {
+      const tbody = document.getElementById('sms-logs-tbody');
+      if (!tbody) return;
+      if (!logs?.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="muted small">No SMS dispatches recorded yet. Try sending a test SMS or verifying an incident.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = logs.map((log) => `
+        <tr>
+          <td style="white-space:nowrap;">${escapeHtml(formatDateTime(log.created_at))}</td>
+          <td style="font-weight:600;">${escapeHtml(log.phone_number)}</td>
+          <td><span class="pill pill-neutral">${escapeHtml(log.event_type || 'dispatch')}</span></td>
+          <td><span class="pill pill-${log.status === 'delivered' || log.status === 'simulated' ? 'ok' : 'bad'}">${escapeHtml(log.status)}</span></td>
+          <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(log.message)}">${escapeHtml(log.message)}</td>
+        </tr>
+      `).join('');
+    }).catch(() => {});
+  }
 }
 
 async function renderAdminProfile() {
