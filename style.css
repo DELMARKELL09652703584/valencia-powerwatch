@@ -3414,7 +3414,7 @@ select.input { cursor: pointer; }
 .legend-dot { width: 11px; height: 11px; display: inline-block; border-radius: 50%; }
 .legend-dot.red { background: #e54444; }
 .legend-dot.blue { background: #1976d2; }
-.community-map { height: min(52vh, 400px); min-height: 270px; overflow: hidden; border: 1px solid #d9e6f0; border-radius: 12px; z-index: 0; box-shadow: 0 4px 14px rgba(7, 43, 77, 0.08); }
+.community-map { height: min(58vh, 440px); min-height: 320px; overflow: hidden; border: 1px solid #d9e6f0; border-radius: 14px; z-index: 0; box-shadow: 0 4px 14px rgba(7, 43, 77, 0.08); }
 .community-map .leaflet-popup-content-wrapper,
 #admin-outage-map .leaflet-popup-content-wrapper { border-radius: 14px; box-shadow: 0 10px 30px rgba(0, 30, 60, 0.22); padding: 0; overflow: hidden; }
 .community-map .leaflet-popup-content,

@@ -494,9 +494,11 @@ async function renderMobileReportForm() {
       14,
     );
     state.reportLocationMap = map;
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors',
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 18,
+      maxNativeZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
     }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     const setPin = (latitude, longitude) => {
@@ -863,22 +865,37 @@ async function renderMobileMap() {
   const mapElement = document.getElementById('community-map');
   if (!mapElement) return;
   await ensureLeaflet();
-  const map = L.map(mapElement, { zoomControl: false }).setView([7.906, 125.094], 12);
+  const map = L.map(mapElement, {
+    zoomControl: false,
+    minZoom: 11,
+    maxZoom: 18,
+    maxBounds: [[7.6, 124.8], [8.2, 125.4]],
+  }).setView([7.9064, 125.0941], 13.5);
 
   if (isSatellite) {
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 19,
+      maxZoom: 18,
+      maxNativeZoom: 18,
       attribution: 'Tiles &copy; Esri',
     }).addTo(map);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 18,
+      maxNativeZoom: 18,
+      opacity: 0.95,
+      attribution: 'Labels &copy; Esri',
+    }).addTo(map);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 19,
+      maxZoom: 18,
+      maxNativeZoom: 18,
       opacity: 0.85,
       attribution: 'Roads &copy; Esri',
     }).addTo(map);
   } else {
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors',
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 18,
+      maxNativeZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
     }).addTo(map);
   }
 

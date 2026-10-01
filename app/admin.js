@@ -762,14 +762,36 @@ async function renderAdminMap() {
   await loadAdminMapLibrary();
   const mapElement = document.getElementById('admin-outage-map');
   if (!mapElement) return;
-  const map = L.map(mapElement, { zoomControl: false }).setView(mapCenter, Number(mapSettings.zoom) || 12);
+  const map = L.map(mapElement, {
+    zoomControl: false,
+    minZoom: 11,
+    maxZoom: 18,
+    maxBounds: [[7.6, 124.8], [8.2, 125.4]],
+  }).setView(mapCenter, Math.max(13, Number(mapSettings.zoom) || 13));
   map.createPane('mapBasemap');
   map.getPane('mapBasemap').style.zIndex = 200;
   map.createPane('mapReferenceOverlays');
   map.getPane('mapReferenceOverlays').style.zIndex = 250;
-  const streetTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, pane: 'mapBasemap', attribution: '&copy; OpenStreetMap contributors' });
-  const satelliteTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, pane: 'mapBasemap', attribution: 'Tiles &copy; Esri' });
-  const roadsTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, pane: 'mapReferenceOverlays', opacity: .9, attribution: 'Roads &copy; Esri' });
+  const streetTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    subdomains: 'abcd',
+    maxZoom: 18,
+    maxNativeZoom: 19,
+    pane: 'mapBasemap',
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+  });
+  const satelliteTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 18,
+    maxNativeZoom: 18,
+    pane: 'mapBasemap',
+    attribution: 'Tiles &copy; Esri',
+  });
+  const roadsTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 18,
+    maxNativeZoom: 18,
+    pane: 'mapReferenceOverlays',
+    opacity: 0.95,
+    attribution: 'Labels &copy; Esri',
+  });
   (layers.satellite ? satelliteTiles : streetTiles).addTo(map);
   L.control.zoom({ position: 'topleft' }).addTo(map);
 
