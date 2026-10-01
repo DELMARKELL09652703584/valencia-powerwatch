@@ -656,6 +656,17 @@ const ensureAdminAccount = () => {
       hashPassword('ADMIN2023*'), now(), now()
     );
   }
+
+  const demoAdmin = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get('admin@powerwatch.ph');
+  if (demoAdmin) {
+    db.prepare("UPDATE users SET password_hash = ?, role = 'administrator', status = 'Active' WHERE id = ?")
+      .run(hashPassword('admin123'), demoAdmin.id);
+  } else {
+    db.prepare(`
+      INSERT INTO users (full_name, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
+      VALUES (?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)
+    `).run('System Administrator', 'admin@powerwatch.ph', '0917-555-0100', 'Brgy. Poblacion, Valencia City', 'Poblacion', hashPassword('admin123'), now(), now());
+  }
 };
 
 ensureAdminAccount();
