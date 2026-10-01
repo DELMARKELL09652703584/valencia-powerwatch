@@ -820,8 +820,29 @@ async function renderAdminMap() {
     const coordinates = locationFor(item);
     if (!coordinates) return;
     const category = incidentLayer(item);
+    const adminSev = item.severity || (String(item.incident_type || '').includes('Line Down') ? 'Critical' : String(item.incident_type || '').includes('Total') ? 'High' : 'Moderate');
+    const adminSevStyle = adminSev === 'Critical' ? 'background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;' : adminSev === 'High' ? 'background:#fff7ed;color:#ea580c;border:1px solid #fdba74;' : 'background:#fefce8;color:#ca8a04;border:1px solid #fde047;';
+    const adminEtr = item.estimated_restoration_time ? new Date(item.estimated_restoration_time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Pending field assessment';
+
+    const adminPopup = `
+      <div class="map-popup-card">
+        <div class="map-popup-header">
+          <span class="map-popup-code">${escapeHtml(item.incident_code || 'OUTAGE')}</span>
+          <span class="map-popup-badge" style="${adminSevStyle}">${escapeHtml(adminSev)}</span>
+        </div>
+        <h4 class="map-popup-title">${escapeHtml(item.title)}</h4>
+        <div class="map-popup-meta">
+          <div class="map-popup-row"><span class="map-popup-icon">📍</span><span><strong>${escapeHtml(item.barangay)}</strong></span></div>
+          <div class="map-popup-row"><span class="map-popup-icon">⚡</span><span>${escapeHtml(item.incident_type || 'Outage Incident')}</span></div>
+          <div class="map-popup-row"><span class="map-popup-icon">⏳</span><span><strong>ETR:</strong> <span class="map-popup-etr">${escapeHtml(adminEtr)}</span></span></div>
+          <div class="map-popup-row"><span class="map-popup-icon">🔄</span><span>Status: <strong style="color:${category.color}">${escapeHtml(item.status)}</strong></span></div>
+        </div>
+        <button type="button" class="map-popup-btn" data-action="view-incident-details" data-id="${item.id}">Inspect Incident Record ›</button>
+      </div>
+    `;
+
     L.circleMarker(coordinates, { pane: 'markerPane', radius: 9, color: '#fff', fillColor: category.color, fillOpacity: .98, weight: 2.5 })
-      .addTo(category.layer).bindPopup(`<strong>${escapeHtml(item.incident_code)}</strong><br>${escapeHtml(item.title)}<br>${escapeHtml(item.barangay)} · ${escapeHtml(item.status)}`);
+      .addTo(category.layer).bindPopup(adminPopup, { maxWidth: 280 });
   });
   verificationReports.forEach((report) => {
     const coordinates = locationFor(report);

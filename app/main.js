@@ -1091,6 +1091,10 @@ async function handleClick(event) {
         state.mobileMapMode = value;
         await render();
         return;
+      case 'set-mobile-map-layer':
+        state.mobileMapLayer = value;
+        await render();
+        return;
       case 'clear-mobile-scope':
         state.filters.mobileBarangay = '';
         state.filters.mobileType = '';

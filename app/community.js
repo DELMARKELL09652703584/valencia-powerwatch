@@ -819,6 +819,7 @@ async function renderMobileMap() {
     api('/api/reports').catch(() => ({ reports: [] })),
   ]);
   const isHeatmap = state.mobileMapMode === 'heat';
+  const isSatellite = state.mobileMapLayer === 'satellite';
 
   const legendMarkup = isHeatmap ? `
     <div class="mobile-map-legend" style="display:flex;align-items:center;gap:10px;">
@@ -834,10 +835,16 @@ async function renderMobileMap() {
   `;
 
   mobileShell(`
-    ${mobileHero('Power Outage Map', 'Explore active interruptions and outage density across Valencia City.')}
-    <div class="mobile-segments" role="group" aria-label="Map display mode" style="margin-bottom:8px;">
-      <button type="button" class="mobile-segment ${!isHeatmap ? 'active' : ''}" data-action="set-mobile-map-mode" data-value="markers">📍 Outage Pins</button>
-      <button type="button" class="mobile-segment ${isHeatmap ? 'active' : ''}" data-action="set-mobile-map-mode" data-value="heat">🔥 Hotspot Heatmap</button>
+    ${mobileHero('Power Outage Map', 'Explore active interruptions, satellite views, and outage density across Valencia City.')}
+    <div class="mobile-map-controls" style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+      <div class="mobile-segments" role="group" aria-label="Map display mode" style="flex:1;min-width:180px;margin-bottom:0;">
+        <button type="button" class="mobile-segment ${!isHeatmap ? 'active' : ''}" data-action="set-mobile-map-mode" data-value="markers">📍 Outage Pins</button>
+        <button type="button" class="mobile-segment ${isHeatmap ? 'active' : ''}" data-action="set-mobile-map-mode" data-value="heat">🔥 Hotspot Heatmap</button>
+      </div>
+      <div class="mobile-segments" role="group" aria-label="Base map layer" style="margin-bottom:0;">
+        <button type="button" class="mobile-segment ${!isSatellite ? 'active' : ''}" data-action="set-mobile-map-layer" data-value="street" title="Standard Street Map">🗺️ Street</button>
+        <button type="button" class="mobile-segment ${isSatellite ? 'active' : ''}" data-action="set-mobile-map-layer" data-value="satellite" title="Satellite Aerial Photo">🛰️ Satellite</button>
+      </div>
     </div>
     ${legendMarkup}
     <div class="community-map" id="community-map" aria-label="Map of Valencia City outages"></div>
@@ -857,15 +864,43 @@ async function renderMobileMap() {
   if (!mapElement) return;
   await ensureLeaflet();
   const map = L.map(mapElement, { zoomControl: false }).setView([7.906, 125.094], 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors',
-  }).addTo(map);
+
+  if (isSatellite) {
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Tiles &copy; Esri',
+    }).addTo(map);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      opacity: 0.85,
+      attribution: 'Roads &copy; Esri',
+    }).addTo(map);
+  } else {
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map);
+  }
+
   L.control.zoom({ position: 'bottomright' }).addTo(map);
   const coordinatesFor = (item) => {
     if (hasCoordinates(item)) return [Number(item.latitude), Number(item.longitude)];
     const barangay = barangayLocations.find((location) => location.name === item.barangay);
     return hasCoordinates(barangay) ? [Number(barangay.latitude), Number(barangay.longitude)] : null;
+  };
+
+  const formatEtr = (val) => {
+    if (!val) return 'Assessing field repair window';
+    const d = new Date(val);
+    return isNaN(d) ? String(val) : d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getSeverity = (inc) => inc.severity || (String(inc.incident_type || '').includes('Line Down') ? 'Critical' : String(inc.incident_type || '').includes('Total') ? 'High' : 'Moderate');
+  const getSeverityStyle = (sev) => {
+    if (sev === 'Critical') return 'background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;';
+    if (sev === 'High') return 'background:#fff7ed;color:#ea580c;border:1px solid #fdba74;';
+    if (sev === 'Moderate') return 'background:#fefce8;color:#ca8a04;border:1px solid #fde047;';
+    return 'background:#f0fdf4;color:#16a34a;border:1px solid #86efac;';
   };
 
   if (isHeatmap) {
@@ -897,14 +932,70 @@ async function renderMobileMap() {
     incidents.forEach((incident) => {
       const coordinates = coordinatesFor(incident);
       if (!coordinates) return;
-      L.circleMarker(coordinates, { radius: 9, color: '#b72832', fillColor: '#e5484d', fillOpacity: .9, weight: 2 })
-        .addTo(map).bindPopup(`<strong>${escapeHtml(incident.title)}</strong><br>${escapeHtml(incident.barangay)} · ${escapeHtml(incident.status)}`);
+      const sev = getSeverity(incident);
+      const markerColor = sev === 'Critical' ? '#b91c1c' : '#e11d48';
+
+      const popupHtml = `
+        <div class="map-popup-card">
+          <div class="map-popup-header">
+            <span class="map-popup-code">${escapeHtml(incident.incident_code || 'OUTAGE')}</span>
+            <span class="map-popup-badge" style="${getSeverityStyle(sev)}">${escapeHtml(sev)}</span>
+          </div>
+          <h4 class="map-popup-title">${escapeHtml(incident.title)}</h4>
+          <div class="map-popup-meta">
+            <div class="map-popup-row">
+              <span class="map-popup-icon">📍</span>
+              <span><strong>${escapeHtml(incident.barangay || 'Valencia City')}</strong></span>
+            </div>
+            <div class="map-popup-row">
+              <span class="map-popup-icon">⚡</span>
+              <span>${escapeHtml(incident.incident_type || 'Power Interruption')}</span>
+            </div>
+            <div class="map-popup-row">
+              <span class="map-popup-icon">⏳</span>
+              <span><strong>Est. Restoration (ETR):</strong> <span class="map-popup-etr">${escapeHtml(formatEtr(incident.estimated_restoration_time))}</span></span>
+            </div>
+            <div class="map-popup-row">
+              <span class="map-popup-icon">🔄</span>
+              <span>Status: <strong style="color:${incident.status === 'Restored' ? '#16a34a' : '#e11d48'}">${escapeHtml(incident.status)}</strong></span>
+            </div>
+          </div>
+          <button type="button" class="map-popup-btn" data-action="view-incident-details" data-id="${incident.id}">View Live Tracker ›</button>
+        </div>
+      `;
+
+      L.circleMarker(coordinates, { radius: 10, color: '#fff', fillColor: markerColor, fillOpacity: 0.95, weight: 2.5 })
+        .addTo(map).bindPopup(popupHtml, { maxWidth: 280 });
     });
+
     scheduled.forEach((item) => {
       const coordinates = coordinatesFor(item);
       if (!coordinates) return;
-      L.circleMarker(coordinates, { radius: 8, color: '#145d9e', fillColor: '#2789dd', fillOpacity: .9, weight: 2 })
-        .addTo(map).bindPopup(`<strong>${escapeHtml(item.title)}</strong><br>${escapeHtml(item.barangay)} · ${escapeHtml(item.status)}`);
+
+      const schedPopupHtml = `
+        <div class="map-popup-card">
+          <div class="map-popup-header">
+            <span class="map-popup-code">${escapeHtml(item.schedule_code || 'SCHEDULED')}</span>
+            <span class="map-popup-badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">Scheduled</span>
+          </div>
+          <h4 class="map-popup-title">${escapeHtml(item.title || 'Planned Maintenance')}</h4>
+          <div class="map-popup-meta">
+            <div class="map-popup-row">
+              <span class="map-popup-icon">📍</span>
+              <span><strong>${escapeHtml(item.barangay)}</strong></span>
+            </div>
+            <div class="map-popup-row">
+              <span class="map-popup-icon">📅</span>
+              <span>${escapeHtml(formatSystemDate(item.outage_date))} (${escapeHtml(String(item.start_time || '').slice(0, 5))} - ${escapeHtml(String(item.expected_end_time || item.end_time || '').slice(0, 5))})</span>
+            </div>
+            ${item.reason ? `<div class="map-popup-row"><span class="map-popup-icon">ℹ️</span><span>${escapeHtml(item.reason)}</span></div>` : ''}
+          </div>
+          <button type="button" class="map-popup-btn sched" data-action="view-schedule-details" data-id="${item.id}">View Schedule Details ›</button>
+        </div>
+      `;
+
+      L.circleMarker(coordinates, { radius: 9, color: '#fff', fillColor: '#0284c7', fillOpacity: 0.95, weight: 2.5 })
+        .addTo(map).bindPopup(schedPopupHtml, { maxWidth: 280 });
     });
   }
   window.requestAnimationFrame(() => map.invalidateSize());
