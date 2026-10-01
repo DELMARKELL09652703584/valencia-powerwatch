@@ -174,7 +174,7 @@ router.post('/incidents', requireAuth, requireRole('personnel', 'administrator')
         INSERT INTO outage_incidents (incident_code, title, barangay, location, latitude, longitude, incident_type, outage_type,
           priority, customers_affected, restoration_progress, description, cause_category, status, start_time, estimated_restoration, etr_reason, affected_area, remarks,
           scheduled_id, created_by, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         code, String(title).trim(), barangay, location || null, latitude ?? null, longitude ?? null,
         incident_type || 'Unexpected', outage_type || null, priority || 'Medium', customers_affected ?? null, restoration_progress ?? null, description || null, cause_category || null,
