@@ -618,29 +618,67 @@ async function submitForm(form) {
     return;
   }
   if (type === 'new-incident') {
-    const primaryBarangay = String(values.barangay || '').trim();
-    const affectedBarangays = [...new Set([primaryBarangay, ...JSON.parse(values.affected_barangays || '[]').map(String)].filter(Boolean))];
-    const relatedReportIds = [...new Set(JSON.parse(values.related_report_ids || '[]').map(Number))];
-    if (!primaryBarangay || !affectedBarangays.length) throw new Error('Choose a primary and at least one affected barangay.');
-    if (!relatedReportIds.length) throw new Error('Link at least one related report before creating the incident.');
+    // 1. Auto-harvest report if selected in dropdown but user didn't click "+ Add Report"
+    const reportPicker = form.querySelector('[data-chip-label="report"]');
+    const reportSelect = reportPicker?.querySelector('[data-chip-select]');
+    let rawReportIds = [];
+    try { rawReportIds = JSON.parse(values.related_report_ids || '[]'); } catch {}
+    if (reportSelect?.value && !rawReportIds.includes(reportSelect.value)) {
+      rawReportIds.push(reportSelect.value);
+    }
+    const relatedReportIds = [...new Set(rawReportIds.map(Number).filter(Boolean))];
+
+    // 2. Auto-harvest barangay if selected in dropdown but user didn't click "+ Add Barangay"
+    const bgyPicker = form.querySelector('[data-chip-label="barangay"]');
+    const bgySelect = bgyPicker?.querySelector('[data-chip-select]');
+    let rawBarangays = [];
+    try { rawBarangays = JSON.parse(values.affected_barangays || '[]'); } catch {}
+    if (bgySelect?.value && !rawBarangays.includes(bgySelect.value)) {
+      rawBarangays.push(bgySelect.value);
+    }
+    let primaryBarangay = String(values.barangay || rawBarangays[0] || '').trim();
+
+    // 3. If primaryBarangay is still empty, detect from selected report's label text
+    if (!primaryBarangay && reportSelect?.selectedOptions?.[0]) {
+      const optText = reportSelect.selectedOptions[0].textContent;
+      for (const b of (state.barangays || [])) {
+        if (optText.includes(b)) {
+          primaryBarangay = b;
+          if (!rawBarangays.includes(b)) rawBarangays.push(b);
+          break;
+        }
+      }
+    }
+
+    const affectedBarangays = [...new Set([primaryBarangay, ...rawBarangays.map(String)].filter(Boolean))];
+    if (!primaryBarangay || !affectedBarangays.length) {
+      throw new Error('Please select at least one Affected Barangay.');
+    }
+
+    const incidentTitle = String(values.title || '').trim() || `${values.outage_type || 'Power Outage'} in ${primaryBarangay}`;
+
     const result = await send('/api/incidents', 'POST', {
       related_report_ids: relatedReportIds,
       affected_barangays: affectedBarangays,
-      title: values.title, barangay: primaryBarangay, location: values.location,
-      latitude: values.latitude === '' ? null : Number(values.latitude),
-      longitude: values.longitude === '' ? null : Number(values.longitude),
-      incident_type: values.incident_type, outage_type: values.outage_type || null,
-      priority: values.priority, customers_affected: values.customers_affected === '' ? null : Number(values.customers_affected),
-      restoration_progress: values.restoration_progress === '' ? null : Number(values.restoration_progress),
-      description: values.description,
+      title: incidentTitle,
+      barangay: primaryBarangay,
+      location: values.location || primaryBarangay,
+      latitude: values.latitude === '' || values.latitude === undefined ? null : Number(values.latitude),
+      longitude: values.longitude === '' || values.longitude === undefined ? null : Number(values.longitude),
+      incident_type: values.incident_type || 'Unexpected',
+      outage_type: values.outage_type || null,
+      priority: values.priority || 'Medium',
+      customers_affected: values.customers_affected === '' || values.customers_affected === undefined ? null : Number(values.customers_affected),
+      restoration_progress: values.restoration_progress === '' || values.restoration_progress === undefined ? null : Number(values.restoration_progress),
+      description: values.description || `Power interruption in ${primaryBarangay}.`,
       cause_category: isOfficial() ? (values.cause_category || null) : null,
-      start_time: values.start_time ? new Date(values.start_time).toISOString() : null,
-      affected_area: values.affected_area,
+      start_time: values.start_time ? new Date(values.start_time).toISOString() : new Date().toISOString(),
+      affected_area: values.affected_area || primaryBarangay,
       estimated_restoration: isOfficial() && values.estimated_restoration
         ? new Date(values.estimated_restoration).toISOString() : null,
-      initial_status: values.initial_status,
+      initial_status: values.initial_status || 'Reported',
     });
-    setToast(result.message);
+    setToast(result.message || 'Incident created successfully.');
     closeDialog();
     await render();
     return;
@@ -1525,13 +1563,13 @@ async function handleClick(event) {
         openDialog('Create Incident', `
           <div class="create-incident-form">
             <div class="incident-create-fields">
-              <label class="incident-create-field wide-field">Incident Title <span class="required-mark">*</span><input class="input" name="title" placeholder="Enter incident title" maxlength="160" required></label>
+              <label class="incident-create-field wide-field">Incident Title <span class="required-mark">*</span><input class="input" name="title" placeholder="e.g. Transformer Issue in Guinoyuran" maxlength="160" required></label>
               <label class="incident-create-field wide-field">Date &amp; Time <span class="required-mark">*</span><input class="input" type="datetime-local" name="start_time" value="${escapeHtml(toLocalInputValue(new Date()))}" required></label>
               <div class="incident-create-field wide-field"><span class="incident-field-label">Affected Barangays <span class="required-mark">*</span></span>${barangayPicker}</div>
               <label class="incident-create-field wide-field">Incident Type <span class="required-mark">*</span><select class="input" name="outage_type" required><option value="">Choose incident type</option>${typeOptions}</select></label>
               <label class="incident-create-field wide-field">Description <span class="required-mark">*</span><textarea class="input" name="description" rows="3" placeholder="Describe the incident" maxlength="3000" required></textarea></label>
               <label class="incident-create-field">Priority <span class="required-mark">*</span><select class="input" name="priority" required><option>Low</option><option selected>Medium</option><option>High</option><option>Critical</option></select></label>
-              <div class="incident-create-field wide-field"><span class="incident-field-label">Related Reports <span class="required-mark">*</span></span>${reportPicker}</div>
+              <div class="incident-create-field wide-field"><span class="incident-field-label">Related Reports (Optional / Link to Incident)</span>${reportPicker}</div>
             </div>
             <details class="incident-advanced-fields"><summary>Additional incident details</summary>
               <div class="incident-create-fields incident-advanced-grid">
@@ -2180,6 +2218,7 @@ document.addEventListener('submit', async (event) => {
   event.preventDefault();
   const button = form.querySelector('[type="submit"]');
   if (button) button.disabled = true;
+  document.querySelector('.dialog-error-banner')?.remove();
   try {
     await submitForm(form);
   } catch (error) {
@@ -2188,6 +2227,19 @@ document.addEventListener('submit', async (event) => {
       renderLogin('Your session expired. Sign in again to continue.');
     } else {
       setToast(error.message);
+      const dialog = document.getElementById('action-dialog');
+      if (dialog && dialog.open) {
+        let errBanner = dialog.querySelector('.dialog-error-banner');
+        if (!errBanner) {
+          errBanner = document.createElement('div');
+          errBanner.className = 'dialog-error-banner';
+          errBanner.style.cssText = 'background:#fef2f2;border:1.5px solid #ef4444;color:#b91c1c;padding:10px 14px;border-radius:8px;font-size:0.88rem;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;box-shadow:0 2px 6px rgba(239,68,68,0.15);';
+          const body = document.getElementById('dialog-body');
+          if (body) body.prepend(errBanner);
+        }
+        errBanner.innerHTML = `<span style="font-size:1.1rem;">⚠️</span> <span>${escapeHtml(error.message)}</span>`;
+        errBanner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
     }
   } finally {
     if (button && button.isConnected) button.disabled = false;
@@ -2195,6 +2247,16 @@ document.addEventListener('submit', async (event) => {
 });
 
 document.addEventListener('change', async (event) => {
+  const chipSelect = event.target.closest('[data-chip-select]');
+  if (chipSelect && chipSelect.value) {
+    const picker = chipSelect.closest('.incident-chip-picker');
+    if (picker) {
+      const values = incidentChipValues(picker);
+      if (!values.includes(chipSelect.value)) values.push(chipSelect.value);
+      updateIncidentChipPicker(picker, values);
+    }
+    return;
+  }
   const reportAttachmentInput = event.target.closest('form[data-form="report"] input[name="attachments"]');
   if (reportAttachmentInput) {
     try {

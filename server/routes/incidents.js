@@ -139,8 +139,7 @@ router.post('/incidents', requireAuth, requireRole('personnel', 'administrator')
   const inactiveArea = requestedAreas.find((name) => !db.prepare("SELECT 1 FROM barangays WHERE name = ? AND status = 'Active'").get(name));
   if (inactiveArea) return res.status(400).json({ error: `Affected barangay "${inactiveArea}" is not active.` });
 
-  if (Array.isArray(related_report_ids) && !related_report_ids.length) return res.status(400).json({ error: 'Link at least one related report.' });
-  const requestedReportIds = [...new Set([...(report_id ? [report_id] : []), ...(Array.isArray(related_report_ids) ? related_report_ids : [])].map(Number))];
+  const requestedReportIds = [...new Set([...(report_id ? [report_id] : []), ...(Array.isArray(related_report_ids) ? related_report_ids : [])].map(Number).filter(Boolean))];
   if (requestedReportIds.some((id) => !Number.isInteger(id) || id < 1)) return res.status(400).json({ error: 'Choose valid related reports.' });
   const linkedReports = [];
   for (const id of requestedReportIds) {
