@@ -883,6 +883,37 @@ async function handleClick(event) {
         await render();
         document.querySelector('[data-action="toggle-notification-panel"]')?.focus();
         return;
+      case 'toggle-admin-theme': {
+        const isDark = document.documentElement.classList.toggle('dark-mode');
+        document.body?.classList.toggle('dark-mode', isDark);
+        try { localStorage.setItem('powerwatch_theme', isDark ? 'dark' : 'light'); } catch (e) {}
+        const iconEl = document.getElementById('theme-btn-icon');
+        const textEl = document.getElementById('theme-btn-text');
+        if (iconEl) iconEl.textContent = isDark ? '☀️' : '🌙';
+        if (textEl) textEl.textContent = isDark ? 'Light' : 'Night Ops';
+        setToast(isDark ? '🌙 Night Ops Command Center mode enabled' : '☀️ Standard Light mode enabled');
+        return;
+      }
+      case 'open-command-palette':
+        openCommandPalette();
+        return;
+      case 'close-command-palette':
+        closeCommandPalette();
+        return;
+      case 'confirm-affected': {
+        if (!state.userAffectedIncidents) {
+          try { state.userAffectedIncidents = JSON.parse(localStorage.getItem('powerwatch_affected_incidents') || '{}'); }
+          catch (e) { state.userAffectedIncidents = {}; }
+        }
+        const current = Boolean(state.userAffectedIncidents[id]);
+        state.userAffectedIncidents[id] = !current;
+        try { localStorage.setItem('powerwatch_affected_incidents', JSON.stringify(state.userAffectedIncidents)); } catch (e) {}
+        setToast(!current 
+          ? '👥 Salamat! Na-record ang imong kumpirmasyon nga apektado ka niining brownout.' 
+          : 'Gikuha ang imong kumpirmasyon.');
+        await render();
+        return;
+      }
       case 'view-all-notifications':
         state.notificationPanelOpen = false;
         state.page = 'notifications';
@@ -2258,5 +2289,161 @@ document.addEventListener('change', (event) => {
     else goToPage(state.page);
   }
 });
+
+function openCommandPalette() {
+  let modal = document.getElementById('command-palette-modal');
+  if (modal) modal.remove();
+
+  const navItems = [
+    { label: 'Dashboard Overview', icon: '📊', type: 'page', key: 'dashboard' },
+    { label: 'Incident & Outage Monitoring', icon: '⚡', type: 'page', key: 'incidents' },
+    { label: 'Report Verification Queue', icon: '🔍', type: 'page', key: 'verification' },
+    { label: 'Citizen Reports Table', icon: '📋', type: 'page', key: 'reports' },
+    { label: 'Interactive GIS Outage Map', icon: '🗺️', type: 'page', key: 'map' },
+    { label: 'Scheduled Maintenance Grid', icon: '🗓️', type: 'page', key: 'scheduled' },
+    { label: 'Announcements & Advisories', icon: '📢', type: 'page', key: 'announcements' },
+    { label: 'Analytics & SAIDI/SAIFI Metrics', icon: '📈', type: 'page', key: 'analytics' },
+    { label: 'System Audit Trail & Security Logs', icon: '🛡️', type: 'page', key: 'audit' },
+    { label: 'User & Staff Access Management', icon: '👥', type: 'page', key: 'users' },
+    { label: 'System Configuration & Settings', icon: '⚙️', type: 'page', key: 'settings' },
+  ];
+
+  const barangays = state.barangays || [];
+
+  const backdrop = document.createElement('div');
+  backdrop.id = 'command-palette-modal';
+  backdrop.className = 'command-palette-backdrop';
+
+  backdrop.innerHTML = `
+    <div class="command-palette-modal" role="dialog" aria-modal="true" aria-label="Command Palette">
+      <div class="command-palette-head">
+        <span style="font-size: 1.15rem;">🔍</span>
+        <input type="text" class="command-palette-input" placeholder="Type a command, page, or barangay..." autofocus>
+        <button type="button" class="link-button" data-action="close-command-palette" style="font-size: 1.25rem;">&times;</button>
+      </div>
+      <div class="command-palette-results">
+        <div class="command-group-title">Navigation &amp; System Modules</div>
+        ${navItems.map(item => `
+          <button type="button" class="command-item" data-command-type="${item.type}" data-command-key="${item.key}">
+            <div class="command-item-left"><span>${item.icon}</span><strong>${escapeHtml(item.label)}</strong></div>
+            <span class="command-item-badge">Jump</span>
+          </button>
+        `).join('')}
+        <div class="command-group-title">Valencia City Barangays (31)</div>
+        ${barangays.slice(0, 10).map(b => `
+          <button type="button" class="command-item" data-command-type="barangay" data-command-key="${escapeHtml(b)}">
+            <div class="command-item-left"><span>📍</span><strong>Brgy. ${escapeHtml(b)}</strong></div>
+            <span class="command-item-badge">Filter Map</span>
+          </button>
+        `).join('')}
+      </div>
+      <div class="command-palette-foot">
+        <span>Navigation: <kbd>↑</kbd> <kbd>↓</kbd> or click to select</span>
+        <span><kbd>Esc</kbd> to exit</span>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(backdrop);
+  const input = backdrop.querySelector('.command-palette-input');
+  input?.focus();
+
+  input?.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    const results = backdrop.querySelector('.command-palette-results');
+    const matchedNav = navItems.filter(item => item.label.toLowerCase().includes(q));
+    const matchedBarangay = barangays.filter(b => b.toLowerCase().includes(q));
+
+    let html = '';
+    if (matchedNav.length) {
+      html += `<div class="command-group-title">Navigation (${matchedNav.length})</div>`;
+      html += matchedNav.map(item => `
+        <button type="button" class="command-item" data-command-type="${item.type}" data-command-key="${item.key}">
+          <div class="command-item-left"><span>${item.icon}</span><strong>${escapeHtml(item.label)}</strong></div>
+          <span class="command-item-badge">Jump</span>
+        </button>
+      `).join('');
+    }
+    if (matchedBarangay.length) {
+      html += `<div class="command-group-title">Barangays (${matchedBarangay.length})</div>`;
+      html += matchedBarangay.map(b => `
+        <button type="button" class="command-item" data-command-type="barangay" data-command-key="${escapeHtml(b)}">
+          <div class="command-item-left"><span>📍</span><strong>Brgy. ${escapeHtml(b)}</strong></div>
+          <span class="command-item-badge">Filter Map</span>
+        </button>
+      `).join('');
+    }
+    if (!matchedNav.length && !matchedBarangay.length) {
+      html = '<div style="padding: 24px; text-align: center; color: var(--muted); font-size: 0.88rem;">No matching commands or barangays found.</div>';
+    }
+    results.innerHTML = html;
+  });
+
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop || e.target.closest('[data-action="close-command-palette"]')) {
+      closeCommandPalette();
+      return;
+    }
+    const itemBtn = e.target.closest('.command-item');
+    if (itemBtn) {
+      const type = itemBtn.dataset.commandType;
+      const key = itemBtn.dataset.commandKey;
+      closeCommandPalette();
+      if (type === 'page') {
+        goToPage(key);
+      } else if (type === 'barangay') {
+        state.page = 'map';
+        render().then(() => {
+          setTimeout(() => {
+            const flySelect = document.getElementById('map-fly-select');
+            if (flySelect) {
+              const opt = Array.from(flySelect.options).find(o => o.text.includes(key));
+              if (opt) {
+                flySelect.value = opt.value;
+                flySelect.dispatchEvent(new Event('change'));
+              }
+            }
+          }, 350);
+        });
+      }
+    }
+  });
+}
+
+function closeCommandPalette() {
+  const modal = document.getElementById('command-palette-modal');
+  if (modal) modal.remove();
+}
+
+window.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    const existing = document.getElementById('command-palette-modal');
+    if (existing) closeCommandPalette();
+    else openCommandPalette();
+  } else if (e.key === 'Escape') {
+    closeCommandPalette();
+  }
+});
+
+// Network status listeners
+window.addEventListener('online', () => {
+  setToast('✓ Network restored: Connected to Valencia PowerWatch.');
+  const banner = document.getElementById('mobile-offline-banner');
+  if (banner) banner.remove();
+});
+
+window.addEventListener('offline', () => {
+  setToast('⚠️ Network connection lost. Offline mode active.');
+  if (IS_COMMUNITY) render();
+});
+
+// Theme persistence on load
+try {
+  if (localStorage.getItem('powerwatch_theme') === 'dark') {
+    document.documentElement.classList.add('dark-mode');
+    document.body?.classList.add('dark-mode');
+  }
+} catch (e) {}
 
 boot();

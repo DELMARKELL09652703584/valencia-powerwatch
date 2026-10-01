@@ -70,7 +70,19 @@ function adminShell(content) {
           <h1>${escapeHtml(nav.find((n) => n.key === state.page)?.label || (state.page === 'notifications' ? 'Notifications' : state.page === 'profile' ? 'My Profile' : 'Dashboard'))}</h1>
           <p class="topbar-sub">${escapeHtml(info.locality || 'Valencia City, Bukidnon')}</p>
         </div>
-        <div class="topbar-right">
+        <div class="topbar-right" style="display:flex;align-items:center;gap:10px;">
+          <div class="grid-pulse-bar ${Number(state.activeIncidentsCount || 0) > 0 ? 'has-outage' : ''}" title="Valencia Grid Health Status">
+            <span class="pulse-dot"></span>
+            <span>${Number(state.activeIncidentsCount || 0) > 0 ? `${state.activeIncidentsCount} Outage${state.activeIncidentsCount > 1 ? 's' : ''} Active` : 'Grid Online: 99.2% Normal'}</span>
+          </div>
+          <button type="button" class="topbar-search-trigger" data-action="open-command-palette" title="Quick Search (Ctrl + K)">
+            <span>🔍 Search...</span>
+            <kbd>Ctrl K</kbd>
+          </button>
+          <button type="button" class="theme-toggle-btn" data-action="toggle-admin-theme" title="Toggle Command Center Night Ops Mode">
+            <span id="theme-btn-icon">${document.documentElement.classList.contains('dark-mode') ? '☀️' : '🌙'}</span>
+            <span id="theme-btn-text">${document.documentElement.classList.contains('dark-mode') ? 'Light' : 'Night Ops'}</span>
+          </button>
           <div class="notification-menu">
             <button type="button" class="icon-button notification-bell" data-action="toggle-notification-panel" aria-label="Notifications${state.unread ? `, ${state.unread} unread` : ''}" aria-haspopup="dialog" aria-expanded="${Boolean(state.notificationPanelOpen)}" aria-controls="admin-notification-panel" title="Notifications">
               ${adminNavIcon('notifications')}${state.unread ? `<span class="notification-badge">${state.unread > 99 ? '99+' : state.unread}</span>` : ''}
@@ -155,6 +167,7 @@ async function renderAdminDashboard() {
   const recent = canManage() ? (await api('/api/reports')).reports.slice(0, 6) : [];
   const active = (await api('/api/incidents')).incidents.slice(0, 4);
   const resolvedCount = Number(stats.resolved || 0) + Number(stats.restored || 0);
+  state.activeIncidentsCount = Number(stats.ongoing || stats.active_incidents || 0);
   const cards = [
     { label: 'Total Reports', value: stats.reports_total, icon: '♙', tone: 'blue', page: 'reports' },
     { label: 'Pending Verification', value: Number(stats.reports_pending || 0) + Number(stats.reports_under_review || 0), icon: '▣', tone: 'amber', page: 'verification' },
@@ -726,6 +739,17 @@ async function renderAdminMap() {
           </ul>
         </section>
         <section class="power-map-panel power-map-layer-panel">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <h3 style="margin:0;">Map Controls</h3>
+            <button type="button" class="link-button" id="toggle-fullscreen-btn" style="font-size:0.78rem;font-weight:700;">⛶ Fullscreen</button>
+          </div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:0.78rem;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:4px;">🎯 Fly to Barangay:</label>
+            <select class="input small" id="map-fly-select" style="width:100%;font-size:0.82rem;padding:6px 8px;">
+              <option value="">Select a barangay to focus...</option>
+              ${barangays.map((b) => `<option value="${b.latitude},${b.longitude},${escapeHtml(b.name)}">${escapeHtml(b.name)}</option>`).join('')}
+            </select>
+          </div>
           <h3>Layers</h3>
           <label style="background:#fff5f5;border:1px solid #fecaca;padding:6px 9px;border-radius:7px;margin-bottom:4px;">
             <input type="checkbox" data-map-layer="heatmap" ${layers.heatmap ? 'checked' : ''}>
@@ -936,6 +960,30 @@ async function renderAdminMap() {
         .bindPopup('Your current location').openPopup();
     }, () => setToast('Could not access your location. Check browser permissions.'), { enableHighAccuracy: true, timeout: 10000 });
   });
+  document.getElementById('map-fly-select')?.addEventListener('change', (event) => {
+    if (!event.target.value) return;
+    const parts = event.target.value.split(',');
+    const lat = Number(parts[0]);
+    const lng = Number(parts[1]);
+    const name = parts[2] || 'Barangay';
+    if (!isNaN(lat) && !isNaN(lng)) {
+      map.flyTo([lat, lng], 15, { duration: 1.2 });
+      L.popup()
+        .setLatLng([lat, lng])
+        .setContent(`<div style="padding:4px;"><strong style="color:#0369a1;font-size:0.95rem;">📍 Brgy. ${escapeHtml(name)}</strong><p style="margin:2px 0 0;font-size:0.78rem;color:#64748b;">Valencia City, Bukidnon</p></div>`)
+        .openOn(map);
+    }
+  });
+
+  document.getElementById('toggle-fullscreen-btn')?.addEventListener('click', () => {
+    const mapContainer = document.querySelector('.power-map-shell') || mapElement;
+    if (!document.fullscreenElement) {
+      mapContainer.requestFullscreen().catch(() => setToast('Fullscreen mode not permitted.'));
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  });
+
   window.requestAnimationFrame(() => map.invalidateSize());
 }
 

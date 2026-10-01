@@ -292,6 +292,7 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
   }
 
   app.innerHTML = `<div class="mobile-shell">
+    ${!navigator.onLine ? '<div class="offline-banner" id="mobile-offline-banner"><span>⚡ Offline Mode: Reports will sync once internet returns.</span></div>' : ''}
     ${statusBarMarkup}
     ${headerMarkup}
     <main class="mobile-content ${subpageHeader ? 'mobile-content-subpage' : ''}" id="mobile-content">${content}</main>
@@ -329,12 +330,69 @@ function formatRelativeTime(value) {
 
 async function renderMobileHome() {
   const cachedWeather = readWeatherCache();
-  const [{ stats }, { notifications }, { announcements }] = await Promise.all([
+  const [{ stats }, { notifications }, { announcements }, { incidents = [] }, { scheduled = [] }] = await Promise.all([
     api('/api/analytics/dashboard'),
     api('/api/notifications'),
     api('/api/announcements').catch(() => ({ announcements: [] })),
+    api('/api/incidents').catch(() => ({ incidents: [] })),
+    api('/api/scheduled/upcoming').catch(() => ({ scheduled: [] })),
   ]);
   state.mobileNotifications = notifications;
+
+  const userBarangay = state.user?.barangay || 'Poblacion';
+  const myIncident = incidents.find((inc) => (inc.affected_barangays || [inc.barangay]).some((b) => b && b.toLowerCase() === userBarangay.toLowerCase()) && inc.status !== 'Closed');
+  const myScheduled = scheduled.find((s) => s.barangay && s.barangay.toLowerCase() === userBarangay.toLowerCase() && s.status !== 'Completed');
+
+  let barangayHeroMarkup = '';
+  if (myIncident) {
+    barangayHeroMarkup = `
+      <section class="barangay-status-hero hero-outage">
+        <div class="bsh-header">
+          <span class="bsh-pulse red"></span>
+          <span class="bsh-badge">Interruption Alert</span>
+          <span class="bsh-barangay">Brgy. ${escapeHtml(userBarangay)}</span>
+        </div>
+        <h3>${escapeHtml(myIncident.title || 'Power Outage Reported')}</h3>
+        <p>${escapeHtml(myIncident.description || 'Line crews have been notified. Response and field assessment ongoing.')}</p>
+        <div class="bsh-actions">
+          <button type="button" class="button danger small" data-mobile-tab="outages">Track Outage &rarr;</button>
+          <button type="button" class="button ghost small" data-mobile-tab="map">View Map</button>
+        </div>
+      </section>
+    `;
+  } else if (myScheduled) {
+    barangayHeroMarkup = `
+      <section class="barangay-status-hero hero-scheduled">
+        <div class="bsh-header">
+          <span class="bsh-pulse amber"></span>
+          <span class="bsh-badge">Scheduled Maintenance</span>
+          <span class="bsh-barangay">Brgy. ${escapeHtml(userBarangay)}</span>
+        </div>
+        <h3>Advisory: Upcoming Maintenance</h3>
+        <p>Interruption scheduled on ${escapeHtml(formatSystemDate(myScheduled.outage_date))} (${escapeHtml(String(myScheduled.start_time || '').slice(0, 5))} - ${escapeHtml(String(myScheduled.end_time || '').slice(0, 5))}).</p>
+        <div class="bsh-actions">
+          <button type="button" class="button secondary small" data-mobile-tab="outages">View Advisory &rarr;</button>
+        </div>
+      </section>
+    `;
+  } else {
+    barangayHeroMarkup = `
+      <section class="barangay-status-hero hero-normal">
+        <div class="bsh-header">
+          <span class="bsh-pulse green"></span>
+          <span class="bsh-badge">Grid Normal</span>
+          <span class="bsh-barangay">Brgy. ${escapeHtml(userBarangay)}</span>
+        </div>
+        <h3>Power Supply Online &amp; Stable</h3>
+        <p>Walay reported nga brownout sa imong barangay karon. Normal ang boltahe ug distribution grid.</p>
+        <div class="bsh-actions">
+          <button type="button" class="button ghost small" data-mobile-tab="report" style="background:#fff;border-color:#bbf7d0;color:#166534;font-weight:700;">⚡ Report Outage</button>
+          <button type="button" class="button ghost small" data-mobile-tab="map" style="background:#fff;border-color:#bbf7d0;color:#166534;">🗺️ Live Map</button>
+        </div>
+      </section>
+    `;
+  }
+
   const dashboardCards = [
     { label: t('active_outages', 'Active Outages'), value: stats.active_incidents, icon: '🔔', tone: 'danger', tab: 'outages' },
     { label: t('pending_reports', 'Pending Reports'), value: stats.reports_pending, icon: '▣', tone: 'warning', action: 'dashboard-pending-reports' },
@@ -344,6 +402,7 @@ async function renderMobileHome() {
   const updates = notifications.slice(0, 3);
 
   mobileShell(`
+    ${barangayHeroMarkup}
     <section class="mobile-weather" id="home-weather" aria-label="Current weather in Valencia City" aria-live="polite">
       ${weatherWidgetMarkup(cachedWeather?.data, !cachedWeather)}
     </section>
@@ -607,7 +666,13 @@ async function renderMobileOutages() {
         </div>
         ${i.restoration_progress !== null && i.restoration_progress !== undefined ? `<div class="progress"><div class="progress-fill" style="width:${Math.max(0, Math.min(100, Number(i.restoration_progress)))}%"></div><span>${escapeHtml(String(i.restoration_progress))}% restored</span></div>` : ''}
         <footer class="muted small">Started ${escapeHtml(formatDateTime(i.start_time))}</footer>
-        <button type="button" class="button ghost block" data-action="view-incident-details" data-id="${i.id}">View Details</button>
+        <div class="neighbor-affected-row">
+          <button type="button" class="neighbor-affected-btn ${(state.userAffectedIncidents && state.userAffectedIncidents[i.id]) ? 'confirmed' : ''}" data-action="confirm-affected" data-id="${i.id}">
+            <span>👥 ${(state.userAffectedIncidents && state.userAffectedIncidents[i.id]) ? '✓ Gikumpirma nimo' : 'Affected sab ko (+1)'}</span>
+            <span class="affected-count-badge">${((i.affected_count || 1) + ((state.userAffectedIncidents && state.userAffectedIncidents[i.id]) ? 1 : 0))} household${((i.affected_count || 1) + ((state.userAffectedIncidents && state.userAffectedIncidents[i.id]) ? 1 : 0)) > 1 ? 's' : ''}</span>
+          </button>
+          <button type="button" class="button ghost small" data-action="view-incident-details" data-id="${i.id}">Details &rarr;</button>
+        </div>
       </section>`).join('') : `<div class="mobile-card">${emptyState('No active outages', 'There are no ongoing interruptions right now.', '⚡')}</div>`}
   `, { activeTab: 'outages' });
 }
@@ -802,10 +867,31 @@ async function renderMobileReportDetail() {
         ? `<video src="${escapeHtml(attachment.file_path)}" controls aria-label="${escapeHtml(attachment.original_name)}"></video>`
         : `<img src="${escapeHtml(attachment.file_path)}" alt="${escapeHtml(attachment.original_name)}">`).join('')}</div>`
         : report.photo_path ? `<h2>Attachments</h2><img class="mobile-report-photo" src="${escapeHtml(report.photo_path)}" alt="Evidence attached to this report">` : ''}
-      <h2>Status Timeline</h2>
-      <div class="mobile-timeline">${steps.map(([label, date], index) => `
-        <div class="mobile-timeline-item ${date ? 'complete' : ''}"><span class="timeline-marker">${date ? '✓' : ''}</span><strong>${escapeHtml(label)}</strong><time>${date ? escapeHtml(formatDateTime(date)) : 'Pending'}</time></div>
-      `).join('')}</div>
+      <section class="live-tracker-card">
+        <div class="live-tracker-header">
+          <div>
+            <strong style="font-size:0.95rem;color:var(--ink);">🚀 Live Restoration Tracker</strong>
+            <p style="margin:2px 0 0;font-size:0.78rem;color:var(--muted);">Grid Incident Lifecycle</p>
+          </div>
+          <span class="tracker-badge" style="${isResolved ? 'background:#dcfce7;color:#15803d;' : 'background:#eff6ff;color:#1d4ed8;'}">
+            ${isResolved ? '✓ Fully Restored' : '⚡ Ongoing Operation'}
+          </span>
+        </div>
+        <div class="tracker-timeline">
+          ${steps.map(([label, date], index) => {
+            const isCompleted = Boolean(date);
+            const isCurrent = isCompleted && (index === steps.length - 1 || !steps[index + 1][1]);
+            const stepIcons = ['📝', '🔍', '✅', '👷', '⚡'];
+            return `
+              <div class="tracker-step ${isCompleted ? 'completed' : ''} ${isCurrent ? 'active' : ''}">
+                <div class="tracker-step-dot">${isCompleted ? (isCurrent ? '●' : '✓') : stepIcons[index] || (index + 1)}</div>
+                <div class="tracker-step-title">${escapeHtml(label)}</div>
+                <div class="tracker-step-time">${date ? escapeHtml(formatDateTime(date)) : 'Awaiting confirmation'}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </section>
     </section>
     ${feedbackCardMarkup}
   `, {
