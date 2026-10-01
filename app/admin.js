@@ -772,12 +772,11 @@ async function renderAdminMap() {
   map.getPane('mapBasemap').style.zIndex = 200;
   map.createPane('mapReferenceOverlays');
   map.getPane('mapReferenceOverlays').style.zIndex = 250;
-  const streetTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    subdomains: 'abcd',
+  const streetTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    subdomains: 'abc',
     maxZoom: 18,
-    maxNativeZoom: 19,
     pane: 'mapBasemap',
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    attribution: '&copy; OpenStreetMap contributors',
   });
   const satelliteTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     maxZoom: 18,

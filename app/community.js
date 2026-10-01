@@ -487,18 +487,22 @@ async function renderMobileReportForm() {
     const mapElement = document.getElementById('report-location-map');
     if (!mapElement) return;
     const initialBarangay = locations.find((item) => item.name === (draft.barangay || state.user.barangay));
-    const map = L.map(mapElement, { zoomControl: false }).setView(
+    const map = L.map(mapElement, {
+      zoomControl: false,
+      minZoom: 11,
+      maxZoom: 18,
+      maxBounds: [[7.6, 124.8], [8.2, 125.4]],
+    }).setView(
       initialBarangay && hasCoordinates(initialBarangay)
         ? [Number(initialBarangay.latitude), Number(initialBarangay.longitude)]
         : [7.9111239, 125.0933669],
       14,
     );
     state.reportLocationMap = map;
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd',
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      subdomains: 'abc',
       maxZoom: 18,
-      maxNativeZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     const setPin = (latitude, longitude) => {
@@ -891,11 +895,10 @@ async function renderMobileMap() {
       attribution: 'Roads &copy; Esri',
     }).addTo(map);
   } else {
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd',
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      subdomains: 'abc',
       maxZoom: 18,
-      maxNativeZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
   }
 
