@@ -30,7 +30,7 @@
       position: relative;
     }
 
-    /* Google Progress Bar */
+    /* Progress Bar */
     .oauth-progress-bar {
       height: 4px;
       width: 100%;
@@ -72,8 +72,18 @@
       display: none;
     }
 
-    /* Accounts List */
-    .accounts-list { display: flex; flex-direction: column; border-top: 1px solid #e8eaed; border-bottom: 1px solid #e8eaed; }
+    /* Saved Account List */
+    .saved-account-section {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 16px;
+    }
+    .accounts-list {
+      display: flex;
+      flex-direction: column;
+      border-top: 1px solid #e8eaed;
+      border-bottom: 1px solid #e8eaed;
+    }
     .account-card {
       display: flex;
       align-items: center;
@@ -101,8 +111,6 @@
       font-size: 0.95rem;
       flex-shrink: 0;
     }
-    .account-card:nth-child(2) .account-avatar { background: #ea4335; }
-    .account-card:nth-child(3) .account-avatar { background: #34a853; }
     .account-info { flex: 1; min-width: 0; }
     .account-name { font-size: 0.9rem; font-weight: 600; color: #3c4043; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .account-email { font-size: 0.78rem; color: #5f6368; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -131,29 +139,26 @@
       border: 1px dashed #dadce0;
       display: grid;
       place-items: center;
-      font-size: 1.2rem;
+      font-size: 1.15rem;
       color: #5f6368;
       flex-shrink: 0;
     }
 
     .custom-form {
-      padding: 16px 14px 4px;
-      display: none;
+      display: flex;
       flex-direction: column;
-      gap: 12px;
-      background: #fbfcfe;
-      border-bottom: 1px solid #e8eaed;
+      gap: 14px;
     }
-    .custom-form.open { display: flex; }
-    .form-field { display: flex; flex-direction: column; gap: 4px; }
-    .form-field label { font-size: 0.78rem; font-weight: 600; color: #4b5563; }
+    .form-field { display: flex; flex-direction: column; gap: 5px; }
+    .form-field label { font-size: 0.8rem; font-weight: 600; color: #4b5563; }
     .form-field input {
-      padding: 10px 12px;
+      padding: 11px 13px;
       border: 1px solid #dadce0;
       border-radius: 6px;
-      font-size: 0.88rem;
+      font-size: 0.9rem;
       font-family: inherit;
       outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
     .form-field input:focus { border-color: #1a73e8; box-shadow: 0 0 0 2px rgba(26,115,232,0.2); }
 
@@ -161,16 +166,17 @@
       display: flex;
       justify-content: flex-end;
       gap: 10px;
-      margin-top: 6px;
+      margin-top: 10px;
     }
     .btn {
-      padding: 9px 16px;
-      font-size: 0.86rem;
+      padding: 10px 18px;
+      font-size: 0.88rem;
       font-weight: 600;
       border-radius: 6px;
       cursor: pointer;
       border: none;
       font-family: inherit;
+      transition: background 0.15s ease;
     }
     .btn-ghost { background: transparent; color: #5f6368; }
     .btn-ghost:hover { background: #f1f3f4; color: #202124; }
@@ -200,6 +206,8 @@
     .facebook-mode .btn-primary { background: #1877f2; }
     .facebook-mode .btn-primary:hover { background: #166fe5; }
     .facebook-mode .custom-account-toggle { color: #1877f2; }
+    .facebook-mode .oauth-progress-inner { background: #1877f2; }
+    .facebook-mode .form-field input:focus { border-color: #1877f2; box-shadow: 0 0 0 2px rgba(24,119,242,0.2); }
   </style>
 </head>
 <body>
@@ -208,48 +216,42 @@
     <div class="oauth-progress-bar" id="progressBar"><div class="oauth-progress-inner"></div></div>
 
     <div class="oauth-content">
-      <div class="oauth-logo-row" id="logoRow">
-        <!-- Injected dynamically based on provider -->
-      </div>
+      <div class="oauth-logo-row" id="logoRow"></div>
       <h1 class="oauth-title" id="pageTitle">Sign in with Google</h1>
-      <p class="oauth-subtitle" id="pageSubtitle">Choose an account to continue to <b>Valencia PowerWatch</b></p>
+      <p class="oauth-subtitle" id="pageSubtitle">to continue to <b>Valencia PowerWatch</b></p>
 
       <div class="oauth-alert" id="alertBox"></div>
 
-      <div class="accounts-list">
-        <button type="button" class="account-card" data-action="pick-user" data-name="Armiralyn Suello" data-email="suelloalmiralyn@gmail.com">
-          <div class="account-avatar">AS</div>
-          <div class="account-info">
-            <span class="account-name">Armiralyn Suello</span>
-            <span class="account-email">suelloalmiralyn@gmail.com</span>
-          </div>
-        </button>
-        <button type="button" class="account-card" data-action="pick-user" data-name="Lui Gie Aguimbag" data-email="luigie.aguimbag@gmail.com">
-          <div class="account-avatar">LA</div>
-          <div class="account-info">
-            <span class="account-name">Lui Gie Aguimbag</span>
-            <span class="account-email">luigie.aguimbag@gmail.com</span>
-          </div>
+      <!-- Saved Account Section (If authenticated on this browser previously) -->
+      <div class="saved-account-section" id="savedAccountSection" style="display: none;">
+        <div class="accounts-list">
+          <button type="button" class="account-card" id="savedAccountBtn">
+            <div class="account-avatar" id="savedAccountAvatar">U</div>
+            <div class="account-info">
+              <span class="account-name" id="savedAccountName">User</span>
+              <span class="account-email" id="savedAccountEmail">user@example.com</span>
+            </div>
+          </button>
+        </div>
+        <button type="button" class="custom-account-toggle" id="toggleCustomBtn">
+          <div class="custom-icon">👤</div>
+          <span id="toggleText">Use another account</span>
         </button>
       </div>
 
-      <button type="button" class="custom-account-toggle" id="toggleCustomBtn">
-        <div class="custom-icon">👤</div>
-        <span id="toggleText">Use another account</span>
-      </button>
-
+      <!-- Main Sign-In Form -->
       <form class="custom-form" id="customForm">
         <div class="form-field">
-          <label>Full Name</label>
+          <label id="nameLabel">Full Name</label>
           <input type="text" id="customName" placeholder="e.g. Maria Santos" required autocomplete="name">
         </div>
         <div class="form-field">
-          <label>Email Address</label>
+          <label id="emailLabel">Google Email Address</label>
           <input type="email" id="customEmail" placeholder="youraccount@gmail.com" required autocomplete="email">
         </div>
         <div class="submit-row">
-          <button type="button" class="btn btn-ghost" id="cancelCustomBtn">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="submitCustomBtn">Next</button>
+          <button type="button" class="btn btn-ghost" id="cancelCustomBtn" onclick="window.close()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="submitCustomBtn">Sign In</button>
         </div>
       </form>
     </div>
@@ -274,15 +276,24 @@
     const logoRow = document.getElementById('logoRow');
     const pageTitle = document.getElementById('pageTitle');
     const pageSubtitle = document.getElementById('pageSubtitle');
+    const savedAccountSection = document.getElementById('savedAccountSection');
+    const savedAccountBtn = document.getElementById('savedAccountBtn');
+    const savedAccountAvatar = document.getElementById('savedAccountAvatar');
+    const savedAccountName = document.getElementById('savedAccountName');
+    const savedAccountEmail = document.getElementById('savedAccountEmail');
     const toggleCustomBtn = document.getElementById('toggleCustomBtn');
     const toggleText = document.getElementById('toggleText');
     const customForm = document.getElementById('customForm');
-    const cancelCustomBtn = document.getElementById('cancelCustomBtn');
+    const nameLabel = document.getElementById('nameLabel');
+    const emailLabel = document.getElementById('emailLabel');
+    const customName = document.getElementById('customName');
+    const customEmail = document.getElementById('customEmail');
+    const submitCustomBtn = document.getElementById('submitCustomBtn');
 
     if (isGoogle) {
       document.title = 'Sign in - Google Accounts';
       logoRow.innerHTML = `
-        <svg viewBox="0 0 24 24" width="34" height="34">
+        <svg viewBox="0 0 24 24" width="36" height="36" aria-hidden="true">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
           <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
@@ -290,31 +301,57 @@
         </svg>
       `;
       pageTitle.textContent = 'Sign in with Google';
-      pageSubtitle.innerHTML = 'Choose an account to continue to <b>Valencia PowerWatch</b>';
+      pageSubtitle.innerHTML = 'Enter your Google account to continue to <b>Valencia PowerWatch</b>';
+      emailLabel.textContent = 'Google Email Address';
+      customEmail.placeholder = 'youraccount@gmail.com';
       toggleText.textContent = 'Use another Google account';
+      submitCustomBtn.textContent = 'Sign In';
     } else {
       document.body.classList.add('facebook-mode');
       document.title = 'Log in with Facebook | Meta';
       logoRow.innerHTML = `
-        <svg viewBox="0 0 24 24" width="38" height="38" fill="#1877F2">
+        <svg viewBox="0 0 24 24" width="38" height="38" fill="#1877F2" aria-hidden="true">
           <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
         </svg>
       `;
       pageTitle.textContent = 'Log in with Facebook';
-      pageSubtitle.innerHTML = 'Valencia PowerWatch is requesting access to your basic profile and email address.';
+      pageSubtitle.innerHTML = 'Enter your Facebook account to connect with <b>Valencia PowerWatch</b>';
+      emailLabel.textContent = 'Facebook Email Address';
+      customEmail.placeholder = 'youraccount@facebook.com';
       toggleText.textContent = 'Log into another Facebook account';
+      submitCustomBtn.textContent = 'Log In';
     }
 
-    toggleCustomBtn.addEventListener('click', () => {
-      customForm.classList.toggle('open');
-      if (customForm.classList.contains('open')) {
-        document.getElementById('customName').focus();
+    // Check for saved account on this device
+    let savedAccount = null;
+    try {
+      const stored = localStorage.getItem(`powerwatch_saved_${provider}_user`);
+      if (stored) {
+        savedAccount = JSON.parse(stored);
       }
-    });
+    } catch (e) {}
 
-    cancelCustomBtn.addEventListener('click', () => {
-      customForm.classList.remove('open');
-    });
+    if (savedAccount && savedAccount.email && savedAccount.name) {
+      savedAccountSection.style.display = 'block';
+      customForm.style.display = 'none';
+      savedAccountName.textContent = savedAccount.name;
+      savedAccountEmail.textContent = savedAccount.email;
+      savedAccountAvatar.textContent = (savedAccount.name.trim().charAt(0) || 'U').toUpperCase();
+
+      savedAccountBtn.addEventListener('click', () => {
+        submitAuth(savedAccount.name, savedAccount.email);
+      });
+
+      toggleCustomBtn.addEventListener('click', () => {
+        savedAccountSection.style.display = 'none';
+        customForm.style.display = 'flex';
+        customName.focus();
+      });
+    } else {
+      savedAccountSection.style.display = 'none';
+      customForm.style.display = 'flex';
+      customName.focus();
+    }
 
     async function submitAuth(name, email) {
       alertBox.style.display = 'none';
@@ -333,18 +370,29 @@
           throw new Error(data.error || 'Authentication failed.');
         }
 
+        // Save account on this device for seamless 1-click continuation next time
+        try {
+          localStorage.setItem(`powerwatch_saved_${provider}_user`, JSON.stringify({
+            name: data.user.full_name || name,
+            email: data.user.email || email,
+          }));
+        } catch (e) {}
+
+        const targetDestination = data.destination || (['administrator', 'personnel', 'dispatcher', 'utility'].includes(data.user?.role) ? '/admin' : '/community');
+
         // Notify parent window (opener)
         if (window.opener && !window.opener.closed) {
           window.opener.postMessage({
             type: 'OAUTH_AUTH_SUCCESS',
             user: data.user,
+            destination: targetDestination,
             provider,
             message: data.message || `Signed in with ${isGoogle ? 'Google' : 'Facebook'} successfully.`
           }, '*');
-          setTimeout(() => window.close(), 350);
+          setTimeout(() => window.close(), 300);
         } else {
           // If opened directly without popup
-          window.location.assign('/community');
+          window.location.assign(targetDestination);
         }
       } catch (err) {
         progressBar.classList.remove('active');
@@ -354,16 +402,10 @@
       }
     }
 
-    document.querySelectorAll('[data-action="pick-user"]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        submitAuth(btn.dataset.name, btn.dataset.email);
-      });
-    });
-
     customForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const name = document.getElementById('customName').value.trim();
-      const email = document.getElementById('customEmail').value.trim();
+      const name = customName.value.trim();
+      const email = customEmail.value.trim();
       if (!email) return;
       submitAuth(name, email);
     });

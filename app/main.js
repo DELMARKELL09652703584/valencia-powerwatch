@@ -71,6 +71,24 @@ function renderLogin(message = '') {
           <div class="admin-login-options"><label><input type="checkbox" name="remember" checked> Remember me</label><button type="button" data-action="forgot-password">Forgot password?</button></div>
           <button class="button primary full" type="submit">Login</button>
         </form>
+        <div class="auth-divider" style="margin: 16px 0;"><span>or continue with</span></div>
+        <div class="social-row">
+          <button type="button" class="social-btn social-google-btn" data-action="start-oauth" data-provider="google" title="Continue with Google">
+            <svg class="social-icon-svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span>Google</span>
+          </button>
+          <button type="button" class="social-btn social-facebook-btn" data-action="start-oauth" data-provider="facebook" title="Continue with Facebook">
+            <svg class="social-icon-svg" viewBox="0 0 24 24" width="20" height="20" fill="#1877F2" aria-hidden="true">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+            <span>Facebook</span>
+          </button>
+        </div>
       </div>
       <footer class="login-footer">&copy; ${new Date().getFullYear()} Valencia PowerWatch. All rights reserved.</footer>
       <div class="toast" role="status" hidden></div>
@@ -1739,6 +1757,11 @@ window.addEventListener('message', async (event) => {
   if (event.data && event.data.type === 'OAUTH_AUTH_SUCCESS') {
     state.user = event.data.user;
     setToast(event.data.message || `Signed in with ${event.data.provider === 'google' ? 'Google' : 'Facebook'} successfully.`);
+    const destination = event.data.destination || (STAFF_ROLES.includes(state.user?.role) ? '/admin' : '/community');
+    if (destination && destination !== window.location.pathname) {
+      window.location.assign(destination);
+      return;
+    }
     await afterLogin();
   }
 });
@@ -1750,6 +1773,12 @@ function openSocialAuthModal(provider) {
   const isGoogle = provider === 'google';
   const providerLabel = isGoogle ? 'Google' : 'Facebook';
   const isLiveConfigured = Boolean(state.oauthProviders?.[`${provider}Live`]);
+
+  let savedAccount = null;
+  try {
+    const raw = localStorage.getItem(`powerwatch_saved_${provider}_user`);
+    if (raw) savedAccount = JSON.parse(raw);
+  } catch (e) {}
 
   const overlay = document.createElement('div');
   overlay.id = 'social-auth-overlay';
@@ -1773,7 +1802,7 @@ function openSocialAuthModal(provider) {
           `}
           <div>
             <h2 id="social-modal-title">${isGoogle ? 'Sign in with Google' : 'Log in with Facebook'}</h2>
-            <p class="social-modal-sub">${isGoogle ? 'Choose an account to continue to <b>Valencia PowerWatch</b>' : 'Connect your Facebook account to <b>Valencia PowerWatch</b>'}</p>
+            <p class="social-modal-sub">${isGoogle ? 'Enter your Google account to continue to <b>Valencia PowerWatch</b>' : 'Connect your Facebook account to <b>Valencia PowerWatch</b>'}</p>
           </div>
         </div>
         <button type="button" class="social-modal-close" data-social-action="close" aria-label="Close dialog">&times;</button>
@@ -1782,31 +1811,26 @@ function openSocialAuthModal(provider) {
       <div class="social-modal-body">
         <div class="social-modal-alert" hidden></div>
 
-        <div class="social-quick-accounts-section">
-          <p class="social-section-title">Select registered account:</p>
-          <div class="social-accounts-list">
-            <button type="button" class="social-account-card" data-social-action="select-user" data-name="Armiralyn Suello" data-email="suelloalmiralyn@gmail.com">
-              <div class="social-user-avatar">AS</div>
-              <div class="social-user-info">
-                <strong>Armiralyn Suello</strong>
-                <span>suelloalmiralyn@gmail.com</span>
-              </div>
-              <span class="social-user-badge">Resident</span>
-            </button>
-            <button type="button" class="social-account-card" data-social-action="select-user" data-name="Lui Gie Aguimbag" data-email="luigie.aguimbag@gmail.com">
-              <div class="social-user-avatar">LA</div>
-              <div class="social-user-info">
-                <strong>Lui Gie Aguimbag</strong>
-                <span>luigie.aguimbag@gmail.com</span>
-              </div>
-              <span class="social-user-badge">Resident</span>
+        ${savedAccount && savedAccount.name && savedAccount.email ? `
+          <div class="social-quick-accounts-section" id="social-saved-section">
+            <p class="social-section-title">Saved ${providerLabel} account:</p>
+            <div class="social-accounts-list">
+              <button type="button" class="social-account-card" data-social-action="select-user" data-name="${escapeHtml(savedAccount.name)}" data-email="${escapeHtml(savedAccount.email)}">
+                <div class="social-user-avatar">${escapeHtml((savedAccount.name.trim().charAt(0) || 'U').toUpperCase())}</div>
+                <div class="social-user-info">
+                  <strong>${escapeHtml(savedAccount.name)}</strong>
+                  <span>${escapeHtml(savedAccount.email)}</span>
+                </div>
+                <span class="social-user-badge">Continue</span>
+              </button>
+            </div>
+            <button type="button" class="button ghost full" data-social-action="toggle-form" style="margin-top: 10px; font-size: 0.82rem;">
+              Use another ${providerLabel} account
             </button>
           </div>
-        </div>
+        ` : ''}
 
-        <div class="auth-divider" style="margin: 14px 0;"><span>or enter ${providerLabel} details</span></div>
-
-        <form class="social-custom-form" data-social-form="custom">
+        <form class="social-custom-form" data-social-form="custom" style="${savedAccount && savedAccount.name && savedAccount.email ? 'display:none;' : ''}">
           <label class="social-input-group">
             <span>Full Name</span>
             <input type="text" name="full_name" placeholder="${isGoogle ? 'e.g. Maria Santos' : 'e.g. Juan Dela Cruz'}" required autocomplete="name">
@@ -1817,7 +1841,7 @@ function openSocialAuthModal(provider) {
           </label>
           <div class="social-permission-notice">
             <span class="social-lock-icon">🔒</span>
-            <span>${isGoogle ? 'Google shares your name and email with Valencia PowerWatch to securely authenticate your resident session.' : 'PowerWatch receives your name and email. This does not grant posting permissions.'}</span>
+            <span>${isGoogle ? 'Google securely authenticates your identity with Valencia PowerWatch.' : 'PowerWatch securely verifies your identity via Facebook.'}</span>
           </div>
           <div class="social-modal-actions">
             <button type="button" class="button ghost social-cancel-btn" data-social-action="close">Cancel</button>
@@ -1873,8 +1897,8 @@ function openSocialAuthModal(provider) {
     if (triggerButton) {
       triggerButton.classList.add('loading');
     }
-    const submitText = submitBtn.querySelector('.submit-text');
-    const submitSpinner = submitBtn.querySelector('.submit-spinner');
+    const submitText = submitBtn?.querySelector('.submit-text');
+    const submitSpinner = submitBtn?.querySelector('.submit-spinner');
     if (submitText) submitText.textContent = `Connecting to ${providerLabel}...`;
     if (submitSpinner) submitSpinner.hidden = false;
 
@@ -1895,9 +1919,22 @@ function openSocialAuthModal(provider) {
         throw new Error(data.error || `${providerLabel} authentication failed. Please try again.`);
       }
 
+      // Save for subsequent convenient 1-click login on this device
+      try {
+        localStorage.setItem(`powerwatch_saved_${provider}_user`, JSON.stringify({
+          name: data.user?.full_name || name,
+          email: data.user?.email || email,
+        }));
+      } catch (e) {}
+
       closeModal(false);
       state.user = data.user;
       setToast(data.message || `Signed in with ${providerLabel} successfully.`);
+      const destination = data.destination || (STAFF_ROLES.includes(data.user?.role) ? '/admin' : '/community');
+      if (destination && destination !== window.location.pathname) {
+        window.location.assign(destination);
+        return;
+      }
       await afterLogin();
     } catch (err) {
       allButtons.forEach(b => b.disabled = false);
@@ -1919,6 +1956,18 @@ function openSocialAuthModal(provider) {
     const closeBtn = e.target.closest('[data-social-action="close"]');
     if (closeBtn) {
       closeModal(true);
+      return;
+    }
+
+    const toggleFormBtn = e.target.closest('[data-social-action="toggle-form"]');
+    if (toggleFormBtn) {
+      const savedSec = overlay.querySelector('#social-saved-section');
+      const formEl = overlay.querySelector('[data-social-form="custom"]');
+      if (savedSec) savedSec.style.display = 'none';
+      if (formEl) {
+        formEl.style.display = 'flex';
+        formEl.full_name?.focus();
+      }
       return;
     }
 
@@ -1949,6 +1998,14 @@ function openSocialAuthModal(provider) {
 }
 
 async function afterLogin() {
+  if (IS_ADMIN && !STAFF_ROLES.includes(state.user?.role)) {
+    window.location.assign('/community');
+    return;
+  }
+  if (!IS_ADMIN && STAFF_ROLES.includes(state.user?.role)) {
+    window.location.assign('/admin');
+    return;
+  }
   await refreshConfig();
   await refreshUnread();
   state.page = 'dashboard';

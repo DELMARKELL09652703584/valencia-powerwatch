@@ -47,6 +47,13 @@ const setSessionCookie = (res, userId) => {
   });
 };
 
+const getPortalDestination = (role) => {
+  if (['administrator', 'personnel', 'dispatcher', 'utility'].includes(role)) {
+    return '/admin';
+  }
+  return '/community';
+};
+
 const signInWithProvider = (provider, profile, req, res) => {
   if (!profile.id || !profile.email || !profile.emailVerified) {
     return redirectAuthError(res, 'unverified-email');
@@ -69,11 +76,10 @@ const signInWithProvider = (provider, profile, req, res) => {
       .run(provider, String(profile.id), user.id, now());
   }
 
-  if (user.role !== 'resident') return redirectAuthError(res, 'provider-account-role');
   if (user.status !== 'Active') return redirectAuthError(res, 'inactive-account');
   setSessionCookie(res, user.id);
   audit({ ...user, ip_address: req.ip || req.socket.remoteAddress || null }, 'OAuth login', `${user.full_name} signed in with ${provider}.`);
-  return res.redirect('/community');
+  return res.redirect(getPortalDestination(user.role));
 };
 
 router.post('/auth/oauth/social-login', (req, res) => {
@@ -87,7 +93,7 @@ router.post('/auth/oauth/social-login', (req, res) => {
     return res.status(400).json({ error: 'Please enter a valid email address.' });
   }
 
-  const defaultName = provider === 'google' ? 'Google Resident' : 'Facebook Resident';
+  const defaultName = provider === 'google' ? 'Google User' : 'Facebook User';
   const cleanName = String(name || '').trim() || defaultName;
   const cleanProviderId = String(provider_user_id || `${provider}_${crypto.createHash('sha256').update(cleanEmail).digest('hex').slice(0, 16)}`);
 
@@ -107,10 +113,6 @@ router.post('/auth/oauth/social-login', (req, res) => {
     }
   }
 
-  if (user.role !== 'resident') {
-    return res.status(403).json({ error: 'Social sign-in is reserved for resident community accounts. Administrators and staff must use the Admin Portal.' });
-  }
-
   if (user.status !== 'Active') {
     return res.status(403).json({ error: 'This account has been deactivated. Please contact an administrator.' });
   }
@@ -126,9 +128,11 @@ router.post('/auth/oauth/social-login', (req, res) => {
   const providerLabel = provider === 'google' ? 'Google' : 'Facebook';
   audit({ ...user, ip_address: req.ip || req.socket.remoteAddress || null }, 'OAuth login', `${user.full_name} signed in with ${providerLabel}.`);
 
+  const destination = getPortalDestination(user.role);
   return res.json({
     success: true,
     user: publicUser(user),
+    destination,
     message: `Signed in with ${providerLabel} successfully.`,
   });
 });
