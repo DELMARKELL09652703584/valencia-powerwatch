@@ -167,7 +167,9 @@ router.post('/incidents', requireAuth, requireRole('personnel', 'administrator')
     const autoEtr = calculateETR(outage_type || incident_type);
     const finalEtr = estimated_restoration || autoEtr.displayTime;
 
-    const incidentId = db.transaction(() => {
+    db.exec('BEGIN');
+    let incidentId;
+    try {
       const info = db.prepare(`
         INSERT INTO outage_incidents (incident_code, title, barangay, location, latitude, longitude, incident_type, outage_type,
           priority, customers_affected, restoration_progress, description, cause_category, status, start_time, estimated_restoration, etr_reason, affected_area, remarks,
@@ -179,21 +181,24 @@ router.post('/incidents', requireAuth, requireRole('personnel', 'administrator')
         status, start_time, finalEtr, autoEtr.reason, affected_area || null, remarks || null,
         scheduled_id === undefined ? null : Number(scheduled_id), req.user.id, ts, ts
       );
-      const createdId = Number(info.lastInsertRowid);
+      incidentId = Number(info.lastInsertRowid);
       const affectedAreas = [...new Set([barangay, ...requestedAreas])];
       const saveArea = db.prepare('INSERT OR IGNORE INTO incident_areas (incident_id, barangay) VALUES (?, ?)');
-      for (const area of affectedAreas) saveArea.run(createdId, area);
+      for (const area of affectedAreas) saveArea.run(incidentId, area);
       const saveReportLink = db.prepare('INSERT OR IGNORE INTO incident_links (incident_id, report_id, link_time) VALUES (?, ?, ?)');
       const updateReport = db.prepare(`UPDATE outage_reports SET
         status = CASE WHEN status = 'Officially Confirmed' THEN status ELSE 'Verified' END,
         verification_status = CASE WHEN verification_status = 'Officially Confirmed' THEN verification_status ELSE 'Verified' END,
         incident_id = ?, updated_at = ? WHERE id = ?`);
       for (const report of linkedReports) {
-        saveReportLink.run(createdId, report.id, ts);
-        updateReport.run(createdId, ts, report.id);
+        saveReportLink.run(incidentId, report.id, ts);
+        updateReport.run(incidentId, ts, report.id);
       }
-      return createdId;
-    })();
+      db.exec('COMMIT');
+    } catch (txnError) {
+      db.exec('ROLLBACK');
+      throw txnError;
+    }
 
     for (const report of linkedReports) {
       notifyUsers([report.reporter_id], 'Outage incident created', `Your report ${report.report_code} is now part of incident ${code}.`, 'incident');
