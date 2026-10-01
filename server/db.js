@@ -285,16 +285,26 @@ const hashPassword = (password) => {
   return `${salt}:${hash}`;
 };
 
-const codeTables = {
-  VPR: 'outage_reports',
-  OUT: 'outage_incidents',
-  SCH: 'scheduled_outages',
+const codeColumns = {
+  VPR: { table: 'outage_reports', col: 'report_code' },
+  OUT: { table: 'outage_incidents', col: 'incident_code' },
+  SCH: { table: 'scheduled_outages', col: 'schedule_code' },
 };
 
 const nextCode = (prefix) => {
-  const table = codeTables[prefix];
-  const { c } = db.prepare(`SELECT COUNT(*) AS c FROM ${table}`).get();
-  return `${prefix}-${String(c + 1).padStart(4, '0')}`;
+  const conf = codeColumns[prefix];
+  if (!conf) return `${prefix}-${Date.now().toString().slice(-4)}`;
+  const rows = db.prepare(`SELECT ${conf.col} AS code FROM ${conf.table} WHERE ${conf.col} LIKE ?`).all(`${prefix}-%`);
+  let maxNum = 0;
+  for (const row of rows) {
+    const num = parseInt(String(row.code || '').replace(`${prefix}-`, ''), 10);
+    if (Number.isFinite(num) && num > maxNum) maxNum = num;
+  }
+  let nextNum = maxNum + 1;
+  while (db.prepare(`SELECT 1 FROM ${conf.table} WHERE ${conf.col} = ?`).get(`${prefix}-${String(nextNum).padStart(4, '0')}`)) {
+    nextNum++;
+  }
+  return `${prefix}-${String(nextNum).padStart(4, '0')}`;
 };
 
 // ---------------------------------------------------------------- seed

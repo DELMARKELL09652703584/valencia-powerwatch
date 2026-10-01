@@ -129,80 +129,85 @@ const validateIncidentPayload = (body) => {
 
 // Create a verified outage incident (personnel/admin). Optionally linked to a report or a scheduled outage.
 router.post('/incidents', requireAuth, requireRole('personnel', 'administrator'), (req, res) => {
-  const error = validateIncidentPayload(req.body);
-  if (error) return res.status(400).json({ error });
+  try {
+    const error = validateIncidentPayload(req.body);
+    if (error) return res.status(400).json({ error });
 
-  const { report_id, related_report_ids, title, barangay, location, latitude, longitude, incident_type, outage_type, priority, customers_affected, restoration_progress, description, cause_category, start_time, affected_area, affected_barangays, remarks, scheduled_id, estimated_restoration, initial_status } = req.body;
-  const activeBarangay = db.prepare("SELECT name FROM barangays WHERE name = ? AND status = 'Active'").get(barangay);
-  if (!activeBarangay) return res.status(400).json({ error: 'Choose an active Valencia City barangay.' });
-  const requestedAreas = [...new Set((Array.isArray(affected_barangays) ? affected_barangays : []).map((name) => String(name).trim()).filter(Boolean))];
-  const inactiveArea = requestedAreas.find((name) => !db.prepare("SELECT 1 FROM barangays WHERE name = ? AND status = 'Active'").get(name));
-  if (inactiveArea) return res.status(400).json({ error: `Affected barangay "${inactiveArea}" is not active.` });
+    const { report_id, related_report_ids, title, barangay, location, latitude, longitude, incident_type, outage_type, priority, customers_affected, restoration_progress, description, cause_category, start_time, affected_area, affected_barangays, remarks, scheduled_id, estimated_restoration, initial_status } = req.body;
+    const activeBarangay = db.prepare("SELECT name FROM barangays WHERE name = ? AND status = 'Active'").get(barangay);
+    if (!activeBarangay) return res.status(400).json({ error: 'Choose an active Valencia City barangay.' });
+    const requestedAreas = [...new Set((Array.isArray(affected_barangays) ? affected_barangays : []).map((name) => String(name).trim()).filter(Boolean))];
+    const inactiveArea = requestedAreas.find((name) => !db.prepare("SELECT 1 FROM barangays WHERE name = ? AND status = 'Active'").get(name));
+    if (inactiveArea) return res.status(400).json({ error: `Affected barangay "${inactiveArea}" is not active.` });
 
-  const requestedReportIds = [...new Set([...(report_id ? [report_id] : []), ...(Array.isArray(related_report_ids) ? related_report_ids : [])].map(Number).filter(Boolean))];
-  if (requestedReportIds.some((id) => !Number.isInteger(id) || id < 1)) return res.status(400).json({ error: 'Choose valid related reports.' });
-  const linkedReports = [];
-  for (const id of requestedReportIds) {
-    const report = db.prepare('SELECT * FROM outage_reports WHERE id = ?').get(id);
-    if (!report) return res.status(404).json({ error: `Linked report ${id} not found.` });
-    if (['Rejected', 'Duplicate'].includes(report.status)) return res.status(400).json({ error: `Report ${report.report_code} cannot be linked because it is ${report.status.toLowerCase()}.` });
-    if (report.incident_id) return res.status(409).json({ error: `Report ${report.report_code} is already linked to an incident.` });
-    linkedReports.push(report);
-  }
-  if (estimated_restoration && !canSetCause(req)) {
-    return res.status(403).json({ error: 'Only authorized utility personnel or administrators can provide official restoration estimates.' });
-  }
-  if (cause_category && !canSetCause(req)) {
-    return res.status(403).json({ error: 'Only authorized utility personnel or administrators can specify a technical cause.' });
-  }
-  if (scheduled_id) {
-    const sched = db.prepare('SELECT * FROM scheduled_outages WHERE id = ?').get(Number(scheduled_id));
-    if (!sched) return res.status(404).json({ error: 'Linked scheduled outage not found.' });
-  }
-
-  const code = nextCode('OUT');
-  const ts = now();
-  const status = INCIDENT_STATUSES.includes(initial_status) ? initial_status : 'Reported';
-  const autoEtr = calculateETR(outage_type || incident_type);
-  const finalEtr = estimated_restoration || autoEtr.displayTime;
-
-  const incidentId = db.transaction(() => {
-    const info = db.prepare(`
-      INSERT INTO outage_incidents (incident_code, title, barangay, location, latitude, longitude, incident_type, outage_type,
-        priority, customers_affected, restoration_progress, description, cause_category, status, start_time, estimated_restoration, etr_reason, affected_area, remarks,
-        scheduled_id, created_by, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      code, String(title).trim(), barangay, location || null, latitude ?? null, longitude ?? null,
-      incident_type || 'Unexpected', outage_type || null, priority || 'Medium', customers_affected ?? null, restoration_progress ?? null, description || null, cause_category || null,
-      status, start_time, finalEtr, autoEtr.reason, affected_area || null, remarks || null,
-      scheduled_id === undefined ? null : Number(scheduled_id), req.user.id, ts, ts
-    );
-    const createdId = Number(info.lastInsertRowid);
-    const affectedAreas = [...new Set([barangay, ...requestedAreas])];
-    const saveArea = db.prepare('INSERT OR IGNORE INTO incident_areas (incident_id, barangay) VALUES (?, ?)');
-    for (const area of affectedAreas) saveArea.run(createdId, area);
-    const saveReportLink = db.prepare('INSERT OR IGNORE INTO incident_links (incident_id, report_id, link_time) VALUES (?, ?, ?)');
-    const updateReport = db.prepare(`UPDATE outage_reports SET
-      status = CASE WHEN status = 'Officially Confirmed' THEN status ELSE 'Verified' END,
-      verification_status = CASE WHEN verification_status = 'Officially Confirmed' THEN verification_status ELSE 'Verified' END,
-      incident_id = ?, updated_at = ? WHERE id = ?`);
-    for (const report of linkedReports) {
-      saveReportLink.run(createdId, report.id, ts);
-      updateReport.run(createdId, ts, report.id);
+    const requestedReportIds = [...new Set([...(report_id ? [report_id] : []), ...(Array.isArray(related_report_ids) ? related_report_ids : [])].map(Number).filter(Boolean))];
+    if (requestedReportIds.some((id) => !Number.isInteger(id) || id < 1)) return res.status(400).json({ error: 'Choose valid related reports.' });
+    const linkedReports = [];
+    for (const id of requestedReportIds) {
+      const report = db.prepare('SELECT * FROM outage_reports WHERE id = ?').get(id);
+      if (!report) return res.status(404).json({ error: `Linked report ${id} not found.` });
+      if (['Rejected', 'Duplicate'].includes(report.status)) return res.status(400).json({ error: `Report ${report.report_code} cannot be linked because it is ${report.status.toLowerCase()}.` });
+      if (report.incident_id) return res.status(409).json({ error: `Report ${report.report_code} is already linked to an incident.` });
+      linkedReports.push(report);
     }
-    return createdId;
-  })();
+    if (estimated_restoration && !canSetCause(req)) {
+      return res.status(403).json({ error: 'Only authorized utility personnel or administrators can provide official restoration estimates.' });
+    }
+    if (cause_category && !canSetCause(req)) {
+      return res.status(403).json({ error: 'Only authorized utility personnel or administrators can specify a technical cause.' });
+    }
+    if (scheduled_id) {
+      const sched = db.prepare('SELECT * FROM scheduled_outages WHERE id = ?').get(Number(scheduled_id));
+      if (!sched) return res.status(404).json({ error: 'Linked scheduled outage not found.' });
+    }
 
-  for (const report of linkedReports) {
-    notifyUsers([report.reporter_id], 'Outage incident created', `Your report ${report.report_code} is now part of incident ${code}.`, 'incident');
+    const code = nextCode('OUT');
+    const ts = now();
+    const status = INCIDENT_STATUSES.includes(initial_status) ? initial_status : 'Reported';
+    const autoEtr = calculateETR(outage_type || incident_type);
+    const finalEtr = estimated_restoration || autoEtr.displayTime;
+
+    const incidentId = db.transaction(() => {
+      const info = db.prepare(`
+        INSERT INTO outage_incidents (incident_code, title, barangay, location, latitude, longitude, incident_type, outage_type,
+          priority, customers_affected, restoration_progress, description, cause_category, status, start_time, estimated_restoration, etr_reason, affected_area, remarks,
+          scheduled_id, created_by, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        code, String(title).trim(), barangay, location || null, latitude ?? null, longitude ?? null,
+        incident_type || 'Unexpected', outage_type || null, priority || 'Medium', customers_affected ?? null, restoration_progress ?? null, description || null, cause_category || null,
+        status, start_time, finalEtr, autoEtr.reason, affected_area || null, remarks || null,
+        scheduled_id === undefined ? null : Number(scheduled_id), req.user.id, ts, ts
+      );
+      const createdId = Number(info.lastInsertRowid);
+      const affectedAreas = [...new Set([barangay, ...requestedAreas])];
+      const saveArea = db.prepare('INSERT OR IGNORE INTO incident_areas (incident_id, barangay) VALUES (?, ?)');
+      for (const area of affectedAreas) saveArea.run(createdId, area);
+      const saveReportLink = db.prepare('INSERT OR IGNORE INTO incident_links (incident_id, report_id, link_time) VALUES (?, ?, ?)');
+      const updateReport = db.prepare(`UPDATE outage_reports SET
+        status = CASE WHEN status = 'Officially Confirmed' THEN status ELSE 'Verified' END,
+        verification_status = CASE WHEN verification_status = 'Officially Confirmed' THEN verification_status ELSE 'Verified' END,
+        incident_id = ?, updated_at = ? WHERE id = ?`);
+      for (const report of linkedReports) {
+        saveReportLink.run(createdId, report.id, ts);
+        updateReport.run(createdId, ts, report.id);
+      }
+      return createdId;
+    })();
+
+    for (const report of linkedReports) {
+      notifyUsers([report.reporter_id], 'Outage incident created', `Your report ${report.report_code} is now part of incident ${code}.`, 'incident');
+    }
+
+    const incident = incidentRow(incidentId);
+    audit(req.user, 'Incident created', `${req.user.full_name} created incident ${code} (${incident_type || 'Unexpected'}).`);
+    notifyIncidentReporters(incident, 'Outage incident update', `Incident ${code} is now monitored with status "${status}".`);
+
+    res.status(201).json({ incident, message: `Incident ${code} created successfully.` });
+  } catch (error) {
+    console.error('Create incident error:', error);
+    res.status(400).json({ error: error.message || 'Failed to create incident.' });
   }
-
-  const incident = incidentRow(incidentId);
-  audit(req.user, 'Incident created', `${req.user.full_name} created incident ${code} (${incident_type || 'Unexpected'}).`);
-  notifyIncidentReporters(incident, 'Outage incident update', `Incident ${code} is now monitored with status "${status}".`);
-
-  res.status(201).json({ incident, message: `Incident ${code} created successfully.` });
 });
 
 // Update an incident's official information/status (authorized roles)
