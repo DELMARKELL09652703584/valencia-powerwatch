@@ -793,16 +793,16 @@ async function renderMobileReports() {
 
 async function renderMobileReportDetail() {
   const { report } = await api(`/api/reports/${Number(state.mobileReportId)}`);
+  const isResolved = report.status === 'Resolved' || ['Closed', 'Restored'].includes(report.incident?.status);
   const steps = [
     ['Report Submitted', report.reported_at],
-    ['Under Verification', ['Under Review', 'Verified', 'Officially Confirmed', 'Resolved'].includes(report.status) ? report.updated_at : null],
-    ['Verified', ['Verified', 'Officially Confirmed', 'Resolved'].includes(report.status) ? report.updated_at : null],
-    ['In Progress', report.incident?.status === 'Ongoing' || report.incident?.status === 'Restoration in Progress' ? report.updated_at : null],
-    ['Resolved', report.status === 'Resolved' || report.incident?.status === 'Closed' ? report.updated_at : null],
+    ['Under Verification', ['Under Review', 'Verified', 'Officially Confirmed', 'Resolved'].includes(report.status) || isResolved ? (report.updated_at || report.reported_at) : null],
+    ['Verified', ['Verified', 'Officially Confirmed', 'Resolved'].includes(report.status) || isResolved ? (report.updated_at || report.reported_at) : null],
+    ['In Progress', ['Ongoing', 'Restoration in Progress', 'Closed', 'Restored'].includes(report.incident?.status) || isResolved ? (report.updated_at || report.reported_at) : null],
+    ['Resolved', isResolved ? (report.updated_at || report.reported_at) : null],
   ];
 
   const etrTime = report.incident?.estimated_restoration || report.estimated_restoration;
-  const isResolved = report.status === 'Resolved' || report.incident?.status === 'Closed';
   const etrMarkup = isResolved ? `
     <div class="mobile-etr-badge" style="background:#ecfdf5;border:1.5px solid #10b981;border-radius:10px;padding:12px;margin:12px 0;">
       <div style="display:flex;align-items:center;gap:8px;font-weight:700;color:#047857;">
@@ -884,7 +884,7 @@ async function renderMobileReportDetail() {
             const stepIcons = ['📝', '🔍', '✅', '👷', '⚡'];
             return `
               <div class="tracker-step ${isCompleted ? 'completed' : ''} ${isCurrent ? 'active' : ''}">
-                <div class="tracker-step-dot">${isCompleted ? (isCurrent ? '●' : '✓') : stepIcons[index] || (index + 1)}</div>
+                <div class="tracker-step-dot">${isCompleted ? (isCurrent && !isResolved ? '●' : '✓') : stepIcons[index] || (index + 1)}</div>
                 <div class="tracker-step-title">${escapeHtml(label)}</div>
                 <div class="tracker-step-time">${date ? escapeHtml(formatDateTime(date)) : 'Awaiting confirmation'}</div>
               </div>
