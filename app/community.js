@@ -943,6 +943,26 @@ async function renderMobileMap() {
   const isHeatmap = state.mobileMapMode === 'heat';
   const isSatellite = state.mobileMapLayer === 'satellite';
 
+  const coordinatesFor = (item) => {
+    if (hasCoordinates(item)) return [Number(item.latitude), Number(item.longitude)];
+    const barangay = (barangayLocations || []).find((location) => location.name === item.barangay);
+    return hasCoordinates(barangay) ? [Number(barangay.latitude), Number(barangay.longitude)] : null;
+  };
+
+  const formatEtr = (val) => {
+    if (!val) return 'Assessing field repair window';
+    const d = new Date(val);
+    return isNaN(d) ? String(val) : d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getSeverity = (inc) => inc.severity || (String(inc.incident_type || '').includes('Line Down') ? 'Critical' : String(inc.incident_type || '').includes('Total') ? 'High' : 'Moderate');
+  const getSeverityStyle = (sev) => {
+    if (sev === 'Critical') return 'background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;';
+    if (sev === 'High') return 'background:#fff7ed;color:#ea580c;border:1px solid #fdba74;';
+    if (sev === 'Moderate') return 'background:#fefce8;color:#ca8a04;border:1px solid #fde047;';
+    return 'background:#f0fdf4;color:#16a34a;border:1px solid #86efac;';
+  };
+
   const legendMarkup = isHeatmap ? `
     <div class="mobile-map-legend" style="display:flex;align-items:center;gap:10px;">
       <span style="font-weight:700;color:#c93b2b;">🔥 Outage Density:</span>
@@ -1036,25 +1056,6 @@ async function renderMobileMap() {
   }
 
   L.control.zoom({ position: 'bottomright' }).addTo(map);
-  const coordinatesFor = (item) => {
-    if (hasCoordinates(item)) return [Number(item.latitude), Number(item.longitude)];
-    const barangay = barangayLocations.find((location) => location.name === item.barangay);
-    return hasCoordinates(barangay) ? [Number(barangay.latitude), Number(barangay.longitude)] : null;
-  };
-
-  const formatEtr = (val) => {
-    if (!val) return 'Assessing field repair window';
-    const d = new Date(val);
-    return isNaN(d) ? String(val) : d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  };
-
-  const getSeverity = (inc) => inc.severity || (String(inc.incident_type || '').includes('Line Down') ? 'Critical' : String(inc.incident_type || '').includes('Total') ? 'High' : 'Moderate');
-  const getSeverityStyle = (sev) => {
-    if (sev === 'Critical') return 'background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;';
-    if (sev === 'High') return 'background:#fff7ed;color:#ea580c;border:1px solid #fdba74;';
-    if (sev === 'Moderate') return 'background:#fefce8;color:#ca8a04;border:1px solid #fde047;';
-    return 'background:#f0fdf4;color:#16a34a;border:1px solid #86efac;';
-  };
 
   if (isHeatmap) {
     const heatPoints = [];
