@@ -276,25 +276,38 @@ const BARANGAY_COORDINATES = {
   Lilingayon: [7.9928, 124.9714],
   Lourdes: [7.9625, 125.0347],
   Lumbayao: [7.8821, 125.1632],
+  Lumbo: [7.8938, 125.0752],
   Lurogan: [7.9283, 125.0275],
+  Maapag: [7.8442, 125.1069],
   Mabuhay: [7.8703, 125.1039],
   Mailag: [7.9839, 125.0872],
   'Mt. Nebo': [7.9589, 124.9358],
   Nabago: [7.8911, 125.1044],
-  Napaliran: [7.9348, 125.0812],
-  'Pal-ing': [7.8633, 125.0736],
+  Pinatilan: [7.8881, 125.1038],
   Poblacion: [7.9111, 125.0934],
   'San Carlos': [7.9197, 125.1647],
   'San Isidro': [7.9042, 125.1128],
   Sinabuagan: [7.8789, 125.1258],
+  Sinayawan: [7.8717, 125.1419],
+  Sugod: [7.9432, 125.1189],
   Tongantongan: [7.9142, 125.0389],
   Tugaya: [7.9406, 125.0531],
-  Vintar: [7.9667, 125.1342],
+  Vintar: [7.9667, 125.1342]
 };
 
+// Remove obsolete non-barangays Napaliran and Pal-ing if present
+db.prepare("DELETE FROM barangays WHERE name IN ('Napaliran', 'Pal-ing')").run();
+
+const checkBgry = db.prepare('SELECT id FROM barangays WHERE name = ?');
+const insBgry = db.prepare("INSERT INTO barangays (name, area_description, status, latitude, longitude) VALUES (?, ?, 'Active', ?, ?)");
 const updateBgryCoords = db.prepare('UPDATE barangays SET latitude = ?, longitude = ? WHERE name = ?');
 for (const [name, [lat, lng]] of Object.entries(BARANGAY_COORDINATES)) {
-  updateBgryCoords.run(lat, lng, name);
+  const existing = checkBgry.get(name);
+  if (existing) {
+    updateBgryCoords.run(lat, lng, name);
+  } else {
+    insBgry.run(name, `Service area within Brgy. ${name}, Valencia City, Bukidnon.`, lat, lng);
+  }
 }
 
 // ---------------------------------------------------------------- helpers
@@ -345,9 +358,10 @@ const SEED_VERSION = 'v2.0_clean';
 const VALENCIA_BARANGAYS = [
   'Bagontaas', 'Banlag', 'Barobo', 'Batangan', 'Catumbalon', 'Colonia',
   'Concepcion', 'Dagat-Kidavao', 'Guinoyuran', 'Kahapunan', 'Laligan',
-  'Lilingayon', 'Lourdes', 'Lumbayao', 'Lurogan', 'Mabuhay', 'Mailag',
-  'Mt. Nebo', 'Nabago', 'Napaliran', 'Pal-ing', 'Poblacion', 'San Carlos',
-  'San Isidro', 'Sinabuagan', 'Tongantongan', 'Tugaya', 'Vintar'
+  'Lilingayon', 'Lourdes', 'Lumbayao', 'Lumbo', 'Lurogan', 'Maapag',
+  'Mabuhay', 'Mailag', 'Mt. Nebo', 'Nabago', 'Pinatilan', 'Poblacion',
+  'San Carlos', 'San Isidro', 'Sinabuagan', 'Sinayawan', 'Sugod',
+  'Tongantongan', 'Tugaya', 'Vintar'
 ];
 
 const SETTINGS_SEED = {
