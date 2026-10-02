@@ -211,6 +211,31 @@ const hasCoordinates = (item) => {
   return Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
 };
 
+const distanceKm = (first, second) => {
+  if (!first || !second) return Infinity;
+  const radians = (degrees) => degrees * Math.PI / 180;
+  const latDelta = radians(Number(first.latitude) - Number(second.latitude));
+  const lngDelta = radians(Number(first.longitude) - Number(second.longitude));
+  const value = Math.sin(latDelta / 2) ** 2 + Math.cos(radians(Number(second.latitude)))
+    * Math.cos(radians(Number(first.latitude))) * Math.sin(lngDelta / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+};
+
+const findNearestBarangay = (latitude, longitude, barangayList) => {
+  const list = barangayList || state.barangayLocations || [];
+  let nearest = null;
+  let minDistance = Infinity;
+  for (const b of list) {
+    if (!hasCoordinates(b)) continue;
+    const dist = distanceKm({ latitude, longitude }, { latitude: Number(b.latitude), longitude: Number(b.longitude) });
+    if (dist < minDistance) {
+      minDistance = dist;
+      nearest = b;
+    }
+  }
+  return nearest ? { name: nearest.name, distanceKm: minDistance } : null;
+};
+
 async function api(path, options = {}) {
   const response = await fetch(path, {
     credentials: 'same-origin',

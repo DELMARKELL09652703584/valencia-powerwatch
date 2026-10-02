@@ -539,13 +539,20 @@ async function renderMobileReportForm() {
     state.reportLocationMarker = null;
     state.reportLocationSetPin = null;
   }
+  if (step === 1) {
+    if (!state.barangayLocations || !state.barangayLocations.length) {
+      try {
+        const { barangays: locations } = await api('/api/barangays/locations');
+        state.barangayLocations = locations;
+      } catch {}
+    }
+  }
   if (step === 1 && locationMode === 'map') {
     await ensureLeaflet();
-    const { barangays: locations } = await api('/api/barangays/locations');
-    state.barangayLocations = locations;
+    const locations = state.barangayLocations || [];
     const mapElement = document.getElementById('report-location-map');
     if (!mapElement) return;
-    const initialBarangay = locations.find((item) => item.name === (draft.barangay || state.user.barangay));
+    const initialBarangay = locations.find((item) => item.name === (draft.barangay || state.user?.barangay));
     const map = L.map(mapElement, {
       zoomControl: false,
       minZoom: 11,
@@ -565,17 +572,40 @@ async function renderMobileReportForm() {
     }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     const setPin = (latitude, longitude) => {
-      const point = [Number(latitude), Number(longitude)];
+      const lat = Number(latitude);
+      const lng = Number(longitude);
+      const point = [lat, lng];
       if (state.reportLocationMarker) state.reportLocationMarker.setLatLng(point);
       else state.reportLocationMarker = L.marker(point).addTo(map);
       const latitudeInput = document.querySelector('[data-gps="latitude"]');
       const longitudeInput = document.querySelector('[data-gps="longitude"]');
       const locationInput = document.querySelector('input[name="location"]');
+      const barangayInput = document.querySelector('input[name="barangay"]');
       const status = document.querySelector('[data-gps="status"]');
-      if (latitudeInput) latitudeInput.value = Number(latitude).toFixed(6);
-      if (longitudeInput) longitudeInput.value = Number(longitude).toFixed(6);
-      if (locationInput) locationInput.value = `${Number(latitude).toFixed(6)}, ${Number(longitude).toFixed(6)}`;
-      if (status) status.textContent = `Pin selected: ${Number(latitude).toFixed(4)}, ${Number(longitude).toFixed(4)}`;
+
+      const latStr = lat.toFixed(6);
+      const lngStr = lng.toFixed(6);
+      if (latitudeInput) latitudeInput.value = latStr;
+      if (longitudeInput) longitudeInput.value = lngStr;
+      if (locationInput) locationInput.value = `${latStr}, ${lngStr}`;
+
+      // Automatically detect and assign the nearest Barangay!
+      const nearest = findNearestBarangay(lat, lng, state.barangayLocations);
+      if (nearest && nearest.name) {
+        if (barangayInput) {
+          barangayInput.value = nearest.name;
+          barangayInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (state.mobileReportDraft) {
+          state.mobileReportDraft.barangay = nearest.name;
+          state.mobileReportDraft.latitude = latStr;
+          state.mobileReportDraft.longitude = lngStr;
+          state.mobileReportDraft.location = `${latStr}, ${lngStr}`;
+        }
+        if (status) status.innerHTML = `📍 <strong>${nearest.name}</strong> (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      } else {
+        if (status) status.textContent = `Pin selected: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      }
     };
     state.reportLocationSetPin = setPin;
     if (draft.latitude && draft.longitude) setPin(draft.latitude, draft.longitude);

@@ -261,10 +261,41 @@ ensureColumn('outage_incidents', 'description', 'TEXT');
 ensureColumn('outage_incidents', 'etr_reason', 'TEXT');
 ensureColumn('audit_logs', 'ip_address', 'TEXT');
 
-db.prepare("UPDATE barangays SET latitude = ?, longitude = ? WHERE name = ? AND latitude IS NULL AND longitude IS NULL")
-  .run(7.9111239, 125.0933669, 'Poblacion');
-db.prepare("UPDATE barangays SET latitude = ?, longitude = ? WHERE name = ? AND latitude IS NULL AND longitude IS NULL")
-  .run(7.9928419, 124.9714083, 'Lilingayon');
+const BARANGAY_COORDINATES = {
+  Bagontaas: [7.9304, 125.1077],
+  Banlag: [7.9547, 125.1558],
+  Barobo: [7.9868, 125.1054],
+  Batangan: [7.8924, 125.1328],
+  Catumbalon: [7.8986, 125.0478],
+  Colonia: [7.9734, 125.0747],
+  Concepcion: [7.8864, 125.0745],
+  'Dagat-Kidavao': [7.8631, 125.0381],
+  Guinoyuran: [7.8761, 125.0125],
+  Kahapunan: [7.9497, 125.1235],
+  Laligan: [7.8488, 125.0863],
+  Lilingayon: [7.9928, 124.9714],
+  Lourdes: [7.9625, 125.0347],
+  Lumbayao: [7.8821, 125.1632],
+  Lurogan: [7.9283, 125.0275],
+  Mabuhay: [7.8703, 125.1039],
+  Mailag: [7.9839, 125.0872],
+  'Mt. Nebo': [7.9589, 124.9358],
+  Nabago: [7.8911, 125.1044],
+  Napaliran: [7.9348, 125.0812],
+  'Pal-ing': [7.8633, 125.0736],
+  Poblacion: [7.9111, 125.0934],
+  'San Carlos': [7.9197, 125.1647],
+  'San Isidro': [7.9042, 125.1128],
+  Sinabuagan: [7.8789, 125.1258],
+  Tongantongan: [7.9142, 125.0389],
+  Tugaya: [7.9406, 125.0531],
+  Vintar: [7.9667, 125.1342],
+};
+
+const updateBgryCoords = db.prepare('UPDATE barangays SET latitude = ?, longitude = ? WHERE name = ?');
+for (const [name, [lat, lng]] of Object.entries(BARANGAY_COORDINATES)) {
+  updateBgryCoords.run(lat, lng, name);
+}
 
 // ---------------------------------------------------------------- helpers
 

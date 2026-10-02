@@ -848,19 +848,48 @@ async function handleClick(event) {
       }
       case 'capture-gps': {
         const status = document.querySelector('[data-gps="status"]');
-        if (status) status.textContent = 'Locatingâ€¦';
+        if (status) status.textContent = 'Locating…';
         const position = await captureLocation();
         if (!position) {
           if (status) status.textContent = 'Location unavailable. You may continue without it.';
           return;
         }
-        const form = actionButton.closest('form');
-        form.querySelector('[data-gps="latitude"]').value = position.latitude.toFixed(6);
-        form.querySelector('[data-gps="longitude"]').value = position.longitude.toFixed(6);
-        const location = form.querySelector('input[name="location"]');
-        if (location) location.value = `${position.latitude.toFixed(6)}, ${position.longitude.toFixed(6)}`;
+        const form = actionButton.closest('form') || document;
+        const latInput = form.querySelector('[data-gps="latitude"]');
+        const lngInput = form.querySelector('[data-gps="longitude"]');
+        const locationInput = form.querySelector('input[name="location"]');
+        const barangayInput = form.querySelector('input[name="barangay"]');
+        const latStr = position.latitude.toFixed(6);
+        const lngStr = position.longitude.toFixed(6);
+
+        if (latInput) latInput.value = latStr;
+        if (lngInput) lngInput.value = lngStr;
+        if (locationInput && state.mobileLocationMode === 'map') {
+          locationInput.value = `${latStr}, ${lngStr}`;
+        }
+
+        // Auto-detect and set Barangay!
+        const nearest = findNearestBarangay(position.latitude, position.longitude, state.barangayLocations);
+        if (nearest && nearest.name) {
+          if (barangayInput) {
+            barangayInput.value = nearest.name;
+            barangayInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          if (state.mobileReportDraft) {
+            state.mobileReportDraft.barangay = nearest.name;
+            state.mobileReportDraft.latitude = latStr;
+            state.mobileReportDraft.longitude = lngStr;
+            if (state.mobileLocationMode === 'map') state.mobileReportDraft.location = `${latStr}, ${lngStr}`;
+          }
+          if (status) status.innerHTML = `📍 Attached: <strong>${nearest.name}</strong> (${position.latitude.toFixed(4)}, ${position.longitude.toFixed(4)})`;
+        } else {
+          if (status) status.textContent = `Location attached: ${position.latitude.toFixed(4)}, ${position.longitude.toFixed(4)}`;
+        }
+
         state.reportLocationSetPin?.(position.latitude, position.longitude);
-        if (status) status.textContent = `Location attached: ${position.latitude.toFixed(4)}, ${position.longitude.toFixed(4)}`;
+        if (state.reportLocationMap) {
+          state.reportLocationMap.setView([position.latitude, position.longitude], 15);
+        }
         return;
       }
       case 'mark-all-read':
