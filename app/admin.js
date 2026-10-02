@@ -1507,6 +1507,7 @@ async function renderAdminAudit() {
       <label class="audit-page-size" aria-label="Rows per page"><select data-audit-page-size>${pageSizeOptions}</select></label>
       <button type="button" class="audit-reset-button" data-action="reset-audit-filters">Reset</button>
       <button type="button" class="audit-export-button" data-action="export-audit-logs"><span aria-hidden="true">⇩</span>Export</button>
+      <button type="button" class="button danger small" data-action="clear-audit-logs" style="margin-left:6px;padding:6px 12px;font-size:0.82rem;">Clear Logs</button>
       <span class="audit-result-count">${total} record${total === 1 ? '' : 's'}</span>
     </div>
     <div class="audit-table-wrap"><div class="table-scroll"><table class="audit-management-table">

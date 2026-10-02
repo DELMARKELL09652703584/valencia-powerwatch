@@ -243,6 +243,11 @@ router.get('/audit-logs', requireAuth, requireRole('administrator'), (req, res) 
   res.json({ logs: rows, total, page, pageSize, pageCount });
 });
 
+router.delete('/audit-logs', requireAuth, requireRole('administrator'), (req, res) => {
+  db.exec("DELETE FROM audit_logs; DELETE FROM sqlite_sequence WHERE name = 'audit_logs';");
+  res.json({ message: 'Audit logs cleared successfully.' });
+});
+
 // ---------------- Data maintenance ----------------
 
 // Reset demonstration data (keeps accounts) and reload fresh seed content

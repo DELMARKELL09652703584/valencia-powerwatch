@@ -1445,6 +1445,14 @@ async function handleClick(event) {
         setToast(`Exported ${logs.length} audit log${logs.length === 1 ? '' : 's'}.`);
         return;
       }
+      case 'clear-audit-logs': {
+        if (!window.confirm('Are you sure you want to clear all audit logs? This cannot be undone.')) return;
+        await send('/api/admin/audit-logs', 'DELETE');
+        setToast('Audit logs cleared.');
+        state.auditPage = 1;
+        await render();
+        return;
+      }
       case 'add-list-row': {
         const list = actionButton.closest('.list-editor');
         const input = list.querySelector('[data-list-new]');
