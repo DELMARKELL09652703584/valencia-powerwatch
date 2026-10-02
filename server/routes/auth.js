@@ -30,10 +30,7 @@ const getBarangayNames = () => {
 // Demo accounts shown on the login screen for demonstration purposes.
 router.get('/auth/demo', (req, res) => {
   const demos = [
-    { role: 'resident', label: 'Resident', email: 'resident@powerwatch.ph' },
-    { role: 'personnel', label: 'System Personnel', email: 'staff@powerwatch.ph' },
     { role: 'administrator', label: 'Administrator', email: 'admin@powerwatch.ph' },
-    { role: 'utility', label: 'Authorized Utility Personnel', email: 'utility@powerwatch.ph' },
   ];
   res.json({
     demos,

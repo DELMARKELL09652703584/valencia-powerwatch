@@ -309,7 +309,7 @@ const nextCode = (prefix) => {
 
 // ---------------------------------------------------------------- seed
 
-const SEED_VERSION = 'v1.2';
+const SEED_VERSION = 'v2.0_clean';
 
 const VALENCIA_BARANGAYS = [
   'Bagontaas', 'Banlag', 'Barobo', 'Batangan', 'Catumbalon', 'Colonia',
@@ -370,273 +370,55 @@ function seedIfFresh() {
   const existing = db.prepare('SELECT value FROM settings WHERE key = ?').get('seed_version');
   if (existing && existing.value === SEED_VERSION) return false;
 
-  const insert = db.prepare(`
-    INSERT INTO users (full_name, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  const seedUser = (...values) => {
-    const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(values[1]);
-    return existingUser ? Number(existingUser.id) : Number(insert.run(...values).lastInsertRowid);
-  };
-
-  const adminId = seedUser(
-    'Rowena Mercader', 'admin@powerwatch.ph', '0917-555-0100',
-    'Brgy. Poblacion, Valencia City, Bukidnon', 'Poblacion',
-    hashPassword('admin123'), 'administrator', 'Active', daysFromNow(-30), daysFromNow(-1)
-  );
-
-  const customAdmin = db.prepare(`
-    SELECT id FROM users 
-    WHERE LOWER(COALESCE(username, '')) = LOWER('DELMARKEL2003') 
-       OR LOWER(email) = LOWER('DELMARKEL2003')
-  `).get();
-  if (!customAdmin) {
-    db.prepare(`
-      INSERT INTO users (full_name, username, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)
-    `).run(
-      'Delmarkel', 'DELMARKEL2003', 'dsaroay@gmail.com', '09652703584',
-      'Brgy. Guinoyuran, Valencia City, Bukidnon', 'Guinoyuran',
-      hashPassword('ADMIN2023*'), daysFromNow(-30), daysFromNow(0)
+  // Clean slate: remove all sample / pre-existing mock records across the system
+  db.exec(`
+    DELETE FROM oauth_states;
+    DELETE FROM incident_links;
+    DELETE FROM incident_areas;
+    DELETE FROM report_attachments;
+    DELETE FROM outage_reports;
+    DELETE FROM outage_incidents;
+    DELETE FROM scheduled_outages;
+    DELETE FROM announcements;
+    DELETE FROM notifications;
+    DELETE FROM citizen_feedback;
+    DELETE FROM sms_logs;
+    DELETE FROM audit_logs;
+    DELETE FROM sessions;
+    DELETE FROM oauth_accounts;
+    DELETE FROM password_reset_tokens;
+    DELETE FROM users 
+    WHERE role != 'administrator' 
+      AND LOWER(COALESCE(username, '')) != 'delmarkel2003' 
+      AND LOWER(email) NOT IN ('dsaroay@gmail.com', 'admin@powerwatch.ph');
+    DELETE FROM sqlite_sequence WHERE name IN (
+      'outage_reports','outage_incidents','incident_links','incident_areas',
+      'scheduled_outages','announcements','notifications','audit_logs',
+      'citizen_feedback','sms_logs','report_attachments','sessions','oauth_accounts'
     );
+  `);
+
+  // Ensure 28 official Valencia City Barangays are present
+  const bgryCount = Number(db.prepare('SELECT COUNT(*) as cnt FROM barangays').get().cnt || 0);
+  if (bgryCount === 0) {
+    const insBgry = db.prepare('INSERT INTO barangays (name, area_description, status) VALUES (?, ?, ?)');
+    for (const name of VALENCIA_BARANGAYS) {
+      insBgry.run(name, `Service area within Brgy. ${name}, Valencia City, Bukidnon.`, 'Active');
+    }
   }
 
-  const staffId = seedUser(
-    'Daniel Tajores', 'staff@powerwatch.ph', '0917-555-0101',
-    'Brgy. Lumbayao, Valencia City, Bukidnon', 'Lumbayao',
-    hashPassword('staff123'), 'personnel', 'Active', daysFromNow(-30), daysFromNow(-1)
-  );
-
-  const utilityId = seedUser(
-    'Joaquin Villanueva', 'utility@powerwatch.ph', '0917-555-0102',
-    'Brgy. San Carlos, Valencia City, Bukidnon', 'San Carlos',
-    hashPassword('utility123'), 'utility', 'Active', daysFromNow(-30), daysFromNow(-2)
-  );
-
-  const residentIds = [
-    seedUser(
-      'Alicia Mendez', 'resident@powerwatch.ph', '0917-123-4567',
-      'Block 3, Poblacion, Valencia City', 'Poblacion',
-      hashPassword('resident123'), 'resident', 'Active', daysFromNow(-45), daysFromNow(0)
-    ),
-    seedUser(
-      'Romel Santos', 'romel.santos@mail.ph', '0928-556-9102',
-      'Sitio Kalubihan, Bagontaas, Valencia City', 'Bagontaas',
-      hashPassword('romel123'), 'resident', 'Active', daysFromNow(-20), null
-    ),
-    seedUser(
-      'Marina Cruz', 'marina.cruz@mail.ph', '0932-778-1200',
-      'Upper Lilingayon Road, Valencia City', 'Lilingayon',
-      hashPassword('marina123'), 'resident', 'Active', daysFromNow(-60), null
-    ),
-    seedUser(
-      'Jonalyn Perez', 'jonalyn.perez@mail.ph', '0998-445-2221',
-      'Malaybalay Road, Colonia, Valencia City', 'Colonia',
-      hashPassword('jonalyn123'), 'resident', 'Active', daysFromNow(-15), null
-    ),
-  ];
-
-  const [alicia, romel, marina, jonalyn] = residentIds;
-
-  // Barangays
-  const insBgry = db.prepare('INSERT INTO barangays (name, area_description, status) VALUES (?, ?, ?)');
-  for (const name of VALENCIA_BARANGAYS) {
-    insBgry.run(name, `Service area within Brgy. ${name}, Valencia City, Bukidnon.`, 'Active');
-  }
-
-  const insSched = db.prepare(`
-    INSERT INTO scheduled_outages (schedule_code, title, barangay, area, outage_date, start_time, expected_end_time, reason, status, created_by, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  const sched1 = Number(insSched.run(
-    nextCode('SCH'), 'Poblacion Scheduled Maintenance', 'Poblacion', 'Poblacion market area and adjacent puroks',
-    daysFromNow(1).slice(0, 10), '09:00', '16:00',
-    'Scheduled line maintenance and pole inspection', 'Scheduled', staffId, daysFromNow(-2), daysFromNow(-2)
-  ).lastInsertRowid);
-
-  const sched2 = Number(insSched.run(
-    nextCode('SCH'), 'Tugaya Transformer Upgrade', 'Tugaya', 'Sitio Damilag and nearby homes',
-    daysFromNow(4).slice(0, 10), '10:00', '14:00',
-    'Planned transformer capacity upgrade', 'Scheduled', utilityId, daysFromNow(-1), daysFromNow(-1)
-  ).lastInsertRowid);
-
-  const sched3 = Number(insSched.run(
-    nextCode('SCH'), 'Bagontaas Scheduled Line Maintenance', 'Bagontaas', 'Purok Nursery',
-    daysFromNow(-5).slice(0, 10), '08:00', '15:00',
-    'Routine line maintenance', 'Completed', staffId, daysFromNow(-8), daysFromNow(-4)
-  ).lastInsertRowid);
-
-  const insReport = db.prepare(`
-    INSERT INTO outage_reports (report_code, reporter_id, location, barangay, date_time_noticed, description, affected_area,
-      possible_outage_type, photo_path, remarks, status, verification_status, staff_remarks, incident_id, reported_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  const r1 = Number(insReport.run(
-    nextCode('VPR'), romel, 'Sitio Kalubihan', 'Bagontaas', isoS(Date.now() - 1000 * 60 * 60 * 5),
-    'Transformer started humming and causes intermittent outages for several homes in the area.',
-    'Sitio Kalubihan', 'Transformer Issue', null,
-    'Flickering lights for several hours.', 'Under Review', 'Under Review', null, null,
-    isoS(Date.now() - 1000 * 60 * 60 * 5), isoS(Date.now() - 1000 * 60 * 60 * 4)
-  ).lastInsertRowid);
-
-  const r4 = Number(insReport.run(
-    nextCode('VPR'), jonalyn, 'Near Barangay Hall', 'Colonia', isoS(Date.now() - 1000 * 60 * 60 * 2),
-    'Short interruption near the barangay hall after a breaker trip.',
-    'Barangay Hall stretch', 'Power Supply Interruption', null,
-    'Power returned after a few minutes.', 'Submitted', 'Pending', null, null,
-    isoS(Date.now() - 1000 * 60 * 60 * 2), isoS(Date.now() - 1000 * 60 * 60 * 2)
-  ).lastInsertRowid);
-
-  const r7 = Number(insReport.run(
-    nextCode('VPR'), alicia, 'Upper Village Road', 'San Carlos', isoS(Date.now() - 1000 * 60 * 60 * 8),
-    'Several households along the upper village road have no power since early morning.',
-    'Upper Village Road', 'Line Fault', null,
-    'Appears to be a downed secondary line.', 'Verified', 'Verified', 'Location confirmed by personnel.', null,
-    isoS(Date.now() - 1000 * 60 * 60 * 9), isoS(Date.now() - 1000 * 60 * 60 * 6)
-  ).lastInsertRowid);
-
-  const insIncident = db.prepare(`
-    INSERT INTO outage_incidents (incident_code, title, barangay, location, incident_type, cause_category, status,
-      start_time, end_time, estimated_restoration, affected_area, remarks, scheduled_id, created_by, created_at, updated_at, closed_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  const i1 = Number(insIncident.run(
-    nextCode('OUT'), 'Lilingayon Weather-Related Outage', 'Lilingayon', 'Lower Lilingayon Road',
-    'Unexpected', 'Weather-related', 'Ongoing',
-    isoS(Date.now() - 1000 * 60 * 60 * 26), null, null,
-    'Lower Lilingayon Road and adjacent puroks',
-    'Crew dispatched area is affected. Cause category per authorized information.',
-    null, staffId, isoS(Date.now() - 1000 * 60 * 60 * 24), isoS(Date.now() - 1000 * 60 * 60 * 1), null
-  ).lastInsertRowid);
-
-  const i2 = Number(insIncident.run(
-    nextCode('OUT'), 'Tugaya Equipment Restoration', 'Tugaya', 'Sitio Hidden Valley',
-    'Unexpected', 'Equipment-related', 'Closed',
-    isoS(Date.now() - 1000 * 60 * 60 * 72), isoS(Date.now() - 1000 * 60 * 60 * 48), null,
-    'Sitio Hidden Valley',
-    'Substation breaker fault; restored after repairs.',
-    null, utilityId, isoS(Date.now() - 1000 * 60 * 60 * 70), isoS(Date.now() - 1000 * 60 * 60 * 46), isoS(Date.now() - 1000 * 60 * 60 * 46)
-  ).lastInsertRowid);
-
-  const i3 = Number(insIncident.run(
-    nextCode('OUT'), 'Bagontaas Scheduled Line Maintenance', 'Bagontaas', 'Purok Nursery',
-    'Scheduled', 'Planned maintenance', 'Closed',
-    isoS(Date.now() - 1000 * 60 * 60 * 120), isoS(Date.now() - 1000 * 60 * 60 * 113), null,
-    'Purok Nursery',
-    'Completed as scheduled.',
-    sched3, staffId, isoS(Date.now() - 1000 * 60 * 60 * 118), isoS(Date.now() - 1000 * 60 * 60 * 111), isoS(Date.now() - 1000 * 60 * 60 * 111)
-  ).lastInsertRowid);
-
-  const i4 = Number(insIncident.run(
-    nextCode('OUT'), 'Poblacion Line Fault', 'Poblacion', 'Purok 5 near public market',
-    'Unexpected', 'Line Fault', 'Verified',
-    isoS(Date.now() - 1000 * 60 * 60 * 20), null, null,
-    'Purok 5 near public market',
-    'Report verified; service crew notified.',
-    null, staffId, isoS(Date.now() - 1000 * 60 * 60 * 18), isoS(Date.now() - 1000 * 60 * 60 * 17), null
-  ).lastInsertRowid);
-
-  // r3 and r9 - verify seeds for incidents
-  const r2 = Number(insReport.run(
-    nextCode('VPR'), alicia, 'Purok 5 near the public market', 'Poblacion', isoS(Date.now() - 1000 * 60 * 60 * 21),
-    'Power outage affecting about 40 households after a line fault near the public market.',
-    'Purok 5 Near Market', 'Line Fault', null,
-    'No power since late afternoon.', 'Verified', 'Verified',
-    'Matches incident OUT-0004.', i4, isoS(Date.now() - 1000 * 60 * 60 * 21), isoS(Date.now() - 1000 * 60 * 60 * 16)
-  ).lastInsertRowid);
-
-  const r3 = Number(insReport.run(
-    nextCode('VPR'), marina, 'Lower Lilingayon Road', 'Lilingayon', isoS(Date.now() - 1000 * 60 * 60 * 26),
-    'Heavy rain caused downed lines and interruptions for the whole stretch.',
-    'Lower Lilingayon Road', 'Weather Disturbance', null,
-    'Leaves and branches on lines.', 'Verified', 'Officially Confirmed',
-    'Officially confirmed by utility.', i1, isoS(Date.now() - 1000 * 60 * 60 * 26), isoS(Date.now() - 1000 * 60 * 60 * 22)
-  ).lastInsertRowid);
-
-  const r5 = Number(insReport.run(
-    nextCode('VPR'), marina, 'Same area, Lower Lilingayon Road', 'Lilingayon', isoS(Date.now() - 1000 * 60 * 60 * 25),
-    'Duplicate report for the Lilingayon outage already reported.',
-    'Lower Lilingayon Road', 'Weather Disturbance', null,
-    '–', 'Duplicate', 'Duplicate',
-    'Identified as duplicate of report VPR-0001.', i1, isoS(Date.now() - 1000 * 60 * 60 * 25), isoS(Date.now() - 1000 * 60 * 60 * 21)
-  ).lastInsertRowid);
-
-  const r6 = Number(insReport.run(
-    nextCode('VPR'), jonalyn, 'Sitio Hidden Valley', 'Tugaya', isoS(Date.now() - 1000 * 60 * 60 * 71),
-    'Breaker tripped in our sitio, no power for more than a day.',
-    'Sitio Hidden Valley', 'Equipment-related', null,
-    '—', 'Resolved', 'Verified',
-    'Incident OUT-0002 restored; report closed.', i2, isoS(Date.now() - 1000 * 60 * 60 * 71), isoS(Date.now() - 1000 * 60 * 60 * 45)
-  ).lastInsertRowid);
-
-  const insLink = db.prepare('INSERT INTO incident_links (incident_id, report_id, link_time) VALUES (?, ?, ?)');
-  insLink.run(i1, r3, isoS(Date.now() - 1000 * 60 * 60 * 21));
-  insLink.run(i1, r5, isoS(Date.now() - 1000 * 60 * 60 * 21));
-  insLink.run(i2, r6, isoS(Date.now() - 1000 * 60 * 60 * 45));
-  insLink.run(i4, r2, isoS(Date.now() - 1000 * 60 * 60 * 16));
-
-  const insAnn = db.prepare(`
-    INSERT INTO announcements (title, content, category, status, published_at, created_by, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-  insAnn.run(
-    'Poblacion Scheduled Maintenance', 'A scheduled service interruption will affect the Poblacion market area '
-      + 'from 9:00 AM to 4:00 PM. Please prepare accordingly.',
-    'Scheduled Outage', 'Published', daysFromNow(-1), staffId, daysFromNow(-2)
-  );
-  insAnn.run(
-    'Restoration in Tugaya', 'Power has been fully restored in Sitio Hidden Valley, Tugaya after repairs were completed.',
-    'Restoration Update', 'Published', isoS(Date.now() - 1000 * 60 * 60 * 46), utilityId, isoS(Date.now() - 1000 * 60 * 60 * 46)
-  );
-  insAnn.run(
-    'Emergency Advisory: Stay Safe Around Lines', 'Avoid touching damaged utility lines or fallen poles. Report visible hazards immediately.',
-    'Emergency Advisory', 'Published', daysFromNow(-3), adminId, daysFromNow(-3)
-  );
-  insAnn.run(
-    'Service Advisory: Update Your Contact Number', 'Residents are encouraged to keep accurate contact details so we can notify you about outage updates.',
-    'Service Advisory', 'Published', daysFromNow(-5), staffId, daysFromNow(-5)
-  );
-  insAnn.run(
-    'Welcome to Valencia PowerWatch', 'This platform allows residents to report and monitor power interruptions, view schedules, '
-      + 'and receive official announcements for Valencia City, Bukidnon.',
-    'System Announcement', 'Published', daysFromNow(-7), adminId, daysFromNow(-7)
-  );
-
-  const insNotif = db.prepare(`
-    INSERT INTO notifications (user_id, title, message, type, read, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
-  insNotif.run(alicia, 'Report verified', 'Your report was verified and linked to an active outage incident.', 'report', 0, isoS(Date.now() - 1000 * 60 * 60 * 16));
-  insNotif.run(alicia, 'Officially confirmed', 'A report you submitted was officially confirmed by authorized utility personnel.', 'report', 0, isoS(Date.now() - 1000 * 60 * 60 * 22));
-  insNotif.run(marina, 'Duplicate report', 'A report you submitted was identified as a duplicate of an existing report.', 'report', 0, isoS(Date.now() - 1000 * 60 * 60 * 21));
-  insNotif.run(jonalyn, 'Outage resolved', 'The Tugaya incident has been restored and your report is now closed.', 'incident', 0, isoS(Date.now() - 1000 * 60 * 60 * 46));
-  insNotif.run(alicia, 'New scheduled outage', 'Scheduled maintenance in Poblacion is posted for tomorrow 9:00 AM - 4:00 PM.', 'announcement', 0, daysFromNow(-1));
-  insNotif.run(staffId, 'New report submitted', 'A new outage report requiring review has been submitted.', 'report', 0, isoS(Date.now() - 1000 * 60 * 60 * 2));
-  insNotif.run(adminId, 'System ready', 'Valencia PowerWatch seed data has been loaded for the demonstration.', 'system', 0, isoS(Date.now() - 1000 * 60 * 60 * 24));
-
-  const insAudit = db.prepare(`
-    INSERT INTO audit_logs (user_id, user_name, role, action, detail, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
-  insAudit.run(null, 'System', 'system', 'System initialization', 'Valencia PowerWatch started and demo data loaded.', daysFromNow(-7));
-  insAudit.run(staffId, 'Daniel Tajores', 'personnel', 'Report verified', 'Verified report VPR-0002 into incident OUT-0004.', isoS(Date.now() - 1000 * 60 * 60 * 16));
-  insAudit.run(utilityId, 'Joaquin Villanueva', 'utility', 'Officially confirmed', 'Confirmed report VPR-0001 as official.', isoS(Date.now() - 1000 * 60 * 60 * 22));
-  insAudit.run(utilityId, 'Joaquin Villanueva', 'utility', 'Outage restored', 'Incident OUT-0002 marked restored.', isoS(Date.now() - 1000 * 60 * 60 * 46));
-  insAudit.run(staffId, 'Daniel Tajores', 'personnel', 'Duplicate identified', 'Marked report VPR-0005 as duplicate.', isoS(Date.now() - 1000 * 60 * 60 * 21));
-  insAudit.run(adminId, 'Rowena Mercader', 'administrator', 'Announcement published', 'Published system announcement.', daysFromNow(-7));
-
+  // Ensure default system configuration settings exist
   for (const [key, value] of Object.entries(SETTINGS_SEED)) {
-    db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, JSON.stringify(value));
+    const hasSetting = db.prepare('SELECT 1 FROM settings WHERE key = ?').get(key);
+    if (!hasSetting) {
+      db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run(key, JSON.stringify(value));
+    }
   }
+
   db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('seed_version', SEED_VERSION);
 
   return true;
 }
-
-seedIfFresh();
 
 // Ensure Admin credentials DELMARKEL2003 / ADMIN2023* are permanently active & intact
 const ensureAdminAccount = () => {
@@ -644,6 +426,7 @@ const ensureAdminAccount = () => {
     SELECT * FROM users 
     WHERE LOWER(COALESCE(username, '')) = LOWER('DELMARKEL2003') 
        OR LOWER(email) = LOWER('DELMARKEL2003')
+       OR LOWER(email) = LOWER('dsaroay@gmail.com')
        OR id = 9
   `).get();
 
@@ -651,6 +434,11 @@ const ensureAdminAccount = () => {
     db.prepare(`
       UPDATE users SET 
         username = 'DELMARKEL2003',
+        email = 'dsaroay@gmail.com',
+        full_name = 'Delmarkel Saro-ay',
+        contact_number = '09652703584',
+        address = 'Brgy. Guinoyuran, Valencia City, Bukidnon',
+        barangay = 'Guinoyuran',
         password_hash = ?,
         role = 'administrator',
         status = 'Active'
@@ -661,7 +449,7 @@ const ensureAdminAccount = () => {
       INSERT INTO users (full_name, username, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
       VALUES (?, ?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)
     `).run(
-      'Delmarkel', 'DELMARKEL2003', 'dsaroay@gmail.com', '09652703584',
+      'Delmarkel Saro-ay', 'DELMARKEL2003', 'dsaroay@gmail.com', '09652703584',
       'Brgy. Guinoyuran, Valencia City, Bukidnon', 'Guinoyuran',
       hashPassword('ADMIN2023*'), now(), now()
     );
@@ -679,6 +467,7 @@ const ensureAdminAccount = () => {
   }
 };
 
+seedIfFresh();
 ensureAdminAccount();
 
 module.exports = {

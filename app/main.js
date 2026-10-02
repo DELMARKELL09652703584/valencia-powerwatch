@@ -1795,10 +1795,10 @@ async function handleClick(event) {
         window.location.assign('/api/admin/backup');
         return;
       case 'seed-reset':
-        if (!window.confirm('Reset demonstration data? Existing demo records will be removed.')) return;
+        if (!window.confirm('Reset system data to a clean/fresh state? All reports, incidents, schedules, announcements, and user submissions will be removed.')) return;
         await send('/api/admin/maintenance/seed', 'POST');
         state.user = null;
-        renderLogin('Demonstration data was reset. Sign in again to continue.');
+        renderLogin('System data was reset to a fresh state. Sign in again to continue.');
         return;
       default:
         return;

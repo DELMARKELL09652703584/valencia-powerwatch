@@ -124,16 +124,29 @@ const clearDBTables = () => {
   db.exec(`
     DELETE FROM oauth_states;
     DELETE FROM incident_links;
+    DELETE FROM incident_areas;
     DELETE FROM report_attachments;
     DELETE FROM outage_reports;
     DELETE FROM outage_incidents;
     DELETE FROM scheduled_outages;
     DELETE FROM announcements;
     DELETE FROM notifications;
+    DELETE FROM citizen_feedback;
+    DELETE FROM sms_logs;
     DELETE FROM audit_logs;
-    DELETE FROM barangays;
+    DELETE FROM sessions;
+    DELETE FROM oauth_accounts;
+    DELETE FROM password_reset_tokens;
+    DELETE FROM users 
+    WHERE role != 'administrator' 
+      AND LOWER(COALESCE(username, '')) != 'delmarkel2003' 
+      AND LOWER(email) NOT IN ('dsaroay@gmail.com', 'admin@powerwatch.ph');
     DELETE FROM settings WHERE key = 'seed_version';
-    DELETE FROM sqlite_sequence WHERE name IN ('outage_reports','outage_incidents','scheduled_outages','announcements','notifications','audit_logs','barangays');
+    DELETE FROM sqlite_sequence WHERE name IN (
+      'outage_reports','outage_incidents','incident_links','incident_areas',
+      'scheduled_outages','announcements','notifications','audit_logs',
+      'citizen_feedback','sms_logs','report_attachments','sessions','oauth_accounts'
+    );
   `);
 };
 
