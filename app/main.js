@@ -1081,6 +1081,61 @@ async function handleClick(event) {
         if (state.adminOutageMapInstance) clearRouteGuideOnMap(state.adminOutageMapInstance);
         return;
       }
+      case 'toggle-community-route': {
+        const hud = document.querySelector('.map-route-hud');
+        if (hud) {
+          clearRouteGuideOnMap(state.communityOutageMap);
+        } else {
+          const { incidents = [] } = await api('/api/incidents');
+          const item = incidents[0];
+          if (item) {
+            const bgyLoc = (state.barangayLocations || []).find((b) => b.name === item.barangay);
+            const lat = item.latitude || (bgyLoc && bgyLoc.latitude);
+            const lng = item.longitude || (bgyLoc && bgyLoc.longitude);
+            if (lat && lng) {
+              const container = document.querySelector('.map-route-hud-container') || document.getElementById('community-map')?.parentElement;
+              await renderRouteGuideOnMap({
+                map: state.communityOutageMap,
+                destLat: Number(lat),
+                destLng: Number(lng),
+                destLabel: `${item.title} (${item.barangay || 'Valencia'})`,
+                container
+              });
+            }
+          } else {
+            setToast('No active outages to route to.');
+          }
+        }
+        return;
+      }
+      case 'toggle-admin-route': {
+        const hud = document.querySelector('.map-route-hud');
+        if (hud) {
+          clearRouteGuideOnMap(state.adminOutageMapInstance);
+        } else {
+          const { incidents = [] } = await api('/api/incidents');
+          const item = incidents[0];
+          if (item) {
+            const bgyLoc = (state.barangayLocations || []).find((b) => b.name === item.barangay);
+            const lat = item.latitude || (bgyLoc && bgyLoc.latitude);
+            const lng = item.longitude || (bgyLoc && bgyLoc.longitude);
+            if (lat && lng) {
+              const container = document.querySelector('.power-map-canvas-wrap') || document.getElementById('admin-outage-map')?.parentElement;
+              await renderRouteGuideOnMap({
+                map: state.adminOutageMapInstance,
+                destLat: Number(lat),
+                destLng: Number(lng),
+                destLabel: `${item.title} (${item.barangay || 'Valencia'})`,
+                container,
+                origin: VALENCIA_HQ_COORDINATES
+              });
+            }
+          } else {
+            setToast('No active outages to route to.');
+          }
+        }
+        return;
+      }
       case 'incident-modal-route': {
         closeDialog();
         const { lat, lng, label } = actionButton.dataset;

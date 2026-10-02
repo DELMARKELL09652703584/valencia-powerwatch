@@ -958,7 +958,7 @@ async function renderMobileMap() {
 
   mobileShell(`
     ${mobileHero('Power Outage Map', 'Explore active interruptions, satellite views, and outage density across Valencia City.')}
-    <div class="mobile-map-controls" style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+    <div class="mobile-map-controls" style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
       <div class="mobile-segments" role="group" aria-label="Map display mode" style="flex:1;min-width:180px;margin-bottom:0;">
         <button type="button" class="mobile-segment ${!isHeatmap ? 'active' : ''}" data-action="set-mobile-map-mode" data-value="markers">📍 Outage Pins</button>
         <button type="button" class="mobile-segment ${isHeatmap ? 'active' : ''}" data-action="set-mobile-map-mode" data-value="heat">🔥 Hotspot Heatmap</button>
@@ -967,15 +967,29 @@ async function renderMobileMap() {
         <button type="button" class="mobile-segment ${!isSatellite ? 'active' : ''}" data-action="set-mobile-map-layer" data-value="street" title="Standard Street Map">🗺️ Street</button>
         <button type="button" class="mobile-segment ${isSatellite ? 'active' : ''}" data-action="set-mobile-map-layer" data-value="satellite" title="Satellite Aerial Photo">🛰️ Satellite</button>
       </div>
+      <button type="button" class="mobile-segment" data-action="toggle-community-route" style="background:#2563eb;color:#fff;font-weight:750;box-shadow:0 2px 6px rgba(37,99,235,0.3);flex:0 0 auto;padding:6px 12px;border:0;border-radius:8px;">🧭 Blue Route Guide</button>
     </div>
     ${legendMarkup}
     <div class="map-route-hud-container" style="position:relative;">
       <div class="community-map" id="community-map" aria-label="Map of Valencia City outages"></div>
     </div>
     <section class="mobile-card"><header class="mobile-card-head"><h2>Active Outages</h2><button class="link-button" data-mobile-tab="outages">View all</button></header>
-      <div class="mobile-card-body">${incidents.length ? incidents.slice(0, 4).map((incident) => `
-        <div class="mobile-list-item"><div class="mobile-list-main"><strong>${escapeHtml(incident.title)}</strong><span>${escapeHtml((incident.affected_barangays || [incident.barangay]).join(', '))}</span></div>${statusPill(incident.status)}<button type="button" class="link-button" data-action="view-incident-details" data-id="${incident.id}" aria-label="View ${escapeHtml(incident.title)} details">›</button></div>
-      `).join('') : '<p class="muted small">No active outage locations are available.</p>'}</div>
+      <div class="mobile-card-body">${incidents.length ? incidents.map((incident) => {
+        const coords = coordinatesFor(incident);
+        return `
+          <div class="mobile-list-item" style="flex-wrap:wrap;gap:8px;padding:12px 10px;border-bottom:1px solid #f1f5f9;">
+            <div class="mobile-list-main" style="flex:1;min-width:180px;">
+              <strong>${escapeHtml(incident.title)}</strong>
+              <span>📍 ${escapeHtml((incident.affected_barangays || [incident.barangay]).join(', '))}</span>
+            </div>
+            ${statusPill(incident.status)}
+            <div style="display:flex;gap:6px;width:100%;margin-top:6px;">
+              <button type="button" class="button ghost small" data-action="view-incident-details" data-id="${incident.id}">Details ›</button>
+              ${coords ? `<button type="button" class="button small" data-action="show-community-route" data-lat="${coords[0]}" data-lng="${coords[1]}" data-label="${escapeHtml(incident.title)} (${escapeHtml(incident.barangay || 'Valencia')})" style="background:#2563eb;color:#fff;font-weight:750;border-radius:8px;box-shadow:0 2px 5px rgba(37,99,235,0.25);">🧭 Show Blue Route Guide</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('') : '<p class="muted small">No active outage locations are available.</p>'}</div>
     </section>
     <section class="mobile-card"><header class="mobile-card-head"><h2>Scheduled Outages</h2><button class="link-button" data-mobile-tab="scheduled">View all</button></header>
       <div class="mobile-card-body">${scheduled.length ? scheduled.slice(0, 3).map((item) => `
@@ -1140,6 +1154,24 @@ async function renderMobileMap() {
     });
   }
   window.requestAnimationFrame(() => map.invalidateSize());
+
+  // Automatically activate the blue route guide for the primary active outage immediately on map load!
+  const firstIncident = incidents[0];
+  if (firstIncident) {
+    const coords = coordinatesFor(firstIncident);
+    if (coords) {
+      setTimeout(() => {
+        const container = document.querySelector('.map-route-hud-container');
+        renderRouteGuideOnMap({
+          map,
+          destLat: coords[0],
+          destLng: coords[1],
+          destLabel: `${firstIncident.title} (${firstIncident.barangay || 'Valencia'})`,
+          container
+        });
+      }, 400);
+    }
+  }
 }
 
 function filterMobileNotifications(notifications) {

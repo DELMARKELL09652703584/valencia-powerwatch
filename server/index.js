@@ -69,9 +69,17 @@ app.get('/sw.js', (req, res) => {
 app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(ROOT, 'admin.html')));
 app.get(['/community', '/community.html'], (req, res) => res.sendFile(path.join(ROOT, 'community.html')));
 app.get(['/auth/oauth-dialog', '/auth/oauth-popup'], (req, res) => res.sendFile(path.join(ROOT, 'oauth-dialog.html')));
-app.get(['/style.css', '/community/style.css', '/admin/style.css', '/install/style.css'], (req, res) => res.sendFile(path.join(ROOT, 'style.css')));
-app.get(['/script.js', '/community/script.js', '/admin/script.js'], (req, res) => res.sendFile(path.join(ROOT, 'script.js')));
-app.use(['/app', '/community/app', '/admin/app', '/install/app'], express.static(path.join(ROOT, 'app')));
+app.get(['/style.css', '/community/style.css', '/admin/style.css', '/install/style.css'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  res.sendFile(path.join(ROOT, 'style.css'));
+});
+app.get(['/script.js', '/community/script.js', '/admin/script.js'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  res.sendFile(path.join(ROOT, 'script.js'));
+});
+app.use(['/app', '/community/app', '/admin/app', '/install/app'], express.static(path.join(ROOT, 'app'), {
+  setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache, must-revalidate')
+}));
 app.use(express.static(ROOT));
 app.get('/', (req, res) => res.sendFile(path.join(ROOT, 'index.html')));
 

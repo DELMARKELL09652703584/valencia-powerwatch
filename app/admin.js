@@ -713,6 +713,7 @@ async function renderAdminMap() {
           <button type="button" data-map-home aria-label="Return to Valencia City extent" title="Return to Valencia City">⌂</button>
           <button type="button" data-map-geolocate aria-label="Show my current location" title="Show my location">◎</button>
           <button type="button" data-map-toggle-heat aria-label="Toggle Outage Heatmap" title="Toggle Outage Heatmap" class="${layers.heatmap ? 'active' : ''}">🔥</button>
+          <button type="button" data-action="toggle-admin-route" aria-label="Toggle Blue Route Guide" title="Toggle Blue Route Guide" style="background:#2563eb;color:#fff;font-weight:750;">🧭</button>
         </div>
         <label class="power-map-focus"><span>⌖</span><select data-map-focus aria-label="Focus map on a barangay"><option value="">Find a barangay</option>${barangays.map((item) => `<option value="${escapeHtml(item.name)}">${escapeHtml(item.name)}</option>`).join('')}</select></label>
       </div>
@@ -1007,6 +1008,25 @@ async function renderAdminMap() {
   });
 
   window.requestAnimationFrame(() => map.invalidateSize());
+
+  // Automatically activate the blue dispatch route guide for primary active incident immediately on load!
+  const primaryIncident = activeIncidents[0] || incidents[0];
+  if (primaryIncident) {
+    const coords = locationFor(primaryIncident);
+    if (coords) {
+      setTimeout(() => {
+        const container = document.querySelector('.power-map-canvas-wrap');
+        renderRouteGuideOnMap({
+          map,
+          destLat: coords[0],
+          destLng: coords[1],
+          destLabel: `${primaryIncident.title} (${primaryIncident.barangay || 'Valencia'})`,
+          container,
+          origin: VALENCIA_HQ_COORDINATES
+        });
+      }, 400);
+    }
+  }
 }
 
 async function renderAdminNotifications() {
