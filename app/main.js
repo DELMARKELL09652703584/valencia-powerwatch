@@ -1566,7 +1566,7 @@ async function handleClick(event) {
           <div class="incident-chip-list" data-chip-list></div>
           <div class="incident-chip-add-row"><select class="input" data-chip-select aria-label="Choose a related report"><option value="">Choose report</option>${availableReports.map((report) => `<option value="${report.id}" data-chip-label="${escapeHtml(report.report_code)}">${escapeHtml(report.report_code)} · ${escapeHtml(report.barangay)} · ${escapeHtml(report.status)}</option>`).join('')}</select><button type="button" class="incident-add-button" data-action="add-incident-chip">+ Add Report</button></div>
           <input type="hidden" name="related_report_ids" data-chip-values value="[]">
-          ${availableReports.length ? '' : '<p class="incident-form-note">There are no unlinked reports available. Submit a report before creating an incident.</p>'}
+          ${availableReports.length ? '' : '<p class="incident-form-note" style="color:#64748b;font-size:0.8rem;margin-top:4px;">(Optional) Walay unlinked reports sa karon — ang tanang reports na-link na o wala pay bag-ong report. Pwede ra kini i-skip.</p>'}
         </div>`;
         openDialog('Create Incident', `
           <div class="create-incident-form">
@@ -1574,18 +1574,18 @@ async function handleClick(event) {
               <label class="incident-create-field wide-field">Incident Title <span class="required-mark">*</span><input class="input" name="title" placeholder="e.g. Transformer Issue in Guinoyuran" maxlength="160" required></label>
               <label class="incident-create-field wide-field">Date &amp; Time <span class="required-mark">*</span><input class="input" type="datetime-local" name="start_time" value="${escapeHtml(toLocalInputValue(new Date()))}" required></label>
               <div class="incident-create-field wide-field"><span class="incident-field-label">Affected Barangays <span class="required-mark">*</span></span>${barangayPicker}</div>
-              <label class="incident-create-field wide-field">Incident Type <span class="required-mark">*</span><select class="input" name="outage_type" required><option value="">Choose incident type</option>${typeOptions}</select></label>
-              <label class="incident-create-field wide-field">Description <span class="required-mark">*</span><textarea class="input" name="description" rows="3" placeholder="Describe the incident" maxlength="3000" required></textarea></label>
+              <label class="incident-create-field">Location (Street / Landmark)<input class="input" name="location" placeholder="e.g. Zone 1, near Plaza"></label>
+              <label class="incident-create-field">Affected Area (Coverage)<input class="input" name="affected_area" placeholder="e.g. Purok 1 to 4, whole sitio"></label>
+              <label class="incident-create-field">Incident Type <span class="required-mark">*</span><select class="input" name="outage_type" required><option value="">Choose incident type</option>${typeOptions}</select></label>
               <label class="incident-create-field">Priority <span class="required-mark">*</span><select class="input" name="priority" required><option>Low</option><option selected>Medium</option><option>High</option><option>Critical</option></select></label>
+              <label class="incident-create-field">Incident Category<select class="input" name="incident_type"><option selected>Unexpected</option><option>Scheduled</option></select></label>
+              <label class="incident-create-field">Initial Status<select class="input" name="initial_status"><option selected>Ongoing</option><option>Reported</option><option>Under Verification</option><option>Verified</option></select></label>
+              <label class="incident-create-field wide-field">Description <span class="required-mark">*</span><textarea class="input" name="description" rows="3" placeholder="Describe the incident" maxlength="3000" required></textarea></label>
               <div class="incident-create-field wide-field"><span class="incident-field-label">Related Reports (Optional / Link to Incident)</span>${reportPicker}</div>
             </div>
-            <details class="incident-advanced-fields"><summary>Additional incident details</summary>
+            <details class="incident-advanced-fields"><summary>More optional details (Coordinates, Estimated Restoration, Customers)</summary>
               <div class="incident-create-fields incident-advanced-grid">
-                <label class="incident-create-field">Incident Category<select class="input" name="incident_type"><option>Unexpected</option><option>Scheduled</option></select></label>
-                <label class="incident-create-field">Initial Status<select class="input" name="initial_status">${['Reported', 'Under Verification', 'Verified', 'Ongoing'].map((status) => `<option>${escapeHtml(status)}</option>`).join('')}</select></label>
-                <label class="incident-create-field">Location<input class="input" name="location" placeholder="Street or landmark"></label>
-                <label class="incident-create-field">Affected Area<input class="input" name="affected_area" placeholder="Purok, sitio, or coverage area"></label>
-                <label class="incident-create-field">Customers Affected<input class="input" type="number" min="0" step="1" name="customers_affected"></label>
+                <label class="incident-create-field">Customers Affected<input class="input" type="number" min="0" step="1" name="customers_affected" placeholder="Estimated homes/meters"></label>
                 <label class="incident-create-field">Restoration Progress (%)<input class="input" type="number" min="0" max="100" step="1" name="restoration_progress" value="0"></label>
                 <label class="incident-create-field">Latitude<input class="input" type="number" step="any" name="latitude" placeholder="e.g. 7.906"></label>
                 <label class="incident-create-field">Longitude<input class="input" type="number" step="any" name="longitude" placeholder="e.g. 125.094"></label>
