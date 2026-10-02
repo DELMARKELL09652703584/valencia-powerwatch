@@ -1598,12 +1598,27 @@ async function handleClick(event) {
         return;
       }
       case 'link-report': {
-        const { reports } = await api('/api/reports?status=Submitted');
+        const { reports } = await api('/api/reports');
+        const available = (reports || []).filter((r) => !r.incident_id && !['Rejected', 'Duplicate', 'Resolved'].includes(r.status));
+        if (!available.length) {
+          openDialog('Link Report', `
+            <div style="padding:10px 0;">
+              <p style="margin-bottom:10px;color:#1e293b;font-weight:600;">Walay unlinked reports nga available sa karon.</p>
+              <p class="muted small" style="line-height:1.5;">Ang tanang na-submit nga reports na-sumpay na daan sa mga incidents o na-resolve na.</p>
+              <p class="muted small" style="margin-top:8px;padding:8px 10px;background:#f8fafc;border-radius:6px;border-left:3px solid #0284c7;">
+                💡 <strong>Pahinumdom:</strong> Kung gusto nimo i-update ang status (sama sa pag-marka og <strong>Restored / Closed</strong> o <strong>Resolved</strong>), i-click ang <strong>Pencil icon (✏️ Edit)</strong> sa Actions column.
+              </p>
+            </div>
+          `, 'Close');
+          setDialogFooter('<button type="button" class="button primary" data-action="close-dialog">Understood</button>');
+          return;
+        }
         openDialog('Link a report to this incident', `
           <div class="form-stack">
-            <label>Report<select class="input" name="report_id" required><option value="">Choose report</option>${reports.map((r) => `<option value="${r.id}">${escapeHtml(r.report_code)} â€” ${escapeHtml(r.barangay)}</option>`).join('')}</select></label>
-            <label class="wide-field">Remarks<textarea class="input" name="remarks" rows="2"></textarea></label>
-          `, 'Link report', { form: 'link-report', id });
+            <label>Report<select class="input" name="report_id" required><option value="">Choose report</option>${available.map((r) => `<option value="${r.id}">${escapeHtml(r.report_code)} — ${escapeHtml(r.barangay)} (${escapeHtml(r.status)})</option>`).join('')}</select></label>
+            <label class="wide-field">Remarks<textarea class="input" name="remarks" rows="2" placeholder="e.g. Confirmed duplicate or same affected area"></textarea></label>
+          </div>
+        `, 'Link report', { form: 'link-report', id });
         return;
       }
       case 'new-schedule':
