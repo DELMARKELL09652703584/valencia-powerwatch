@@ -236,6 +236,186 @@ const findNearestBarangay = (latitude, longitude, barangayList) => {
   return nearest ? { name: nearest.name, distanceKm: minDistance } : null;
 };
 
+const VALENCIA_HQ_COORDINATES = {
+  latitude: 7.9135,
+  longitude: 125.0934,
+  label: 'FIBECO Valencia Substation / HQ'
+};
+
+const getUserLocation = () => new Promise((resolve) => {
+  if (!navigator.geolocation) return resolve(null);
+  navigator.geolocation.getCurrentPosition(
+    (pos) => resolve({
+      latitude: pos.coords.latitude,
+      longitude: pos.coords.longitude,
+      label: 'Your Current GPS Location'
+    }),
+    () => resolve(null),
+    { timeout: 5000, enableHighAccuracy: true }
+  );
+});
+
+async function fetchRouteWaypoints(startLat, startLng, destLat, destLng) {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${destLng},${destLat}?overview=full&geometries=geojson`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    if (!res.ok) throw new Error('OSRM status ' + res.status);
+    const data = await res.json();
+    if (data.routes && data.routes.length > 0) {
+      const route = data.routes[0];
+      const waypoints = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+      return {
+        waypoints,
+        distanceKm: (route.distance / 1000).toFixed(1),
+        durationMins: Math.max(1, Math.round(route.duration / 60)),
+        isRealRoute: true
+      };
+    }
+  } catch (err) {
+    console.warn('Routing API fallback to straight line:', err);
+  }
+  const dist = distanceKm({ latitude: startLat, longitude: startLng }, { latitude: destLat, longitude: destLng });
+  return {
+    waypoints: [[startLat, startLng], [destLat, destLng]],
+    distanceKm: dist.toFixed(1),
+    durationMins: Math.max(1, Math.round((dist / 35) * 60)),
+    isRealRoute: false
+  };
+}
+
+let activeRouteGuideLayer = null;
+
+async function renderRouteGuideOnMap({
+  map,
+  destLat,
+  destLng,
+  destLabel,
+  container,
+  origin = null
+}) {
+  if (!map) return;
+  setToast('Calculating road route navigation guide...');
+
+  if (!origin) {
+    const userGps = await getUserLocation();
+    origin = userGps || VALENCIA_HQ_COORDINATES;
+  }
+
+  if (activeRouteGuideLayer) {
+    try { map.removeLayer(activeRouteGuideLayer); } catch {}
+  }
+  activeRouteGuideLayer = L.layerGroup().addTo(map);
+
+  const routeData = await fetchRouteWaypoints(origin.latitude, origin.longitude, destLat, destLng);
+
+  // Outer border (navy blue stroke for navigation polyline contrast)
+  L.polyline(routeData.waypoints, {
+    color: '#1e3a8a',
+    weight: 9,
+    opacity: 0.9,
+    lineCap: 'round',
+    lineJoin: 'round'
+  }).addTo(activeRouteGuideLayer);
+
+  // Inner core (vibrant Google Maps blue line)
+  const corePolyline = L.polyline(routeData.waypoints, {
+    color: '#2563eb',
+    weight: 5.5,
+    opacity: 1.0,
+    lineCap: 'round',
+    lineJoin: 'round'
+  }).addTo(activeRouteGuideLayer);
+
+  // Origin marker
+  const startIcon = L.divIcon({
+    className: 'route-start-pin-wrap',
+    html: '<div style="background:#0284c7;color:#fff;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;border:2.5px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,0.35);">🟢</div>',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  });
+  L.marker([origin.latitude, origin.longitude], { icon: startIcon })
+    .addTo(activeRouteGuideLayer)
+    .bindPopup(`<strong>📍 Start / Dispatch Location</strong><br>${escapeHtml(origin.label)}`);
+
+  // Destination marker
+  const destIcon = L.divIcon({
+    className: 'route-dest-pin-wrap',
+    html: '<div class="route-dest-pin">📍</div>',
+    iconSize: [28, 28],
+    iconAnchor: [14, 26]
+  });
+  L.marker([destLat, destLng], { icon: destIcon })
+    .addTo(activeRouteGuideLayer)
+    .bindPopup(`<strong>⚡ Outage Destination</strong><br>${escapeHtml(destLabel)}`);
+
+  // Fit bounds to entire route
+  map.fitBounds(corePolyline.getBounds(), { padding: [50, 50] });
+
+  // Floating Navigation HUD
+  const targetContainer = container || map.getContainer()?.parentElement;
+  if (targetContainer) {
+    targetContainer.querySelector('.map-route-hud')?.remove();
+    const hud = document.createElement('aside');
+    hud.className = 'map-route-hud';
+    hud.setAttribute('role', 'region');
+    hud.setAttribute('aria-label', 'Road Route Navigation Guide');
+    hud.innerHTML = `
+      <div class="map-route-hud-header">
+        <div class="map-route-hud-title">
+          <span>🧭</span>
+          <span>Navigation Route Guide</span>
+        </div>
+        <button type="button" class="map-route-hud-close" data-action="clear-route-guide" title="Close and clear route" aria-label="Close route guide">✕</button>
+      </div>
+      <div class="map-route-hud-endpoints">
+        <div class="map-route-hud-point">
+          <span>🟢</span>
+          <span><strong>From:</strong> ${escapeHtml(origin.label)}</span>
+        </div>
+        <div class="map-route-hud-point">
+          <span>🔴</span>
+          <span><strong>To:</strong> ${escapeHtml(destLabel)}</span>
+        </div>
+      </div>
+      <div class="map-route-hud-details">
+        <div class="map-route-hud-stat">
+          <span>📏</span>
+          <span>${escapeHtml(routeData.distanceKm)} km</span>
+        </div>
+        <div class="map-route-hud-stat">
+          <span>⏱️</span>
+          <span>~${escapeHtml(String(routeData.durationMins))} mins drive</span>
+        </div>
+        <div class="map-route-hud-stat">
+          <span>${routeData.isRealRoute ? '🛣️ Road Route' : '📍 Direct'}</span>
+        </div>
+      </div>
+      <div class="map-route-hud-actions">
+        <a href="https://www.google.com/maps/dir/?api=1&origin=${origin.latitude},${origin.longitude}&destination=${destLat},${destLng}&travelmode=driving" 
+           target="_blank" rel="noopener noreferrer" class="map-route-hud-btn primary">
+          <span>🗺️ Open in Google Maps</span>
+        </a>
+        <button type="button" class="map-route-hud-btn secondary" data-action="clear-route-guide">
+          <span>Clear Route</span>
+        </button>
+      </div>
+    `;
+    targetContainer.appendChild(hud);
+  }
+
+  setToast(`Route guide active: ${routeData.distanceKm} km · ~${routeData.durationMins} mins`);
+}
+
+function clearRouteGuideOnMap(map, container) {
+  if (activeRouteGuideLayer) {
+    try { map?.removeLayer(activeRouteGuideLayer); } catch {}
+    activeRouteGuideLayer = null;
+  }
+  const targetContainer = container || map?.getContainer()?.parentElement || document;
+  targetContainer?.querySelector('.map-route-hud')?.remove();
+  setToast('Route guide cleared.');
+}
+
 async function api(path, options = {}) {
   const response = await fetch(path, {
     credentials: 'same-origin',

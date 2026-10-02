@@ -792,6 +792,7 @@ async function renderAdminMap() {
     maxZoom: 18,
     maxBounds: [[7.6, 124.8], [8.2, 125.4]],
   }).setView(mapCenter, Math.max(13, Number(mapSettings.zoom) || 13));
+  state.adminOutageMapInstance = map;
   map.createPane('mapBasemap');
   map.getPane('mapBasemap').style.zIndex = 200;
   map.createPane('mapReferenceOverlays');
@@ -883,6 +884,7 @@ async function renderAdminMap() {
           <div class="map-popup-row"><span class="map-popup-icon">🔄</span><span>Status: <strong style="color:${category.color}">${escapeHtml(item.status)}</strong></span></div>
         </div>
         <button type="button" class="map-popup-btn" data-action="view-incident-details" data-id="${item.id}">Inspect Incident Record ›</button>
+        <button type="button" class="map-popup-btn route-btn" data-action="show-admin-route" data-lat="${coordinates[0]}" data-lng="${coordinates[1]}" data-label="${escapeHtml(item.title)} (${escapeHtml(item.barangay)})">🧭 Dispatch Route Guide</button>
       </div>
     `;
 
@@ -891,13 +893,33 @@ async function renderAdminMap() {
   });
   verificationReports.forEach((report) => {
     const coordinates = locationFor(report);
-    if (coordinates) L.circleMarker(coordinates, { pane: 'markerPane', radius: 8, color: '#fff', fillColor: '#f0a629', fillOpacity: .98, weight: 2.5 })
-      .addTo(layerGroups.verification).bindPopup(`<strong>${escapeHtml(report.report_code)}</strong><br>${escapeHtml(report.barangay)} · ${escapeHtml(report.status)}<br>${escapeHtml(report.description || '')}`);
+    if (coordinates) {
+      const repPopup = `
+        <div class="map-popup-card">
+          <strong>${escapeHtml(report.report_code)}</strong>
+          <div>${escapeHtml(report.barangay)} · ${escapeHtml(report.status)}</div>
+          <small class="muted">${escapeHtml(report.description || '')}</small>
+          <button type="button" class="map-popup-btn route-btn" data-action="show-admin-route" data-lat="${coordinates[0]}" data-lng="${coordinates[1]}" data-label="Report ${escapeHtml(report.report_code)} (${escapeHtml(report.barangay)})">🧭 Dispatch Route Guide</button>
+        </div>
+      `;
+      L.circleMarker(coordinates, { pane: 'markerPane', radius: 8, color: '#fff', fillColor: '#f0a629', fillOpacity: .98, weight: 2.5 })
+        .addTo(layerGroups.verification).bindPopup(repPopup, { maxWidth: 260 });
+    }
   });
   scheduled.forEach((item) => {
     const coordinates = locationFor(item);
-    if (coordinates) L.circleMarker(coordinates, { pane: 'markerPane', radius: 8, color: '#fff', fillColor: '#147bd1', fillOpacity: .98, weight: 2.5 })
-      .addTo(layerGroups.scheduled).bindPopup(`<strong>${escapeHtml(item.schedule_code)}</strong><br>${escapeHtml(item.title)}<br>${escapeHtml(item.barangay)} · ${escapeHtml(item.status)}`);
+    if (coordinates) {
+      const schedPopup = `
+        <div class="map-popup-card">
+          <strong>${escapeHtml(item.schedule_code)}</strong>
+          <div>${escapeHtml(item.title)}</div>
+          <small class="muted">${escapeHtml(item.barangay)} · ${escapeHtml(item.status)}</small>
+          <button type="button" class="map-popup-btn route-btn" data-action="show-admin-route" data-lat="${coordinates[0]}" data-lng="${coordinates[1]}" data-label="${escapeHtml(item.title)} (${escapeHtml(item.barangay)})">🧭 Route Guide</button>
+        </div>
+      `;
+      L.circleMarker(coordinates, { pane: 'markerPane', radius: 8, color: '#fff', fillColor: '#147bd1', fillOpacity: .98, weight: 2.5 })
+        .addTo(layerGroups.scheduled).bindPopup(schedPopup, { maxWidth: 260 });
+    }
   });
   barangays.forEach((item) => {
     if (hasCoordinates(item)) L.circleMarker([Number(item.latitude), Number(item.longitude)], { pane: 'markerPane', radius: 5, color: '#fff', fillColor: '#25a66a', fillOpacity: .95, weight: 2 })

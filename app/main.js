@@ -1015,6 +1015,9 @@ async function handleClick(event) {
       }
       case 'view-incident-details': {
         const { incident } = await api(`/api/incidents/${id}`);
+        const bgyLoc = (state.barangayLocations || []).find((b) => b.name === incident.barangay);
+        const lat = incident.latitude || (bgyLoc && bgyLoc.latitude);
+        const lng = incident.longitude || (bgyLoc && bgyLoc.longitude);
         openDialog(incident.title || incident.incident_code, `
           <div class="detail-grid">
             <div><span>Incident</span><strong>${escapeHtml(incident.incident_code)}</strong></div>
@@ -1025,11 +1028,14 @@ async function handleClick(event) {
             <div><span>Restoration</span><strong>${incident.restoration_progress == null ? 'Not reported' : `${escapeHtml(String(incident.restoration_progress))}%`}</strong></div>
           </div><p>${escapeHtml(incident.description || '')}</p>
         `, 'Close');
-        setDialogFooter('<button type="button" class="button ghost" data-action="close-dialog">Close</button>');
+        setDialogFooter(`${lat && lng ? `<button type="button" class="button primary" data-action="incident-modal-route" data-lat="${lat}" data-lng="${lng}" data-label="${escapeHtml(incident.title)} (${escapeHtml(incident.barangay)})">🧭 Route Guide on Map</button>` : ''}<button type="button" class="button ghost" data-action="close-dialog">Close</button>`);
         return;
       }
       case 'view-schedule-details': {
         const { scheduled } = await api(`/api/scheduled/${id}`);
+        const bgyLoc = (state.barangayLocations || []).find((b) => b.name === scheduled.barangay);
+        const lat = scheduled.latitude || (bgyLoc && bgyLoc.latitude);
+        const lng = scheduled.longitude || (bgyLoc && bgyLoc.longitude);
         openDialog(scheduled.title, `
           <div class="detail-grid">
             <div><span>Schedule</span><strong>${escapeHtml(scheduled.schedule_code)}</strong></div>
@@ -1040,7 +1046,71 @@ async function handleClick(event) {
             <div><span>Reason</span><strong>${escapeHtml(scheduled.reason || 'Not provided')}</strong></div>
           </div>
         `, 'Close');
-        setDialogFooter('<button type="button" class="button ghost" data-action="close-dialog">Close</button>');
+        setDialogFooter(`${lat && lng ? `<button type="button" class="button primary" data-action="incident-modal-route" data-lat="${lat}" data-lng="${lng}" data-label="${escapeHtml(scheduled.title)} (${escapeHtml(scheduled.barangay)})">🧭 Route Guide on Map</button>` : ''}<button type="button" class="button ghost" data-action="close-dialog">Close</button>`);
+        return;
+      }
+      case 'show-community-route': {
+        const { lat, lng, label } = actionButton.dataset;
+        if (!lat || !lng) return;
+        const container = document.querySelector('.map-route-hud-container') || document.getElementById('community-map')?.parentElement;
+        await renderRouteGuideOnMap({
+          map: state.communityOutageMap,
+          destLat: Number(lat),
+          destLng: Number(lng),
+          destLabel: label || 'Valencia Outage Location',
+          container
+        });
+        return;
+      }
+      case 'show-admin-route': {
+        const { lat, lng, label } = actionButton.dataset;
+        if (!lat || !lng) return;
+        const container = document.querySelector('.power-map-canvas-wrap') || document.getElementById('admin-outage-map')?.parentElement;
+        await renderRouteGuideOnMap({
+          map: state.adminOutageMapInstance,
+          destLat: Number(lat),
+          destLng: Number(lng),
+          destLabel: label || 'Valencia Outage Location',
+          container,
+          origin: VALENCIA_HQ_COORDINATES
+        });
+        return;
+      }
+      case 'clear-route-guide': {
+        if (state.communityOutageMap) clearRouteGuideOnMap(state.communityOutageMap);
+        if (state.adminOutageMapInstance) clearRouteGuideOnMap(state.adminOutageMapInstance);
+        return;
+      }
+      case 'incident-modal-route': {
+        closeDialog();
+        const { lat, lng, label } = actionButton.dataset;
+        if (!lat || !lng) return;
+        if (IS_ADMIN) {
+          await goToPage('outage-map');
+          setTimeout(async () => {
+            const container = document.querySelector('.power-map-canvas-wrap');
+            await renderRouteGuideOnMap({
+              map: state.adminOutageMapInstance,
+              destLat: Number(lat),
+              destLng: Number(lng),
+              destLabel: label || 'Outage Incident',
+              container,
+              origin: VALENCIA_HQ_COORDINATES
+            });
+          }, 450);
+        } else {
+          await goToTab('map');
+          setTimeout(async () => {
+            const container = document.querySelector('.map-route-hud-container');
+            await renderRouteGuideOnMap({
+              map: state.communityOutageMap,
+              destLat: Number(lat),
+              destLng: Number(lng),
+              destLabel: label || 'Outage Incident',
+              container
+            });
+          }, 450);
+        }
         return;
       }
       case 'view-announcement': {

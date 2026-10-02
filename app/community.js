@@ -969,7 +969,9 @@ async function renderMobileMap() {
       </div>
     </div>
     ${legendMarkup}
-    <div class="community-map" id="community-map" aria-label="Map of Valencia City outages"></div>
+    <div class="map-route-hud-container" style="position:relative;">
+      <div class="community-map" id="community-map" aria-label="Map of Valencia City outages"></div>
+    </div>
     <section class="mobile-card"><header class="mobile-card-head"><h2>Active Outages</h2><button class="link-button" data-mobile-tab="outages">View all</button></header>
       <div class="mobile-card-body">${incidents.length ? incidents.slice(0, 4).map((incident) => `
         <div class="mobile-list-item"><div class="mobile-list-main"><strong>${escapeHtml(incident.title)}</strong><span>${escapeHtml((incident.affected_barangays || [incident.barangay]).join(', '))}</span></div>${statusPill(incident.status)}<button type="button" class="link-button" data-action="view-incident-details" data-id="${incident.id}" aria-label="View ${escapeHtml(incident.title)} details">›</button></div>
@@ -991,6 +993,7 @@ async function renderMobileMap() {
     maxZoom: 18,
     maxBounds: [[7.6, 124.8], [8.2, 125.4]],
   }).setView([7.9064, 125.0941], 13.5);
+  state.communityOutageMap = map;
 
   if (isSatellite) {
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -1097,6 +1100,7 @@ async function renderMobileMap() {
             </div>
           </div>
           <button type="button" class="map-popup-btn" data-action="view-incident-details" data-id="${incident.id}">View Live Tracker ›</button>
+          <button type="button" class="map-popup-btn route-btn" data-action="show-community-route" data-lat="${coordinates[0]}" data-lng="${coordinates[1]}" data-label="${escapeHtml(incident.title)} (${escapeHtml(incident.barangay || 'Valencia')})">🧭 Route Guide / Directions</button>
         </div>
       `;
 
@@ -1127,6 +1131,7 @@ async function renderMobileMap() {
             ${item.reason ? `<div class="map-popup-row"><span class="map-popup-icon">ℹ️</span><span>${escapeHtml(item.reason)}</span></div>` : ''}
           </div>
           <button type="button" class="map-popup-btn sched" data-action="view-schedule-details" data-id="${item.id}">View Schedule Details ›</button>
+          <button type="button" class="map-popup-btn route-btn" data-action="show-community-route" data-lat="${coordinates[0]}" data-lng="${coordinates[1]}" data-label="${escapeHtml(item.title || 'Scheduled Outage')} (${escapeHtml(item.barangay)})">🧭 Route Guide / Directions</button>
         </div>
       `;
 
