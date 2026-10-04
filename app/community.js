@@ -1039,36 +1039,7 @@ async function renderMobileMap() {
   `;
 
   mobileShell(`
-    ${mobileHero('Power Outage Map', 'Explore active interruptions, satellite views, and outage density across Valencia City.')}
-    
-    <!-- 2030 SCADA Telemetry Strip -->
-    <div class="scada-telemetry-strip" role="status" aria-label="Live SCADA Power Grid Telemetry">
-      <div class="scada-stat live-status">
-        <span class="scada-led ${incidents.length ? 'red' : 'green'}"></span>
-        <strong>SCADA 2030</strong>
-        <span class="scada-sub">${incidents.length ? 'ALERT' : 'NOMINAL'}</span>
-      </div>
-      <div class="scada-stat">
-        <span class="scada-label">GRID LOAD:</span>
-        <span class="scada-val cyan">68.4 MW</span>
-      </div>
-      <div class="scada-stat">
-        <span class="scada-label">FREQ:</span>
-        <span class="scada-val">60.01 Hz</span>
-      </div>
-      <div class="scada-stat">
-        <span class="scada-label">FEEDERS:</span>
-        <span class="scada-val ${incidents.length ? 'warn' : 'cyan'}">3/4 OK · 1 FAULT</span>
-      </div>
-      <div class="scada-stat">
-        <span class="scada-label">NODES:</span>
-        <span class="scada-val cyan">31/31 BGRYS</span>
-      </div>
-      <div class="scada-stat">
-        <span class="scada-label">AI ENGINE:</span>
-        <span class="scada-val cyan">OPTIMAL (98%)</span>
-      </div>
-    </div>
+    ${mobileHero('Power Outage Map', 'Explore active interruptions and scheduled maintenance in Valencia City.')}
 
     <div class="mobile-map-controls" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
       <div class="mobile-segments" role="group" aria-label="Map display mode" style="flex:1;min-width:180px;margin-bottom:0;">
@@ -1076,17 +1047,12 @@ async function renderMobileMap() {
         <button type="button" class="mobile-segment ${isHeatmap ? 'active' : ''}" data-action="set-mobile-map-mode" data-value="heat">🔥 Hotspot Heatmap</button>
       </div>
       <div class="mobile-segments" role="group" aria-label="Base map layer" style="margin-bottom:0;">
-        <button type="button" class="mobile-segment ${!isSatellite && !state.communityCyberMode ? 'active' : ''}" data-action="set-mobile-map-layer" data-value="street" title="Standard Street Map">🗺️ Street</button>
-        <button type="button" class="mobile-segment ${isSatellite ? 'active' : ''}" data-action="set-mobile-map-layer" data-value="satellite" title="Satellite Aerial Photo">🛰️ Satellite 4K</button>
-        <button type="button" class="mobile-segment ${state.communityCyberMode ? 'active' : ''}" data-action="toggle-community-cyber" title="Cyber 2030 Dark Mode" style="${state.communityCyberMode ? 'background:#0f172a;color:#38bdf8;border:1px solid #38bdf8;' : ''}">🌌 Cyber 2030</button>
+        <button type="button" class="mobile-segment ${!isSatellite ? 'active' : ''}" data-action="set-mobile-map-layer" data-value="street" title="Standard Street Map">🗺️ Street</button>
+        <button type="button" class="mobile-segment ${isSatellite ? 'active' : ''}" data-action="set-mobile-map-layer" data-value="satellite" title="Satellite Aerial Photo">🛰️ Satellite</button>
       </div>
-      <button type="button" class="mobile-segment" data-action="toggle-community-feeders" style="${state.communityFeedersMode !== false ? 'background:#0284c7;color:#fff;font-weight:750;' : 'background:#f1f5f9;color:#334155;'}border:0;border-radius:8px;padding:6px 11px;">⚡ Smart Grid Feeders</button>
-      <button type="button" class="mobile-segment" data-action="toggle-community-route" style="background:#2563eb;color:#fff;font-weight:750;box-shadow:0 2px 6px rgba(37,99,235,0.3);flex:0 0 auto;padding:6px 12px;border:0;border-radius:8px;">🧭 Blue Route</button>
     </div>
     ${legendMarkup}
-    <div class="map-route-hud-container" style="position:relative;">
-      <div class="community-map" id="community-map" aria-label="Map of Valencia City outages"></div>
-    </div>
+    <div class="community-map" id="community-map" aria-label="Map of Valencia City outages"></div>
     <section class="mobile-card"><header class="mobile-card-head"><h2>Active Outages</h2><button class="link-button" data-mobile-tab="outages">View all</button></header>
       <div class="mobile-card-body">${incidents.length ? incidents.map((incident) => {
         const coords = coordinatesFor(incident);
@@ -1099,7 +1065,7 @@ async function renderMobileMap() {
             ${statusPill(incident.status)}
             <div style="display:flex;gap:6px;width:100%;margin-top:6px;">
               <button type="button" class="button ghost small" data-action="view-incident-details" data-id="${incident.id}">Details ›</button>
-              ${coords ? `<button type="button" class="button small" data-action="show-community-route" data-lat="${coords[0]}" data-lng="${coords[1]}" data-label="${escapeHtml(incident.title)} (${escapeHtml(incident.barangay || 'Valencia')})" style="background:#2563eb;color:#fff;font-weight:750;border-radius:8px;box-shadow:0 2px 5px rgba(37,99,235,0.25);">🧭 Show Blue Route Guide</button>` : ''}
+              ${coords ? `<button type="button" class="button small" data-action="focus-community-map" data-lat="${coords[0]}" data-lng="${coords[1]}" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;border-radius:8px;font-weight:600;">📍 Focus on Map</button>` : ''}
             </div>
           </div>
         `;
@@ -1115,12 +1081,6 @@ async function renderMobileMap() {
   const mapElement = document.getElementById('community-map');
   if (!mapElement) return;
   await ensureLeaflet();
-
-  if (state.communityCyberMode) {
-    mapElement.classList.add('cyber-mode');
-  } else {
-    mapElement.classList.remove('cyber-mode');
-  }
 
   const map = L.map(mapElement, {
     zoomControl: false,
@@ -1154,11 +1114,6 @@ async function renderMobileMap() {
       maxZoom: 18,
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
-  }
-
-  // 2030 Smart Electric Feeder Grid Layer
-  if (state.communityFeedersMode !== false) {
-    renderElectricFeedersOnMap(map);
   }
 
   L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -1196,9 +1151,9 @@ async function renderMobileMap() {
       const markerColor = sev === 'Critical' ? '#b91c1c' : '#e11d48';
 
       const popupHtml = `
-        <div class="map-popup-card holographic">
+        <div class="map-popup-card">
           <div class="map-popup-header">
-            <span class="scada-telemetry-badge">${escapeHtml(incident.incident_code || 'OUTAGE')}</span>
+            <span class="map-popup-code">${escapeHtml(incident.incident_code || 'OUTAGE')}</span>
             <span class="map-popup-badge" style="${getSeverityStyle(sev)}">${escapeHtml(sev)}</span>
           </div>
           <h4 class="map-popup-title">⚡ ${escapeHtml(incident.title)}</h4>
@@ -1208,39 +1163,25 @@ async function renderMobileMap() {
               <span><strong>${escapeHtml(incident.barangay || 'Valencia City')}</strong></span>
             </div>
             <div class="map-popup-row">
-              <span class="map-popup-icon">⚡</span>
-              <span>Grid Sector: <strong style="color:#38bdf8;">FDR-03 Western Radial Trunk</strong></span>
-            </div>
-            <div class="map-popup-row">
               <span class="map-popup-icon">⏳</span>
-              <span><strong>AI Predicted ETR:</strong> <span class="map-popup-etr" style="color:#38bdf8;">${escapeHtml(formatEtr(incident.estimated_restoration_time))}</span></span>
+              <span><strong>Estimated Restoration:</strong> <span style="color:#0284c7;font-weight:600;">${escapeHtml(formatEtr(incident.estimated_restoration_time))}</span></span>
             </div>
             <div class="map-popup-row">
               <span class="map-popup-icon">🔄</span>
-              <span>SCADA Status: <strong style="color:${incident.status === 'Restored' ? '#22c55e' : '#ef4444'}">${escapeHtml(incident.status)}</strong></span>
+              <span>Status: <strong style="color:${incident.status === 'Restored' ? '#22c55e' : '#ef4444'}">${escapeHtml(incident.status)}</strong></span>
             </div>
           </div>
-          <button type="button" class="map-popup-btn route-btn" data-action="show-community-route" data-lat="${coordinates[0]}" data-lng="${coordinates[1]}" data-label="${escapeHtml(incident.title)} (${escapeHtml(incident.barangay || 'Valencia')})">🧭 2030 Road Navigation Guide</button>
-          <button type="button" class="map-popup-btn sim-btn" data-action="sim-crew-direct" data-lat="${coordinates[0]}" data-lng="${coordinates[1]}" data-label="${escapeHtml(incident.title)}">🚀 Simulate Crew Dispatch (GPS)</button>
-          <button type="button" class="map-popup-btn" style="background:#334155;" data-action="view-incident-details" data-id="${incident.id}">View Live Tracker ›</button>
+          <button type="button" class="map-popup-btn" style="background:#0284c7;color:#fff;" data-action="view-incident-details" data-id="${incident.id}">View Outage Details ›</button>
         </div>
       `;
 
-      // 2030 Sonar Radar Ping Marker
-      const sonarIcon = L.divIcon({
-        className: 'sonar-marker-wrap',
-        html: `
-          <div class="sonar-ring"></div>
-          <div class="sonar-ring delay-1"></div>
-          <div class="sonar-ring delay-2"></div>
-          <div class="sonar-pin-center" style="background:${markerColor};"></div>
-        `,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12]
-      });
-
-      L.marker(coordinates, { icon: sonarIcon })
-        .addTo(map).bindPopup(popupHtml, { maxWidth: 295 });
+      L.circleMarker(coordinates, {
+        radius: 9,
+        color: '#ffffff',
+        fillColor: markerColor,
+        fillOpacity: 0.95,
+        weight: 2.5
+      }).addTo(map).bindPopup(popupHtml, { maxWidth: 280 });
     });
 
     scheduled.forEach((item) => {
@@ -1266,7 +1207,6 @@ async function renderMobileMap() {
             ${item.reason ? `<div class="map-popup-row"><span class="map-popup-icon">ℹ️</span><span>${escapeHtml(item.reason)}</span></div>` : ''}
           </div>
           <button type="button" class="map-popup-btn sched" data-action="view-schedule-details" data-id="${item.id}">View Schedule Details ›</button>
-          <button type="button" class="map-popup-btn route-btn" data-action="show-community-route" data-lat="${coordinates[0]}" data-lng="${coordinates[1]}" data-label="${escapeHtml(item.title || 'Scheduled Outage')} (${escapeHtml(item.barangay)})">🧭 Route Guide / Directions</button>
         </div>
       `;
 
@@ -1275,24 +1215,6 @@ async function renderMobileMap() {
     });
   }
   window.requestAnimationFrame(() => map.invalidateSize());
-
-  // Automatically activate the blue route guide for the primary active outage immediately on map load!
-  const firstIncident = incidents[0];
-  if (firstIncident) {
-    const coords = coordinatesFor(firstIncident);
-    if (coords) {
-      setTimeout(() => {
-        const container = document.querySelector('.map-route-hud-container');
-        renderRouteGuideOnMap({
-          map,
-          destLat: coords[0],
-          destLng: coords[1],
-          destLabel: `${firstIncident.title} (${firstIncident.barangay || 'Valencia'})`,
-          container
-        });
-      }, 400);
-    }
-  }
 }
 
 function filterMobileNotifications(notifications) {

@@ -1057,6 +1057,17 @@ async function handleClick(event) {
         setDialogFooter(`${lat && lng ? `<button type="button" class="button primary" data-action="incident-modal-route" data-lat="${lat}" data-lng="${lng}" data-label="${escapeHtml(scheduled.title)} (${escapeHtml(scheduled.barangay)})">🧭 Route Guide on Map</button>` : ''}<button type="button" class="button ghost" data-action="close-dialog">Close</button>`);
         return;
       }
+      case 'focus-community-map': {
+        const { lat, lng } = actionButton.dataset;
+        if (state.communityOutageMap && lat && lng) {
+          state.communityOutageMap.setView([Number(lat), Number(lng)], 15, { animate: true });
+          const mapEl = document.getElementById('community-map');
+          if (mapEl) {
+            mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+        return;
+      }
       case 'show-community-route': {
         const { lat, lng, label } = actionButton.dataset;
         if (!lat || !lng) return;
