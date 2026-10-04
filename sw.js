@@ -9,11 +9,11 @@ const STATIC_ASSETS = [
   '/style.css',
   '/style.css?v=7',
   '/app/core.js',
-  '/app/core.js?v=6',
+  '/app/core.js?v=7',
   '/app/community.js',
-  '/app/community.js?v=6',
+  '/app/community.js?v=7',
   '/app/main.js',
-  '/app/main.js?v=6',
+  '/app/main.js?v=7',
   '/assets/powerwatch-logo.svg',
   '/manifest.json'
 ];
