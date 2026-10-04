@@ -237,6 +237,7 @@ db.exec(`
     base_station TEXT DEFAULT 'Central Substation, Sayre Highway',
     current_latitude REAL DEFAULT 7.9064,
     current_longitude REAL DEFAULT 125.0941,
+    location_updated_at TEXT,
     status TEXT NOT NULL DEFAULT 'Available',
     active_assignment_id INTEGER,
     created_at TEXT NOT NULL
@@ -299,6 +300,8 @@ ensureColumn('announcements', 'image_path', 'TEXT');
 ensureColumn('outage_reports', 'latitude', 'REAL');
 ensureColumn('outage_reports', 'longitude', 'REAL');
 ensureColumn('outage_reports', 'purok', 'TEXT');
+ensureColumn('outage_reports', 'location_source', 'TEXT');
+ensureColumn('outage_reports', 'location_accuracy_m', 'REAL');
 ensureColumn('outage_reports', 'assigned_team_id', 'INTEGER');
 ensureColumn('outage_reports', 'assigned_team_name', 'TEXT');
 ensureColumn('outage_reports', 'repair_status', "TEXT DEFAULT 'Pending Assignment'");
@@ -306,6 +309,7 @@ ensureColumn('outage_reports', 'estimated_restoration', 'TEXT');
 ensureColumn('outage_incidents', 'latitude', 'REAL');
 ensureColumn('outage_incidents', 'longitude', 'REAL');
 ensureColumn('outage_incidents', 'purok', 'TEXT');
+ensureColumn('repair_teams', 'location_updated_at', 'TEXT');
 ensureColumn('outage_incidents', 'assigned_team_id', 'INTEGER');
 ensureColumn('outage_incidents', 'assigned_team_name', 'TEXT');
 ensureColumn('outage_incidents', 'repair_status', "TEXT DEFAULT 'Pending Assignment'");
@@ -636,14 +640,21 @@ const seedRepairTeams = () => {
       ];
 
       const stmt = db.prepare(`
-        INSERT INTO repair_teams (team_code, name, lead_technician, contact_number, vehicle_type, base_station, current_latitude, current_longitude, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO repair_teams (team_code, name, lead_technician, contact_number, vehicle_type, base_station, current_latitude, current_longitude, location_updated_at, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const t of teams) {
-        stmt.run(t.team_code, t.name, t.lead_technician, t.contact_number, t.vehicle_type, t.base_station, t.current_latitude, t.current_longitude, t.status, now());
+        const ts = now();
+        stmt.run(t.team_code, t.name, t.lead_technician, t.contact_number, t.vehicle_type, t.base_station, t.current_latitude, t.current_longitude, ts, t.status, ts);
       }
     }
+
+    db.exec(`
+      UPDATE repair_teams 
+      SET location_updated_at = COALESCE(location_updated_at, created_at, datetime('now'))
+      WHERE current_latitude IS NOT NULL AND current_longitude IS NOT NULL AND location_updated_at IS NULL;
+    `);
   } catch (err) {
     console.error('Error seeding repair teams:', err);
   }

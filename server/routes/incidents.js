@@ -154,6 +154,14 @@ router.post('/incidents', requireAuth, requireRole('personnel', 'administrator')
       if (report.incident_id) return res.status(409).json({ error: `Report ${report.report_code} is already linked to an incident.` });
       linkedReports.push(report);
     }
+    const primaryReport = linkedReports.length === 1 ? linkedReports[0] : null;
+    const incidentLocation = String(location || primaryReport?.location || '').trim() || null;
+    const incidentPurok = String(primaryReport?.purok || '').trim() || null;
+    const incidentLatitude = latitude !== null && latitude !== undefined && latitude !== ''
+      ? Number(latitude) : primaryReport?.latitude ?? null;
+    const incidentLongitude = longitude !== null && longitude !== undefined && longitude !== ''
+      ? Number(longitude) : primaryReport?.longitude ?? null;
+    const incidentAffectedArea = String(affected_area || primaryReport?.affected_area || primaryReport?.purok || '').trim() || null;
     if (estimated_restoration && !canSetCause(req)) {
       return res.status(403).json({ error: 'Only authorized utility personnel or administrators can provide official restoration estimates.' });
     }
@@ -176,13 +184,13 @@ router.post('/incidents', requireAuth, requireRole('personnel', 'administrator')
     try {
       const info = db.prepare(`
         INSERT INTO outage_incidents (incident_code, title, barangay, location, latitude, longitude, incident_type, outage_type,
-          priority, customers_affected, restoration_progress, description, cause_category, status, start_time, estimated_restoration, etr_reason, affected_area, remarks,
+          priority, customers_affected, restoration_progress, description, cause_category, status, start_time, estimated_restoration, etr_reason, affected_area, purok, remarks,
           scheduled_id, created_by, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
-        code, String(title).trim(), barangay, location || null, latitude ?? null, longitude ?? null,
+        code, String(title).trim(), barangay, incidentLocation, incidentLatitude, incidentLongitude,
         incident_type || 'Unexpected', outage_type || null, priority || 'Medium', customers_affected ?? null, restoration_progress ?? null, description || null, cause_category || null,
-        status, start_time, finalEtr, autoEtr.reason, affected_area || null, remarks || null,
+        status, start_time, finalEtr, autoEtr.reason, incidentAffectedArea, incidentPurok, remarks || null,
         scheduled_id === undefined ? null : Number(scheduled_id), req.user.id, ts, ts
       );
       incidentId = Number(info.lastInsertRowid);

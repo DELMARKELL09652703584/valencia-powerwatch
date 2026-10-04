@@ -86,16 +86,27 @@ const savePhoto = async (photoData) => {
 
 // Resident submits an outage report
 router.post('/reports', requireAuth, requireRole('resident'), parseReportAttachments, async (req, res, next) => {
-  const { location, latitude, longitude, barangay, date_time_noticed, description, affected_area, possible_outage_type, photoData, remarks, purok } = req.body || {};
+  const { location, latitude, longitude, location_source, location_accuracy_m, barangay, date_time_noticed, description, affected_area, possible_outage_type, photoData, remarks, purok } = req.body || {};
 
   if (!barangay) return res.status(400).json({ error: 'Barangay is required.' });
+  if (!db.prepare("SELECT 1 FROM barangays WHERE name = ? AND status = 'Active'").get(String(barangay).trim())) {
+    return res.status(400).json({ error: 'Choose an active Valencia City barangay.' });
+  }
+  if (!String(purok || affected_area || '').trim()) return res.status(400).json({ error: 'Specific purok, sitio, or landmark is required.' });
+  if (!String(location || '').trim()) return res.status(400).json({ error: 'A specific location description is required.' });
   if (!description || !String(description).trim()) return res.status(400).json({ error: 'Please describe the interruption.' });
   if (!date_time_noticed) return res.status(400).json({ error: 'Please indicate when the interruption was noticed.' });
+  if (!['gps', 'map_pin'].includes(location_source)) return res.status(400).json({ error: 'Confirm the location using GPS or a manually placed map pin.' });
   const hasLatitude = latitude !== null && latitude !== undefined && latitude !== '';
   const hasLongitude = longitude !== null && longitude !== undefined && longitude !== '';
   if (hasLatitude !== hasLongitude) return res.status(400).json({ error: 'Both GPS coordinates are required together.' });
+  if (!hasLatitude) return res.status(400).json({ error: 'GPS coordinates or a manually placed map pin are required.' });
   if (hasLatitude && (!Number.isFinite(Number(latitude)) || Number(latitude) < -90 || Number(latitude) > 90 || !Number.isFinite(Number(longitude)) || Number(longitude) < -180 || Number(longitude) > 180)) {
     return res.status(400).json({ error: 'Please provide valid GPS coordinates.' });
+  }
+  if (location_accuracy_m !== null && location_accuracy_m !== undefined && location_accuracy_m !== ''
+    && (!Number.isFinite(Number(location_accuracy_m)) || Number(location_accuracy_m) < 0 || Number(location_accuracy_m) > 100000)) {
+    return res.status(400).json({ error: 'Location accuracy must be a valid non-negative distance.' });
   }
   if ((req.files || []).some((file) => !validMediaSignature(file))) {
     return res.status(400).json({ error: 'One or more attachments do not match their file type.' });
@@ -112,11 +123,13 @@ router.post('/reports', requireAuth, requireRole('resident'), parseReportAttachm
   const reportedAt = now();
   const finalPurok = String(purok || affected_area || '').trim() || null;
   const info = db.prepare(`
-    INSERT INTO outage_reports (report_code, reporter_id, location, latitude, longitude, barangay, purok, date_time_noticed, description, affected_area,
+    INSERT INTO outage_reports (report_code, reporter_id, location, latitude, longitude, location_source, location_accuracy_m, barangay, purok, date_time_noticed, description, affected_area,
       possible_outage_type, photo_path, remarks, status, verification_status, repair_status, reported_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Submitted', 'Pending', 'Pending Assignment', ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Submitted', 'Pending', 'Pending Assignment', ?, ?)
   `).run(
-    code, req.user.id, location || null, latitude ?? null, longitude ?? null, barangay, finalPurok, date_time_noticed, String(description).trim(),
+    code, req.user.id, String(location).trim(), Number(latitude), Number(longitude), location_source,
+    location_accuracy_m === '' || location_accuracy_m === undefined ? null : Number(location_accuracy_m),
+    String(barangay).trim(), finalPurok, date_time_noticed, String(description).trim(),
     affected_area || finalPurok, possible_outage_type || null, photoPath, remarks || null, reportedAt, reportedAt
   );
 
@@ -143,7 +156,7 @@ router.post('/reports', requireAuth, requireRole('resident'), parseReportAttachm
 // Active community outage reports for Map display (all authenticated roles)
 router.get('/reports/map', requireAuth, (req, res) => {
   const rows = db.prepare(`
-    SELECT r.id, r.report_code, r.barangay, r.purok, r.location, r.affected_area,
+    SELECT r.id, r.report_code, r.barangay, r.purok, r.location, r.location_source, r.location_accuracy_m, r.affected_area,
            r.latitude, r.longitude, r.possible_outage_type, r.description,
            r.status, r.verification_status, r.repair_status, r.assigned_team_name,
            r.reported_at, r.reporter_id,

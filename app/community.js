@@ -463,16 +463,10 @@ async function renderMobileReportForm() {
   const defaultBarangay = draft.barangay || state.user?.barangay || 'Poblacion';
   if (!draft.barangay) draft.barangay = defaultBarangay;
 
-  // Auto-fill coordinates from assigned barangay if not yet picked
-  if (!draft.latitude && draft.barangay && state.barangayLocations?.length) {
-    const bgyObj = state.barangayLocations.find((b) => b.name === draft.barangay) || state.barangayLocations[0];
-    if (bgyObj && hasCoordinates(bgyObj)) {
-      draft.latitude = String(bgyObj.latitude);
-      draft.longitude = String(bgyObj.longitude);
-      if (locationMode === 'map' && !draft.location) {
-        draft.location = `Brgy. ${bgyObj.name}, Valencia City (${Number(bgyObj.latitude).toFixed(4)}, ${Number(bgyObj.longitude).toFixed(4)})`;
-      }
-    }
+  if (!['gps', 'map_pin'].includes(draft.location_source)) {
+    delete draft.latitude;
+    delete draft.longitude;
+    delete draft.location_accuracy_m;
   }
   state.mobileReportDraft = draft;
 
@@ -480,13 +474,13 @@ async function renderMobileReportForm() {
   const stepper = `<div class="stepper">${stepNames.map((name, index) => `
     <div class="step ${step === index + 1 ? 'active' : ''} ${step > index + 1 ? 'complete' : ''}"><span class="step-number">${step > index + 1 ? '✓' : index + 1}</span><span>${name}</span></div>
   `).join('')}</div>`;
-  const hidden = ['barangay', 'location', 'purok', 'affected_area', 'date_time_noticed', 'possible_outage_type', 'description', 'latitude', 'longitude', 'remarks']
+  const hidden = ['barangay', 'location', 'purok', 'affected_area', 'date_time_noticed', 'possible_outage_type', 'description', 'latitude', 'longitude', 'location_source', 'location_accuracy_m', 'remarks']
     .map((name) => `<input type="hidden" name="${name}" value="${escapeHtml(draft[name] || '')}">`).join('');
   let formBody = '';
 
   if (step === 1) {
     formBody = `<h2>Location</h2>
-      <p class="report-step-hint">Pin the outage on the map or enter its exact address and purok.</p>
+      <p class="report-step-hint">Use GPS or tap the exact spot on the map before continuing. The barangay is estimated from the nearest barangay center; confirm it and enter the specific purok or landmark.</p>
       <div class="mobile-segments report-location-modes" role="group" aria-label="Location method">
         <button type="button" class="mobile-segment ${locationMode === 'map' ? 'active' : ''}" data-action="set-report-location-mode" data-value="map">Map</button>
         <button type="button" class="mobile-segment ${locationMode === 'address' ? 'active' : ''}" data-action="set-report-location-mode" data-value="address">Address</button>
@@ -495,26 +489,27 @@ async function renderMobileReportForm() {
       <datalist id="report-barangay-options">${state.barangays.map((barangay) => `<option value="${escapeHtml(barangay)}">`).join('')}</datalist>
       ${locationMode === 'map' ? '<div class="report-location-map" id="report-location-map" aria-label="Tap to select outage location"></div>' : ''}
       
-      <!-- Auto-Assigned Barangay Live Banner -->
       <div id="report-assigned-barangay-badge" style="margin: 8px 0; padding: 10px 14px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:1.25rem;">🏛️</span>
           <div>
-            <div style="font-size:0.75rem;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.5px;">Assigned Barangay:</div>
+            <div style="font-size:0.75rem;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.5px;">Barangay estimate:</div>
             <strong id="assigned-barangay-name" style="font-size:0.95rem;color:#14532d;">Brgy. ${escapeHtml(draft.barangay || state.user?.barangay || 'Poblacion')}</strong>
           </div>
         </div>
-        <span class="pill pill-ok" style="font-size:0.75rem;font-weight:750;">Valencia City</span>
+        <span class="pill pill-ok" style="font-size:0.75rem;font-weight:750;">Nearest center</span>
       </div>
 
       <label>📍 Specific Purok / Sitio / Landmark (Precise Location)<input name="purok" value="${escapeHtml(draft.purok || draft.affected_area || '')}" placeholder="e.g. Purok 4, Crossing, Near San Agustin Chapel" required></label>
 
-      <label>${locationMode === 'map' ? '📍 Assigned Barangay & Coordinates' : 'Street address / full location'}<input name="location" value="${escapeHtml(draft.location || '')}" placeholder="${locationMode === 'map' ? 'Tap map or select barangay above' : 'Purok, street, or nearby landmark'}" ${locationMode === 'map' ? 'readonly' : ''} required></label>
+      <label>${locationMode === 'map' ? '📍 Pinned location' : 'Street address / full location'}<input name="location" value="${escapeHtml(draft.location || '')}" placeholder="${locationMode === 'map' ? 'Tap the map or use GPS to confirm a location' : 'Purok, street, or nearby landmark'}" ${locationMode === 'map' ? 'readonly' : ''} required></label>
       <div class="mobile-gps">
         <button type="button" class="button ghost block" data-action="capture-gps">📍 Use current location (GPS)</button>
         <input type="hidden" name="latitude" data-gps="latitude" value="${escapeHtml(draft.latitude || '')}">
         <input type="hidden" name="longitude" data-gps="longitude" value="${escapeHtml(draft.longitude || '')}">
-        <span class="muted small" data-gps="status">${draft.latitude ? `📍 Assigned: Brgy. ${escapeHtml(draft.barangay || 'Valencia')} (${Number(draft.latitude).toFixed(4)}, ${Number(draft.longitude).toFixed(4)})` : 'Tap anywhere on the map or use GPS to auto-assign barangay'}</span>
+        <input type="hidden" name="location_source" value="${escapeHtml(draft.location_source || '')}">
+        <input type="hidden" name="location_accuracy_m" value="${escapeHtml(draft.location_accuracy_m || '')}">
+        <span class="muted small" data-gps="status">${draft.location_source && draft.latitude ? `📍 ${draft.location_source === 'gps' ? 'GPS fix' : 'Map pin'}: ${Number(draft.latitude).toFixed(5)}, ${Number(draft.longitude).toFixed(5)} · Barangay estimate: ${escapeHtml(draft.barangay || 'Valencia')}` : 'Location not confirmed. Tap the map or use GPS; barangay-center previews are not report locations.'}</span>
       </div>
       <button type="button" class="button primary block" data-action="next-report-step">Next</button>`;
   } else if (step === 2) {
@@ -549,7 +544,7 @@ async function renderMobileReportForm() {
         <div class="review-item"><span class="review-label">Interruption Type</span><span class="review-value">${escapeHtml(draft.possible_outage_type || 'Power interruption')}</span></div>
         <div class="review-item"><span class="review-label">Barangay</span><span class="review-value">${escapeHtml(draft.barangay || '')}</span></div>
         <div class="review-item"><span class="review-label">Purok / Area</span><span class="review-value">${escapeHtml(draft.purok || draft.affected_area || 'Not specified')}</span></div>
-        <div class="review-item"><span class="review-label">GPS Location</span><span class="review-value">${draft.latitude && draft.longitude ? `(${Number(draft.latitude).toFixed(5)}, ${Number(draft.longitude).toFixed(5)})` : escapeHtml(draft.location || '')}</span></div>
+        <div class="review-item"><span class="review-label">Confirmed Location</span><span class="review-value">${draft.latitude && draft.longitude ? `${draft.location_source === 'gps' ? 'GPS' : 'Map pin'} · (${Number(draft.latitude).toFixed(5)}, ${Number(draft.longitude).toFixed(5)})${draft.location_accuracy_m ? ` · ±${Math.round(Number(draft.location_accuracy_m))} m` : ''}` : escapeHtml(draft.location || '')}</span></div>
         <div class="review-item"><span class="review-label">Date &amp; Time</span><span class="review-value">${escapeHtml(draft.date_time_noticed || '')}</span></div>
         <div class="review-item"><span class="review-label">Description</span><span class="review-value">${escapeHtml(draft.description || '')}</span></div>
         ${attachments.length ? `<div class="report-attachment-previews">${attachments.map((attachment) => attachment.type.startsWith('video/')
@@ -608,7 +603,7 @@ async function renderMobileReportForm() {
     }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    const setPin = (latitude, longitude, customBarangayName = null) => {
+    const setPin = (latitude, longitude, customBarangayName = null, source = 'map_pin', accuracy = null) => {
       const lat = Number(latitude);
       const lng = Number(longitude);
       const point = [lat, lng];
@@ -617,6 +612,8 @@ async function renderMobileReportForm() {
 
       const latitudeInput = document.querySelector('[data-gps="latitude"]');
       const longitudeInput = document.querySelector('[data-gps="longitude"]');
+      const sourceInput = document.querySelector('[name="location_source"]');
+      const accuracyInput = document.querySelector('[name="location_accuracy_m"]');
       const locationInput = document.querySelector('input[name="location"]');
       const barangayInput = document.querySelector('input[name="barangay"]');
       const status = document.querySelector('[data-gps="status"]');
@@ -626,6 +623,9 @@ async function renderMobileReportForm() {
       const lngStr = lng.toFixed(6);
       if (latitudeInput) latitudeInput.value = latStr;
       if (longitudeInput) longitudeInput.value = lngStr;
+      if (sourceInput) sourceInput.value = source;
+      if (accuracyInput) accuracyInput.value = accuracy !== null && accuracy !== undefined && accuracy !== ''
+        && Number.isFinite(Number(accuracy)) ? String(Number(accuracy)) : '';
 
       // Automatically detect and assign the nearest Barangay!
       let assignedName = customBarangayName;
@@ -635,9 +635,9 @@ async function renderMobileReportForm() {
         else assignedName = barangayInput?.value || 'Poblacion';
       }
 
-      const formattedLocation = `Brgy. ${assignedName}, Valencia City (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      const formattedLocation = `Brgy. ${assignedName}, Valencia City (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
 
-      if (locationInput) locationInput.value = formattedLocation;
+      if (locationInput && (state.mobileLocationMode || 'map') === 'map') locationInput.value = formattedLocation;
       if (barangayInput && barangayInput.value !== assignedName) {
         barangayInput.value = assignedName;
       }
@@ -647,19 +647,42 @@ async function renderMobileReportForm() {
         state.mobileReportDraft.barangay = assignedName;
         state.mobileReportDraft.latitude = latStr;
         state.mobileReportDraft.longitude = lngStr;
-        state.mobileReportDraft.location = formattedLocation;
+        state.mobileReportDraft.location_source = source;
+        state.mobileReportDraft.location_accuracy_m = accuracy !== null && accuracy !== undefined && accuracy !== ''
+          && Number.isFinite(Number(accuracy)) ? String(Number(accuracy)) : '';
+        if ((state.mobileLocationMode || 'map') === 'map') state.mobileReportDraft.location = formattedLocation;
       }
-
-      if (status) status.innerHTML = `📍 Assigned: <strong>Brgy. ${escapeHtml(assignedName)}</strong> (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      if (status) status.innerHTML = `📍 ${source === 'gps' ? 'GPS fix' : 'Map pin'}: <strong>${lat.toFixed(5)}, ${lng.toFixed(5)}</strong> · Barangay estimate: ${escapeHtml(assignedName)}`;
     };
 
     state.reportLocationSetPin = setPin;
-    // Always place the pin immediately!
-    const pinLat = draft.latitude ? Number(draft.latitude) : initialCoords[0];
-    const pinLng = draft.longitude ? Number(draft.longitude) : initialCoords[1];
-    setPin(pinLat, pinLng, draft.barangay || initialBarangay?.name);
+    state.reportLocationClearPin = () => {
+      if (state.reportLocationMarker) {
+        map.removeLayer(state.reportLocationMarker);
+        state.reportLocationMarker = null;
+      }
+      for (const selector of ['[data-gps="latitude"]', '[data-gps="longitude"]', '[name="location_source"]', '[name="location_accuracy_m"]']) {
+        const input = document.querySelector(selector);
+        if (input) input.value = '';
+      }
+      if (state.mobileReportDraft) {
+        delete state.mobileReportDraft.latitude;
+        delete state.mobileReportDraft.longitude;
+        delete state.mobileReportDraft.location_source;
+        delete state.mobileReportDraft.location_accuracy_m;
+      }
+      const locationInput = document.querySelector('input[name="location"]');
+      const status = document.querySelector('[data-gps="status"]');
+      if (locationInput && (state.mobileLocationMode || 'map') === 'map') locationInput.value = '';
+      if (state.mobileReportDraft && (state.mobileLocationMode || 'map') === 'map') state.mobileReportDraft.location = '';
+      if (status) status.textContent = 'Location not confirmed. Tap the map or use GPS; barangay-center previews are not report locations.';
+    };
 
-    map.on('click', (event) => setPin(event.latlng.lat, event.latlng.lng));
+    if (['gps', 'map_pin'].includes(draft.location_source) && draft.latitude && draft.longitude) {
+      setPin(Number(draft.latitude), Number(draft.longitude), draft.barangay || null, draft.location_source, draft.location_accuracy_m);
+    }
+
+    map.on('click', (event) => setPin(event.latlng.lat, event.latlng.lng, null, 'map_pin'));
     window.requestAnimationFrame(() => map.invalidateSize());
   }
 }
@@ -686,6 +709,15 @@ async function moveMobileReportStep(direction) {
   const form = document.querySelector('form[data-form="report"]');
   if (!form) return;
   if (direction > 0 && !form.reportValidity()) return;
+  if (direction > 0 && (state.mobileReportStep || 1) === 1) {
+    const values = new FormData(form);
+    const latitudes = values.getAll('latitude');
+    const longitudes = values.getAll('longitude');
+    if (!['gps', 'map_pin'].includes(values.get('location_source'))
+      || !latitudes.at(-1) || !longitudes.at(-1)) {
+      throw new Error('Confirm the outage location with GPS or a map pin before continuing.');
+    }
+  }
   const values = Object.fromEntries([...new FormData(form).entries()].filter(([name, value]) => name !== 'attachments' && !(value instanceof File)));
   const files = [...form.querySelectorAll('input[name="attachments"]')].flatMap((input) => [...input.files]);
   const currentAttachments = state.mobileReportDraft?.attachments || [];
@@ -955,6 +987,7 @@ async function renderMobileReportDetail() {
       <div class="mobile-detail-row"><strong>Interruption Type</strong><span>${escapeHtml(report.possible_outage_type || 'Power outage')}</span></div>
       <div class="mobile-detail-row"><strong>Barangay</strong><span>${escapeHtml(report.barangay)}</span></div>
       <div class="mobile-detail-row"><strong>Location</strong><span>${escapeHtml(report.location || (hasCoordinates(report) ? `${report.latitude}, ${report.longitude}` : 'Not provided'))}</span></div>
+      <div class="mobile-detail-row"><strong>Pin / GPS</strong><span>${hasCoordinates(report) ? `${report.location_source === 'gps' ? 'GPS' : report.location_source === 'map_pin' ? 'Map pin' : 'Source not recorded'} · ${Number(report.latitude).toFixed(5)}, ${Number(report.longitude).toFixed(5)}${report.location_accuracy_m ? ` · ±${Math.round(Number(report.location_accuracy_m))} m` : ''}` : 'Exact location not available'}</span></div>
       <h2>Description</h2><p>${escapeHtml(report.description || '')}</p>
       ${report.remarks ? `<h2>Additional notes</h2><p>${escapeHtml(report.remarks)}</p>` : ''}
       ${report.staff_remarks ? `<h2>Review update</h2><p>${escapeHtml(report.staff_remarks)}</p>` : ''}
@@ -1014,6 +1047,9 @@ async function renderMobileMap() {
     const barangay = (barangayLocations || []).find((location) => location.name === item.barangay);
     return hasCoordinates(barangay) ? [Number(barangay.latitude), Number(barangay.longitude)] : null;
   };
+  const reportCoordinatesFor = (report) => hasCoordinates(report)
+    ? [Number(report.latitude), Number(report.longitude)]
+    : null;
 
   const formatEtr = (val) => {
     if (!val) return 'Assessing field repair window';
@@ -1067,7 +1103,7 @@ async function renderMobileMap() {
       </header>
       <div class="mobile-card-body">
         ${myReports.map((item) => {
-          const coords = coordinatesFor(item);
+          const coords = reportCoordinatesFor(item);
           const isDispatched = item.repair_status && item.repair_status !== 'Pending Assignment';
           return `
             <div class="mobile-list-item" style="flex-wrap:wrap;gap:8px;padding:12px 10px;border-bottom:1px solid #ffedd5;">
@@ -1158,13 +1194,13 @@ async function renderMobileMap() {
 
   if (isHeatmap) {
     const heatPoints = [];
-    const addHeat = (item, intensity) => {
-      const coords = coordinatesFor(item);
+    const addHeat = (item, intensity, exactReportLocation = false) => {
+      const coords = exactReportLocation ? reportCoordinatesFor(item) : coordinatesFor(item);
       if (coords) heatPoints.push([coords[0], coords[1], intensity]);
     };
     incidents.forEach((i) => addHeat(i, 1.0));
-    myReports.forEach((r) => addHeat(r, 0.85));
-    (reports || []).forEach((r) => addHeat(r, 0.7));
+    myReports.forEach((r) => addHeat(r, 0.85, true));
+    (reports || []).forEach((r) => addHeat(r, 0.7, true));
     scheduled.forEach((s) => addHeat(s, 0.35));
     if (typeof L.heatLayer === 'function' && heatPoints.length) {
       L.heatLayer(heatPoints, {
@@ -1185,7 +1221,7 @@ async function renderMobileMap() {
   } else {
     // 1. Plot user's own reports with prominent amber/orange markers
     myReports.forEach((myRep) => {
-      const coordinates = coordinatesFor(myRep);
+      const coordinates = reportCoordinatesFor(myRep);
       if (!coordinates) return;
       const isResolved = myRep.status === 'Resolved';
       const isProgress = myRep.status === 'In Progress' || ['Team Dispatched', 'En Route', 'Arrived On Site', 'In Progress'].includes(myRep.repair_status);
@@ -1202,6 +1238,10 @@ async function renderMobileMap() {
             <div class="map-popup-row">
               <span class="map-popup-icon">🏛️</span>
               <span><strong>Brgy. ${escapeHtml(myRep.barangay || 'Valencia City')}</strong></span>
+            </div>
+            <div class="map-popup-row">
+              <span class="map-popup-icon">🎯</span>
+              <span>${myRep.location_source === 'gps' ? 'GPS location' : myRep.location_source === 'map_pin' ? 'User-placed map pin' : 'Location source not recorded'}${myRep.location_accuracy_m ? ` · ±${Math.round(Number(myRep.location_accuracy_m))} m reported GPS accuracy` : ''}</span>
             </div>
             ${myRep.purok || myRep.affected_area ? `
             <div class="map-popup-row">
@@ -1237,7 +1277,7 @@ async function renderMobileMap() {
 
     // 2. Plot community reports not in user's reports
     (reports || []).filter((r) => !myReports.some((m) => m.id === r.id)).forEach((rep) => {
-      const coordinates = coordinatesFor(rep);
+      const coordinates = reportCoordinatesFor(rep);
       if (!coordinates) return;
       const isProgress = rep.status === 'In Progress' || ['Team Dispatched', 'En Route', 'Arrived On Site'].includes(rep.repair_status);
       const markerColor = isProgress ? '#f59e0b' : '#f97316';

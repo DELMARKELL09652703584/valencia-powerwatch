@@ -490,6 +490,8 @@ async function submitForm(form) {
       location: values.location,
       latitude: values.latitude === '' ? null : Number(values.latitude),
       longitude: values.longitude === '' ? null : Number(values.longitude),
+      location_source: values.location_source,
+      location_accuracy_m: values.location_accuracy_m === '' ? null : Number(values.location_accuracy_m),
       barangay: values.barangay,
       purok: values.purok || values.affected_area || null,
       date_time_noticed: values.date_time_noticed ? new Date(values.date_time_noticed).toISOString() : null,
@@ -877,7 +879,7 @@ async function handleClick(event) {
         if (status) status.textContent = 'Locating…';
         const position = await captureLocation();
         if (!position) {
-          if (status) status.textContent = 'Location unavailable. You may continue without it.';
+          if (status) status.textContent = 'GPS unavailable. Allow location access or tap the map to place a pin.';
           return;
         }
         const form = actionButton.closest('form') || document;
@@ -894,7 +896,7 @@ async function handleClick(event) {
         // Auto-detect and set Barangay!
         const nearest = findNearestBarangay(position.latitude, position.longitude, state.barangayLocations);
         const bgyName = nearest?.name || barangayInput?.value || 'Poblacion';
-        const formattedLocation = `Brgy. ${bgyName}, Valencia City (${position.latitude.toFixed(4)}, ${position.longitude.toFixed(4)})`;
+        const formattedLocation = `Brgy. ${bgyName}, Valencia City (${position.latitude.toFixed(5)}, ${position.longitude.toFixed(5)})`;
 
         if (locationInput && state.mobileLocationMode === 'map') {
           locationInput.value = formattedLocation;
@@ -909,11 +911,13 @@ async function handleClick(event) {
           state.mobileReportDraft.barangay = bgyName;
           state.mobileReportDraft.latitude = latStr;
           state.mobileReportDraft.longitude = lngStr;
+          state.mobileReportDraft.location_source = 'gps';
+          state.mobileReportDraft.location_accuracy_m = String(position.accuracy);
           if (state.mobileLocationMode === 'map') state.mobileReportDraft.location = formattedLocation;
         }
-        if (status) status.innerHTML = `📍 Assigned: <strong>Brgy. ${escapeHtml(bgyName)}</strong> (${position.latitude.toFixed(4)}, ${position.longitude.toFixed(4)})`;
+        if (status) status.innerHTML = `📍 GPS fix: <strong>${position.latitude.toFixed(5)}, ${position.longitude.toFixed(5)}</strong> · Barangay estimate: ${escapeHtml(bgyName)} (${Math.round(position.accuracy)} m accuracy)`;
 
-        state.reportLocationSetPin?.(position.latitude, position.longitude, bgyName);
+        state.reportLocationSetPin?.(position.latitude, position.longitude, bgyName, 'gps', position.accuracy);
         if (state.reportLocationMap) {
           state.reportLocationMap.setView([position.latitude, position.longitude], 15);
         }
@@ -1550,8 +1554,8 @@ async function handleClick(event) {
           const emailInput = form.querySelector('input[name="email"]');
           const passInput = form.querySelector('input[name="password"]');
           if (emailInput && passInput) {
-            emailInput.value = target.dataset.user || '';
-            passInput.value = target.dataset.pass || '';
+            emailInput.value = actionButton.dataset.user || '';
+            passInput.value = actionButton.dataset.pass || '';
             form.requestSubmit();
           }
         }
@@ -1688,7 +1692,7 @@ async function handleClick(event) {
           api('/api/reports')
         ]);
         const teamOptions = teams.map((t) => `<option value="${t.id}">${escapeHtml(t.name)} · ${escapeHtml(t.vehicle_type)} (${escapeHtml(t.status)})</option>`).join('');
-        const openReports = reports.filter((r) => ['Submitted', 'Under Review', 'Verified', 'In Progress'].includes(r.status));
+        const openReports = reports.filter((r) => ['Submitted', 'Under Review', 'Verified', 'In Progress'].includes(r.status) && hasCoordinates(r));
         const reportOptions = openReports.map((r) => `<option value="${r.id}">${escapeHtml(r.report_code)} — Brgy. ${escapeHtml(r.barangay)} (${escapeHtml(r.purok || r.affected_area || 'Site')})</option>`).join('');
 
         openDialog('🚀 Dispatch Response Unit', `
@@ -1741,11 +1745,29 @@ async function handleClick(event) {
         await render();
         return;
       }
+      case 'update-repair-team-gps': {
+        if (!id) return;
+        const position = await captureLocation();
+        if (!position) {
+          setToast('GPS unavailable. Allow location access on this Dispatch device and try again.');
+          return;
+        }
+        await send(`/api/repair-teams/${id}/location`, 'PUT', {
+          latitude: position.latitude,
+          longitude: position.longitude
+        });
+        setToast(`GPS position saved for the selected repair team (±${Math.round(position.accuracy)} m reported accuracy).`);
+        await render();
+        return;
+      }
       case 'focus-repair-route': {
         state.selectedDispatchId = id;
         if (state.page !== 'dispatch') {
           state.page = 'dispatch';
           await render();
+          if (typeof window.drawDispatchRoute === 'function') {
+            await window.drawDispatchRoute(id);
+          }
         } else {
           const card = document.getElementById(`assignment-card-${id}`);
           if (card) {
@@ -2778,9 +2800,7 @@ document.addEventListener('input', (event) => {
       if (state.reportLocationMap) {
         state.reportLocationMap.flyTo([lat, lng], 15, { duration: 0.6 });
       }
-      if (typeof state.reportLocationSetPin === 'function') {
-        state.reportLocationSetPin(lat, lng, barangay.name);
-      }
+      state.reportLocationClearPin?.();
     }
   }
   if (el.dataset && el.dataset.filter && el.tagName !== 'SELECT') {

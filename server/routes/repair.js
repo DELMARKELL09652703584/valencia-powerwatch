@@ -7,6 +7,22 @@ const router = express.Router();
 
 const ASSIGNMENT_STATUSES = ['Dispatched', 'En Route', 'Arrived On Site', 'In Progress', 'Resolved', 'Cancelled'];
 
+const validateCoordinates = (latitude, longitude) => {
+  const hasLatitude = latitude !== null && latitude !== undefined && latitude !== '';
+  const hasLongitude = longitude !== null && longitude !== undefined && longitude !== '';
+  if (hasLatitude !== hasLongitude) return 'Both latitude and longitude are required together.';
+  if (!hasLatitude) return 'A confirmed GPS location is required.';
+  if (!Number.isFinite(Number(latitude)) || Number(latitude) < -90 || Number(latitude) > 90
+    || !Number.isFinite(Number(longitude)) || Number(longitude) < -180 || Number(longitude) > 180) {
+    return 'GPS coordinates are outside valid ranges.';
+  }
+  return null;
+};
+
+const hasCoordinates = (record) => record
+  && record.latitude !== null && record.latitude !== undefined && record.latitude !== ''
+  && record.longitude !== null && record.longitude !== undefined && record.longitude !== '';
+
 // Helper to get full assignment details
 const getAssignmentRow = (id) => {
   const assignment = db.prepare(`
@@ -75,19 +91,44 @@ router.post('/repair-teams', requireAuth, requireRole('administrator'), (req, re
   const { name, lead_technician, contact_number, vehicle_type, base_station, current_latitude, current_longitude } = req.body || {};
   if (!name || !String(name).trim()) return res.status(400).json({ error: 'Team name is required.' });
   if (!lead_technician || !String(lead_technician).trim()) return res.status(400).json({ error: 'Lead technician is required.' });
+  const hasCoordinates = ![null, undefined, ''].includes(current_latitude)
+    || ![null, undefined, ''].includes(current_longitude);
+  if (hasCoordinates) {
+    const error = validateCoordinates(current_latitude, current_longitude);
+    if (error) return res.status(400).json({ error });
+  }
 
   const code = nextCode('TEAM');
-  const lat = Number(current_latitude) || 7.9064;
-  const lng = Number(current_longitude) || 125.0941;
+  const lat = hasCoordinates ? Number(current_latitude) : null;
+  const lng = hasCoordinates ? Number(current_longitude) : null;
 
   const result = db.prepare(`
-    INSERT INTO repair_teams (team_code, name, lead_technician, contact_number, vehicle_type, base_station, current_latitude, current_longitude, status, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Available', ?)
-  `).run(code, String(name).trim(), String(lead_technician).trim(), contact_number || null, vehicle_type || 'Utility Vehicle', base_station || 'Valencia City Central Base', lat, lng, now());
+    INSERT INTO repair_teams (team_code, name, lead_technician, contact_number, vehicle_type, base_station, current_latitude, current_longitude, location_updated_at, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available', ?)
+  `).run(code, String(name).trim(), String(lead_technician).trim(), contact_number || null, vehicle_type || 'Utility Vehicle', base_station || 'Valencia City Central Base', lat, lng, hasCoordinates ? now() : null, now());
 
   const team = db.prepare('SELECT * FROM repair_teams WHERE id = ?').get(result.lastInsertRowid);
   audit(req.user, 'Repair team added', `Added repair team ${team.name} (${code}).`);
   res.status(201).json({ team, message: `Repair team ${team.name} created successfully.` });
+});
+
+router.put('/repair-teams/:id/location', requireAuth, requireRole('personnel', 'administrator', 'utility'), (req, res) => {
+  const team = db.prepare('SELECT * FROM repair_teams WHERE id = ?').get(Number(req.params.id));
+  if (!team) return res.status(404).json({ error: 'Repair team not found.' });
+  const { latitude, longitude } = req.body || {};
+  const error = validateCoordinates(latitude, longitude);
+  if (error) return res.status(400).json({ error });
+
+  const updatedAt = now();
+  db.prepare(`
+    UPDATE repair_teams
+    SET current_latitude = ?, current_longitude = ?, location_updated_at = ?
+    WHERE id = ?
+  `).run(Number(latitude), Number(longitude), updatedAt, team.id);
+
+  const updatedTeam = db.prepare('SELECT * FROM repair_teams WHERE id = ?').get(team.id);
+  audit(req.user, 'Repair team GPS updated', `Updated the current GPS position for ${team.name}.`);
+  res.json({ team: updatedTeam, message: `GPS position updated for ${team.name}.` });
 });
 
 // List repair assignments
@@ -146,8 +187,8 @@ router.post('/repair/assign', requireAuth, requireRole('personnel', 'administrat
   let targetBarangay = 'Poblacion';
   let targetPurok = null;
   let targetLocation = null;
-  let targetLatitude = 7.9064;
-  let targetLongitude = 125.0941;
+  let targetLatitude = null;
+  let targetLongitude = null;
   let report = null;
   let incident = null;
 
@@ -157,8 +198,8 @@ router.post('/repair/assign', requireAuth, requireRole('personnel', 'administrat
     targetBarangay = report.barangay;
     targetPurok = report.purok || report.affected_area || null;
     targetLocation = report.location || `Brgy. ${report.barangay}${targetPurok ? ', ' + targetPurok : ''}`;
-    targetLatitude = report.latitude ?? 7.9064;
-    targetLongitude = report.longitude ?? 125.0941;
+    targetLatitude = report.latitude;
+    targetLongitude = report.longitude;
   }
 
   if (incident_id) {
@@ -167,8 +208,13 @@ router.post('/repair/assign', requireAuth, requireRole('personnel', 'administrat
     targetBarangay = incident.barangay;
     targetPurok = incident.purok || incident.affected_area || null;
     targetLocation = incident.location || `Brgy. ${incident.barangay}${targetPurok ? ', ' + targetPurok : ''}`;
-    targetLatitude = incident.latitude ?? targetLatitude;
-    targetLongitude = incident.longitude ?? targetLongitude;
+    const destination = hasCoordinates(incident) ? incident : hasCoordinates(report) ? report : null;
+    targetLatitude = destination?.latitude ?? null;
+    targetLongitude = destination?.longitude ?? null;
+  }
+  const locationError = validateCoordinates(targetLatitude, targetLongitude);
+  if (locationError) {
+    return res.status(400).json({ error: 'This report or incident has no confirmed exact coordinates and cannot be routed. Verify its location before dispatch.' });
   }
 
   const code = nextCode('DISP');
@@ -284,6 +330,12 @@ router.put('/repair/assignments/:id/status', requireAuth, requireRole('personnel
   if (!status || !ASSIGNMENT_STATUSES.includes(status)) {
     return res.status(400).json({ error: `Invalid status. Choose from: ${ASSIGNMENT_STATUSES.join(', ')}` });
   }
+  const hasCurrentLatitude = ![null, undefined, ''].includes(current_latitude);
+  const hasCurrentLongitude = ![null, undefined, ''].includes(current_longitude);
+  if (hasCurrentLatitude || hasCurrentLongitude) {
+    const coordinateError = validateCoordinates(current_latitude, current_longitude);
+    if (coordinateError) return res.status(400).json({ error: coordinateError });
+  }
 
   const ts = now();
   let arrivedAt = assignment.arrived_at;
@@ -306,12 +358,12 @@ router.put('/repair/assignments/:id/status', requireAuth, requireRole('personnel
     const nextTeamStatus = isFinished ? 'Available' : status === 'En Route' ? 'Dispatched' : status === 'Arrived On Site' ? 'On Site' : 'In Progress';
     const activeAssignId = isFinished ? null : assignment.id;
 
-    if (current_latitude && current_longitude) {
+    if (hasCurrentLatitude || hasCurrentLongitude) {
       db.prepare(`
         UPDATE repair_teams
-        SET status = ?, active_assignment_id = ?, current_latitude = ?, current_longitude = ?
+        SET status = ?, active_assignment_id = ?, current_latitude = ?, current_longitude = ?, location_updated_at = ?
         WHERE id = ?
-      `).run(nextTeamStatus, activeAssignId, Number(current_latitude), Number(current_longitude), assignment.team_id);
+      `).run(nextTeamStatus, activeAssignId, Number(current_latitude), Number(current_longitude), ts, assignment.team_id);
     } else {
       db.prepare(`
         UPDATE repair_teams

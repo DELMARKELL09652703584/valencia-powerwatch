@@ -422,10 +422,7 @@ async function renderAdminVerification() {
   }
   const coordinates = report && hasCoordinates(report)
     ? { latitude: Number(report.latitude), longitude: Number(report.longitude), exact: true }
-    : (() => {
-      const center = barangays.find((item) => item.name === report?.barangay && hasCoordinates(item));
-      return center ? { latitude: Number(center.latitude), longitude: Number(center.longitude), exact: false } : null;
-    })();
+    : null;
   const distanceKm = (first, second) => {
     const radians = (degrees) => degrees * Math.PI / 180;
     const latDelta = radians(Number(first.latitude) - Number(second.latitude));
@@ -500,7 +497,8 @@ async function renderAdminVerification() {
             <div><span>Reporter:</span><strong>${escapeHtml(report.reporter_name || 'Unknown reporter')}</strong></div>
             <div><span>Barangay:</span><strong>Brgy. ${escapeHtml(report.barangay || 'Not provided')}</strong></div>
             <div><span>Purok / Area:</span><strong style="color:#0284c7;">📍 ${escapeHtml(report.purok || report.affected_area || 'Specific Purok Not Specified')}</strong></div>
-            <div><span>Coordinates:</span><strong>${report.latitude && report.longitude ? `${Number(report.latitude).toFixed(5)}, ${Number(report.longitude).toFixed(5)}` : 'Approximate Barangay Location'}</strong></div>
+            <div><span>Location source:</span><strong>${report.location_source === 'gps' ? `GPS${report.location_accuracy_m ? ` (±${Math.round(Number(report.location_accuracy_m))} m)` : ''}` : report.location_source === 'map_pin' ? 'User-placed map pin' : 'Not recorded'}</strong></div>
+            <div><span>Coordinates:</span><strong>${hasCoordinates(report) ? `${Number(report.latitude).toFixed(5)}, ${Number(report.longitude).toFixed(5)}` : 'Exact pin unavailable'}</strong></div>
             <div><span>Assigned Crew:</span><strong>${report.assigned_team_name ? `<span style="color:#059669;font-weight:700;">🚛 ${escapeHtml(report.assigned_team_name)}</span> <span style="background:#e0f2fe;color:#0284c7;font-size:0.75rem;padding:2px 7px;border-radius:4px;font-weight:700;margin-left:4px;">${escapeHtml(report.repair_status || 'Dispatched')}</span>` : '<span style="color:#64748b;font-weight:500;">None (Unassigned)</span>'}</strong></div>
             <div><span>Type:</span><strong>${escapeHtml(report.possible_outage_type || 'Power Outage')}</strong></div>
             <div class="description-row"><span>Description:</span><strong>${escapeHtml(report.description || 'No description provided.')}</strong></div>
@@ -514,7 +512,7 @@ async function renderAdminVerification() {
 
         <aside class="verification-right-column">
           <section class="verification-map-card">
-            ${coordinates ? `<div class="verification-map" id="verification-map" aria-label="Map showing the report location"></div><p class="verification-map-caption">${coordinates.exact ? 'Reported GPS location' : 'Approximate barangay center'} · ${escapeHtml(report.barangay || '')}</p>` : `<div class="verification-map-unavailable"><span>⌖</span><strong>Location map unavailable</strong><small>This report has no GPS coordinates or mapped barangay center.</small></div>`}
+            ${coordinates ? `<div class="verification-map" id="verification-map" aria-label="Map showing the report location"></div><p class="verification-map-caption">${report.location_source === 'gps' ? 'User GPS location' : report.location_source === 'map_pin' ? 'User-placed map pin' : 'Location source not recorded'} · Brgy. ${escapeHtml(report.barangay || '')} · ${escapeHtml(report.purok || report.affected_area || 'Specific area not entered')}</p>` : `<div class="verification-map-unavailable"><span>⌖</span><strong>Exact location pin unavailable</strong><small>Do not route this legacy report until its exact location is confirmed.</small></div>`}
           </section>
           <section class="verification-nearby">
             <h3>Nearby Reports <span>(${nearbyReports.length})</span></h3>
@@ -525,7 +523,7 @@ async function renderAdminVerification() {
 
       <footer class="verification-actions" style="flex-wrap:wrap;gap:8px;">
         ${canVerify ? `<button type="button" class="verification-action verify" data-action="verify-report" data-id="${report.id}">${icon('check')}Verify</button>` : ''}
-        <button type="button" class="verification-action" style="background:#0284c7;color:#fff;" data-action="open-assign-repair-modal" data-id="${report.id}">
+        <button type="button" class="verification-action" style="background:#0284c7;color:#fff;" data-action="open-assign-repair-modal" data-id="${report.id}" ${hasCoordinates(report) ? '' : 'disabled title="Exact report coordinates are required before dispatch."'} >
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
           ${report.assigned_team_name ? 'Reassign Crew' : 'Assign Repair Team'}
         </button>
@@ -674,6 +672,10 @@ async function renderAdminDispatch() {
                 <div style="font-size:0.72rem;color:#64748b;">
                   <span>Base: ${escapeHtml(t.base_station)}</span> · <span>📞 ${escapeHtml(t.contact_number)}</span>
                 </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:5px;">
+                  <span style="font-size:0.7rem;color:#64748b;">${t.location_updated_at ? `GPS updated ${escapeHtml(formatDateTime(t.location_updated_at))}` : (t.current_latitude ? 'Base station GPS active' : 'GPS not set')}</span>
+                  <button type="button" class="button ghost small" data-action="update-repair-team-gps" data-id="${t.id}" style="font-size:0.7rem;padding:3px 7px;">Update GPS</button>
+                </div>
               </div>
             `;
           }).join('')}
@@ -719,9 +721,9 @@ async function renderAdminDispatch() {
                       <strong>${escapeHtml(r.report_code)}</strong> · <span>Brgy. ${escapeHtml(r.barangay)}</span>
                       <div style="color:#0284c7;font-weight:600;">📍 ${escapeHtml(r.purok || r.affected_area || 'Specific Purok Not Specified')}</div>
                     </div>
-                    <button type="button" class="button small primary" data-action="open-assign-repair-modal" data-id="${r.id}" style="font-size:0.72rem;padding:4px 9px;white-space:nowrap;">
-                      Assign Crew
-                    </button>
+                    ${hasCoordinates(r)
+                      ? `<button type="button" class="button small primary" data-action="open-assign-repair-modal" data-id="${r.id}" style="font-size:0.72rem;padding:4px 9px;white-space:nowrap;">Assign Crew</button>`
+                      : '<span title="Exact report coordinates are required before dispatch." style="font-size:0.7rem;color:#92400e;">Location pin required</span>'}
                   </div>
                 `).join('')}
               </div>
@@ -737,6 +739,7 @@ async function renderAdminDispatch() {
             const isSelected = String(a.id) === String(state.selectedDispatchId);
             const team = teams.find(t => t.id === a.team_id) || {};
             const attachments = a.attachments || [];
+            const hasTargetCoordinates = hasCoordinates({ latitude: a.target_latitude, longitude: a.target_longitude });
             if (a.photo_path && !attachments.some(att => att.file_path === a.photo_path)) {
               attachments.unshift({ file_path: a.photo_path, mime_type: 'image/jpeg', original_name: 'Outage Photo' });
             }
@@ -758,7 +761,7 @@ async function renderAdminDispatch() {
                   </div>
                   <div>
                     <span style="color:#64748b;">GPS Coordinates:</span>
-                    <strong style="font-family:var(--mono);font-size:0.79rem;color:#334155;">${a.target_latitude && a.target_longitude ? `${Number(a.target_latitude).toFixed(5)}, ${Number(a.target_longitude).toFixed(5)}` : 'Approximate'}</strong>
+                    <strong style="font-family:var(--mono);font-size:0.79rem;color:#334155;">${hasTargetCoordinates ? `${Number(a.target_latitude).toFixed(5)}, ${Number(a.target_longitude).toFixed(5)}` : 'Exact coordinates unavailable'}</strong>
                   </div>
                   <div>
                     <span style="color:#64748b;">Assigned Crew:</span>
@@ -789,9 +792,9 @@ async function renderAdminDispatch() {
                 ` : ''}
 
                 <div class="dispatch-actions-bar">
-                  <button type="button" class="dispatch-btn route" data-action="focus-repair-route" data-id="${a.id}" title="Calculate &amp; render road route to site">
-                    🧭 <span>Navigate to Site</span>
-                  </button>
+                  ${hasTargetCoordinates
+                    ? `<button type="button" class="dispatch-btn route" data-action="focus-repair-route" data-id="${a.id}" title="Calculate &amp; render road route to site">🧭 <span>Navigate to Site</span></button>`
+                    : '<button type="button" class="dispatch-btn route" disabled title="Exact target coordinates are unavailable.">📍 <span>Route unavailable</span></button>'}
                   ${a.status === 'Dispatched' ? `
                     <button type="button" class="dispatch-btn status-step" data-action="dispatch-update-status" data-id="${a.id}" data-status="En Route" style="background:#e0f2fe;color:#0369a1;border-color:#7dd3fc;">
                       🚀 Mark En Route
@@ -896,8 +899,12 @@ async function renderAdminDispatch() {
     const a = assignments.find((item) => String(item.id) === String(assignmentId));
     if (!a || !a.target_latitude || !a.target_longitude) return;
     const team = teams.find((t) => t.id === a.team_id);
-    const origin = team && team.current_latitude && team.current_longitude
-      ? { latitude: Number(team.current_latitude), longitude: Number(team.current_longitude), label: `${team.name} (${team.base_station})` }
+    const origin = (team && team.current_latitude && team.current_longitude)
+      ? {
+          latitude: Number(team.current_latitude),
+          longitude: Number(team.current_longitude),
+          label: `${team.name} · ${team.location_updated_at ? 'GPS as of ' + formatDateTime(team.location_updated_at) : (team.base_station || 'Base')}`
+        }
       : VALENCIA_HQ_COORDINATES;
 
     await renderRouteGuideOnMap({
@@ -910,9 +917,6 @@ async function renderAdminDispatch() {
     });
   };
 
-  if (selectedAssignment && selectedAssignment.target_latitude && selectedAssignment.target_longitude) {
-    window.drawDispatchRoute(selectedAssignment.id);
-  }
 }
 
 async function renderAdminOutageMonitoring() {
@@ -1077,7 +1081,7 @@ async function renderAdminMap() {
   const mapCenter = [Number(mapSettings.latitude) || 7.906, Number(mapSettings.longitude) || 125.094];
   const marker = (color, radius = 9) => `<span class="map-legend-marker" style="--marker-color:${color};--marker-size:${radius * 2}px"></span>`;
   const countWithCoordinates = (records) => records.filter((item) => hasCoordinates(item)
-    || barangays.some((center) => center.name === item.barangay && hasCoordinates(center))).length;
+    || (!item.report_code && barangays.some((center) => center.name === item.barangay && hasCoordinates(center)))).length;
 
   const barangayCounts = {};
   [...incidents, ...reports].forEach((item) => {
@@ -1249,6 +1253,7 @@ async function renderAdminMap() {
 
   const locationFor = (item) => {
     if (hasCoordinates(item)) return [Number(item.latitude), Number(item.longitude)];
+    if (item.report_code) return null;
     const center = barangays.find((row) => row.name === item.barangay);
     return center && hasCoordinates(center) ? [Number(center.latitude), Number(center.longitude)] : null;
   };
