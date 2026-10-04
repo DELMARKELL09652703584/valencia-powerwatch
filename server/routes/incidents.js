@@ -263,6 +263,17 @@ router.put('/incidents/:id/status', requireAuth, requireRole('personnel', 'admin
     for (const l of linked) {
       db.prepare("UPDATE outage_reports SET status = 'Resolved', updated_at = ? WHERE id = ?").run(now(), l.report_id);
     }
+    if (incident.barangay) {
+      db.prepare("UPDATE outage_reports SET status = 'Resolved', updated_at = ? WHERE barangay = ? AND status NOT IN ('Rejected', 'Duplicate', 'Resolved')").run(now(), incident.barangay);
+    }
+  } else if (['Ongoing', 'Restoration in Progress', 'In Progress'].includes(status)) {
+    const linked = db.prepare('SELECT report_id FROM incident_links WHERE incident_id = ?').all(incident.id);
+    for (const l of linked) {
+      db.prepare("UPDATE outage_reports SET status = 'In Progress', updated_at = ? WHERE id = ?").run(now(), l.report_id);
+    }
+    if (incident.barangay) {
+      db.prepare("UPDATE outage_reports SET status = 'In Progress', updated_at = ? WHERE barangay = ? AND status IN ('Submitted', 'Under Review', 'Verified', 'Officially Confirmed')").run(now(), incident.barangay);
+    }
   }
 
   res.json({ incident: fresh, message: `Incident is now "${status}".` });

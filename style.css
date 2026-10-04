@@ -739,6 +739,12 @@ select.input { cursor: pointer; }
   color: #147a4a;
 }
 
+.report-status.ongoing {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
 .report-status.rejected {
   background: #fdd8d8;
   color: #b91c1c;

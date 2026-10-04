@@ -8,7 +8,7 @@ const { requireAuth, requireRole, audit, notifyRole, notifyUsers } = require('..
 
 const router = express.Router();
 
-const STATUS_FLOW = ['Submitted', 'Under Review', 'Verified', 'Officially Confirmed', 'Unverified', 'Duplicate', 'Rejected', 'Resolved'];
+const STATUS_FLOW = ['Submitted', 'Under Review', 'Verified', 'Officially Confirmed', 'In Progress', 'Resolved', 'Unverified', 'Duplicate', 'Rejected'];
 const ATTACHMENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime']);
 const reportUpload = multer({
   storage: multer.memoryStorage(),
@@ -57,9 +57,17 @@ const reportDetailRow = (id) => {
   `).get(id);
   if (!report) return null;
   report.incident = report.incident_id
-    ? db.prepare('SELECT id, incident_code, title, status, incident_type, cause_category FROM outage_incidents WHERE id = ?').get(report.incident_id)
+    ? db.prepare('SELECT id, incident_code, title, status, incident_type, cause_category, estimated_restoration FROM outage_incidents WHERE id = ?').get(report.incident_id)
     : null;
-  report.linked_incident = report.incident_id ? report.incident : null;
+  if (!report.incident && report.barangay) {
+    report.incident = db.prepare(`
+      SELECT id, incident_code, title, status, incident_type, cause_category, estimated_restoration 
+      FROM outage_incidents 
+      WHERE (barangay = ? OR id IN (SELECT incident_id FROM incident_areas WHERE barangay = ?))
+      ORDER BY id DESC LIMIT 1
+    `).get(report.barangay, report.barangay) || null;
+  }
+  report.linked_incident = report.incident;
   report.attachments = db.prepare('SELECT id, file_path, mime_type, original_name, file_size FROM report_attachments WHERE report_id = ? ORDER BY id').all(id);
   return report;
 };
@@ -204,6 +212,9 @@ router.put('/reports/:id/status', requireAuth, requireRole('personnel', 'adminis
       case 'Verified':
         verificationStatus = 'Verified';
         break;
+      case 'In Progress':
+        verificationStatus = 'Verified';
+        break;
       case 'Unverified':
         verificationStatus = 'Unverified';
         break;
@@ -231,11 +242,12 @@ router.put('/reports/:id/status', requireAuth, requireRole('personnel', 'adminis
   const actions = {
     'Officially Confirmed': `Your report ${report.report_code} has been officially confirmed by authorized personnel.`,
     Verified: `Your report ${report.report_code} has been verified.`,
+    'In Progress': `Field response crew dispatched. Interruption restoration is in progress for ${report.report_code}.`,
     Rejected: `Your report ${report.report_code} was rejected. Remarks: ${remarks || 'none provided'}.`,
     Duplicate: `Your report ${report.report_code} was identified as a duplicate.`,
     Unverified: `Your report ${report.report_code} could not be verified.`,
     'Under Review': `Your report ${report.report_code} is now under review.`,
-    Resolved: `Your report ${report.report_code} has been resolved.`,
+    Resolved: `Your report ${report.report_code} has been resolved. Power restored.`,
   };
   if (actions[nextStatus]) {
     notifyUsers([report.reporter_id], 'Report updated', actions[nextStatus], 'report');

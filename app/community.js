@@ -844,7 +844,7 @@ async function renderMobileReports() {
       <button class="button ghost block" data-mobile-tab="history">${t('outage_history', 'View outage history')}</button>
     </div>
     <div class="mobile-segments" role="group" aria-label="Filter reports">
-      ${['', 'pending', 'Verified', 'Resolved'].map((status) => `
+      ${['', 'pending', 'Verified', 'In Progress', 'Resolved'].map((status) => `
         <button class="mobile-segment ${selectedStatus === status ? 'active' : ''}" data-action="filter-my-reports" data-value="${escapeHtml(status)}">${escapeHtml(status === 'pending' ? 'Pending' : status || 'All')}</button>
       `).join('')}
     </div>
@@ -870,12 +870,26 @@ async function renderMobileReports() {
 
 async function renderMobileReportDetail() {
   const { report } = await api(`/api/reports/${Number(state.mobileReportId)}`);
-  const isResolved = report.status === 'Resolved' || ['Closed', 'Restored'].includes(report.incident?.status);
+  const reportStatus = String(report.status || '').trim();
+  const incidentStatus = String(report.incident?.status || '').trim();
+
+  const isResolved = reportStatus === 'Resolved' || ['Closed', 'Restored', 'Resolved'].includes(incidentStatus);
+  const isInProgress = ['In Progress', 'Ongoing', 'Restoration in Progress'].includes(reportStatus)
+    || ['Ongoing', 'Restoration in Progress', 'Closed', 'Restored', 'Resolved'].includes(incidentStatus)
+    || isResolved;
+  const isVerified = ['Verified', 'Officially Confirmed'].includes(reportStatus)
+    || ['Verified', 'Officially Confirmed'].includes(report.verification_status)
+    || isInProgress
+    || isResolved;
+  const isUnderReview = ['Under Review', 'Under Verification'].includes(reportStatus)
+    || report.verification_status === 'Under Review'
+    || isVerified;
+
   const steps = [
     ['Report Submitted', report.reported_at],
-    ['Under Verification', ['Under Review', 'Verified', 'Officially Confirmed', 'Resolved'].includes(report.status) || isResolved ? (report.updated_at || report.reported_at) : null],
-    ['Verified', ['Verified', 'Officially Confirmed', 'Resolved'].includes(report.status) || isResolved ? (report.updated_at || report.reported_at) : null],
-    ['In Progress', ['Ongoing', 'Restoration in Progress', 'Closed', 'Restored'].includes(report.incident?.status) || isResolved ? (report.updated_at || report.reported_at) : null],
+    ['Under Verification', isUnderReview ? (report.updated_at || report.reported_at) : null],
+    ['Verified', isVerified ? (report.updated_at || report.reported_at) : null],
+    ['In Progress', isInProgress ? (report.updated_at || report.reported_at) : null],
     ['Resolved', isResolved ? (report.updated_at || report.reported_at) : null],
   ];
 

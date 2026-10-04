@@ -234,7 +234,16 @@ async function renderAdminReports() {
   const f = state.filters;
   const params = query({ status: f.reportStatus, verification: f.reportVerification, barangay: f.reportBarangay, q: f.reportSearch });
   const [{ reports, statuses }, data] = await Promise.all([api(`/api/reports${params}`), api('/api/reports')]);
-  const reportTabs = [['All Reports', ''], ['Pending', 'Submitted'], ['Under Review', 'Under Review'], ['Verified', 'Verified'], ['Rejected', 'Rejected'], ['Duplicate', 'Duplicate']];
+  const reportTabs = [
+    ['All Reports', ''],
+    ['Pending', 'Submitted'],
+    ['Under Review', 'Under Review'],
+    ['Verified', 'Verified'],
+    ['In Progress', 'In Progress'],
+    ['Resolved', 'Resolved'],
+    ['Rejected', 'Rejected'],
+    ['Duplicate', 'Duplicate']
+  ];
 
   const visibleReports = reports.filter((row) => (!f.reportFrom || String(row.reported_at).slice(0, 10) >= f.reportFrom)
     && (!f.reportTo || String(row.reported_at).slice(0, 10) <= f.reportTo));
@@ -255,6 +264,7 @@ async function renderAdminReports() {
   const badgeClass = (value) => {
     const status = String(value || '').toLowerCase();
     if (status === 'under review' || status === 'under verification') return 'report-status review';
+    if (status === 'in progress' || status === 'ongoing') return 'report-status ongoing';
     if (status === 'verified' || status === 'officially confirmed' || status === 'resolved') return 'report-status verified';
     if (status === 'rejected' || status === 'duplicate') return 'report-status rejected';
     if (status === 'submitted' || status === 'pending') return 'report-status pending';
