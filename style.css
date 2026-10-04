@@ -3925,6 +3925,7 @@ select.input { cursor: pointer; }
 .auth-options-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #344e65; font-size: .8rem; }
 .auth-options-row label { display: flex; align-items: center; gap: 7px; }
 .auth-options-row input { width: 18px; height: 18px; accent-color: #0878d5; }
+.mobile-auth-page .mobile-auth-form .auth-options-row input { width: 18px; height: 18px; min-height: 18px; flex: 0 0 18px; }
 .auth-options-row button { padding: 4px 0; border: 0; background: transparent; color: #0871bd; font: inherit; font-weight: 600; cursor: pointer; }
 .auth-divider { display: flex; align-items: center; gap: 12px; color: #60778a; font-size: .82rem; }
 .auth-divider::before,

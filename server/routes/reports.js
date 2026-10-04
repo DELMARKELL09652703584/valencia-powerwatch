@@ -190,6 +190,12 @@ router.put('/reports/:id/status', requireAuth, requireRole('personnel', 'adminis
   if (!report) return res.status(404).json({ error: 'Report not found.' });
 
   const { status, remarks, verify } = req.body || {};
+  if (status !== undefined && !STATUS_FLOW.includes(status)) {
+    return res.status(400).json({ error: 'Invalid report status.' });
+  }
+  if (verify !== undefined && verify !== 'officially-confirmed') {
+    return res.status(400).json({ error: 'Invalid verification action.' });
+  }
   let nextStatus = status || report.status;
   let verificationStatus = report.verification_status;
 

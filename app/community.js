@@ -292,7 +292,7 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
   }
 
   app.innerHTML = `<div class="mobile-shell">
-    ${!navigator.onLine ? '<div class="offline-banner" id="mobile-offline-banner"><span>⚡ Offline Mode: Reports will sync once internet returns.</span></div>' : ''}
+    ${!navigator.onLine ? '<div class="offline-banner" id="mobile-offline-banner"><span>Offline: reports are not saved or sent. Reconnect before submitting.</span></div>' : ''}
     ${statusBarMarkup}
     ${headerMarkup}
     <main class="mobile-content ${subpageHeader ? 'mobile-content-subpage' : ''}" id="mobile-content">${content}</main>

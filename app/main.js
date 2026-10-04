@@ -47,7 +47,6 @@ function renderLogin(message = '') {
           </button>
         </div>
         <p class="mobile-auth-switch">New here? <button type="button" data-action="go-register">Create an account</button></p>
-        <p class="mobile-auth-switch" style="margin-top:10px;font-size:0.8rem;color:#64748b;">City Personnel or Admin? <a href="/admin" style="color:#0284c7;font-weight:700;text-decoration:none;">Go to Admin Portal &rarr;</a></p>
       </section>
       <footer class="login-footer">Valencia City, Bukidnon</footer>
       <div class="toast" role="status" hidden></div>

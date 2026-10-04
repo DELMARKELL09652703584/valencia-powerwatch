@@ -1,6 +1,6 @@
 const express = require('express');
 const { db } = require('../db');
-const { requireAuth } = require('../auth');
+const { requireAuth, requireRole } = require('../auth');
 
 const router = express.Router();
 
@@ -9,6 +9,20 @@ const duration = (start, end) => {
   const ms = new Date(end).getTime() - new Date(start).getTime();
   if (Number.isNaN(ms) || ms < 0) return null;
   return ms;
+};
+
+const isValidDate = (value) => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+};
+
+const validateDateRange = ({ from, to }) => {
+  if ((from && !isValidDate(from)) || (to && !isValidDate(to))) {
+    return 'Dates must use a valid YYYY-MM-DD format.';
+  }
+  if (from && to && from > to) return 'Start date must be on or before the end date.';
+  return null;
 };
 
 const baseSelect = `
@@ -26,8 +40,8 @@ const listHistory = (query) => {
 
   if (barangay) { where.push('i.barangay = ?'); params.push(barangay); }
   if (type && type !== 'all') { where.push('i.incident_type = ?'); params.push(type); }
-  if (from) { where.push('i.closed_at >= ?'); params.push(new Date(`${from}T00:00:00`).toISOString()); }
-  if (to) { where.push('i.closed_at <= ?'); params.push(new Date(`${to}T23:59:59`).toISOString()); }
+  if (from) { where.push('i.closed_at >= ?'); params.push(`${from}T00:00:00.000Z`); }
+  if (to) { where.push('i.closed_at <= ?'); params.push(`${to}T23:59:59.999Z`); }
   if (q) {
     where.push('(i.incident_code LIKE ? OR i.title LIKE ? OR i.barangay LIKE ? OR i.affected_area LIKE ?)');
     const like = `%${q}%`;
@@ -52,19 +66,24 @@ const listHistory = (query) => {
 
 // Historical closed incidents with search/filter (all authenticated roles)
 router.get('/', requireAuth, (req, res) => {
+  const validationError = validateDateRange(req.query);
+  if (validationError) return res.status(400).json({ error: validationError });
   res.json({ history: listHistory(req.query) });
 });
 
 // CSV export (administrator / personnel)
-router.get('/export.csv', requireAuth, (req, res) => {
+router.get('/export.csv', requireAuth, requireRole('administrator', 'personnel', 'utility'), (req, res) => {
+  const validationError = validateDateRange(req.query);
+  if (validationError) return res.status(400).json({ error: validationError });
   const rows = listHistory(req.query);
   const headers = [
     'Incident Code', 'Title', 'Barangay', 'Type', 'Cause/Category', 'Status',
     'Start Time', 'End Time', 'Restoration Time', 'Duration (hours)', 'Affected Area', 'Remarks',
   ];
   const esc = (v) => {
-    const s = v === null || v === undefined ? '' : String(v);
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    let value = v === null || v === undefined ? '' : String(v);
+    if (/^[\u0000-\u0020]*[=+\-@]/.test(value)) value = `'${value}`;
+    return `"${value.replace(/"/g, '""')}"`;
   };
   const lines = [
     headers.join(','),

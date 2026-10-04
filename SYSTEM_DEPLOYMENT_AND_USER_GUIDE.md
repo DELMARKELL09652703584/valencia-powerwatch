@@ -78,7 +78,7 @@ flowchart TD
    - Choose outage type (Complete Blackout, Partial Voltage/Flicker, Line Down/Transformer Spark).
    - Optional: Attach a photo or notes.
    - Tap **"Submit Report"**.
-4. **Offline Capability:** If cellular data drops during a storm, the app automatically saves the report into the **Offline Report Queue** and automatically uploads it once signal returns.
+4. **Connectivity:** Report submission requires an active internet connection. If the connection drops, reconnect before submitting; reports are not currently saved to an offline queue.
 
 ### B. Administrator Walkthrough
 1. **Login:** Navigate to `/admin` and enter administrator credentials.

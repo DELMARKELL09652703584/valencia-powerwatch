@@ -50,7 +50,7 @@ router.post('/feedback', requireAuth, (req, res) => {
 });
 
 // Get citizen satisfaction analytics & recent testimonials
-router.get('/feedback/summary', (req, res) => {
+router.get('/feedback/summary', requireAuth, requireRole('personnel', 'administrator', 'utility'), (req, res) => {
   try {
     const stats = db.prepare(`
       SELECT 

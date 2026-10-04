@@ -66,6 +66,8 @@ router.get('/manage', requireAuth, requireRole('personnel', 'administrator', 'ut
 router.get('/:id', requireAuth, (req, res) => {
   const row = rowById(req.params.id);
   if (!row) return res.status(404).json({ error: 'Announcement not found.' });
+  const isStaff = ['personnel', 'administrator', 'utility'].includes(req.user.role);
+  if (row.status !== 'Published' && !isStaff) return res.status(404).json({ error: 'Announcement not found.' });
   res.json({ announcement: row });
 });
 

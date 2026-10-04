@@ -124,6 +124,15 @@ router.post('/:id/trigger-incident', requireAuth, requireRole('utility', 'admini
   if (sched.status === 'Cancelled') {
     return res.status(400).json({ error: 'This scheduled outage has been cancelled.' });
   }
+  const existingIncident = db.prepare(`
+    SELECT id, incident_code FROM outage_incidents WHERE scheduled_id = ? ORDER BY id DESC LIMIT 1
+  `).get(sched.id);
+  if (existingIncident) {
+    return res.status(409).json({
+      error: `This scheduled outage already has incident ${existingIncident.incident_code}.`,
+      incident_id: existingIncident.id,
+    });
+  }
 
   const ts = now();
   const code = nextCode('OUT');

@@ -107,6 +107,10 @@ router.get('/incidents/:id', requireAuth, (req, res) => {
   const incident = incidentRow(Number(req.params.id));
   if (!incident) return res.status(404).json({ error: 'Incident not found.' });
   incident.duration_display = duration(incident.start_time, incident.end_time || incident.closed_at);
+  if (req.user.role === 'resident') {
+    delete incident.linked_reports;
+    delete incident.primary_report;
+  }
   res.json({ incident });
 });
 

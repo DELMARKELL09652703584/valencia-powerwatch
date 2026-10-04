@@ -2,8 +2,8 @@ const path = require('node:path');
 require('dotenv').config();
 const express = require('express');
 const compression = require('compression');
-const { ROOT, UPLOAD_DIR } = require('./db');
-const { cleanupExpiredSessions, COOKIE_NAME } = require('./auth');
+const { ROOT, UPLOAD_DIR, db } = require('./db');
+const { cleanupExpiredSessions, COOKIE_NAME, getUserByToken } = require('./auth');
 
 const authRoutes = require('./routes/auth');
 const identityRoutes = require('./routes/identity');
@@ -55,6 +55,39 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', feedbackRoutes);
 
+app.get('/uploads/:filename', (req, res, next) => {
+  const filename = req.params.filename;
+  if (!filename.startsWith('report_') && !filename.startsWith('photo_')) return next();
+
+  const isReportAttachment = /^report_\d+_[\da-f-]+\.(?:jpg|png|webp|mp4|mov)$/i.test(filename);
+  const isReportPhoto = /^photo_\d+_\d+\.(?:jpg|png|webp|gif)$/i.test(filename);
+  if (!isReportAttachment && !isReportPhoto) return res.sendStatus(404);
+
+  const user = getUserByToken(req.cookies?.[COOKIE_NAME]);
+  if (!user) return res.status(401).json({ error: 'Authentication required.' });
+  if (user.status !== 'Active') return res.status(403).json({ error: 'This account is deactivated.' });
+
+  const evidencePath = `/uploads/${filename}`;
+  const report = isReportAttachment
+    ? db.prepare(`
+      SELECT r.reporter_id FROM report_attachments a
+      JOIN outage_reports r ON r.id = a.report_id
+      WHERE a.file_path = ?
+    `).get(evidencePath)
+    : db.prepare('SELECT reporter_id FROM outage_reports WHERE photo_path = ?').get(evidencePath);
+
+  if (!report) return res.sendStatus(404);
+  const isStaff = ['administrator', 'personnel', 'utility'].includes(user.role);
+  if (!isStaff && Number(report.reporter_id) !== Number(user.id)) {
+    return res.status(403).json({ error: 'You do not have permission to view this report evidence.' });
+  }
+
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.sendFile(filename, { root: UPLOAD_DIR }, (error) => {
+    if (error && !res.headersSent) next(error);
+  });
+});
 app.use('/uploads', express.static(UPLOAD_DIR));
 app.use('/assets', express.static(path.join(ROOT, 'assets')));
 app.use('/vendor/leaflet', express.static(path.join(ROOT, 'node_modules', 'leaflet', 'dist')));
