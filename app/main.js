@@ -864,29 +864,30 @@ async function handleClick(event) {
 
         if (latInput) latInput.value = latStr;
         if (lngInput) lngInput.value = lngStr;
-        if (locationInput && state.mobileLocationMode === 'map') {
-          locationInput.value = `${latStr}, ${lngStr}`;
-        }
 
         // Auto-detect and set Barangay!
         const nearest = findNearestBarangay(position.latitude, position.longitude, state.barangayLocations);
-        if (nearest && nearest.name) {
-          if (barangayInput) {
-            barangayInput.value = nearest.name;
-            barangayInput.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          if (state.mobileReportDraft) {
-            state.mobileReportDraft.barangay = nearest.name;
-            state.mobileReportDraft.latitude = latStr;
-            state.mobileReportDraft.longitude = lngStr;
-            if (state.mobileLocationMode === 'map') state.mobileReportDraft.location = `${latStr}, ${lngStr}`;
-          }
-          if (status) status.innerHTML = `📍 Attached: <strong>${nearest.name}</strong> (${position.latitude.toFixed(4)}, ${position.longitude.toFixed(4)})`;
-        } else {
-          if (status) status.textContent = `Location attached: ${position.latitude.toFixed(4)}, ${position.longitude.toFixed(4)}`;
-        }
+        const bgyName = nearest?.name || barangayInput?.value || 'Poblacion';
+        const formattedLocation = `Brgy. ${bgyName}, Valencia City (${position.latitude.toFixed(4)}, ${position.longitude.toFixed(4)})`;
 
-        state.reportLocationSetPin?.(position.latitude, position.longitude);
+        if (locationInput && state.mobileLocationMode === 'map') {
+          locationInput.value = formattedLocation;
+        }
+        if (barangayInput) {
+          barangayInput.value = bgyName;
+        }
+        const badgeName = document.getElementById('assigned-barangay-name');
+        if (badgeName) badgeName.textContent = `Brgy. ${bgyName}`;
+
+        if (state.mobileReportDraft) {
+          state.mobileReportDraft.barangay = bgyName;
+          state.mobileReportDraft.latitude = latStr;
+          state.mobileReportDraft.longitude = lngStr;
+          if (state.mobileLocationMode === 'map') state.mobileReportDraft.location = formattedLocation;
+        }
+        if (status) status.innerHTML = `📍 Assigned: <strong>Brgy. ${escapeHtml(bgyName)}</strong> (${position.latitude.toFixed(4)}, ${position.longitude.toFixed(4)})`;
+
+        state.reportLocationSetPin?.(position.latitude, position.longitude, bgyName);
         if (state.reportLocationMap) {
           state.reportLocationMap.setView([position.latitude, position.longitude], 15);
         }
@@ -2558,9 +2559,17 @@ let filterTimer = null;
 document.addEventListener('input', (event) => {
   const el = event.target;
   if (el.matches('[data-location-search]')) {
-    const barangay = state.barangayLocations.find((item) => item.name.toLowerCase() === el.value.trim().toLowerCase());
-    if (barangay && hasCoordinates(barangay) && state.reportLocationMap) {
-      state.reportLocationMap.setView([Number(barangay.latitude), Number(barangay.longitude)], 14);
+    const bgyName = el.value.trim().toLowerCase();
+    const barangay = (state.barangayLocations || []).find((item) => item.name.toLowerCase() === bgyName);
+    if (barangay && hasCoordinates(barangay)) {
+      const lat = Number(barangay.latitude);
+      const lng = Number(barangay.longitude);
+      if (state.reportLocationMap) {
+        state.reportLocationMap.flyTo([lat, lng], 15, { duration: 0.6 });
+      }
+      if (typeof state.reportLocationSetPin === 'function') {
+        state.reportLocationSetPin(lat, lng, barangay.name);
+      }
     }
   }
   if (el.dataset && el.dataset.filter && el.tagName !== 'SELECT') {

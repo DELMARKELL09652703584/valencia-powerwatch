@@ -447,11 +447,35 @@ async function renderMobileHome() {
 }
 
 async function renderMobileReportForm() {
+  if (!state.barangayLocations || !state.barangayLocations.length) {
+    try {
+      const { barangays: locations } = await api('/api/barangays/locations');
+      state.barangayLocations = locations;
+    } catch {}
+  }
   const types = activeOutageTypes();
   const draft = state.mobileReportDraft || {};
   const step = state.mobileReportStep || 1;
   const locationMode = state.mobileLocationMode || 'map';
   const attachments = draft.attachments || [];
+
+  // Default to user's registered barangay or Poblacion
+  const defaultBarangay = draft.barangay || state.user?.barangay || 'Poblacion';
+  if (!draft.barangay) draft.barangay = defaultBarangay;
+
+  // Auto-fill coordinates from assigned barangay if not yet picked
+  if (!draft.latitude && draft.barangay && state.barangayLocations?.length) {
+    const bgyObj = state.barangayLocations.find((b) => b.name === draft.barangay) || state.barangayLocations[0];
+    if (bgyObj && hasCoordinates(bgyObj)) {
+      draft.latitude = String(bgyObj.latitude);
+      draft.longitude = String(bgyObj.longitude);
+      if (locationMode === 'map' && !draft.location) {
+        draft.location = `Brgy. ${bgyObj.name}, Valencia City (${Number(bgyObj.latitude).toFixed(4)}, ${Number(bgyObj.longitude).toFixed(4)})`;
+      }
+    }
+  }
+  state.mobileReportDraft = draft;
+
   const stepNames = ['Location', 'Details', 'Evidence', 'Review'];
   const stepper = `<div class="stepper">${stepNames.map((name, index) => `
     <div class="step ${step === index + 1 ? 'active' : ''} ${step > index + 1 ? 'complete' : ''}"><span class="step-number">${step > index + 1 ? '✓' : index + 1}</span><span>${name}</span></div>
@@ -467,15 +491,28 @@ async function renderMobileReportForm() {
         <button type="button" class="mobile-segment ${locationMode === 'map' ? 'active' : ''}" data-action="set-report-location-mode" data-value="map">Map</button>
         <button type="button" class="mobile-segment ${locationMode === 'address' ? 'active' : ''}" data-action="set-report-location-mode" data-value="address">Address</button>
       </div>
-      <label>Search barangay<input type="search" name="barangay" list="report-barangay-options" data-location-search placeholder="Search barangay..." value="${escapeHtml(draft.barangay || state.user.barangay || '')}" required></label>
+      <label>Search barangay<input type="search" name="barangay" list="report-barangay-options" data-location-search placeholder="Search barangay..." value="${escapeHtml(draft.barangay || state.user?.barangay || 'Poblacion')}" required></label>
       <datalist id="report-barangay-options">${state.barangays.map((barangay) => `<option value="${escapeHtml(barangay)}">`).join('')}</datalist>
       ${locationMode === 'map' ? '<div class="report-location-map" id="report-location-map" aria-label="Tap to select outage location"></div>' : ''}
-      <label>${locationMode === 'map' ? 'Selected coordinates' : 'Street address or landmark'}<input name="location" value="${escapeHtml(draft.location || '')}" placeholder="${locationMode === 'map' ? 'Tap the map to place a pin' : 'Purok, street, or nearby landmark'}" ${locationMode === 'map' ? 'readonly' : ''} required></label>
+      
+      <!-- Auto-Assigned Barangay Live Banner -->
+      <div id="report-assigned-barangay-badge" style="margin: 8px 0; padding: 10px 14px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:1.25rem;">🏛️</span>
+          <div>
+            <div style="font-size:0.75rem;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.5px;">Assigned Barangay:</div>
+            <strong id="assigned-barangay-name" style="font-size:0.95rem;color:#14532d;">Brgy. ${escapeHtml(draft.barangay || state.user?.barangay || 'Poblacion')}</strong>
+          </div>
+        </div>
+        <span class="pill pill-ok" style="font-size:0.75rem;font-weight:750;">Valencia City</span>
+      </div>
+
+      <label>${locationMode === 'map' ? '📍 Assigned Barangay & Coordinates' : 'Street address or landmark'}<input name="location" value="${escapeHtml(draft.location || '')}" placeholder="${locationMode === 'map' ? 'Tap map or select barangay above' : 'Purok, street, or nearby landmark'}" ${locationMode === 'map' ? 'readonly' : ''} required></label>
       <div class="mobile-gps">
-        <button type="button" class="button ghost block" data-action="capture-gps">📍 Use current location</button>
+        <button type="button" class="button ghost block" data-action="capture-gps">📍 Use current location (GPS)</button>
         <input type="hidden" name="latitude" data-gps="latitude" value="${escapeHtml(draft.latitude || '')}">
         <input type="hidden" name="longitude" data-gps="longitude" value="${escapeHtml(draft.longitude || '')}">
-        <span class="muted small" data-gps="status">${draft.latitude ? `Location attached: ${escapeHtml(draft.latitude)}, ${escapeHtml(draft.longitude)}` : 'Choose a map point or use GPS'}</span>
+        <span class="muted small" data-gps="status">${draft.latitude ? `📍 Assigned: Brgy. ${escapeHtml(draft.barangay || 'Valencia')} (${Number(draft.latitude).toFixed(4)}, ${Number(draft.longitude).toFixed(4)})` : 'Tap anywhere on the map or use GPS to auto-assign barangay'}</span>
       </div>
       <button type="button" class="button primary block" data-action="next-report-step">Next</button>`;
   } else if (step === 2) {
@@ -539,29 +576,25 @@ async function renderMobileReportForm() {
     state.reportLocationMarker = null;
     state.reportLocationSetPin = null;
   }
-  if (step === 1) {
-    if (!state.barangayLocations || !state.barangayLocations.length) {
-      try {
-        const { barangays: locations } = await api('/api/barangays/locations');
-        state.barangayLocations = locations;
-      } catch {}
-    }
-  }
   if (step === 1 && locationMode === 'map') {
     await ensureLeaflet();
     const locations = state.barangayLocations || [];
     const mapElement = document.getElementById('report-location-map');
     if (!mapElement) return;
-    const initialBarangay = locations.find((item) => item.name === (draft.barangay || state.user?.barangay));
+    const initialBarangay = locations.find((item) => item.name === (draft.barangay || state.user?.barangay)) || locations[0];
+    const initialCoords = (initialBarangay && hasCoordinates(initialBarangay))
+      ? [Number(initialBarangay.latitude), Number(initialBarangay.longitude)]
+      : [7.9111239, 125.0933669];
+
     const map = L.map(mapElement, {
       zoomControl: false,
       minZoom: 11,
       maxZoom: 18,
       maxBounds: [[7.6, 124.8], [8.2, 125.4]],
     }).setView(
-      initialBarangay && hasCoordinates(initialBarangay)
-        ? [Number(initialBarangay.latitude), Number(initialBarangay.longitude)]
-        : [7.9111239, 125.0933669],
+      draft.latitude && draft.longitude
+        ? [Number(draft.latitude), Number(draft.longitude)]
+        : initialCoords,
       14,
     );
     state.reportLocationMap = map;
@@ -571,44 +604,58 @@ async function renderMobileReportForm() {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
-    const setPin = (latitude, longitude) => {
+
+    const setPin = (latitude, longitude, customBarangayName = null) => {
       const lat = Number(latitude);
       const lng = Number(longitude);
       const point = [lat, lng];
       if (state.reportLocationMarker) state.reportLocationMarker.setLatLng(point);
       else state.reportLocationMarker = L.marker(point).addTo(map);
+
       const latitudeInput = document.querySelector('[data-gps="latitude"]');
       const longitudeInput = document.querySelector('[data-gps="longitude"]');
       const locationInput = document.querySelector('input[name="location"]');
       const barangayInput = document.querySelector('input[name="barangay"]');
       const status = document.querySelector('[data-gps="status"]');
+      const badgeName = document.getElementById('assigned-barangay-name');
 
       const latStr = lat.toFixed(6);
       const lngStr = lng.toFixed(6);
       if (latitudeInput) latitudeInput.value = latStr;
       if (longitudeInput) longitudeInput.value = lngStr;
-      if (locationInput) locationInput.value = `${latStr}, ${lngStr}`;
 
       // Automatically detect and assign the nearest Barangay!
-      const nearest = findNearestBarangay(lat, lng, state.barangayLocations);
-      if (nearest && nearest.name) {
-        if (barangayInput) {
-          barangayInput.value = nearest.name;
-          barangayInput.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-        if (state.mobileReportDraft) {
-          state.mobileReportDraft.barangay = nearest.name;
-          state.mobileReportDraft.latitude = latStr;
-          state.mobileReportDraft.longitude = lngStr;
-          state.mobileReportDraft.location = `${latStr}, ${lngStr}`;
-        }
-        if (status) status.innerHTML = `📍 <strong>${nearest.name}</strong> (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-      } else {
-        if (status) status.textContent = `Pin selected: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      let assignedName = customBarangayName;
+      if (!assignedName) {
+        const nearest = findNearestBarangay(lat, lng, state.barangayLocations);
+        if (nearest && nearest.name) assignedName = nearest.name;
+        else assignedName = barangayInput?.value || 'Poblacion';
       }
+
+      const formattedLocation = `Brgy. ${assignedName}, Valencia City (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+
+      if (locationInput) locationInput.value = formattedLocation;
+      if (barangayInput && barangayInput.value !== assignedName) {
+        barangayInput.value = assignedName;
+      }
+      if (badgeName) badgeName.textContent = `Brgy. ${assignedName}`;
+
+      if (state.mobileReportDraft) {
+        state.mobileReportDraft.barangay = assignedName;
+        state.mobileReportDraft.latitude = latStr;
+        state.mobileReportDraft.longitude = lngStr;
+        state.mobileReportDraft.location = formattedLocation;
+      }
+
+      if (status) status.innerHTML = `📍 Assigned: <strong>Brgy. ${escapeHtml(assignedName)}</strong> (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
     };
+
     state.reportLocationSetPin = setPin;
-    if (draft.latitude && draft.longitude) setPin(draft.latitude, draft.longitude);
+    // Always place the pin immediately!
+    const pinLat = draft.latitude ? Number(draft.latitude) : initialCoords[0];
+    const pinLng = draft.longitude ? Number(draft.longitude) : initialCoords[1];
+    setPin(pinLat, pinLng, draft.barangay || initialBarangay?.name);
+
     map.on('click', (event) => setPin(event.latlng.lat, event.latlng.lng));
     window.requestAnimationFrame(() => map.invalidateSize());
   }
