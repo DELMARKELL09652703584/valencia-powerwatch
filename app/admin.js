@@ -4,6 +4,7 @@ const ADMIN_NAV = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'reports', label: 'Reports', roles: STAFF_ROLES },
   { key: 'verification', label: 'Verification', roles: STAFF_ROLES },
+  { key: 'dispatch', label: 'Repair & Dispatch', roles: STAFF_ROLES },
   { key: 'incidents', label: 'Incidents' },
   { key: 'outage-monitoring', label: 'Outage Monitoring', roles: STAFF_ROLES },
   { key: 'map', label: 'Map / GIS', roles: STAFF_ROLES },
@@ -24,6 +25,7 @@ function adminNavIcon(key) {
     dashboard: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"></path>',
     reports: '<path d="M8 4h11a2 2 0 0 1 2 2v14H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1"></path><path d="M8 2v4M9 10h8M9 14h8M9 18h5"></path>',
     verification: '<path d="M12 3 20 6v5c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6z"></path><path d="m8.5 12 2.2 2.2 4.8-5"></path>',
+    dispatch: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path><circle cx="5" cy="19" r="2"></circle>',
     incidents: '<path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"></path><path d="m13 7-3 6h4l-3 5"></path>',
     'outage-monitoring': '<path d="M12 3v2m0 14v2M4.2 6.2l1.4 1.4m12.8 8.8 1.4 1.4M3 12h2m14 0h2M4.2 17.8l1.4-1.4m12.8-8.8 1.4-1.4"></path><circle cx="12" cy="12" r="5"></circle>',
     map: '<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"></path><path d="M9 3v15m6-12v15"></path><circle cx="12" cy="10" r="2"></circle>',
@@ -496,8 +498,10 @@ async function renderAdminVerification() {
         <section class="verification-left-column">
           <div class="verification-report-facts">
             <div><span>Reporter:</span><strong>${escapeHtml(report.reporter_name || 'Unknown reporter')}</strong></div>
-            <div><span>Location:</span><strong>${escapeHtml(report.location || report.affected_area || report.barangay || 'Not provided')}</strong></div>
-            <div><span>Barangay:</span><strong>${escapeHtml(report.barangay || 'Not provided')}</strong></div>
+            <div><span>Barangay:</span><strong>Brgy. ${escapeHtml(report.barangay || 'Not provided')}</strong></div>
+            <div><span>Purok / Area:</span><strong style="color:#0284c7;">📍 ${escapeHtml(report.purok || report.affected_area || 'Specific Purok Not Specified')}</strong></div>
+            <div><span>Coordinates:</span><strong>${report.latitude && report.longitude ? `${Number(report.latitude).toFixed(5)}, ${Number(report.longitude).toFixed(5)}` : 'Approximate Barangay Location'}</strong></div>
+            <div><span>Assigned Crew:</span><strong>${report.assigned_team_name ? `<span style="color:#059669;font-weight:700;">🚛 ${escapeHtml(report.assigned_team_name)}</span> <span style="background:#e0f2fe;color:#0284c7;font-size:0.75rem;padding:2px 7px;border-radius:4px;font-weight:700;margin-left:4px;">${escapeHtml(report.repair_status || 'Dispatched')}</span>` : '<span style="color:#64748b;font-weight:500;">None (Unassigned)</span>'}</strong></div>
             <div><span>Type:</span><strong>${escapeHtml(report.possible_outage_type || 'Power Outage')}</strong></div>
             <div class="description-row"><span>Description:</span><strong>${escapeHtml(report.description || 'No description provided.')}</strong></div>
           </div>
@@ -519,8 +523,16 @@ async function renderAdminVerification() {
         </aside>
       </div>
 
-      <footer class="verification-actions">
+      <footer class="verification-actions" style="flex-wrap:wrap;gap:8px;">
         ${canVerify ? `<button type="button" class="verification-action verify" data-action="verify-report" data-id="${report.id}">${icon('check')}Verify</button>` : ''}
+        <button type="button" class="verification-action" style="background:#0284c7;color:#fff;" data-action="open-assign-repair-modal" data-id="${report.id}">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          ${report.assigned_team_name ? 'Reassign Crew' : 'Assign Repair Team'}
+        </button>
+        ${report.assigned_team_name ? `<button type="button" class="verification-action" style="background:#4f46e5;color:#fff;" data-action="view-crew-route" data-id="${report.id}">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          Track Crew Route
+        </button>` : ''}
         ${canMarkDuplicate ? `<button type="button" class="verification-action duplicate" data-action="verification-duplicate" data-id="${report.id}">${icon('duplicate')}Mark Duplicate</button>` : ''}
         ${canReject ? `<button type="button" class="verification-action reject" data-action="verification-reject" data-id="${report.id}">${icon('reject')}Reject</button>` : ''}
         ${canLinkIncident ? `<button type="button" class="verification-action link-incident" data-action="verification-link-incident" data-id="${report.id}">${icon('link')}Link to Incident</button>` : ''}
@@ -540,6 +552,366 @@ async function renderAdminVerification() {
     } catch {
       if (mapElement?.isConnected) mapElement.innerHTML = '<p class="verification-map-fallback">Map tiles could not be loaded. The report coordinates remain available in the report record.</p>';
     }
+  }
+}
+
+async function renderAdminDispatch() {
+  const [{ teams }, { assignments }, { reports }] = await Promise.all([
+    api('/api/repair-teams'),
+    api('/api/repair/assignments'),
+    api('/api/reports')
+  ]);
+
+  const filter = state.filters.dispatchStatus || '';
+  const search = String(state.filters.dispatchSearch || '').trim().toLowerCase();
+
+  const filteredAssignments = assignments.filter((a) => {
+    const matchesStatus = !filter || (filter === 'Active' ? ['Dispatched', 'En Route', 'Arrived On Site', 'In Progress'].includes(a.status) : a.status === filter);
+    const searchable = [a.assignment_code, a.team_name, a.target_barangay, a.target_purok, a.target_location, a.lead_technician, a.status].join(' ').toLowerCase();
+    return matchesStatus && (!search || searchable.includes(search));
+  });
+
+  const availableTeams = teams.filter((t) => t.status === 'Available');
+  const activeAssignments = assignments.filter((a) => ['Dispatched', 'En Route', 'Arrived On Site', 'In Progress'].includes(a.status));
+  const resolvedAssignments = assignments.filter((a) => a.status === 'Resolved');
+
+  const selectedAssignment = filteredAssignments.find((a) => String(a.id) === String(state.selectedDispatchId))
+    || activeAssignments[0]
+    || filteredAssignments[0];
+  state.selectedDispatchId = selectedAssignment?.id || null;
+
+  const unassignedReports = reports.filter((r) => ['Submitted', 'Under Review', 'Verified', 'In Progress'].includes(r.status) && !r.assigned_team_id);
+
+  const statusBadge = (st) => {
+    if (st === 'En Route') return '<span class="dispatch-badge en-route">🚀 En Route</span>';
+    if (st === 'Arrived On Site') return '<span class="dispatch-badge arrived">📍 Arrived On Site</span>';
+    if (st === 'In Progress') return '<span class="dispatch-badge in-progress">⚡ In Progress</span>';
+    if (st === 'Resolved') return '<span class="dispatch-badge resolved">✅ Resolved</span>';
+    return '<span class="dispatch-badge dispatched">📋 Dispatched</span>';
+  };
+
+  const priorityBadge = (pr) => {
+    if (pr === 'Critical') return '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:800;">🚨 Critical</span>';
+    if (pr === 'High') return '<span style="background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:800;">⚡ High</span>';
+    return '<span style="background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:700;">Normal</span>';
+  };
+
+  const tabs = [
+    ['All Dispatches', '', assignments.length],
+    ['Active Response', 'Active', activeAssignments.length],
+    ['En Route', 'En Route', assignments.filter(a => a.status === 'En Route').length],
+    ['On-Site', 'Arrived On Site', assignments.filter(a => a.status === 'Arrived On Site').length],
+    ['In Progress', 'In Progress', assignments.filter(a => a.status === 'In Progress').length],
+    ['Resolved', 'Resolved', resolvedAssignments.length],
+  ];
+
+  const tabMarkup = tabs.map(([label, val, count]) => `
+    <button type="button" class="verification-tab ${(filter === val || (val === 'Active' && ['Dispatched','En Route','Arrived On Site','In Progress'].includes(filter))) ? 'active' : ''}" data-action="filter-dispatch-status" data-value="${val}">
+      ${label} <span>(${count})</span>
+    </button>
+  `).join('');
+
+  adminShell(`
+    <section class="dispatch-page">
+      <div class="verification-heading-row">
+        <div>
+          <p class="verification-eyebrow">COMMAND CENTER &amp; EMERGENCY RESPONSE</p>
+          <h2>Repair Teams &amp; Dispatch Control</h2>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button type="button" class="button primary" data-action="open-quick-dispatch-modal" style="display:inline-flex;align-items:center;gap:6px;font-weight:750;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            Dispatch Response Crew
+          </button>
+          <button type="button" class="verification-icon-btn" data-action="dispatch-refresh" title="Refresh Live State">⟳</button>
+        </div>
+      </div>
+
+      <div class="dispatch-metrics">
+        <div class="dispatch-stat-card">
+          <span class="dispatch-stat-label">Response Fleet</span>
+          <span class="dispatch-stat-value">${teams.length} Crews</span>
+          <span class="dispatch-stat-sub">${availableTeams.length} Standby / Ready</span>
+        </div>
+        <div class="dispatch-stat-card" style="border-left:4px solid #0284c7;">
+          <span class="dispatch-stat-label">Active Field Dispatches</span>
+          <span class="dispatch-stat-value" style="color:#0284c7;">${activeAssignments.length}</span>
+          <span class="dispatch-stat-sub">Units navigating / working on-site</span>
+        </div>
+        <div class="dispatch-stat-card" style="border-left:4px solid #f59e0b;">
+          <span class="dispatch-stat-label">Pending Outage Reports</span>
+          <span class="dispatch-stat-value" style="color:#f59e0b;">${unassignedReports.length}</span>
+          <span class="dispatch-stat-sub">Citizens awaiting response</span>
+        </div>
+        <div class="dispatch-stat-card" style="border-left:4px solid #10b981;">
+          <span class="dispatch-stat-label">Restored Outages</span>
+          <span class="dispatch-stat-value" style="color:#10b981;">${resolvedAssignments.length}</span>
+          <span class="dispatch-stat-sub">Repaired &amp; closed successfully</span>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #d9e6f1;border-radius:10px;padding:12px 16px;box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <span style="font-size:0.8rem;font-weight:750;color:#1e3a8a;text-transform:uppercase;letter-spacing:0.05em;">🚒 Emergency Response Units Status</span>
+          <span style="font-size:0.75rem;color:#64748b;">Valencia PowerWatch Fleet Monitoring</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:10px;">
+          ${teams.map((t) => {
+            const isAvail = t.status === 'Available';
+            const dotColor = isAvail ? '#10b981' : '#f59e0b';
+            return `
+              <div style="border:1px solid ${isAvail ? '#e2e8f0' : '#bae6fd'};background:${isAvail ? '#f8fafc' : '#f0f9ff'};border-radius:8px;padding:9px 12px;display:flex;flex-direction:column;gap:3px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                  <strong style="font-size:0.85rem;color:#0f172a;">${escapeHtml(t.name)}</strong>
+                  <span style="display:inline-flex;align-items:center;gap:4px;font-size:0.72rem;font-weight:750;color:${isAvail ? '#059669' : '#0369a1'};">
+                    <span style="width:7px;height:7px;border-radius:50%;background:${dotColor};"></span>
+                    ${escapeHtml(t.status)}
+                  </span>
+                </div>
+                <div style="font-size:0.75rem;color:#475569;">
+                  <span>Lead: ${escapeHtml(t.lead_technician)}</span> · <span>${escapeHtml(t.vehicle_type)}</span>
+                </div>
+                <div style="font-size:0.72rem;color:#64748b;">
+                  <span>Base: ${escapeHtml(t.base_station)}</span> · <span>📞 ${escapeHtml(t.contact_number)}</span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="verification-toolbar">
+        <div class="verification-tabs">${tabMarkup}</div>
+        <label class="verification-search">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+          <input type="search" data-filter="dispatchSearch" value="${escapeHtml(state.filters.dispatchSearch || '')}" placeholder="Search crew, barangay, purok, assignment code...">
+        </label>
+      </div>
+
+      <div class="dispatch-work-grid">
+        <div class="dispatch-map-wrap">
+          <div class="dispatch-map-head">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span>🧭</span>
+              <h3>Tactical Dispatch Map &amp; Route Guidance</h3>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              ${selectedAssignment ? `<span style="font-size:0.76rem;background:#dbeafe;color:#1e40af;padding:3px 8px;border-radius:6px;font-weight:700;">Target: Brgy. ${escapeHtml(selectedAssignment.target_barangay)} · ${escapeHtml(selectedAssignment.target_purok || 'Site')}</span>` : ''}
+              <button type="button" class="button ghost small" data-action="reset-dispatch-map" style="font-size:0.74rem;padding:4px 8px;">Center Map</button>
+            </div>
+          </div>
+          <div class="dispatch-map-canvas" id="admin-dispatch-map" aria-label="Interactive tactical map for repair dispatch"></div>
+        </div>
+
+        <div class="dispatch-queue-wrap">
+          ${unassignedReports.length ? `
+            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px;margin-bottom:4px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                <strong style="font-size:0.83rem;color:#92400e;display:flex;align-items:center;gap:6px;">
+                  <span>⚠️</span> Unassigned Verified Reports (${unassignedReports.length})
+                </strong>
+                <span style="font-size:0.72rem;color:#b45309;">Needs Crew Dispatch</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;">
+                ${unassignedReports.slice(0, 4).map((r) => `
+                  <div style="background:#fff;border:1px solid #fef3c7;border-radius:6px;padding:7px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="font-size:0.78rem;line-height:1.3;">
+                      <strong>${escapeHtml(r.report_code)}</strong> · <span>Brgy. ${escapeHtml(r.barangay)}</span>
+                      <div style="color:#0284c7;font-weight:600;">📍 ${escapeHtml(r.purok || r.affected_area || 'Specific Purok Not Specified')}</div>
+                    </div>
+                    <button type="button" class="button small primary" data-action="open-assign-repair-modal" data-id="${r.id}" style="font-size:0.72rem;padding:4px 9px;white-space:nowrap;">
+                      Assign Crew
+                    </button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+            <span style="font-size:0.84rem;font-weight:750;color:#1e3a8a;">Dispatched Deployments (${filteredAssignments.length})</span>
+            <span style="font-size:0.74rem;color:#64748b;">Click card or Navigate to plot live route</span>
+          </div>
+
+          ${filteredAssignments.length ? filteredAssignments.map((a) => {
+            const isSelected = String(a.id) === String(state.selectedDispatchId);
+            const team = teams.find(t => t.id === a.team_id) || {};
+            const attachments = a.attachments || [];
+            if (a.photo_path && !attachments.some(att => att.file_path === a.photo_path)) {
+              attachments.unshift({ file_path: a.photo_path, mime_type: 'image/jpeg', original_name: 'Outage Photo' });
+            }
+
+            return `
+              <article class="dispatch-card ${isSelected ? 'active-target' : ''}" id="assignment-card-${a.id}">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                  <div style="display:flex;align-items:center;gap:7px;">
+                    <strong style="font-family:var(--mono);font-size:0.92rem;color:#0369a1;">${escapeHtml(a.assignment_code)}</strong>
+                    ${priorityBadge(a.priority)}
+                  </div>
+                  ${statusBadge(a.status)}
+                </div>
+
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;display:grid;gap:5px;font-size:0.83rem;">
+                  <div>
+                    <span style="color:#64748b;">Target Location:</span>
+                    <strong style="color:#0f172a;font-size:0.88rem;">Brgy. ${escapeHtml(a.target_barangay || 'Valencia')} · <span style="color:#0284c7;">📍 ${escapeHtml(a.target_purok || a.target_location || 'Area')}</span></strong>
+                  </div>
+                  <div>
+                    <span style="color:#64748b;">GPS Coordinates:</span>
+                    <strong style="font-family:var(--mono);font-size:0.79rem;color:#334155;">${a.target_latitude && a.target_longitude ? `${Number(a.target_latitude).toFixed(5)}, ${Number(a.target_longitude).toFixed(5)}` : 'Approximate'}</strong>
+                  </div>
+                  <div>
+                    <span style="color:#64748b;">Assigned Crew:</span>
+                    <strong style="color:#0369a1;">🚒 ${escapeHtml(a.team_name || team.name || 'Crew')}</strong>
+                    <span style="color:#475569;font-size:0.75rem;"> (Lead: ${escapeHtml(a.lead_technician || team.lead_technician || 'Technician')}, 📞 ${escapeHtml(a.contact_number || team.contact_number || '')})</span>
+                  </div>
+                  ${a.dispatch_notes ? `
+                    <div style="margin-top:2px;font-size:0.78rem;color:#475569;background:#fff;padding:6px 8px;border-radius:5px;border:1px solid #e2e8f0;">
+                      <strong>Notes:</strong> ${escapeHtml(a.dispatch_notes)}
+                    </div>
+                  ` : ''}
+                  ${a.crew_report ? `
+                    <div style="margin-top:2px;font-size:0.78rem;color:#047857;background:#ecfdf5;padding:6px 8px;border-radius:5px;border:1px solid #a7f3d0;">
+                      <strong>Restoration Summary:</strong> ${escapeHtml(a.crew_report)}
+                    </div>
+                  ` : ''}
+                </div>
+
+                ${attachments.length ? `
+                  <div style="display:flex;align-items:center;justify-content:space-between;background:#f0f9ff;border:1px solid #bae6fd;border-radius:7px;padding:6px 10px;">
+                    <div style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:#0369a1;font-weight:650;">
+                      <span>📷</span> <span>Attached Evidence (${attachments.length})</span>
+                    </div>
+                    <button type="button" class="button small ghost" data-action="dispatch-view-evidence" data-id="${a.report_id || a.id}" style="font-size:0.73rem;padding:3px 7px;">
+                      View Photos / Video
+                    </button>
+                  </div>
+                ` : ''}
+
+                <div class="dispatch-actions-bar">
+                  <button type="button" class="dispatch-btn route" data-action="focus-repair-route" data-id="${a.id}" title="Calculate &amp; render road route to site">
+                    🧭 <span>Navigate to Site</span>
+                  </button>
+                  ${a.status === 'Dispatched' ? `
+                    <button type="button" class="dispatch-btn status-step" data-action="dispatch-update-status" data-id="${a.id}" data-status="En Route" style="background:#e0f2fe;color:#0369a1;border-color:#7dd3fc;">
+                      🚀 Mark En Route
+                    </button>
+                  ` : ''}
+                  ${['Dispatched', 'En Route'].includes(a.status) ? `
+                    <button type="button" class="dispatch-btn status-step" data-action="dispatch-update-status" data-id="${a.id}" data-status="Arrived On Site" style="background:#fef3c7;color:#b45309;border-color:#fcd34d;">
+                      📍 Arrived On Site
+                    </button>
+                  ` : ''}
+                  ${['Dispatched', 'En Route', 'Arrived On Site'].includes(a.status) ? `
+                    <button type="button" class="dispatch-btn status-step" data-action="dispatch-update-status" data-id="${a.id}" data-status="In Progress" style="background:#f3e8ff;color:#7e22ce;border-color:#d8b4fe;">
+                      ⚡ In Progress
+                    </button>
+                  ` : ''}
+                  ${a.status !== 'Resolved' ? `
+                    <button type="button" class="dispatch-btn resolve" data-action="dispatch-update-status" data-id="${a.id}" data-status="Resolved">
+                      ✅ Mark Resolved
+                    </button>
+                  ` : ''}
+                </div>
+              </article>
+            `;
+          }).join('') : `
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:32px 16px;text-align:center;color:#64748b;">
+              <span style="font-size:2rem;display:block;margin-bottom:8px;">🚒</span>
+              <strong>No dispatch assignments match this filter.</strong>
+              <p style="font-size:0.8rem;margin:6px 0 0 0;">Select "All Dispatches" or dispatch a repair crew to an open report.</p>
+            </div>
+          `}
+        </div>
+      </div>
+    </section>
+  `);
+
+  await loadAdminMapLibrary();
+  const mapElement = document.getElementById('admin-dispatch-map');
+  if (!mapElement?.isConnected) return;
+
+  const mapCenter = [8.1250, 125.0933];
+  const map = L.map(mapElement, {
+    zoomControl: false,
+    minZoom: 11,
+    maxZoom: 18,
+  }).setView(mapCenter, 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+  state.adminDispatchMap = map;
+
+  teams.forEach((t) => {
+    if (!t.current_latitude || !t.current_longitude) return;
+    const isAvail = t.status === 'Available';
+    const truckIcon = L.divIcon({
+      className: 'crew-truck-marker',
+      html: `<div style="background:${isAvail ? '#059669' : '#0284c7'};color:#fff;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:15px;border:2.5px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.35);" title="${escapeHtml(t.name)}">🚒</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+    L.marker([t.current_latitude, t.current_longitude], { icon: truckIcon })
+      .addTo(map)
+      .bindPopup(`
+        <div style="font-family:sans-serif;font-size:0.83rem;">
+          <strong style="color:#0f172a;font-size:0.9rem;">🚒 ${escapeHtml(t.name)}</strong><br>
+          <span style="color:#64748b;">Vehicle: ${escapeHtml(t.vehicle_type)}</span><br>
+          <span style="color:#64748b;">Lead: ${escapeHtml(t.lead_technician)} (📞 ${escapeHtml(t.contact_number)})</span><br>
+          <span style="color:#64748b;">Base: ${escapeHtml(t.base_station)}</span><br>
+          <div style="margin-top:6px;font-weight:700;color:${isAvail ? '#059669' : '#0284c7'};">Status: ${escapeHtml(t.status)}</div>
+        </div>
+      `);
+  });
+
+  assignments.forEach((a) => {
+    if (!a.target_latitude || !a.target_longitude) return;
+    const isDone = a.status === 'Resolved';
+    const pinIcon = L.divIcon({
+      className: 'outage-target-pin',
+      html: `<div style="background:${isDone ? '#10b981' : '#e11d48'};color:#fff;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:14px;border:2.5px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.35);" title="Target: ${escapeHtml(a.target_barangay)}">⚡</div>`,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    });
+    L.marker([a.target_latitude, a.target_longitude], { icon: pinIcon })
+      .addTo(map)
+      .bindPopup(`
+        <div style="font-family:sans-serif;font-size:0.83rem;">
+          <strong style="color:#b91c1c;">⚡ ${escapeHtml(a.assignment_code)}</strong><br>
+          <strong>Brgy. ${escapeHtml(a.target_barangay)}</strong><br>
+          <span style="color:#0284c7;font-weight:700;">📍 ${escapeHtml(a.target_purok || a.target_location || 'Area')}</span><br>
+          <span style="color:#64748b;">Crew: ${escapeHtml(a.team_name || 'Assigned')}</span><br>
+          <span style="font-weight:700;">Status: ${escapeHtml(a.status)}</span><br>
+          <button type="button" class="button small primary" data-action="focus-repair-route" data-id="${a.id}" style="margin-top:8px;width:100%;font-size:0.75rem;padding:4px 8px;">
+            🧭 Navigate Here
+          </button>
+        </div>
+      `);
+  });
+
+  window.drawDispatchRoute = async (assignmentId) => {
+    const a = assignments.find((item) => String(item.id) === String(assignmentId));
+    if (!a || !a.target_latitude || !a.target_longitude) return;
+    const team = teams.find((t) => t.id === a.team_id);
+    const origin = team && team.current_latitude && team.current_longitude
+      ? { latitude: Number(team.current_latitude), longitude: Number(team.current_longitude), label: `${team.name} (${team.base_station})` }
+      : VALENCIA_HQ_COORDINATES;
+
+    await renderRouteGuideOnMap({
+      map,
+      destLat: Number(a.target_latitude),
+      destLng: Number(a.target_longitude),
+      destLabel: `Brgy. ${a.target_barangay} · ${a.target_purok || 'Incident Site'}`,
+      origin,
+      container: mapElement.parentElement
+    });
+  };
+
+  if (selectedAssignment && selectedAssignment.target_latitude && selectedAssignment.target_longitude) {
+    window.drawDispatchRoute(selectedAssignment.id);
   }
 }
 

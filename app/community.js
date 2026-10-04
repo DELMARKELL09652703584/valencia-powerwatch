@@ -480,13 +480,13 @@ async function renderMobileReportForm() {
   const stepper = `<div class="stepper">${stepNames.map((name, index) => `
     <div class="step ${step === index + 1 ? 'active' : ''} ${step > index + 1 ? 'complete' : ''}"><span class="step-number">${step > index + 1 ? '✓' : index + 1}</span><span>${name}</span></div>
   `).join('')}</div>`;
-  const hidden = ['barangay', 'location', 'affected_area', 'date_time_noticed', 'possible_outage_type', 'description', 'latitude', 'longitude', 'remarks']
+  const hidden = ['barangay', 'location', 'purok', 'affected_area', 'date_time_noticed', 'possible_outage_type', 'description', 'latitude', 'longitude', 'remarks']
     .map((name) => `<input type="hidden" name="${name}" value="${escapeHtml(draft[name] || '')}">`).join('');
   let formBody = '';
 
   if (step === 1) {
     formBody = `<h2>Location</h2>
-      <p class="report-step-hint">Pin the outage on the map or enter its address.</p>
+      <p class="report-step-hint">Pin the outage on the map or enter its exact address and purok.</p>
       <div class="mobile-segments report-location-modes" role="group" aria-label="Location method">
         <button type="button" class="mobile-segment ${locationMode === 'map' ? 'active' : ''}" data-action="set-report-location-mode" data-value="map">Map</button>
         <button type="button" class="mobile-segment ${locationMode === 'address' ? 'active' : ''}" data-action="set-report-location-mode" data-value="address">Address</button>
@@ -507,7 +507,9 @@ async function renderMobileReportForm() {
         <span class="pill pill-ok" style="font-size:0.75rem;font-weight:750;">Valencia City</span>
       </div>
 
-      <label>${locationMode === 'map' ? '📍 Assigned Barangay & Coordinates' : 'Street address or landmark'}<input name="location" value="${escapeHtml(draft.location || '')}" placeholder="${locationMode === 'map' ? 'Tap map or select barangay above' : 'Purok, street, or nearby landmark'}" ${locationMode === 'map' ? 'readonly' : ''} required></label>
+      <label>📍 Specific Purok / Sitio / Landmark (Precise Location)<input name="purok" value="${escapeHtml(draft.purok || draft.affected_area || '')}" placeholder="e.g. Purok 4, Crossing, Near San Agustin Chapel" required></label>
+
+      <label>${locationMode === 'map' ? '📍 Assigned Barangay & Coordinates' : 'Street address / full location'}<input name="location" value="${escapeHtml(draft.location || '')}" placeholder="${locationMode === 'map' ? 'Tap map or select barangay above' : 'Purok, street, or nearby landmark'}" ${locationMode === 'map' ? 'readonly' : ''} required></label>
       <div class="mobile-gps">
         <button type="button" class="button ghost block" data-action="capture-gps">📍 Use current location (GPS)</button>
         <input type="hidden" name="latitude" data-gps="latitude" value="${escapeHtml(draft.latitude || '')}">
@@ -517,7 +519,7 @@ async function renderMobileReportForm() {
       <button type="button" class="button primary block" data-action="next-report-step">Next</button>`;
   } else if (step === 2) {
     formBody = `<h2>Interruption Details</h2>
-      <label>Affected area<input name="affected_area" value="${escapeHtml(draft.affected_area || '')}" placeholder="Nearby streets or sitios"></label>
+      <label>Affected area / Purok note<input name="affected_area" value="${escapeHtml(draft.affected_area || draft.purok || '')}" placeholder="Nearby streets, purok, or sitios"></label>
       <label>Date and time noticed<input type="datetime-local" name="date_time_noticed" value="${escapeHtml(draft.date_time_noticed || toLocalInputValue(new Date()))}" required></label>
       <label>Interruption type<select name="possible_outage_type"><option value="">Select a type</option>${types.map((type) => `<option ${draft.possible_outage_type === type ? 'selected' : ''}>${escapeHtml(type)}</option>`).join('')}</select></label>
       <label>Description<textarea name="description" rows="4" placeholder="Describe what happened" required>${escapeHtml(draft.description || '')}</textarea></label>
@@ -546,7 +548,8 @@ async function renderMobileReportForm() {
       <div class="review-list">
         <div class="review-item"><span class="review-label">Interruption Type</span><span class="review-value">${escapeHtml(draft.possible_outage_type || 'Power interruption')}</span></div>
         <div class="review-item"><span class="review-label">Barangay</span><span class="review-value">${escapeHtml(draft.barangay || '')}</span></div>
-        <div class="review-item"><span class="review-label">Location</span><span class="review-value">${escapeHtml(draft.location || '')}</span></div>
+        <div class="review-item"><span class="review-label">Purok / Area</span><span class="review-value">${escapeHtml(draft.purok || draft.affected_area || 'Not specified')}</span></div>
+        <div class="review-item"><span class="review-label">GPS Location</span><span class="review-value">${draft.latitude && draft.longitude ? `(${Number(draft.latitude).toFixed(5)}, ${Number(draft.longitude).toFixed(5)})` : escapeHtml(draft.location || '')}</span></div>
         <div class="review-item"><span class="review-label">Date &amp; Time</span><span class="review-value">${escapeHtml(draft.date_time_noticed || '')}</span></div>
         <div class="review-item"><span class="review-label">Description</span><span class="review-value">${escapeHtml(draft.description || '')}</span></div>
         ${attachments.length ? `<div class="report-attachment-previews">${attachments.map((attachment) => attachment.type.startsWith('video/')
@@ -996,11 +999,12 @@ async function renderMobileReportDetail() {
 }
 
 async function renderMobileMap() {
-  const [{ incidents }, { scheduled }, { barangays: barangayLocations }, { reports }] = await Promise.all([
+  const [{ incidents }, { scheduled }, { barangays: barangayLocations }, { reports = [] }, { reports: myReports = [] }] = await Promise.all([
     api('/api/incidents'),
     api('/api/scheduled/upcoming'),
     api('/api/barangays/locations'),
-    api('/api/reports').catch(() => ({ reports: [] })),
+    api('/api/reports/map').catch(() => ({ reports: [] })),
+    api('/api/reports/mine').catch(() => ({ reports: [] })),
   ]);
   const isHeatmap = state.mobileMapMode === 'heat';
   const isSatellite = state.mobileMapLayer === 'satellite';
@@ -1032,14 +1036,15 @@ async function renderMobileMap() {
       <span style="font-size:0.72rem;color:#64748b;">(Cool → Hot)</span>
     </div>
   ` : `
-    <div class="mobile-map-legend">
-      <span><i class="legend-dot red"></i>Active outage</span>
+    <div class="mobile-map-legend" style="display:flex;flex-wrap:wrap;gap:8px 12px;font-size:0.75rem;">
+      <span><i class="legend-dot red"></i>Active Incident</span>
+      <span><i class="legend-dot orange"></i>My Report / Submitted</span>
       <span><i class="legend-dot blue"></i>Scheduled</span>
     </div>
   `;
 
   mobileShell(`
-    ${mobileHero('Power Outage Map', 'Explore active interruptions and scheduled maintenance in Valencia City.')}
+    ${mobileHero('Power Outage Map', 'Explore active interruptions, your submitted reports, and maintenance across Valencia City.')}
 
     <div class="mobile-map-controls" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
       <div class="mobile-segments" role="group" aria-label="Map display mode" style="flex:1;min-width:180px;margin-bottom:0;">
@@ -1053,6 +1058,39 @@ async function renderMobileMap() {
     </div>
     ${legendMarkup}
     <div class="community-map" id="community-map" aria-label="Map of Valencia City outages"></div>
+
+    ${myReports.length ? `
+    <section class="mobile-card" style="border:1.5px solid #fed7aa;background:#fffaf5;">
+      <header class="mobile-card-head" style="border-bottom:1px solid #ffedd5;">
+        <h2 style="color:#c2410c;">📌 My Submitted Reports (${myReports.length})</h2>
+        <button class="link-button" data-mobile-tab="reports">View all</button>
+      </header>
+      <div class="mobile-card-body">
+        ${myReports.map((item) => {
+          const coords = coordinatesFor(item);
+          const isDispatched = item.repair_status && item.repair_status !== 'Pending Assignment';
+          return `
+            <div class="mobile-list-item" style="flex-wrap:wrap;gap:8px;padding:12px 10px;border-bottom:1px solid #ffedd5;">
+              <div class="mobile-list-main" style="flex:1;min-width:180px;">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                  <strong style="color:#ea580c;font-size:0.92rem;">${escapeHtml(item.report_code)}</strong>
+                  <span class="pill pill-neutral" style="font-size:0.7rem;">${escapeHtml(item.possible_outage_type || 'Power Outage')}</span>
+                </div>
+                <div style="font-size:0.83rem;color:#334155;">📍 <strong>Brgy. ${escapeHtml(item.barangay)}</strong>${item.purok ? ` · <span style="color:#0284c7;font-weight:600;">${escapeHtml(item.purok)}</span>` : ''}</div>
+                ${isDispatched ? `<div style="font-size:0.78rem;color:#0284c7;font-weight:700;margin-top:2px;">🛠️ Crew: ${escapeHtml(item.assigned_team_name || 'Assigned')} (${escapeHtml(item.repair_status)})</div>` : ''}
+              </div>
+              ${statusPill(item.status)}
+              <div style="display:flex;gap:6px;width:100%;margin-top:6px;">
+                <button type="button" class="button ghost small" data-action="view-report-details" data-id="${item.id}">Details ›</button>
+                ${coords ? `<button type="button" class="button small" data-action="focus-community-map" data-lat="${coords[0]}" data-lng="${coords[1]}" style="background:#ea580c;color:#fff;border-radius:8px;font-weight:600;">📍 Focus on Map</button>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </section>
+    ` : ''}
+
     <section class="mobile-card"><header class="mobile-card-head"><h2>Active Outages</h2><button class="link-button" data-mobile-tab="outages">View all</button></header>
       <div class="mobile-card-body">${incidents.length ? incidents.map((incident) => {
         const coords = coordinatesFor(incident);
@@ -1125,6 +1163,7 @@ async function renderMobileMap() {
       if (coords) heatPoints.push([coords[0], coords[1], intensity]);
     };
     incidents.forEach((i) => addHeat(i, 1.0));
+    myReports.forEach((r) => addHeat(r, 0.85));
     (reports || []).forEach((r) => addHeat(r, 0.7));
     scheduled.forEach((s) => addHeat(s, 0.35));
     if (typeof L.heatLayer === 'function' && heatPoints.length) {
@@ -1144,6 +1183,100 @@ async function renderMobileMap() {
       }).addTo(map);
     }
   } else {
+    // 1. Plot user's own reports with prominent amber/orange markers
+    myReports.forEach((myRep) => {
+      const coordinates = coordinatesFor(myRep);
+      if (!coordinates) return;
+      const isResolved = myRep.status === 'Resolved';
+      const isProgress = myRep.status === 'In Progress' || ['Team Dispatched', 'En Route', 'Arrived On Site', 'In Progress'].includes(myRep.repair_status);
+      const markerColor = isResolved ? '#16a34a' : isProgress ? '#f59e0b' : '#ea580c';
+
+      const myPopupHtml = `
+        <div class="map-popup-card">
+          <div class="map-popup-header">
+            <span class="map-popup-code" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;">📌 MY REPORT</span>
+            <span class="map-popup-badge" style="background:#fff7ed;color:#c2410c;border:1px solid #ffedd5;">${escapeHtml(myRep.status)}</span>
+          </div>
+          <h4 class="map-popup-title">📍 ${escapeHtml(myRep.report_code)} · ${escapeHtml(myRep.possible_outage_type || 'Power Outage')}</h4>
+          <div class="map-popup-meta">
+            <div class="map-popup-row">
+              <span class="map-popup-icon">🏛️</span>
+              <span><strong>Brgy. ${escapeHtml(myRep.barangay || 'Valencia City')}</strong></span>
+            </div>
+            ${myRep.purok || myRep.affected_area ? `
+            <div class="map-popup-row">
+              <span class="map-popup-icon">📍</span>
+              <span>Purok/Area: <strong style="color:#0284c7;">${escapeHtml(myRep.purok || myRep.affected_area)}</strong></span>
+            </div>` : ''}
+            <div class="map-popup-row">
+              <span class="map-popup-icon">🛠️</span>
+              <span>Repair Status: <strong style="color:${isProgress ? '#d97706' : isResolved ? '#16a34a' : '#64748b'};">${escapeHtml(myRep.repair_status || 'Pending Assignment')}</strong></span>
+            </div>
+            ${myRep.assigned_team_name ? `
+            <div class="map-popup-row">
+              <span class="map-popup-icon">🚚</span>
+              <span>Assigned Crew: <strong style="color:#2563eb;">${escapeHtml(myRep.assigned_team_name)}</strong></span>
+            </div>` : ''}
+            <div class="map-popup-row">
+              <span class="map-popup-icon">🕒</span>
+              <span>Reported: ${escapeHtml(formatDate(myRep.reported_at))}</span>
+            </div>
+          </div>
+          <button type="button" class="map-popup-btn" style="background:#ea580c;color:#fff;" data-action="view-report-details" data-id="${myRep.id}">Track My Report Details ›</button>
+        </div>
+      `;
+
+      L.circleMarker(coordinates, {
+        radius: 11,
+        color: '#ffffff',
+        fillColor: markerColor,
+        fillOpacity: 1.0,
+        weight: 3.5,
+      }).addTo(map).bindPopup(myPopupHtml, { maxWidth: 290 });
+    });
+
+    // 2. Plot community reports not in user's reports
+    (reports || []).filter((r) => !myReports.some((m) => m.id === r.id)).forEach((rep) => {
+      const coordinates = coordinatesFor(rep);
+      if (!coordinates) return;
+      const isProgress = rep.status === 'In Progress' || ['Team Dispatched', 'En Route', 'Arrived On Site'].includes(rep.repair_status);
+      const markerColor = isProgress ? '#f59e0b' : '#f97316';
+
+      const repPopupHtml = `
+        <div class="map-popup-card">
+          <div class="map-popup-header">
+            <span class="map-popup-code">${escapeHtml(rep.report_code)}</span>
+            <span class="map-popup-badge" style="background:#fff7ed;color:#ea580c;border:1px solid #fdba74;">${escapeHtml(rep.status)}</span>
+          </div>
+          <h4 class="map-popup-title">⚡ ${escapeHtml(rep.possible_outage_type || 'Reported Outage')}</h4>
+          <div class="map-popup-meta">
+            <div class="map-popup-row">
+              <span class="map-popup-icon">📍</span>
+              <span><strong>Brgy. ${escapeHtml(rep.barangay || 'Valencia')}</strong>${rep.purok ? ` · ${escapeHtml(rep.purok)}` : ''}</span>
+            </div>
+            ${rep.assigned_team_name ? `
+            <div class="map-popup-row">
+              <span class="map-popup-icon">🛠️</span>
+              <span>Crew: <strong style="color:#0284c7;">${escapeHtml(rep.assigned_team_name)}</strong></span>
+            </div>` : ''}
+            <div class="map-popup-row">
+              <span class="map-popup-icon">🔄</span>
+              <span>Status: <strong>${escapeHtml(rep.repair_status || rep.status)}</strong></span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      L.circleMarker(coordinates, {
+        radius: 8,
+        color: '#ffffff',
+        fillColor: markerColor,
+        fillOpacity: 0.9,
+        weight: 2,
+      }).addTo(map).bindPopup(repPopupHtml, { maxWidth: 270 });
+    });
+
+    // 3. Plot active incidents
     incidents.forEach((incident) => {
       const coordinates = coordinatesFor(incident);
       if (!coordinates) return;
@@ -1184,6 +1317,7 @@ async function renderMobileMap() {
       }).addTo(map).bindPopup(popupHtml, { maxWidth: 280 });
     });
 
+    // 4. Plot scheduled outages
     scheduled.forEach((item) => {
       const coordinates = coordinatesFor(item);
       if (!coordinates) return;

@@ -242,6 +242,7 @@ const ADMIN_PAGES = IS_ADMIN ? {
   dashboard: renderAdminDashboard,
   reports: renderAdminReports,
   verification: renderAdminVerification,
+  dispatch: renderAdminDispatch,
   incidents: renderAdminIncidents,
   'outage-monitoring': renderAdminOutageMonitoring,
   scheduled: renderAdminScheduled,
@@ -466,6 +467,23 @@ async function submitForm(form) {
     await render();
     return;
   }
+  if (type === 'assign-repair-crew') {
+    const reportId = values.report_id ? Number(values.report_id) : null;
+    const incidentId = values.incident_id ? Number(values.incident_id) : null;
+    const teamId = Number(values.team_id);
+    if (!teamId) throw new Error('Please select a repair crew to dispatch.');
+    await send('/api/repair/assign', 'POST', {
+      team_id: teamId,
+      report_id: reportId,
+      incident_id: incidentId,
+      priority: values.priority || 'High',
+      dispatch_notes: values.dispatch_notes || ''
+    });
+    closeDialog();
+    setToast('🚀 Repair team successfully dispatched! Citizen notified via SMS & App.');
+    await render();
+    return;
+  }
   if (type === 'report') {
     const reportFormData = new FormData();
     const reportValues = {
@@ -473,9 +491,10 @@ async function submitForm(form) {
       latitude: values.latitude === '' ? null : Number(values.latitude),
       longitude: values.longitude === '' ? null : Number(values.longitude),
       barangay: values.barangay,
+      purok: values.purok || values.affected_area || null,
       date_time_noticed: values.date_time_noticed ? new Date(values.date_time_noticed).toISOString() : null,
       description: values.description,
-      affected_area: values.affected_area,
+      affected_area: values.affected_area || values.purok || null,
       possible_outage_type: values.possible_outage_type || null,
       remarks: values.remarks,
     };
@@ -1610,6 +1629,172 @@ async function handleClick(event) {
           </div>`, 'Link report', { form: 'verification-link-incident', id });
         return;
       }
+      case 'open-assign-repair-modal': {
+        const reportId = id;
+        const [{ report }, { teams }] = await Promise.all([
+          api(`/api/reports/${reportId}`),
+          api('/api/repair-teams')
+        ]);
+        
+        const teamOptions = teams.map((team) => {
+          const isAvail = team.status === 'Available';
+          const statusBadge = isAvail ? '🟢 [Ready]' : `🟠 [${team.status}]`;
+          return `<option value="${team.id}" ${team.id === report.assigned_team_id ? 'selected' : ''}>
+            ${escapeHtml(team.name)} · ${escapeHtml(team.vehicle_type)} ${statusBadge} (Lead: ${escapeHtml(team.lead_technician)})
+          </option>`;
+        }).join('');
+
+        openDialog(`🚒 Dispatch Repair Crew — ${escapeHtml(report.report_code)}`, `
+          <div class="form-stack">
+            <input type="hidden" name="report_id" value="${report.id}">
+            <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px;margin-bottom:8px;">
+              <p style="margin:0 0 6px 0;font-size:0.86rem;font-weight:700;color:#0369a1;">📍 Incident Location &amp; Details</p>
+              <div style="font-size:0.83rem;color:#1e293b;line-height:1.5;">
+                <div><strong>Barangay:</strong> Brgy. ${escapeHtml(report.barangay || 'Valencia City')}</div>
+                <div><strong>Purok / Specific Area:</strong> <span style="color:#0284c7;font-weight:700;">📍 ${escapeHtml(report.purok || report.affected_area || 'Not specified')}</span></div>
+                <div><strong>Exact Coordinates:</strong> ${report.latitude && report.longitude ? `${Number(report.latitude).toFixed(5)}, ${Number(report.longitude).toFixed(5)}` : 'Approximate'}</div>
+                <div><strong>Problem Type:</strong> ${escapeHtml(report.possible_outage_type || 'Power Outage')}</div>
+              </div>
+            </div>
+
+            <label class="wide-field">
+              <span>Select Emergency Response Crew <strong style="color:#ef4444;">*</strong></span>
+              <select class="input" name="team_id" required>
+                <option value="">-- Choose Emergency Crew --</option>
+                ${teamOptions}
+              </select>
+            </label>
+
+            <label class="wide-field">
+              <span>Dispatch Priority</span>
+              <select class="input" name="priority">
+                <option value="High" selected>⚡ High Priority (Standard Emergency Outage)</option>
+                <option value="Critical">🚨 Critical Priority (Hospital / Water / Substation / Live Wire)</option>
+                <option value="Normal">Normal Priority (Minor Feeder / Service Line)</option>
+              </select>
+            </label>
+
+            <label class="wide-field">
+              <span>Technical Notes / Crew Instructions</span>
+              <textarea class="input" name="dispatch_notes" rows="3" placeholder="e.g. Broken crossarm and severed wire along Purok 2. Coordinate with local Barangay Tanod upon arrival.">${report.description ? 'Resident Note: ' + escapeHtml(report.description) : ''}</textarea>
+            </label>
+          </div>
+        `, '🚀 Dispatch Crew to Site', { form: 'assign-repair-crew', id: report.id });
+        return;
+      }
+      case 'open-quick-dispatch-modal': {
+        const [{ teams }, { reports }] = await Promise.all([
+          api('/api/repair-teams'),
+          api('/api/reports')
+        ]);
+        const teamOptions = teams.map((t) => `<option value="${t.id}">${escapeHtml(t.name)} · ${escapeHtml(t.vehicle_type)} (${escapeHtml(t.status)})</option>`).join('');
+        const openReports = reports.filter((r) => ['Submitted', 'Under Review', 'Verified', 'In Progress'].includes(r.status));
+        const reportOptions = openReports.map((r) => `<option value="${r.id}">${escapeHtml(r.report_code)} — Brgy. ${escapeHtml(r.barangay)} (${escapeHtml(r.purok || r.affected_area || 'Site')})</option>`).join('');
+
+        openDialog('🚀 Dispatch Response Unit', `
+          <div class="form-stack">
+            <label class="wide-field">
+              <span>Target Incident / Outage Report <strong style="color:#ef4444;">*</strong></span>
+              <select class="input" name="report_id" required>
+                <option value="">-- Select Outage Report --</option>
+                ${reportOptions}
+              </select>
+            </label>
+            <label class="wide-field">
+              <span>Response Crew <strong style="color:#ef4444;">*</strong></span>
+              <select class="input" name="team_id" required>
+                <option value="">-- Select Response Crew --</option>
+                ${teamOptions}
+              </select>
+            </label>
+            <label class="wide-field">
+              <span>Priority</span>
+              <select class="input" name="priority">
+                <option value="High" selected>⚡ High Priority</option>
+                <option value="Critical">🚨 Critical Priority</option>
+                <option value="Normal">Normal Priority</option>
+              </select>
+            </label>
+            <label class="wide-field">
+              <span>Instructions</span>
+              <textarea class="input" name="dispatch_notes" rows="2" placeholder="Instructions for emergency crew..."></textarea>
+            </label>
+          </div>
+        `, 'Dispatch Crew', { form: 'assign-repair-crew' });
+        return;
+      }
+      case 'dispatch-update-status': {
+        const assignmentId = id;
+        const newStatus = actionButton.dataset.status;
+        if (!assignmentId || !newStatus) return;
+
+        let crewReport = '';
+        if (newStatus === 'Resolved') {
+          crewReport = prompt('Restoration summary / crew notes (optional):') || 'Power successfully restored to affected area.';
+        }
+
+        await send(`/api/repair/assignments/${assignmentId}/status`, 'PUT', {
+          status: newStatus,
+          crew_report: crewReport
+        });
+        setToast(`⚡ Repair status updated to: ${newStatus}. User notification & SMS sent.`);
+        await render();
+        return;
+      }
+      case 'focus-repair-route': {
+        state.selectedDispatchId = id;
+        if (state.page !== 'dispatch') {
+          state.page = 'dispatch';
+          await render();
+        } else {
+          const card = document.getElementById(`assignment-card-${id}`);
+          if (card) {
+            document.querySelectorAll('.dispatch-card').forEach((c) => c.classList.remove('active-target'));
+            card.classList.add('active-target');
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+          if (typeof window.drawDispatchRoute === 'function') {
+            await window.drawDispatchRoute(id);
+          }
+        }
+        return;
+      }
+      case 'view-crew-route': {
+        try {
+          const { assignments } = await api('/api/repair/assignments');
+          const matching = assignments.find((a) => String(a.report_id) === String(id));
+          if (matching) state.selectedDispatchId = matching.id;
+        } catch (e) {}
+        state.page = 'dispatch';
+        await render();
+        return;
+      }
+      case 'dispatch-view-evidence': {
+        const { report } = await api(`/api/reports/${id}`);
+        const attachments = [...(report.attachments || [])];
+        if (report.photo_path && !attachments.some((attachment) => attachment.file_path === report.photo_path)) {
+          attachments.unshift({ file_path: report.photo_path, mime_type: 'image/jpeg', original_name: 'Report photo' });
+        }
+        const media = attachments.map((attachment) => String(attachment.mime_type || '').startsWith('video/')
+          ? `<figure><video src="${escapeHtml(attachment.file_path)}" controls preload="metadata"></video><figcaption>${escapeHtml(attachment.original_name || 'Video evidence')}</figcaption></figure>`
+          : `<figure><a href="${escapeHtml(attachment.file_path)}" target="_blank" rel="noopener"><img src="${escapeHtml(attachment.file_path)}" alt="${escapeHtml(attachment.original_name || 'Report evidence')}"></a><figcaption>${escapeHtml(attachment.original_name || 'Photo evidence')}</figcaption></figure>`).join('');
+        openDialog(`Evidence · ${report.report_code} (${escapeHtml(report.purok || report.barangay)})`, media ? `<div class="verification-evidence-dialog">${media}</div>` : '<p>No evidence attachments were submitted with this report.</p>', 'Close');
+        setDialogFooter('<button type="button" class="button ghost" data-action="close-dialog">Close</button>');
+        return;
+      }
+      case 'filter-dispatch-status':
+        state.filters.dispatchStatus = value;
+        await render();
+        return;
+      case 'dispatch-refresh':
+        await render();
+        setToast('Dispatch and fleet state refreshed.');
+        return;
+      case 'reset-dispatch-map':
+        if (state.adminDispatchMap) {
+          state.adminDispatchMap.setView([8.1250, 125.0933], 13);
+        }
+        return;
       case 'admin-outage-view':
         state.adminOutageView = value;
         await render();

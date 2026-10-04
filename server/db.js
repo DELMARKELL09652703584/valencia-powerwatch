@@ -226,6 +226,43 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS repair_teams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_code TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    lead_technician TEXT NOT NULL,
+    contact_number TEXT,
+    vehicle_type TEXT,
+    base_station TEXT DEFAULT 'Central Substation, Sayre Highway',
+    current_latitude REAL DEFAULT 7.9064,
+    current_longitude REAL DEFAULT 125.0941,
+    status TEXT NOT NULL DEFAULT 'Available',
+    active_assignment_id INTEGER,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS repair_assignments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    assignment_code TEXT UNIQUE NOT NULL,
+    team_id INTEGER NOT NULL REFERENCES repair_teams(id),
+    report_id INTEGER REFERENCES outage_reports(id),
+    incident_id INTEGER REFERENCES outage_incidents(id),
+    assigned_by INTEGER NOT NULL REFERENCES users(id),
+    status TEXT NOT NULL DEFAULT 'Dispatched',
+    priority TEXT DEFAULT 'High',
+    target_barangay TEXT NOT NULL,
+    target_purok TEXT,
+    target_location TEXT,
+    target_latitude REAL,
+    target_longitude REAL,
+    dispatch_notes TEXT,
+    crew_report TEXT,
+    dispatched_at TEXT NOT NULL,
+    arrived_at TEXT,
+    completed_at TEXT,
+    updated_at TEXT NOT NULL
+  );
 `);
 
 db.exec(`
@@ -241,6 +278,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_feedback_report ON citizen_feedback(report_id);
   CREATE INDEX IF NOT EXISTS idx_feedback_incident ON citizen_feedback(incident_id);
   CREATE INDEX IF NOT EXISTS idx_sms_logs_created ON sms_logs(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_repair_assignments_team ON repair_assignments(team_id);
+  CREATE INDEX IF NOT EXISTS idx_repair_assignments_status ON repair_assignments(status);
 `);
 
 const ensureColumn = (table, column, definition) => {
@@ -259,9 +298,17 @@ ensureColumn('users', 'preferred_language', "TEXT DEFAULT 'en'");
 ensureColumn('announcements', 'image_path', 'TEXT');
 ensureColumn('outage_reports', 'latitude', 'REAL');
 ensureColumn('outage_reports', 'longitude', 'REAL');
+ensureColumn('outage_reports', 'purok', 'TEXT');
+ensureColumn('outage_reports', 'assigned_team_id', 'INTEGER');
+ensureColumn('outage_reports', 'assigned_team_name', 'TEXT');
+ensureColumn('outage_reports', 'repair_status', "TEXT DEFAULT 'Pending Assignment'");
 ensureColumn('outage_reports', 'estimated_restoration', 'TEXT');
 ensureColumn('outage_incidents', 'latitude', 'REAL');
 ensureColumn('outage_incidents', 'longitude', 'REAL');
+ensureColumn('outage_incidents', 'purok', 'TEXT');
+ensureColumn('outage_incidents', 'assigned_team_id', 'INTEGER');
+ensureColumn('outage_incidents', 'assigned_team_name', 'TEXT');
+ensureColumn('outage_incidents', 'repair_status', "TEXT DEFAULT 'Pending Assignment'");
 ensureColumn('outage_incidents', 'outage_type', 'TEXT');
 ensureColumn('outage_incidents', 'priority', "TEXT NOT NULL DEFAULT 'Medium'");
 ensureColumn('outage_incidents', 'customers_affected', 'INTEGER');
@@ -537,12 +584,79 @@ const ensureAdminAccount = () => {
   checkpointDb();
 };
 
+const seedRepairTeams = () => {
+  try {
+    const count = db.prepare('SELECT COUNT(*) AS total FROM repair_teams').get()?.total || 0;
+    if (count === 0) {
+      const teams = [
+        {
+          team_code: 'TEAM-01',
+          name: 'Alpha Quick Response Unit',
+          lead_technician: 'Engr. Carlos Mendoza',
+          contact_number: '0917-889-1234',
+          vehicle_type: 'FIBECO Heavy Boom Truck #01',
+          base_station: 'Central Substation, Sayre Highway',
+          current_latitude: 7.9064,
+          current_longitude: 125.0941,
+          status: 'Available'
+        },
+        {
+          team_code: 'TEAM-02',
+          name: 'Bravo Overhead Line Squad',
+          lead_technician: 'Foreman Arnel Guingona',
+          contact_number: '0917-889-5678',
+          vehicle_type: 'Utility Line Rig #02',
+          base_station: 'Poblacion Operations Base, Valencia',
+          current_latitude: 7.9045,
+          current_longitude: 125.0912,
+          status: 'Available'
+        },
+        {
+          team_code: 'TEAM-03',
+          name: 'Charlie Transformer & Substation Team',
+          lead_technician: 'Engr. Reynante Silva',
+          contact_number: '0917-889-9012',
+          vehicle_type: 'Heavy Service Rig #05',
+          base_station: 'Valencia Central Switchyard',
+          current_latitude: 7.9152,
+          current_longitude: 125.0988,
+          status: 'Available'
+        },
+        {
+          team_code: 'TEAM-04',
+          name: 'Delta Emergency Rescue Unit',
+          lead_technician: 'Supervisor Jason Tan',
+          contact_number: '0917-889-3456',
+          vehicle_type: 'Rapid Response Pickup #04',
+          base_station: 'Bagontaas Auxiliary Outpost',
+          current_latitude: 7.9304,
+          current_longitude: 125.1077,
+          status: 'Available'
+        }
+      ];
+
+      const stmt = db.prepare(`
+        INSERT INTO repair_teams (team_code, name, lead_technician, contact_number, vehicle_type, base_station, current_latitude, current_longitude, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      for (const t of teams) {
+        stmt.run(t.team_code, t.name, t.lead_technician, t.contact_number, t.vehicle_type, t.base_station, t.current_latitude, t.current_longitude, t.status, now());
+      }
+    }
+  } catch (err) {
+    console.error('Error seeding repair teams:', err);
+  }
+};
+
 seedIfFresh();
 ensureAdminAccount();
+seedRepairTeams();
 checkpointDb();
 
 module.exports = {
   ensureAdminAccount,
+  seedRepairTeams,
   checkpointDb,
   db,
   ROOT,

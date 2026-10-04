@@ -16,6 +16,7 @@ const historyRoutes = require('./routes/history');
 const analyticsRoutes = require('./routes/analytics');
 const adminRoutes = require('./routes/admin');
 const feedbackRoutes = require('./routes/feedback');
+const repairRoutes = require('./routes/repair');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -47,6 +48,7 @@ app.use('/api', authRoutes);
 app.use('/api', identityRoutes);
 app.use('/api', reportRoutes);
 app.use('/api', incidentRoutes);
+app.use('/api', repairRoutes);
 app.use('/api/scheduled', scheduledRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/notifications', notificationRoutes);

@@ -86,7 +86,7 @@ const savePhoto = async (photoData) => {
 
 // Resident submits an outage report
 router.post('/reports', requireAuth, requireRole('resident'), parseReportAttachments, async (req, res, next) => {
-  const { location, latitude, longitude, barangay, date_time_noticed, description, affected_area, possible_outage_type, photoData, remarks } = req.body || {};
+  const { location, latitude, longitude, barangay, date_time_noticed, description, affected_area, possible_outage_type, photoData, remarks, purok } = req.body || {};
 
   if (!barangay) return res.status(400).json({ error: 'Barangay is required.' });
   if (!description || !String(description).trim()) return res.status(400).json({ error: 'Please describe the interruption.' });
@@ -110,13 +110,14 @@ router.post('/reports', requireAuth, requireRole('resident'), parseReportAttachm
 
   const code = nextCode('VPR');
   const reportedAt = now();
+  const finalPurok = String(purok || affected_area || '').trim() || null;
   const info = db.prepare(`
-    INSERT INTO outage_reports (report_code, reporter_id, location, latitude, longitude, barangay, date_time_noticed, description, affected_area,
-      possible_outage_type, photo_path, remarks, status, verification_status, reported_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Submitted', 'Pending', ?, ?)
+    INSERT INTO outage_reports (report_code, reporter_id, location, latitude, longitude, barangay, purok, date_time_noticed, description, affected_area,
+      possible_outage_type, photo_path, remarks, status, verification_status, repair_status, reported_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Submitted', 'Pending', 'Pending Assignment', ?, ?)
   `).run(
-    code, req.user.id, location || null, latitude ?? null, longitude ?? null, barangay, date_time_noticed, String(description).trim(),
-    affected_area || null, possible_outage_type || null, photoPath, remarks || null, reportedAt, reportedAt
+    code, req.user.id, location || null, latitude ?? null, longitude ?? null, barangay, finalPurok, date_time_noticed, String(description).trim(),
+    affected_area || finalPurok, possible_outage_type || null, photoPath, remarks || null, reportedAt, reportedAt
   );
 
   const reportId = Number(info.lastInsertRowid);
@@ -137,6 +138,21 @@ router.post('/reports', requireAuth, requireRole('resident'), parseReportAttachm
   notifyRole('administrator', 'New outage report', `Report ${code} in ${barangay} requires review.`, 'report');
 
   res.status(201).json({ report: reportDetailRow(reportId), message: 'Report submitted successfully. It is now pending review.' });
+});
+
+// Active community outage reports for Map display (all authenticated roles)
+router.get('/reports/map', requireAuth, (req, res) => {
+  const rows = db.prepare(`
+    SELECT r.id, r.report_code, r.barangay, r.purok, r.location, r.affected_area,
+           r.latitude, r.longitude, r.possible_outage_type, r.description,
+           r.status, r.verification_status, r.repair_status, r.assigned_team_name,
+           r.reported_at, r.reporter_id,
+           (SELECT COUNT(*) FROM report_attachments a WHERE a.report_id = r.id) AS attachments_count
+    FROM outage_reports r
+    WHERE r.status NOT IN ('Rejected', 'Duplicate', 'Resolved')
+    ORDER BY r.reported_at DESC
+  `).all();
+  res.json({ reports: rows });
 });
 
 // Staff/admin/utility view report queue with filters
