@@ -100,7 +100,7 @@ app.get('/sw.js', (req, res) => {
   res.sendFile(path.join(ROOT, 'sw.js'));
 });
 app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(ROOT, 'admin.html')));
-app.get(['/community', '/community.html'], (req, res) => res.sendFile(path.join(ROOT, 'community.html')));
+app.get(['/user', '/user.html', '/citizen', '/citizen.html', '/community', '/community.html'], (req, res) => res.sendFile(path.join(ROOT, 'community.html')));
 app.get(['/auth/oauth-dialog', '/auth/oauth-popup'], (req, res) => res.sendFile(path.join(ROOT, 'oauth-dialog.html')));
 app.get(['/style.css', '/community/style.css', '/admin/style.css', '/install/style.css'], (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, must-revalidate');
@@ -114,7 +114,7 @@ app.use(['/app', '/community/app', '/admin/app', '/install/app'], express.static
   setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache, must-revalidate')
 }));
 app.use(express.static(ROOT));
-app.get('/', (req, res) => res.sendFile(path.join(ROOT, 'index.html')));
+app.get('/', (req, res) => res.sendFile(path.join(ROOT, 'community.html')));
 
 // Error handler
 app.use((err, req, res, next) => {

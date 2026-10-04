@@ -2,23 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Valencia PowerWatch</title>
-    <meta name="description" content="Community Power Interruption Reporting, Verification, and Information Management System for Valencia City, Bukidnon." />
-    <link rel="stylesheet" href="/style.css?v=2.2" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Valencia PowerWatch · Community User App</title>
+    <meta name="description" content="Valencia PowerWatch community mobile app for Valencia City, Bukidnon." />
+    <meta name="theme-color" content="#073c68" />
+    <link rel="stylesheet" href="/style.css?v=2.3" />
     <script>
-      window.POWERWATCH_PORTAL = 'auto';
+      window.POWERWATCH_PORTAL = 'community';
     </script>
   </head>
-  <body>
+  <body class="community-body">
     <div id="app"></div>
     <script>
-      const v = '2.2_' + Date.now();
+      const v = '2.3_' + Date.now();
       const coreScript = document.createElement('script');
       coreScript.src = '/app/core.js?v=' + v;
       coreScript.onload = () => {
         const portalScript = document.createElement('script');
-        portalScript.src = (window.matchMedia('(max-width: 780px)').matches ? '/app/community.js' : '/app/admin.js') + '?v=' + v;
+        portalScript.src = '/app/community.js?v=' + v;
         portalScript.onload = () => {
           const routerScript = document.createElement('script');
           routerScript.src = '/app/main.js?v=' + v;

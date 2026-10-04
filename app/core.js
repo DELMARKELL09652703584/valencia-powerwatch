@@ -2,10 +2,11 @@
 
 const app = document.getElementById('app');
 
-// 'auto' routes by viewport width so the root page works as one adaptive app.
-const PORTAL = window.POWERWATCH_PORTAL === 'community' ? 'community'
-  : window.POWERWATCH_PORTAL === 'admin' ? 'admin'
-    : (window.matchMedia('(max-width: 780px)').matches ? 'community' : 'admin');
+// Strict portal separation based on URL path or explicit configuration
+const pathname = (window.location.pathname || '').toLowerCase();
+const PORTAL = window.POWERWATCH_PORTAL === 'admin' || pathname.startsWith('/admin')
+  ? 'admin'
+  : 'community';
 const IS_COMMUNITY = PORTAL === 'community';
 const IS_ADMIN = PORTAL === 'admin';
 

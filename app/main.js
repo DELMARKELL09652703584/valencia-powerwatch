@@ -2121,7 +2121,7 @@ window.addEventListener('message', async (event) => {
   if (event.data && event.data.type === 'OAUTH_AUTH_SUCCESS') {
     state.user = event.data.user;
     setToast(event.data.message || `Signed in with ${event.data.provider === 'google' ? 'Google' : 'Facebook'} successfully.`);
-    const destination = event.data.destination || (STAFF_ROLES.includes(state.user?.role) ? '/admin' : '/community');
+    const destination = event.data.destination || (IS_ADMIN ? '/admin' : '/community');
     if (destination && destination !== window.location.pathname) {
       window.location.assign(destination);
       return;
@@ -2294,7 +2294,7 @@ function openSocialAuthModal(provider) {
       closeModal(false);
       state.user = data.user;
       setToast(data.message || `Signed in with ${providerLabel} successfully.`);
-      const destination = data.destination || (STAFF_ROLES.includes(data.user?.role) ? '/admin' : '/community');
+      const destination = data.destination || (IS_ADMIN ? '/admin' : '/community');
       if (destination && destination !== window.location.pathname) {
         window.location.assign(destination);
         return;
@@ -2362,12 +2362,8 @@ function openSocialAuthModal(provider) {
 }
 
 async function afterLogin() {
-  if (IS_ADMIN && !STAFF_ROLES.includes(state.user?.role)) {
+  if (IS_ADMIN && state.user && !STAFF_ROLES.includes(state.user.role)) {
     window.location.replace('/community');
-    return;
-  }
-  if (!IS_ADMIN && STAFF_ROLES.includes(state.user?.role)) {
-    window.location.replace('/admin');
     return;
   }
   await refreshConfig();
@@ -2412,12 +2408,8 @@ async function boot() {
 
     const { user } = await api('/api/auth/me');
     state.user = user;
-    if (IS_ADMIN && !STAFF_ROLES.includes(user?.role)) {
+    if (IS_ADMIN && state.user && !STAFF_ROLES.includes(state.user.role)) {
       window.location.replace('/community');
-      return;
-    }
-    if (!IS_ADMIN && STAFF_ROLES.includes(user?.role)) {
-      window.location.replace('/admin');
       return;
     }
     await refreshConfig();

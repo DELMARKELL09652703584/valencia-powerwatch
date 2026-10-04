@@ -791,6 +791,7 @@ async function renderMobileProfile() {
       ${u.profile_photo_path ? `<img class="avatar big profile-photo" src="${escapeHtml(u.profile_photo_path)}" alt="Profile photo of ${escapeHtml(u.full_name)}">` : `<div class="avatar big">${escapeHtml((u.full_name || '?').charAt(0).toUpperCase())}</div>`}
       <div><h1>${escapeHtml(u.full_name)}</h1><p class="muted small">${escapeHtml(u.email)}</p><span class="pill pill-neutral">${escapeHtml(roleLabel(u.role))}</span></div>
     </section>
+    ${STAFF_ROLES.includes(u.role) ? `<a href="/admin" class="button primary block" style="margin-bottom:12px;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#0369a1,#0284c7);color:#fff;font-weight:700;">👑 Open Admin / Staff Console &rarr;</a>` : ''}
     <button class="button ghost block" data-action="open-settings">⚙ Settings</button>
     ${mobileCard('My reports', mine.reports.length ? mine.reports.slice(0, 6).map((r) => `
       <div class="mobile-list-item">
