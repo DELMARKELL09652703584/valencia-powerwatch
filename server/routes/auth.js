@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('node:fs');
 const path = require('node:path');
-const { db, now } = require('../db');
+const { db, now, checkpointDb } = require('../db');
 const { UPLOAD_DIR } = require('../db');
 const {
   COOKIE_NAME, hashPassword, verifyPassword, createSession, destroySession,
@@ -54,46 +54,77 @@ router.post('/auth/register', (req, res) => {
   if (String(password).length < 6) {
     return res.status(400).json({ error: 'Password must be at least 6 characters.' });
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  const cleanEmail = String(email).trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
     return res.status(400).json({ error: 'Please provide a valid email address.' });
   }
 
-  const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(email);
+  const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = ?').get(cleanEmail);
   if (existing) return res.status(409).json({ error: 'An account with this email already exists.' });
 
+  const rawUsername = (req.body?.username ? String(req.body.username).trim().toLowerCase() : cleanEmail.split('@')[0]) || null;
+  const cleanContact = contact_number ? String(contact_number).trim() : null;
+  const cleanAddress = address ? String(address).trim() : null;
+  const cleanBarangay = barangay ? String(barangay).trim() : null;
+
   const info = db.prepare(`
-    INSERT INTO users (full_name, email, contact_number, address, barangay, password_hash, role, status, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, 'resident', 'Active', ?)
-  `).run(full_name.trim(), email.trim(), contact_number || null, address || null, barangay || null, hashPassword(password), now());
+    INSERT INTO users (full_name, username, email, contact_number, address, barangay, password_hash, role, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'resident', 'Active', ?)
+  `).run(
+    String(full_name).trim(),
+    rawUsername,
+    cleanEmail,
+    cleanContact,
+    cleanAddress,
+    cleanBarangay,
+    hashPassword(password),
+    now()
+  );
+
+  checkpointDb();
 
   const userId = Number(info.lastInsertRowid);
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
-  const token = createSession(userId);
+  const token = createSession(userId, true);
 
   audit({ ...user, ip_address: req.ip || req.socket.remoteAddress || null }, 'Registration', `New resident account created for ${user.email}.`);
   notifyRole('personnel', 'New resident registered', `${user.full_name} registered to Valencia PowerWatch.`, 'system');
   notifyRole('administrator', 'New resident registered', `${user.full_name} registered to Valencia PowerWatch.`, 'system');
 
-  res.cookie(COOKIE_NAME, token, { httpOnly: true, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 });
+  res.cookie(COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 30 * 24 * 60 * 60 * 1000
+  });
   res.json({ user: publicUser(user), message: 'Registration successful.' });
 });
 
 router.post('/auth/login', (req, res) => {
   const { email, password, remember } = req.body || {};
-  if (!email || !password) return res.status(400).json({ error: 'Username or email and password are required.' });
+  if (!email || !password) return res.status(400).json({ error: 'Email, mobile number, or username and password are required.' });
 
-  const identifier = String(email).trim();
-  const user = db.prepare(`
+  const raw = String(email).trim();
+  const cleanPhone = raw.replace(/[\s\-\(\)\.]/g, '').replace(/^\+63/, '0');
+
+  const candidates = db.prepare(`
     SELECT * FROM users 
     WHERE (
       LOWER(email) = LOWER(?) 
       OR LOWER(COALESCE(username, '')) = LOWER(?) 
       OR LOWER(full_name) = LOWER(?) 
       OR contact_number = ?
+      OR REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(contact_number, ''), ' ', ''), '-', ''), '+63', '0'), '.', '') = ?
     )
-  `).get(identifier, identifier, identifier, identifier);
-  if (!user || !verifyPassword(password, user.password_hash)) {
-    return res.status(401).json({ error: 'Invalid email or password.' });
+  `).all(raw, raw, raw, raw, cleanPhone);
+
+  if (!candidates.length) {
+    return res.status(401).json({ error: 'No account found with this email, mobile number, or username.' });
+  }
+
+  const user = candidates.find((cand) => verifyPassword(password, cand.password_hash));
+  if (!user) {
+    return res.status(401).json({ error: 'Incorrect password. Please verify and try again.' });
   }
   if (user.status !== 'Active') {
     return res.status(403).json({ error: 'This account is deactivated. Contact the administrator.' });
@@ -102,18 +133,25 @@ router.post('/auth/login', (req, res) => {
   const rememberMe = remember === true;
   const token = createSession(user.id, rememberMe);
   db.prepare('UPDATE users SET last_login = ? WHERE id = ?').run(now(), user.id);
+  checkpointDb();
   const fresh = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
 
   audit({ ...fresh, ip_address: req.ip || req.socket.remoteAddress || null }, 'Login', `${user.full_name} (${roleLabel(user.role)}) logged in.`);
 
-  res.cookie(COOKIE_NAME, token, { httpOnly: true, sameSite: 'lax', maxAge: (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000 });
+  res.cookie(COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000
+  });
   res.json({ user: publicUser(fresh), message: 'Login successful.' });
 });
 
 router.post('/auth/logout', requireAuth, (req, res) => {
   destroySession(req.token);
   audit(req.user, 'Logout', `${req.user.full_name} logged out.`);
-  res.clearCookie(COOKIE_NAME);
+  res.clearCookie(COOKIE_NAME, { path: '/' });
+  checkpointDb();
   res.json({ message: 'Logged out.' });
 });
 

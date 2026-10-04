@@ -23,8 +23,8 @@ function renderLogin(message = '') {
         <p>Sign in to report interruptions and stay updated.</p>
         ${message ? `<div class="inline-alert">${escapeHtml(message)}</div>` : ''}
         <form class="mobile-auth-form" data-form="login">
-          <label>Email or mobile number<input name="email" type="text" inputmode="email" autocomplete="username" required></label>
-          <label>Password<span class="mobile-password-field"><input name="password" type="password" autocomplete="current-password" required><button type="button" data-action="toggle-password" aria-label="Show password">&#9673;</button></span></label>
+          <label>Email or mobile number<input name="email" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" required></label>
+          <label>Password<span class="mobile-password-field"><input name="password" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="current-password" required><button type="button" data-action="toggle-password" aria-label="Show password">&#9673;</button></span></label>
           <div class="auth-options-row"><label><input type="checkbox" name="remember" checked> Remember me</label><button type="button" data-action="forgot-password">Forgot Password?</button></div>
           <button class="button primary mobile-auth-submit" type="submit">Login</button>
         </form>
@@ -47,6 +47,7 @@ function renderLogin(message = '') {
           </button>
         </div>
         <p class="mobile-auth-switch">New here? <button type="button" data-action="go-register">Create an account</button></p>
+        <p class="mobile-auth-switch" style="margin-top:10px;font-size:0.8rem;color:#64748b;">City Personnel or Admin? <a href="/admin" style="color:#0284c7;font-weight:700;text-decoration:none;">Go to Admin Portal &rarr;</a></p>
       </section>
       <footer class="login-footer">Valencia City, Bukidnon</footer>
       <div class="toast" role="status" hidden></div>
@@ -62,12 +63,19 @@ function renderLogin(message = '') {
     </aside>
     <section class="login-panel">
       <div class="login-content">
+        <div style="margin-bottom:14px;padding:12px 14px;background:#f0f9ff;border:1px solid #7dd3fc;border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div style="font-size:0.82rem;color:#0369a1;line-height:1.35;">
+            <strong>👥 Citizen or Resident of Valencia City?</strong><br>
+            <span>Report outages, track ETR, and view public alerts.</span>
+          </div>
+          <a href="/community" class="button primary small" style="text-decoration:none;white-space:nowrap;font-size:0.78rem;padding:6px 12px;">Open Citizen Portal &rarr;</a>
+        </div>
         <h1>Welcome Back!</h1>
         <p class="login-intro">Sign in to your Valencia PowerWatch account.</p>
         ${message ? `<div class="inline-alert">${escapeHtml(message)}</div>` : ''}
         <form class="form-stack" data-form="login">
-          <label>Username or Email<input name="email" type="text" autocomplete="username" required></label>
-          <label>Password<span class="password-control"><input name="password" type="password" autocomplete="current-password" required><button type="button" data-action="toggle-password" aria-label="Show password">&#9673;</button></span></label>
+          <label>Username, Email, or Mobile Number<input name="email" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" required></label>
+          <label>Password<span class="password-control"><input name="password" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="current-password" required><button type="button" data-action="toggle-password" aria-label="Show password">&#9673;</button></span></label>
           <div class="admin-login-options"><label><input type="checkbox" name="remember" checked> Remember me</label><button type="button" data-action="forgot-password">Forgot password?</button></div>
           <button class="button primary full" type="submit">Login</button>
         </form>
@@ -171,11 +179,11 @@ function renderRegister(message = '') {
         ${message ? `<div class="inline-alert">${escapeHtml(message)}</div>` : ''}
         <form class="mobile-auth-form" data-form="register">
           <label>Full Name<input name="full_name" autocomplete="name" required></label>
-          <label>Email Address<input name="email" type="email" autocomplete="email" required></label>
+          <label>Email Address<input name="email" type="email" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="email" required></label>
           <label>Mobile Number<input name="contact_number" type="tel" autocomplete="tel" placeholder="0917 123 4567"></label>
           <label>Home Barangay<select name="barangay"><option value="">Choose barangay</option>${state.barangays.map((b) => `<option>${escapeHtml(b)}</option>`).join('')}</select></label>
-          <label>Password<span class="mobile-password-field"><input name="password" type="password" minlength="6" autocomplete="new-password" required><button type="button" data-action="toggle-password" aria-label="Show password">&#9673;</button></span></label>
-          <label>Confirm Password<span class="mobile-password-field"><input name="confirm_password" type="password" minlength="6" autocomplete="new-password" required><button type="button" data-action="toggle-password" aria-label="Show password">&#9673;</button></span></label>
+          <label>Password<span class="mobile-password-field"><input name="password" type="password" minlength="6" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="new-password" required><button type="button" data-action="toggle-password" aria-label="Show password">&#9673;</button></span></label>
+          <label>Confirm Password<span class="mobile-password-field"><input name="confirm_password" type="password" minlength="6" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="new-password" required><button type="button" data-action="toggle-password" aria-label="Show password">&#9673;</button></span></label>
           <button class="button primary mobile-auth-submit" type="submit">Register</button>
         </form>
         <div class="auth-divider"><span>or sign up with</span></div>
@@ -2356,11 +2364,11 @@ function openSocialAuthModal(provider) {
 
 async function afterLogin() {
   if (IS_ADMIN && !STAFF_ROLES.includes(state.user?.role)) {
-    window.location.assign('/community');
+    window.location.replace('/community');
     return;
   }
   if (!IS_ADMIN && STAFF_ROLES.includes(state.user?.role)) {
-    window.location.assign('/admin');
+    window.location.replace('/admin');
     return;
   }
   await refreshConfig();
@@ -2406,8 +2414,11 @@ async function boot() {
     const { user } = await api('/api/auth/me');
     state.user = user;
     if (IS_ADMIN && !STAFF_ROLES.includes(user?.role)) {
-      state.user = null;
-      renderLogin('Social and resident accounts cannot access the Admin Portal. Please sign in with administrator credentials.');
+      window.location.replace('/community');
+      return;
+    }
+    if (!IS_ADMIN && STAFF_ROLES.includes(user?.role)) {
+      window.location.replace('/admin');
       return;
     }
     await refreshConfig();
@@ -2490,6 +2501,19 @@ document.addEventListener('submit', async (event) => {
   try {
     await submitForm(form);
   } catch (error) {
+    const formType = form.dataset.form;
+    if (formType === 'login') {
+      renderLogin(error.message || 'Invalid email, mobile number, or password.');
+      return;
+    }
+    if (formType === 'register') {
+      renderRegister(error.message || 'Registration failed. Please check your information.');
+      return;
+    }
+    if (formType === 'forgot-password') {
+      renderForgotPassword(error.message);
+      return;
+    }
     if (error.status === 401) {
       state.user = null;
       renderLogin('Your session expired. Sign in again to continue.');

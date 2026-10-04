@@ -6,3 +6,5 @@ cloudflared.exe
 *.log
 public-url.txt
 *.bak
+*.db-shm
+*.db-wal

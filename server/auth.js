@@ -137,10 +137,6 @@ const clearDBTables = () => {
     DELETE FROM sessions;
     DELETE FROM oauth_accounts;
     DELETE FROM password_reset_tokens;
-    DELETE FROM users 
-    WHERE role != 'administrator' 
-      AND LOWER(COALESCE(username, '')) != 'delmarkel2003' 
-      AND LOWER(email) NOT IN ('dsaroay@gmail.com', 'admin@powerwatch.ph');
     DELETE FROM settings WHERE key = 'seed_version';
     DELETE FROM sqlite_sequence WHERE name IN (
       'outage_reports','outage_incidents','incident_links','incident_areas',

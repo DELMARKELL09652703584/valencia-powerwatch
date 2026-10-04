@@ -15,6 +15,15 @@ const db = new DatabaseSync(DB_PATH);
 
 db.exec('PRAGMA journal_mode = WAL;');
 db.exec('PRAGMA foreign_keys = ON;');
+db.exec('PRAGMA synchronous = NORMAL;');
+
+const checkpointDb = () => {
+  try {
+    db.exec('PRAGMA wal_checkpoint(TRUNCATE);');
+  } catch (err) {
+    // Non-fatal checkpoint notice
+  }
+};
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -432,16 +441,21 @@ function seedIfFresh() {
     DELETE FROM sessions;
     DELETE FROM oauth_accounts;
     DELETE FROM password_reset_tokens;
-    DELETE FROM users 
-    WHERE role != 'administrator' 
-      AND LOWER(COALESCE(username, '')) != 'delmarkel2003' 
-      AND LOWER(email) NOT IN ('dsaroay@gmail.com', 'admin@powerwatch.ph');
     DELETE FROM sqlite_sequence WHERE name IN (
       'outage_reports','outage_incidents','incident_links','incident_areas',
       'scheduled_outages','announcements','notifications','audit_logs',
       'citizen_feedback','sms_logs','report_attachments','sessions','oauth_accounts'
     );
   `);
+
+  // Ensure all registered users have a valid username (defaulting to email prefix if blank)
+  try {
+    db.exec(`
+      UPDATE users 
+      SET username = LOWER(SUBSTR(email, 1, INSTR(email, '@') - 1)) 
+      WHERE (username IS NULL OR username = '') AND INSTR(email, '@') > 1;
+    `);
+  } catch (err) {}
 
   // Ensure 28 official Valencia City Barangays are present
   const bgryCount = Number(db.prepare('SELECT COUNT(*) as cnt FROM barangays').get().cnt || 0);
@@ -510,13 +524,26 @@ const ensureAdminAccount = () => {
       VALUES (?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)
     `).run('System Administrator', 'admin@powerwatch.ph', '0917-555-0100', 'Brgy. Poblacion, Valencia City', 'Poblacion', hashPassword('admin123'), now(), now());
   }
+
+  // Ensure all existing users have a valid lowercase username derived from their email
+  try {
+    db.exec(`
+      UPDATE users 
+      SET username = LOWER(SUBSTR(email, 1, INSTR(email, '@') - 1)) 
+      WHERE (username IS NULL OR username = '') AND INSTR(email, '@') > 1;
+    `);
+  } catch (err) {}
+
+  checkpointDb();
 };
 
 seedIfFresh();
 ensureAdminAccount();
+checkpointDb();
 
 module.exports = {
   ensureAdminAccount,
+  checkpointDb,
   db,
   ROOT,
   DATA_DIR,
