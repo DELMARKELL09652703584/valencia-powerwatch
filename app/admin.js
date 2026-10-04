@@ -706,14 +706,46 @@ async function renderAdminMap() {
 
   adminShell(`<section class="power-map-page">
     <header class="power-map-heading"><div><p class="power-map-eyebrow">OPERATIONS</p><h2>Power Outage Map &amp; GIS Hotspots</h2></div><button type="button" class="power-map-close" data-page="dashboard" aria-label="Close map" title="Back to dashboard">×</button></header>
+    
+    <!-- 2030 Smart Grid SCADA Strip -->
+    <div class="scada-telemetry-strip" style="margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.12);">
+      <div class="scada-stat">
+        <span class="scada-led ${activeIncidents.length ? 'pulse' : ''}"></span>
+        <span class="scada-label">SCADA GRID:</span>
+        <span class="scada-val ${activeIncidents.length ? 'warn' : 'ok'}">${activeIncidents.length ? 'DEGRADED (FAULT)' : 'NOMINAL 100%'}</span>
+      </div>
+      <div class="scada-stat">
+        <span class="scada-label">LOAD:</span>
+        <span class="scada-val cyan">68.4 MW / 75.0 MW</span>
+      </div>
+      <div class="scada-stat">
+        <span class="scada-label">FREQ:</span>
+        <span class="scada-val">60.01 Hz</span>
+      </div>
+      <div class="scada-stat">
+        <span class="scada-label">FEEDERS:</span>
+        <span class="scada-val ${activeIncidents.length ? 'warn' : 'cyan'}">3/4 OK · 1 FAULT (FDR-03)</span>
+      </div>
+      <div class="scada-stat">
+        <span class="scada-label">NODES:</span>
+        <span class="scada-val cyan">${barangays.length}/31 BGRYS SYNCED</span>
+      </div>
+      <div class="scada-stat">
+        <span class="scada-label">AI ENGINE:</span>
+        <span class="scada-val cyan">OPTIMAL (99.4%)</span>
+      </div>
+    </div>
+
     <div class="power-map-layout">
       <div class="power-map-canvas-wrap">
-        <div class="admin-map" id="admin-outage-map" aria-label="Interactive power outage map of Valencia City"></div>
+        <div class="admin-map ${state.adminCyberMode ? 'cyber-mode' : ''}" id="admin-outage-map" aria-label="Interactive power outage map of Valencia City"></div>
         <div class="power-map-controls" aria-label="Map navigation controls">
           <button type="button" data-map-home aria-label="Return to Valencia City extent" title="Return to Valencia City">⌂</button>
           <button type="button" data-map-geolocate aria-label="Show my current location" title="Show my location">◎</button>
           <button type="button" data-map-toggle-heat aria-label="Toggle Outage Heatmap" title="Toggle Outage Heatmap" class="${layers.heatmap ? 'active' : ''}">🔥</button>
           <button type="button" data-action="toggle-admin-route" aria-label="Toggle Blue Route Guide" title="Toggle Blue Route Guide" style="background:#2563eb;color:#fff;font-weight:750;">🧭</button>
+          <button type="button" data-action="toggle-admin-cyber" class="${state.adminCyberMode ? 'active' : ''}" aria-label="Toggle Cyber 2030 Dark Matrix" title="Cyber 2030 Dark Mode" style="background:#0f172a;color:#38bdf8;font-weight:750;">🌌</button>
+          <button type="button" data-action="toggle-admin-feeders" class="${state.adminFeedersMode !== false ? 'active' : ''}" aria-label="Toggle Smart Grid Feeder Lines" title="Toggle 13.2kV Distribution Feeders" style="background:#0284c7;color:#fff;font-weight:750;">⚡</button>
         </div>
         <label class="power-map-focus"><span>⌖</span><select data-map-focus aria-label="Focus map on a barangay"><option value="">Find a barangay</option>${barangays.map((item) => `<option value="${escapeHtml(item.name)}">${escapeHtml(item.name)}</option>`).join('')}</select></label>
       </div>
@@ -751,7 +783,17 @@ async function renderAdminMap() {
               ${barangays.map((b) => `<option value="${b.latitude},${b.longitude},${escapeHtml(b.name)}">${escapeHtml(b.name)}</option>`).join('')}
             </select>
           </div>
-          <h3>Layers</h3>
+          <h3>Layers &amp; Smart Grid</h3>
+          <label style="background:#f0f9ff;border:1px solid #bae6fd;padding:6px 9px;border-radius:7px;margin-bottom:4px;cursor:pointer;">
+            <input type="checkbox" data-action="toggle-admin-feeders" ${state.adminFeedersMode !== false ? 'checked' : ''}>
+            <span style="font-weight:700;color:#0369a1;">⚡ 13.2kV Feeders (Pulsing)</span>
+            <b class="heatmap-badge" style="background:#0284c7;color:#fff;">2030</b>
+          </label>
+          <label style="background:#0f172a;color:#e2e8f0;border:1px solid #334155;padding:6px 9px;border-radius:7px;margin-bottom:4px;cursor:pointer;">
+            <input type="checkbox" data-action="toggle-admin-cyber" ${state.adminCyberMode ? 'checked' : ''}>
+            <span style="font-weight:750;color:#38bdf8;">🌌 Cyber 2030 Dark Matrix</span>
+            <b class="heatmap-badge" style="background:#0284c7;color:#fff;">Sci-Fi</b>
+          </label>
           <label style="background:#fff5f5;border:1px solid #fecaca;padding:6px 9px;border-radius:7px;margin-bottom:4px;">
             <input type="checkbox" data-map-layer="heatmap" ${layers.heatmap ? 'checked' : ''}>
             <span style="font-weight:700;color:#b91c1c;">🔥 Outage Density Heatmap</span>
@@ -858,6 +900,9 @@ async function renderAdminMap() {
     scheduled: L.layerGroup(), barangays: L.layerGroup(), roads: roadsTiles,
   };
   Object.entries(layerGroups).forEach(([name, layer]) => { if (layers[name]) layer.addTo(map); });
+  if (state.adminFeedersMode !== false) {
+    renderElectricFeedersOnMap(map);
+  }
   const incidentLayer = (item) => ['Restored', 'Closed', 'Resolved'].includes(item.status)
     ? { layer: layerGroups.resolved, color: '#25a66a', label: 'Resolved Incident' }
     : ['Reported', 'Under Verification'].includes(item.status)
@@ -872,25 +917,42 @@ async function renderAdminMap() {
     const adminEtr = item.estimated_restoration_time ? new Date(item.estimated_restoration_time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Pending field assessment';
 
     const adminPopup = `
-      <div class="map-popup-card">
+      <div class="map-popup-card holographic">
         <div class="map-popup-header">
-          <span class="map-popup-code">${escapeHtml(item.incident_code || 'OUTAGE')}</span>
+          <span class="scada-telemetry-badge">${escapeHtml(item.incident_code || 'OUTAGE')}</span>
           <span class="map-popup-badge" style="${adminSevStyle}">${escapeHtml(adminSev)}</span>
         </div>
-        <h4 class="map-popup-title">${escapeHtml(item.title)}</h4>
+        <h4 class="map-popup-title">⚡ ${escapeHtml(item.title)}</h4>
         <div class="map-popup-meta">
           <div class="map-popup-row"><span class="map-popup-icon">📍</span><span><strong>${escapeHtml(item.barangay)}</strong></span></div>
           <div class="map-popup-row"><span class="map-popup-icon">⚡</span><span>${escapeHtml(item.incident_type || 'Outage Incident')}</span></div>
-          <div class="map-popup-row"><span class="map-popup-icon">⏳</span><span><strong>ETR:</strong> <span class="map-popup-etr">${escapeHtml(adminEtr)}</span></span></div>
+          <div class="map-popup-row"><span class="map-popup-icon">⏳</span><span><strong>AI Predicted ETR:</strong> <span class="map-popup-etr" style="color:#38bdf8;">${escapeHtml(adminEtr)}</span></span></div>
           <div class="map-popup-row"><span class="map-popup-icon">🔄</span><span>Status: <strong style="color:${category.color}">${escapeHtml(item.status)}</strong></span></div>
         </div>
-        <button type="button" class="map-popup-btn" data-action="view-incident-details" data-id="${item.id}">Inspect Incident Record ›</button>
         <button type="button" class="map-popup-btn route-btn" data-action="show-admin-route" data-lat="${coordinates[0]}" data-lng="${coordinates[1]}" data-label="${escapeHtml(item.title)} (${escapeHtml(item.barangay)})">🧭 Dispatch Route Guide</button>
+        <button type="button" class="map-popup-btn sim-btn" data-action="sim-crew-direct" data-lat="${coordinates[0]}" data-lng="${coordinates[1]}" data-label="${escapeHtml(item.title)}">🚀 Simulate Crew Dispatch (GPS)</button>
+        <button type="button" class="map-popup-btn" style="background:#334155;" data-action="view-incident-details" data-id="${item.id}">Inspect Incident Record ›</button>
       </div>
     `;
 
-    L.circleMarker(coordinates, { pane: 'markerPane', radius: 9, color: '#fff', fillColor: category.color, fillOpacity: .98, weight: 2.5 })
-      .addTo(category.layer).bindPopup(adminPopup, { maxWidth: 280 });
+    if (category.label === 'Active Outage') {
+      const sonarIcon = L.divIcon({
+        className: 'sonar-marker-wrap',
+        html: `
+          <div class="sonar-ring"></div>
+          <div class="sonar-ring delay-1"></div>
+          <div class="sonar-ring delay-2"></div>
+          <div class="sonar-pin-center" style="background:#ef4444;"></div>
+        `,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+      L.marker(coordinates, { icon: sonarIcon, pane: 'markerPane' })
+        .addTo(category.layer).bindPopup(adminPopup, { maxWidth: 300 });
+    } else {
+      L.circleMarker(coordinates, { pane: 'markerPane', radius: 9, color: '#fff', fillColor: category.color, fillOpacity: .98, weight: 2.5 })
+        .addTo(category.layer).bindPopup(adminPopup, { maxWidth: 280 });
+    }
   });
   verificationReports.forEach((report) => {
     const coordinates = locationFor(report);

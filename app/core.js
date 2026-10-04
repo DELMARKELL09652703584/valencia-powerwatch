@@ -390,10 +390,13 @@ async function renderRouteGuideOnMap({
           <span>${routeData.isRealRoute ? '🛣️ Road Route' : '📍 Direct'}</span>
         </div>
       </div>
-      <div class="map-route-hud-actions">
+      <div class="map-route-hud-actions" style="flex-wrap:wrap;gap:6px;">
+        <button type="button" class="map-route-hud-btn" data-action="sim-crew-dispatch" style="background:#0284c7;color:#fff;box-shadow:0 0 10px rgba(2,132,199,0.5);flex:1 1 100%;">
+          <span>🚀 Simulate Crew Dispatch (2030 Live Tracker)</span>
+        </button>
         <a href="https://www.google.com/maps/dir/?api=1&origin=${origin.latitude},${origin.longitude}&destination=${destLat},${destLng}&travelmode=driving" 
            target="_blank" rel="noopener noreferrer" class="map-route-hud-btn primary">
-          <span>🗺️ Open in Google Maps</span>
+          <span>🗺️ Google Maps</span>
         </a>
         <button type="button" class="map-route-hud-btn secondary" data-action="clear-route-guide">
           <span>Clear Route</span>
@@ -403,6 +406,8 @@ async function renderRouteGuideOnMap({
     targetContainer.appendChild(hud);
   }
 
+  state.activeRouteWaypoints = routeData.waypoints;
+  state.activeRouteDestLabel = destLabel;
   setToast(`Route guide active: ${routeData.distanceKm} km · ~${routeData.durationMins} mins`);
 }
 
@@ -411,9 +416,227 @@ function clearRouteGuideOnMap(map, container) {
     try { map?.removeLayer(activeRouteGuideLayer); } catch {}
     activeRouteGuideLayer = null;
   }
+  stopCrewDispatchSimulation(map);
   const targetContainer = container || map?.getContainer()?.parentElement || document;
   targetContainer?.querySelector('.map-route-hud')?.remove();
   setToast('Route guide cleared.');
+}
+
+// ==========================================================================
+// 2030 SMART ELECTRICAL GRID FEEDER NETWORK & SIMULATION ENGINE
+// ==========================================================================
+
+const VALENCIA_ELECTRIC_FEEDERS = [
+  {
+    id: 'FDR-01',
+    name: 'Sayre Highway North Trunk (13.2kV)',
+    voltage: '13.2 kV',
+    loadMw: '18.4 MW',
+    freq: '60.01 Hz',
+    substation: 'Valencia Central Substation',
+    status: 'Energized (Nominal)',
+    color: '#06b6d4',
+    isFaulted: false,
+    path: [
+      [7.9135, 125.0934], // Central Substation
+      [7.9111, 125.0934], // Poblacion
+      [7.9304, 125.1077], // Bagontaas
+      [7.9432, 125.1189], // Sugod
+      [7.9497, 125.1235], // Kahapunan
+      [7.9734, 125.0747], // Colonia
+      [7.9839, 125.0872]  // Mailag
+    ]
+  },
+  {
+    id: 'FDR-02',
+    name: 'Sayre Highway South Corridor (13.2kV)',
+    voltage: '13.2 kV',
+    loadMw: '16.2 MW',
+    freq: '60.02 Hz',
+    substation: 'Valencia Central Substation',
+    status: 'Energized (Nominal)',
+    color: '#3b82f6',
+    isFaulted: false,
+    path: [
+      [7.9135, 125.0934], // Central Substation
+      [7.9042, 125.1128], // San Isidro
+      [7.8938, 125.0752], // Lumbo
+      [7.8881, 125.1038], // Pinatilan
+      [7.8924, 125.1328], // Batangan
+      [7.8717, 125.1419]  // Sinayawan
+    ]
+  },
+  {
+    id: 'FDR-03',
+    name: 'Guinoyuran Western Radial Trunk (13.2kV)',
+    voltage: '0.0 kV (Tripped)',
+    loadMw: '0.0 MW (Lockout)',
+    freq: '0.00 Hz',
+    substation: 'Valencia Central Substation',
+    status: 'De-energized (Fault Detected)',
+    color: '#ef4444',
+    isFaulted: true,
+    path: [
+      [7.9135, 125.0934], // Central Substation
+      [7.9142, 125.0389], // Tongantongan
+      [7.8986, 125.0478], // Catumbalon
+      [7.8761, 125.0125], // Guinoyuran Fault Point!
+      [7.8631, 125.0381]  // Dagat-Kidavao
+    ]
+  },
+  {
+    id: 'FDR-04',
+    name: 'Eastern Agribusiness Sector Trunk (13.2kV)',
+    voltage: '13.2 kV',
+    loadMw: '14.1 MW',
+    freq: '60.01 Hz',
+    substation: 'Valencia Central Substation',
+    status: 'Energized (Nominal)',
+    color: '#10b981',
+    isFaulted: false,
+    path: [
+      [7.9135, 125.0934], // Central Substation
+      [7.9197, 125.1647], // San Carlos
+      [7.9547, 125.1558], // Banlag
+      [7.8821, 125.1632], // Lumbayao
+      [7.8789, 125.1258]  // Sinabuagan
+    ]
+  }
+];
+
+let activeElectricFeedersLayer = null;
+
+function renderElectricFeedersOnMap(map) {
+  if (!map) return;
+  if (activeElectricFeedersLayer) {
+    try { map.removeLayer(activeElectricFeedersLayer); } catch {}
+  }
+  activeElectricFeedersLayer = L.layerGroup().addTo(map);
+
+  VALENCIA_ELECTRIC_FEEDERS.forEach((feeder) => {
+    // 1. Dark glowing backing stroke
+    L.polyline(feeder.path, {
+      color: feeder.isFaulted ? '#7f1d1d' : '#0f172a',
+      weight: 7,
+      opacity: 0.85,
+      lineCap: 'round',
+      lineJoin: 'round'
+    }).addTo(activeElectricFeedersLayer);
+
+    // 2. Neon animated pulsing core line
+    const neonLine = L.polyline(feeder.path, {
+      color: feeder.color,
+      weight: 3.5,
+      opacity: 0.95,
+      className: `electric-feeder-pulse ${feeder.isFaulted ? 'fault' : ''}`
+    }).addTo(activeElectricFeedersLayer);
+
+    // Telemetry popup on feeder click
+    neonLine.bindPopup(`
+      <div class="map-popup-card holographic" style="min-width:240px;">
+        <div class="map-popup-header">
+          <span class="scada-telemetry-badge">${escapeHtml(feeder.id)}</span>
+          <span class="map-popup-badge" style="${feeder.isFaulted ? 'background:#ef4444;color:#fff;' : 'background:#10b981;color:#fff;'}">${escapeHtml(feeder.status)}</span>
+        </div>
+        <h4 class="map-popup-title" style="margin:4px 0;">⚡ ${escapeHtml(feeder.name)}</h4>
+        <div class="map-popup-meta" style="font-size:0.75rem;display:flex;flex-direction:column;gap:4px;padding:8px;">
+          <div>📡 <strong>Grid Source:</strong> ${escapeHtml(feeder.substation)}</div>
+          <div>⚡ <strong>Voltage:</strong> <span style="color:${feeder.isFaulted ? '#f87171' : '#38bdf8'};font-weight:800;">${escapeHtml(feeder.voltage)}</span></div>
+          <div>🔋 <strong>Load Capacity:</strong> ${escapeHtml(feeder.loadMw)}</div>
+          <div>📊 <strong>Frequency:</strong> ${escapeHtml(feeder.freq)}</div>
+        </div>
+      </div>
+    `);
+
+    // Substation / Terminal marker
+    feeder.path.forEach((pt, idx) => {
+      if (idx === 0) {
+        L.circleMarker(pt, {
+          radius: 6,
+          fillColor: '#38bdf8',
+          color: '#ffffff',
+          weight: 2,
+          fillOpacity: 1
+        }).addTo(activeElectricFeedersLayer).bindPopup(`<strong>⚡ ${escapeHtml(feeder.substation)}</strong><br>Valencia Main SCADA Dispatch Node`);
+      }
+    });
+  });
+}
+
+function clearElectricFeedersOnMap(map) {
+  if (activeElectricFeedersLayer) {
+    try { map?.removeLayer(activeElectricFeedersLayer); } catch {}
+    activeElectricFeedersLayer = null;
+  }
+}
+
+// ---------------- Real-Time Emergency Response Crew Dispatch GPS Simulator
+let crewSimulationTimer = null;
+let crewSimulationMarker = null;
+
+function startCrewDispatchSimulation(map, waypoints, onUpdate, onComplete) {
+  if (!map || !waypoints || waypoints.length < 2) {
+    setToast('No route waypoints available for simulation.');
+    return;
+  }
+  stopCrewDispatchSimulation(map);
+
+  let currentIndex = 0;
+  const total = waypoints.length;
+  const startPt = waypoints[0];
+
+  const crewIcon = L.divIcon({
+    className: 'sim-crew-marker-wrap',
+    html: `
+      <div class="sim-crew-marker">
+        <div class="sim-crew-icon">⚡🚒</div>
+        <div class="sim-crew-badge">FIBECO RESCUE-01</div>
+      </div>
+    `,
+    iconSize: [44, 52],
+    iconAnchor: [22, 26]
+  });
+
+  crewSimulationMarker = L.marker(startPt, { icon: crewIcon }).addTo(map);
+  map.panTo(startPt);
+  setToast('🚀 Response Crew RESCUE-01 Dispatched! En route to outage location...');
+
+  crewSimulationTimer = setInterval(() => {
+    currentIndex = Math.min(total - 1, currentIndex + Math.max(1, Math.floor(total / 65)));
+    const curPt = waypoints[currentIndex];
+    crewSimulationMarker.setLatLng(curPt);
+
+    const progressPct = Math.round((currentIndex / (total - 1)) * 100);
+    const speed = 40 + Math.floor(Math.sin(currentIndex) * 8);
+
+    if (onUpdate) {
+      onUpdate({
+        index: currentIndex,
+        total,
+        percent: progressPct,
+        coords: curPt,
+        speed
+      });
+    }
+
+    if (currentIndex >= total - 1) {
+      clearInterval(crewSimulationTimer);
+      crewSimulationTimer = null;
+      setToast('🎯 CREW ARRIVED ON-SITE! Commencing emergency repairs.');
+      if (onComplete) onComplete();
+    }
+  }, 75);
+}
+
+function stopCrewDispatchSimulation(map) {
+  if (crewSimulationTimer) {
+    clearInterval(crewSimulationTimer);
+    crewSimulationTimer = null;
+  }
+  if (crewSimulationMarker) {
+    try { map?.removeLayer(crewSimulationMarker); } catch {}
+    crewSimulationMarker = null;
+  }
 }
 
 async function api(path, options = {}) {

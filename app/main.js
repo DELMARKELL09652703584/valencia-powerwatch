@@ -1136,6 +1136,95 @@ async function handleClick(event) {
         }
         return;
       }
+      case 'toggle-community-cyber': {
+        state.communityCyberMode = !state.communityCyberMode;
+        if (state.communityCyberMode) {
+          state.communityMapLayer = 'street';
+        }
+        const mapEl = document.getElementById('community-map');
+        if (mapEl) {
+          mapEl.classList.toggle('cyber-mode', !!state.communityCyberMode);
+        }
+        setToast(state.communityCyberMode ? '🌌 2030 Cyber Dark Grid Matrix Activated!' : 'Standard map theme restored.');
+        if (typeof renderCommunityMap === 'function') {
+          await renderCommunityMap();
+        }
+        return;
+      }
+      case 'toggle-community-feeders': {
+        state.communityFeedersMode = state.communityFeedersMode === false ? true : false;
+        if (state.communityFeedersMode) {
+          renderElectricFeedersOnMap(state.communityOutageMap);
+          setToast('⚡ 13.2kV Valencia Feeder Lines & Substation Grid Online!');
+        } else {
+          clearElectricFeedersOnMap(state.communityOutageMap);
+          setToast('Feeder line overlay hidden.');
+        }
+        const feederBtn = document.querySelector('[data-action="toggle-community-feeders"]');
+        if (feederBtn) {
+          feederBtn.style.background = state.communityFeedersMode ? '#0284c7' : '#f1f5f9';
+          feederBtn.style.color = state.communityFeedersMode ? '#fff' : '#334155';
+          feederBtn.style.fontWeight = state.communityFeedersMode ? '750' : 'normal';
+        }
+        return;
+      }
+      case 'toggle-admin-cyber': {
+        state.adminCyberMode = !state.adminCyberMode;
+        const mapEl = document.getElementById('admin-outage-map');
+        if (mapEl) {
+          mapEl.classList.toggle('cyber-mode', !!state.adminCyberMode);
+        }
+        const cyberBtn = document.querySelector('[data-action="toggle-admin-cyber"]');
+        if (cyberBtn) {
+          cyberBtn.classList.toggle('active', !!state.adminCyberMode);
+        }
+        setToast(state.adminCyberMode ? '🌌 2030 Cyber Dark Matrix Activated on Operations Map!' : 'Standard map theme restored.');
+        return;
+      }
+      case 'toggle-admin-feeders': {
+        state.adminFeedersMode = !state.adminFeedersMode;
+        if (state.adminFeedersMode) {
+          renderElectricFeedersOnMap(state.adminOutageMapInstance);
+          setToast('⚡ 13.2kV Distribution Feeders & Central Substation Active!');
+        } else {
+          clearElectricFeedersOnMap(state.adminOutageMapInstance);
+          setToast('Distribution feeder overlay cleared.');
+        }
+        const feederBtn = document.querySelector('[data-action="toggle-admin-feeders"]');
+        if (feederBtn) {
+          feederBtn.classList.toggle('active', !!state.adminFeedersMode);
+        }
+        return;
+      }
+      case 'sim-crew-dispatch': {
+        const targetMap = state.communityOutageMap || state.adminOutageMapInstance;
+        if (!targetMap || !state.activeRouteWaypoints || state.activeRouteWaypoints.length < 2) {
+          setToast('⚠️ Route navigation not active. Please click a route guide first!');
+          return;
+        }
+        startCrewDispatchSimulation(targetMap, state.activeRouteWaypoints);
+        return;
+      }
+      case 'sim-crew-direct': {
+        const { lat, lng, label } = actionButton.dataset;
+        if (!lat || !lng) return;
+        const targetMap = state.communityOutageMap || state.adminOutageMapInstance;
+        const container = document.querySelector('.map-route-hud-container') || document.querySelector('.power-map-canvas-wrap') || targetMap?.getContainer()?.parentElement;
+        await renderRouteGuideOnMap({
+          map: targetMap,
+          destLat: Number(lat),
+          destLng: Number(lng),
+          destLabel: label || 'Valencia Outage Location',
+          container,
+          origin: VALENCIA_HQ_COORDINATES
+        });
+        setTimeout(() => {
+          if (state.activeRouteWaypoints && state.activeRouteWaypoints.length >= 2) {
+            startCrewDispatchSimulation(targetMap, state.activeRouteWaypoints);
+          }
+        }, 300);
+        return;
+      }
       case 'incident-modal-route': {
         closeDialog();
         const { lat, lng, label } = actionButton.dataset;
@@ -1341,6 +1430,7 @@ async function handleClick(event) {
         return;
       case 'set-mobile-map-layer':
         state.mobileMapLayer = value;
+        state.communityCyberMode = false;
         await render();
         return;
       case 'clear-mobile-scope':

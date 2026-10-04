@@ -3590,6 +3590,228 @@ select.input { cursor: pointer; }
   from { transform: translateY(0); }
   to { transform: translateY(-5px); }
 }
+
+/* ==========================================================================
+   2030 SMART GRID & FUTURISTIC GIS COMMAND CENTER STYLES
+   ========================================================================== */
+
+/* 2030 SCADA Telemetry Strip */
+.scada-telemetry-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 8px 14px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.74rem;
+}
+.scada-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+}
+.scada-stat.live-status {
+  padding-right: 10px;
+  border-right: 1px solid #334155;
+  color: #38bdf8;
+  font-weight: 800;
+}
+.scada-led {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  background: #22c55e;
+  box-shadow: 0 0 10px #22c55e, 0 0 4px #22c55e;
+  animation: ledPulse 1.5s infinite alternate ease-in-out;
+}
+.scada-led.red {
+  background: #ef4444;
+  box-shadow: 0 0 10px #ef4444, 0 0 4px #ef4444;
+}
+@keyframes ledPulse {
+  from { opacity: 0.6; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1.15); }
+}
+.scada-label {
+  color: #64748b;
+  font-weight: 700;
+}
+.scada-val {
+  color: #f1f5f9;
+  font-weight: 800;
+}
+.scada-val.warn {
+  color: #f59e0b;
+}
+.scada-val.cyan {
+  color: #38bdf8;
+  text-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+}
+
+/* Cyber Matrix Dark Mode for Leaflet Basemap */
+.community-map.cyber-mode .leaflet-tile-pane,
+.admin-map.cyber-mode .leaflet-tile-pane,
+#community-map.cyber-mode .leaflet-tile-pane,
+#admin-outage-map.cyber-mode .leaflet-tile-pane {
+  filter: invert(100%) hue-rotate(190deg) brightness(85%) contrast(125%) saturate(75%);
+}
+
+/* Electric Grid Feeder Pulsing Flow Lines */
+@keyframes electricFlow {
+  from { stroke-dashoffset: 40; }
+  to { stroke-dashoffset: 0; }
+}
+.electric-feeder-pulse {
+  stroke-dasharray: 8, 8;
+  animation: electricFlow 1.1s linear infinite;
+}
+.electric-feeder-pulse.fault {
+  stroke-dasharray: 6, 6;
+  animation: electricFlow 0.55s linear infinite;
+}
+
+/* Sonar Radar Ping FX around Outages */
+.sonar-marker-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sonar-pin-center {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 0 12px #ef4444;
+  z-index: 2;
+  position: relative;
+}
+.sonar-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(239, 68, 68, 0.85);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+  transform: translate(-50%, -50%);
+  animation: sonarWave 1.8s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+.sonar-ring.delay-1 {
+  animation-delay: 0.6s;
+}
+.sonar-ring.delay-2 {
+  animation-delay: 1.2s;
+}
+@keyframes sonarWave {
+  0% {
+    width: 12px;
+    height: 12px;
+    opacity: 1;
+  }
+  100% {
+    width: 65px;
+    height: 65px;
+    opacity: 0;
+  }
+}
+
+/* 2030 Real-time Response Crew Vehicle Marker */
+.sim-crew-marker-wrap {
+  background: transparent !important;
+  border: 0 !important;
+}
+.sim-crew-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.sim-crew-icon {
+  width: 38px;
+  height: 38px;
+  background: #0f172a;
+  border: 2px solid #38bdf8;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 1.25rem;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.8), 0 4px 10px rgba(0, 0, 0, 0.5);
+  animation: crewPulse 1.2s infinite alternate ease-in-out;
+}
+@keyframes crewPulse {
+  from { transform: scale(1); box-shadow: 0 0 12px rgba(56, 189, 248, 0.6); }
+  to { transform: scale(1.12); box-shadow: 0 0 24px rgba(56, 189, 248, 0.95); }
+}
+.sim-crew-badge {
+  background: #0284c7;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-top: 2px;
+  letter-spacing: 0.4px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+}
+
+/* 2030 Holographic Glassmorphism Map Popup */
+.map-popup-card.holographic {
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(14px);
+  border: 1px solid #38bdf8;
+  border-radius: 12px;
+  padding: 12px;
+  color: #f8fafc;
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.25);
+}
+.map-popup-card.holographic .map-popup-title {
+  color: #ffffff;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+}
+.map-popup-card.holographic .map-popup-meta {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #cbd5e1;
+}
+.scada-telemetry-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  font-family: monospace;
+}
+.map-popup-btn.sim-btn {
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.5);
+  border: 1px solid #60a5fa;
+  margin-top: 4px;
+}
+.map-popup-btn.sim-btn:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
+}
 .report-location-map { height: min(42vh, 320px); min-height: 230px; overflow: hidden; border: 1px solid #c8dce9; border-radius: 12px; z-index: 0; }
 .report-location-modes { margin: 0; }
 .report-attachment-previews { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 10px; }

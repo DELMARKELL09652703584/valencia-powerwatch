@@ -978,16 +978,48 @@ async function renderMobileMap() {
 
   mobileShell(`
     ${mobileHero('Power Outage Map', 'Explore active interruptions, satellite views, and outage density across Valencia City.')}
-    <div class="mobile-map-controls" style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
+    
+    <!-- 2030 SCADA Telemetry Strip -->
+    <div class="scada-telemetry-strip" role="status" aria-label="Live SCADA Power Grid Telemetry">
+      <div class="scada-stat live-status">
+        <span class="scada-led ${incidents.length ? 'red' : 'green'}"></span>
+        <strong>SCADA 2030</strong>
+        <span class="scada-sub">${incidents.length ? 'ALERT' : 'NOMINAL'}</span>
+      </div>
+      <div class="scada-stat">
+        <span class="scada-label">GRID LOAD:</span>
+        <span class="scada-val cyan">68.4 MW</span>
+      </div>
+      <div class="scada-stat">
+        <span class="scada-label">FREQ:</span>
+        <span class="scada-val">60.01 Hz</span>
+      </div>
+      <div class="scada-stat">
+        <span class="scada-label">FEEDERS:</span>
+        <span class="scada-val ${incidents.length ? 'warn' : 'cyan'}">3/4 OK · 1 FAULT</span>
+      </div>
+      <div class="scada-stat">
+        <span class="scada-label">NODES:</span>
+        <span class="scada-val cyan">31/31 BGRYS</span>
+      </div>
+      <div class="scada-stat">
+        <span class="scada-label">AI ENGINE:</span>
+        <span class="scada-val cyan">OPTIMAL (98%)</span>
+      </div>
+    </div>
+
+    <div class="mobile-map-controls" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
       <div class="mobile-segments" role="group" aria-label="Map display mode" style="flex:1;min-width:180px;margin-bottom:0;">
         <button type="button" class="mobile-segment ${!isHeatmap ? 'active' : ''}" data-action="set-mobile-map-mode" data-value="markers">📍 Outage Pins</button>
         <button type="button" class="mobile-segment ${isHeatmap ? 'active' : ''}" data-action="set-mobile-map-mode" data-value="heat">🔥 Hotspot Heatmap</button>
       </div>
       <div class="mobile-segments" role="group" aria-label="Base map layer" style="margin-bottom:0;">
-        <button type="button" class="mobile-segment ${!isSatellite ? 'active' : ''}" data-action="set-mobile-map-layer" data-value="street" title="Standard Street Map">🗺️ Street</button>
-        <button type="button" class="mobile-segment ${isSatellite ? 'active' : ''}" data-action="set-mobile-map-layer" data-value="satellite" title="Satellite Aerial Photo">🛰️ Satellite</button>
+        <button type="button" class="mobile-segment ${!isSatellite && !state.communityCyberMode ? 'active' : ''}" data-action="set-mobile-map-layer" data-value="street" title="Standard Street Map">🗺️ Street</button>
+        <button type="button" class="mobile-segment ${isSatellite ? 'active' : ''}" data-action="set-mobile-map-layer" data-value="satellite" title="Satellite Aerial Photo">🛰️ Satellite 4K</button>
+        <button type="button" class="mobile-segment ${state.communityCyberMode ? 'active' : ''}" data-action="toggle-community-cyber" title="Cyber 2030 Dark Mode" style="${state.communityCyberMode ? 'background:#0f172a;color:#38bdf8;border:1px solid #38bdf8;' : ''}">🌌 Cyber 2030</button>
       </div>
-      <button type="button" class="mobile-segment" data-action="toggle-community-route" style="background:#2563eb;color:#fff;font-weight:750;box-shadow:0 2px 6px rgba(37,99,235,0.3);flex:0 0 auto;padding:6px 12px;border:0;border-radius:8px;">🧭 Blue Route Guide</button>
+      <button type="button" class="mobile-segment" data-action="toggle-community-feeders" style="${state.communityFeedersMode !== false ? 'background:#0284c7;color:#fff;font-weight:750;' : 'background:#f1f5f9;color:#334155;'}border:0;border-radius:8px;padding:6px 11px;">⚡ Smart Grid Feeders</button>
+      <button type="button" class="mobile-segment" data-action="toggle-community-route" style="background:#2563eb;color:#fff;font-weight:750;box-shadow:0 2px 6px rgba(37,99,235,0.3);flex:0 0 auto;padding:6px 12px;border:0;border-radius:8px;">🧭 Blue Route</button>
     </div>
     ${legendMarkup}
     <div class="map-route-hud-container" style="position:relative;">
@@ -1021,6 +1053,13 @@ async function renderMobileMap() {
   const mapElement = document.getElementById('community-map');
   if (!mapElement) return;
   await ensureLeaflet();
+
+  if (state.communityCyberMode) {
+    mapElement.classList.add('cyber-mode');
+  } else {
+    mapElement.classList.remove('cyber-mode');
+  }
+
   const map = L.map(mapElement, {
     zoomControl: false,
     minZoom: 11,
@@ -1053,6 +1092,11 @@ async function renderMobileMap() {
       maxZoom: 18,
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
+  }
+
+  // 2030 Smart Electric Feeder Grid Layer
+  if (state.communityFeedersMode !== false) {
+    renderElectricFeedersOnMap(map);
   }
 
   L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -1090,12 +1134,12 @@ async function renderMobileMap() {
       const markerColor = sev === 'Critical' ? '#b91c1c' : '#e11d48';
 
       const popupHtml = `
-        <div class="map-popup-card">
+        <div class="map-popup-card holographic">
           <div class="map-popup-header">
-            <span class="map-popup-code">${escapeHtml(incident.incident_code || 'OUTAGE')}</span>
+            <span class="scada-telemetry-badge">${escapeHtml(incident.incident_code || 'OUTAGE')}</span>
             <span class="map-popup-badge" style="${getSeverityStyle(sev)}">${escapeHtml(sev)}</span>
           </div>
-          <h4 class="map-popup-title">${escapeHtml(incident.title)}</h4>
+          <h4 class="map-popup-title">⚡ ${escapeHtml(incident.title)}</h4>
           <div class="map-popup-meta">
             <div class="map-popup-row">
               <span class="map-popup-icon">📍</span>
@@ -1103,24 +1147,38 @@ async function renderMobileMap() {
             </div>
             <div class="map-popup-row">
               <span class="map-popup-icon">⚡</span>
-              <span>${escapeHtml(incident.incident_type || 'Power Interruption')}</span>
+              <span>Grid Sector: <strong style="color:#38bdf8;">FDR-03 Western Radial Trunk</strong></span>
             </div>
             <div class="map-popup-row">
               <span class="map-popup-icon">⏳</span>
-              <span><strong>Est. Restoration (ETR):</strong> <span class="map-popup-etr">${escapeHtml(formatEtr(incident.estimated_restoration_time))}</span></span>
+              <span><strong>AI Predicted ETR:</strong> <span class="map-popup-etr" style="color:#38bdf8;">${escapeHtml(formatEtr(incident.estimated_restoration_time))}</span></span>
             </div>
             <div class="map-popup-row">
               <span class="map-popup-icon">🔄</span>
-              <span>Status: <strong style="color:${incident.status === 'Restored' ? '#16a34a' : '#e11d48'}">${escapeHtml(incident.status)}</strong></span>
+              <span>SCADA Status: <strong style="color:${incident.status === 'Restored' ? '#22c55e' : '#ef4444'}">${escapeHtml(incident.status)}</strong></span>
             </div>
           </div>
-          <button type="button" class="map-popup-btn" data-action="view-incident-details" data-id="${incident.id}">View Live Tracker ›</button>
-          <button type="button" class="map-popup-btn route-btn" data-action="show-community-route" data-lat="${coordinates[0]}" data-lng="${coordinates[1]}" data-label="${escapeHtml(incident.title)} (${escapeHtml(incident.barangay || 'Valencia')})">🧭 Route Guide / Directions</button>
+          <button type="button" class="map-popup-btn route-btn" data-action="show-community-route" data-lat="${coordinates[0]}" data-lng="${coordinates[1]}" data-label="${escapeHtml(incident.title)} (${escapeHtml(incident.barangay || 'Valencia')})">🧭 2030 Road Navigation Guide</button>
+          <button type="button" class="map-popup-btn sim-btn" data-action="sim-crew-direct" data-lat="${coordinates[0]}" data-lng="${coordinates[1]}" data-label="${escapeHtml(incident.title)}">🚀 Simulate Crew Dispatch (GPS)</button>
+          <button type="button" class="map-popup-btn" style="background:#334155;" data-action="view-incident-details" data-id="${incident.id}">View Live Tracker ›</button>
         </div>
       `;
 
-      L.circleMarker(coordinates, { radius: 10, color: '#fff', fillColor: markerColor, fillOpacity: 0.95, weight: 2.5 })
-        .addTo(map).bindPopup(popupHtml, { maxWidth: 280 });
+      // 2030 Sonar Radar Ping Marker
+      const sonarIcon = L.divIcon({
+        className: 'sonar-marker-wrap',
+        html: `
+          <div class="sonar-ring"></div>
+          <div class="sonar-ring delay-1"></div>
+          <div class="sonar-ring delay-2"></div>
+          <div class="sonar-pin-center" style="background:${markerColor};"></div>
+        `,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+
+      L.marker(coordinates, { icon: sonarIcon })
+        .addTo(map).bindPopup(popupHtml, { maxWidth: 295 });
     });
 
     scheduled.forEach((item) => {
