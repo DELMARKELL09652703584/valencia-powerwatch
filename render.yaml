@@ -3,8 +3,11 @@ services:
     name: valencia-powerwatch
     runtime: node
     plan: free
-    buildCommand: npm install
+    branch: main
+    buildCommand: npm ci
     startCommand: node server/index.js
+    autoDeploy: true
+    healthCheckPath: /api/health
     envVars:
       - key: PORT
         value: 10000

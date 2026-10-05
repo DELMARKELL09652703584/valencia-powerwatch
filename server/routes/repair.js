@@ -2,6 +2,7 @@ const express = require('express');
 const { db, now, nextCode } = require('../db');
 const { requireAuth, requireRole, audit, notifyUsers } = require('../auth');
 const { sendSMS } = require('../sms');
+const { recordReportEvent, recordReportStatusChange } = require('../report-events');
 
 const router = express.Router();
 
@@ -254,10 +255,20 @@ router.post('/repair/assign', requireAuth, requireRole('personnel', 'administrat
             updated_at = ?
         WHERE id = ?
       `).run(team.id, team.name, ts, report.id);
+      recordReportStatusChange(report, 'In Progress', req.user, ts, `Repair team ${team.name} was dispatched.`);
+      recordReportEvent({
+        reportId: report.id,
+        eventType: 'repair',
+        title: 'Repair team dispatched',
+        details: `${team.name} was assigned to this report.`,
+        actor: req.user,
+        createdAt: ts,
+      });
     }
 
     // Update incident
     if (incident) {
+      const linkedReports = db.prepare('SELECT * FROM outage_reports WHERE incident_id = ?').all(incident.id);
       db.prepare(`
         UPDATE outage_incidents
         SET assigned_team_id = ?, assigned_team_name = ?, repair_status = 'Team Dispatched',
@@ -272,6 +283,17 @@ router.post('/repair/assign', requireAuth, requireRole('personnel', 'administrat
             status = 'In Progress', updated_at = ?
         WHERE incident_id = ?
       `).run(team.id, team.name, ts, incident.id);
+      for (const linkedReport of linkedReports) {
+        recordReportStatusChange(linkedReport, 'In Progress', req.user, ts, `Repair team ${team.name} was dispatched.`);
+        recordReportEvent({
+          reportId: linkedReport.id,
+          eventType: 'repair',
+          title: 'Repair team dispatched',
+          details: `${team.name} was assigned to the linked incident.`,
+          actor: req.user,
+          createdAt: ts,
+        });
+      }
     }
 
     db.exec('COMMIT');
@@ -338,6 +360,9 @@ router.put('/repair/assignments/:id/status', requireAuth, requireRole('personnel
   }
 
   const ts = now();
+  const linkedReports = assignment.incident_id
+    ? db.prepare('SELECT * FROM outage_reports WHERE incident_id = ? AND id <> ?').all(assignment.incident_id, assignment.report_id || 0)
+    : [];
   let arrivedAt = assignment.arrived_at;
   let completedAt = assignment.completed_at;
 
@@ -381,6 +406,15 @@ router.put('/repair/assignments/:id/status', requireAuth, requireRole('personnel
         SET repair_status = ?, status = ?, updated_at = ?
         WHERE id = ?
       `).run(nextRepairStatus, nextReportStatus, ts, assignment.report_id);
+      recordReportStatusChange(assignment.report, nextReportStatus, req.user, ts, `Repair team ${assignment.team_name} updated its status to ${status}.`);
+      recordReportEvent({
+        reportId: assignment.report_id,
+        eventType: 'repair',
+        title: `Repair team ${status.toLowerCase()}`,
+        details: `${assignment.team_name}: ${status}`,
+        actor: req.user,
+        createdAt: ts,
+      });
     }
 
     // 4. Propagate to linked incident
@@ -399,6 +433,19 @@ router.put('/repair/assignments/:id/status', requireAuth, requireRole('personnel
           SET repair_status = 'Resolved', status = 'Resolved', updated_at = ?
           WHERE incident_id = ?
         `).run(ts, assignment.incident_id);
+      }
+      for (const linkedReport of linkedReports) {
+        if (status === 'Resolved') {
+          recordReportStatusChange(linkedReport, 'Resolved', req.user, ts, `Repair team ${assignment.team_name} completed the incident response.`);
+        }
+        recordReportEvent({
+          reportId: linkedReport.id,
+          eventType: 'repair',
+          title: `Repair team ${status.toLowerCase()}`,
+          details: `${assignment.team_name}: ${status}`,
+          actor: req.user,
+          createdAt: ts,
+        });
       }
     }
 

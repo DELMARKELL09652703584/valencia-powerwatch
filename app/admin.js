@@ -511,6 +511,14 @@ async function renderAdminDashboard() {
     { label: 'Grid Restored', value: resolvedCount, tag: 'RESTORED', sub: `Avg ETR: ${stats.avg_duration_hours ? stats.avg_duration_hours + 'h' : 'Optimal'}`, tone: 'teal', page: 'history', icon: '✅' },
   ];
 
+  const topBarangays = (barangay.data || []).slice(0, 3);
+  const focusCards = [
+    { icon: '📊', label: 'Customer Impact', value: `${stats.affected_customers || 0}`, sub: 'affected accounts', tone: 'critical' },
+    { icon: '🚨', label: 'Priority Areas', value: topBarangays.length ? `${topBarangays[0]?.barangay || 'N/A'}` : 'No active alert', sub: topBarangays.length > 1 ? `${topBarangays[1]?.barangay || 'Monitoring stable'}` : 'Monitoring stable', tone: 'warning' },
+    { icon: '🛠️', label: 'Crew Readiness', value: `${stats.available_crews || 0}/${stats.total_crews || 4}`, sub: 'units on standby', tone: 'success' },
+    { icon: '🧭', label: 'Grid Status', value: state.activeIncidentsCount > 0 ? `${state.activeIncidentsCount} active` : 'Stable', sub: 'operations pulse', tone: 'neutral' },
+  ];
+
   const barangayRows = (barangay.data || []).slice(0, 6).map((row) => ({ label: row.barangay, value: Number(row.c) || 0 }));
   const otherCount = (barangay.data || []).slice(6).reduce((sum, row) => sum + (Number(row.c) || 0), 0);
   if (otherCount) barangayRows.push({ label: 'Others', value: otherCount });
@@ -600,6 +608,19 @@ async function renderAdminDashboard() {
           <span class="scada-card-label">${escapeHtml(card.label)}</span>
           <span class="scada-card-sub">${escapeHtml(card.sub)}</span>
         </button>
+      `).join('')}
+    </div>
+
+    <div class="dashboard-focus-grid">
+      ${focusCards.map((item) => `
+        <div class="dashboard-focus-item focus-${item.tone}">
+          <div class="focus-item-header">
+            <span class="focus-icon">${item.icon}</span>
+            <span>${escapeHtml(item.label)}</span>
+          </div>
+          <strong>${escapeHtml(item.value)}</strong>
+          <small>${escapeHtml(item.sub)}</small>
+        </div>
       `).join('')}
     </div>
 

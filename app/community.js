@@ -477,6 +477,20 @@ async function renderMobileReportForm() {
   const hidden = ['barangay', 'location', 'purok', 'affected_area', 'date_time_noticed', 'possible_outage_type', 'description', 'latitude', 'longitude', 'location_source', 'location_accuracy_m', 'remarks']
     .map((name) => `<input type="hidden" name="${name}" value="${escapeHtml(draft[name] || '')}">`).join('');
   let formBody = '';
+  const possibleDuplicates = state.mobilePossibleDuplicates || [];
+  const duplicateWarning = state.mobileDuplicateCheckError
+    ? `<aside class="possible-duplicate-notice is-unavailable" role="status"><strong>Similar-report check unavailable</strong><p>${escapeHtml(state.mobileDuplicateCheckError)} You can still submit; authorized staff will review your report.</p></aside>`
+    : possibleDuplicates.length
+      ? `<aside class="possible-duplicate-notice" role="status">
+          <strong>Possible nearby reports found</strong>
+          <p>These active reports were submitted within 1 km of your pin during the last 72 hours. They are suggestions only; your report will not be marked duplicate automatically.</p>
+          <ul>${possibleDuplicates.map((candidate) => `
+            <li><span><strong>${escapeHtml(candidate.report_code)}</strong> · ${escapeHtml(candidate.possible_outage_type || 'Power interruption')} · ${escapeHtml(candidate.status)}</span>
+              <small>${candidate.distance_m < 1000 ? `${candidate.distance_m} m away` : `${(candidate.distance_m / 1000).toFixed(1)} km away`} · ${escapeHtml(formatDateTime(candidate.reported_at))}</small>
+            </li>`).join('')}</ul>
+          <p>If one describes the same interruption, you can go back instead. If your report is separate, continue submitting.</p>
+        </aside>`
+      : '<p class="possible-duplicate-clear" role="status">No similar active reports were found nearby in the last 72 hours.</p>';
 
   if (step === 1) {
     formBody = `<h2>Location</h2>
@@ -540,6 +554,7 @@ async function renderMobileReportForm() {
       <button type="button" class="button primary block report-evidence-next" data-action="next-report-step">Next</button>`;
   } else {
     formBody = `<h2>Review Your Report</h2>
+      ${duplicateWarning}
       <div class="review-list">
         <div class="review-item"><span class="review-label">Interruption Type</span><span class="review-value">${escapeHtml(draft.possible_outage_type || 'Power interruption')}</span></div>
         <div class="review-item"><span class="review-label">Barangay</span><span class="review-value">${escapeHtml(draft.barangay || '')}</span></div>
@@ -749,6 +764,22 @@ async function moveMobileReportStep(direction) {
   })));
   state.mobileReportDraft = { ...(state.mobileReportDraft || {}), ...values };
   state.mobileReportDraft.attachments = [...currentAttachments, ...addedAttachments];
+  if (direction > 0 && (state.mobileReportStep || 1) === 3) {
+    state.mobilePossibleDuplicates = [];
+    state.mobileDuplicateCheckError = '';
+    const draft = state.mobileReportDraft;
+    const params = new URLSearchParams({
+      barangay: String(draft.barangay || ''),
+      latitude: String(draft.latitude || ''),
+      longitude: String(draft.longitude || ''),
+    });
+    try {
+      const { possible_duplicates: matches } = await api(`/api/reports/possible-duplicates?${params}`);
+      state.mobilePossibleDuplicates = matches;
+    } catch (error) {
+      state.mobileDuplicateCheckError = error.message || 'Please try again later.';
+    }
+  }
   state.mobileReportStep = Math.max(1, Math.min(4, (state.mobileReportStep || 1) + direction));
   await render();
 }
@@ -945,45 +976,29 @@ async function renderMobileReportDetail() {
   const { report } = await api(`/api/reports/${Number(state.mobileReportId)}`);
   const prog = computeReportProgressStage(report);
   const isResolved = prog.stage === 4;
-
-  const stages = [
-    {
-      step: 1,
-      name: 'Report Submitted',
-      bisaya: 'Nadawat',
-      icon: '📝',
-      time: report.reported_at,
-      desc: 'Nadawat na sa Valencia PowerWatch control center ang imong report ug gi-queue para sa validation ug screening.'
-    },
-    {
-      step: 2,
-      name: 'Under Verification',
-      bisaya: 'Gi-verify',
-      icon: '🔍',
-      time: prog.stage >= 2 ? (report.updated_at || report.reported_at) : null,
-      desc: 'Gisusi ug gi-validate sa technical dispatchers ang outage report dungan sa feeder grid telemetry ug mga silingang konsumante.'
-    },
-    {
-      step: 3,
-      name: 'Crew Dispatched',
-      bisaya: 'On-site Repair',
-      icon: '👷',
-      time: prog.stage >= 3 ? (report.updated_at || report.reported_at) : null,
-      desc: report.assigned_team_name 
-        ? `Ang Emergency Response Crew (${escapeHtml(report.assigned_team_name)}) anaa na sa lokasyon ug aktibong nag-ayo sa linya/transformer.`
-        : 'Gipadala na ang maintenance repair crew sa maong dapit aron ayuhon ang depekto sa kuryente.'
-    },
-    {
-      step: 4,
-      name: 'Power Restored',
-      bisaya: 'Nauli Na',
-      icon: '⚡',
-      time: prog.stage >= 4 ? (report.updated_at || report.reported_at) : null,
-      desc: 'Malampusong nauli ug normal na ang suplay sa kuryente sa maong lugar. Palihog kumpirmahi ug hatagi og feedback sa ubos!'
-    }
-  ];
-
-  const fillPercent = Math.min(100, Math.max(0, ((prog.stage - 1) / 3) * 100));
+  const timeline = report.timeline?.length ? report.timeline : [{
+    event_type: 'submitted',
+    title: 'Report submitted',
+    details: 'Your report was received and is pending review.',
+    created_at: report.reported_at,
+  }];
+  const timelineMarkup = timeline.map((event, index) => {
+    const icon = event.event_type === 'submitted' ? '📝'
+      : event.event_type === 'repair' ? '🛠️'
+        : event.event_type === 'incident' ? '⚡' : '↻';
+    const statusText = event.from_status && event.to_status
+      ? `${event.from_status} → ${event.to_status}`
+      : event.to_status || '';
+    return `<li class="report-timeline-item ${index === timeline.length - 1 ? 'is-latest' : ''}">
+      <span class="report-timeline-icon" aria-hidden="true">${icon}</span>
+      <div class="report-timeline-content">
+        <strong>${escapeHtml(event.title)}</strong>
+        ${statusText ? `<span class="report-timeline-status">${escapeHtml(statusText)}</span>` : ''}
+        ${event.details ? `<p>${escapeHtml(event.details)}</p>` : ''}
+        <small>${escapeHtml(formatDateTime(event.created_at))}${event.actor_name ? ` · Updated by ${escapeHtml(event.actor_name)}` : ''}</small>
+      </div>
+    </li>`;
+  }).join('');
 
   const etrTime = report.incident?.estimated_restoration || report.estimated_restoration;
   const etrMarkup = isResolved ? `
@@ -997,10 +1012,10 @@ async function renderMobileReportDetail() {
     <div class="mobile-etr-badge" style="background:#eef7ff;border:1.5px solid #0284c7;border-radius:10px;padding:12px;margin:12px 0;">
       <div style="display:flex;align-items:center;gap:8px;font-weight:700;color:#0369a1;">
         <span>⏱️</span>
-        <span>${t('etr_label', 'Estimated Restoration (ETR)')}: ${etrTime ? formatDateTime(etrTime) : 'Calculating (~2 to 3 hrs)'}</span>
+        <span>${t('etr_label', 'Estimated Restoration (ETR)')}: ${etrTime ? formatDateTime(etrTime) : 'No estimate available yet'}</span>
       </div>
       <p style="margin:4px 0 0;font-size:0.82rem;color:#334155;">
-        ${escapeHtml(report.incident?.etr_reason || 'Automated restoration estimate calculated by Valencia PowerWatch AI/ETR engine based on fault severity and weather.')}
+        ${escapeHtml(report.incident?.etr_reason || 'An estimate will appear here if authorized staff records one for the linked incident.')}
       </p>
     </div>`;
 
@@ -1041,49 +1056,9 @@ async function renderMobileReportDetail() {
       <div class="mobile-detail-top"><span class="mobile-report-pin large">⌖</span><div><strong>${escapeHtml(report.report_code)}</strong><span>${escapeHtml(formatDateTime(report.date_time_noticed))}</span></div>${statusPill(report.status)}</div>
       ${etrMarkup}
 
-      <!-- 2030 Delivery-Style Visual Progress Stepper -->
-      <section class="visual-progress-stepper-card">
-        <div class="visual-stepper-header">
-          <div>
-            <span class="visual-stepper-eyebrow">VALENCIA POWERWATCH 2030 TRACKER</span>
-            <h3>Real-Time Restoration Progress</h3>
-          </div>
-          <span class="visual-stepper-status-badge tone-${prog.tone}">
-            ${prog.icon} ${prog.label}
-          </span>
-        </div>
-
-        <div class="visual-stepper-diagram">
-          <div class="visual-stepper-line-bg"></div>
-          <div class="visual-stepper-line-fill" style="width: ${fillPercent}%;"></div>
-          
-          <div class="visual-stepper-nodes">
-            ${stages.map((st) => {
-              const isCompleted = st.step < prog.stage || (st.step === 4 && prog.stage === 4);
-              const isCurrent = st.step === prog.stage && prog.stage < 4;
-              const isPending = st.step > prog.stage;
-              return `
-                <div class="visual-stepper-node ${isCompleted ? 'completed' : ''} ${isCurrent ? 'active' : ''} ${isPending ? 'pending' : ''}">
-                  <div class="visual-node-circle">
-                    ${isCompleted ? '<span class="node-check">✓</span>' : `<span class="node-icon">${st.icon}</span>`}
-                    ${isCurrent ? '<span class="node-beacon"></span>' : ''}
-                  </div>
-                  <strong class="visual-node-title">${escapeHtml(st.name)}</strong>
-                  <span class="visual-node-bisaya">${escapeHtml(st.bisaya)}</span>
-                  <time class="visual-node-time">${st.time ? escapeHtml(formatDateTime(st.time)) : 'Pending'}</time>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        </div>
-
-        <div class="visual-stage-callout tone-${prog.tone}">
-          <div class="callout-icon">${stages[prog.stage - 1].icon}</div>
-          <div class="callout-copy">
-            <strong>Hakbang ${prog.stage}: ${stages[prog.stage - 1].name} (${stages[prog.stage - 1].bisaya})</strong>
-            <p>${stages[prog.stage - 1].desc}</p>
-          </div>
-        </div>
+      <section class="mobile-report-timeline" aria-labelledby="report-timeline-heading">
+        <header><div><span class="report-timeline-eyebrow">REPORT ACTIVITY</span><h3 id="report-timeline-heading">Status timeline</h3></div>${statusPill(report.status)}</header>
+        <ol>${timelineMarkup}</ol>
       </section>
 
       <div class="mobile-detail-row"><strong>Interruption Type</strong><span>${escapeHtml(report.possible_outage_type || 'Power outage')}</span></div>

@@ -5,6 +5,7 @@ const crypto = require('node:crypto');
 const multer = require('multer');
 const { db, now, UPLOAD_DIR, nextCode } = require('../db');
 const { requireAuth, requireRole, audit, notifyRole, notifyUsers } = require('../auth');
+const { recordReportEvent, recordReportStatusChange } = require('../report-events');
 
 const router = express.Router();
 
@@ -69,6 +70,12 @@ const reportDetailRow = (id) => {
   }
   report.linked_incident = report.incident;
   report.attachments = db.prepare('SELECT id, file_path, mime_type, original_name, file_size FROM report_attachments WHERE report_id = ? ORDER BY id').all(id);
+  report.timeline = db.prepare(`
+    SELECT event_type, title, details, from_status, to_status, actor_name, created_at
+    FROM report_status_history
+    WHERE report_id = ?
+    ORDER BY created_at, id
+  `).all(id);
   return report;
 };
 
@@ -134,6 +141,14 @@ router.post('/reports', requireAuth, requireRole('resident'), parseReportAttachm
   );
 
   const reportId = Number(info.lastInsertRowid);
+  recordReportEvent({
+    reportId,
+    eventType: 'submitted',
+    title: 'Report submitted',
+    details: 'Your report was received and is pending review.',
+    toStatus: 'Submitted',
+    createdAt: reportedAt,
+  });
   const savedAttachmentPaths = [];
   try {
     for (const file of req.files || []) savedAttachmentPaths.push(await storeReportAttachment(file, reportId));
@@ -204,6 +219,47 @@ router.get('/reports/mine', requireAuth, (req, res) => {
   res.json({ reports: rows });
 });
 
+router.get('/reports/possible-duplicates', requireAuth, requireRole('resident'), (req, res) => {
+  const { barangay, latitude, longitude } = req.query;
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  if (!barangay || !Number.isFinite(lat) || lat < -90 || lat > 90
+    || !Number.isFinite(lng) || lng < -180 || lng > 180) {
+    return res.status(400).json({ error: 'Choose a barangay and confirm a valid map location before checking similar reports.' });
+  }
+
+  const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+  const candidates = db.prepare(`
+    SELECT report_code, status, possible_outage_type, reported_at, latitude, longitude
+    FROM outage_reports
+    WHERE barangay = ?
+      AND reported_at >= ?
+      AND status NOT IN ('Rejected', 'Duplicate', 'Resolved')
+      AND latitude IS NOT NULL AND longitude IS NOT NULL
+  `).all(String(barangay).trim(), cutoff);
+
+  const toRadians = (degrees) => degrees * Math.PI / 180;
+  const matches = candidates.map((candidate) => {
+    const dLat = toRadians(Number(candidate.latitude) - lat);
+    const dLng = toRadians(Number(candidate.longitude) - lng);
+    const a = Math.sin(dLat / 2) ** 2
+      + Math.cos(toRadians(lat)) * Math.cos(toRadians(Number(candidate.latitude))) * Math.sin(dLng / 2) ** 2;
+    const distanceMeters = 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return { ...candidate, distance_m: Math.round(distanceMeters) };
+  }).filter((candidate) => candidate.distance_m <= 1000)
+    .sort((a, b) => a.distance_m - b.distance_m)
+    .slice(0, 5)
+    .map(({ report_code, status, possible_outage_type, reported_at, distance_m }) => ({
+      report_code,
+      status,
+      possible_outage_type,
+      reported_at,
+      distance_m,
+    }));
+
+  res.json({ possible_duplicates: matches, radius_m: 1000, lookback_hours: 72 });
+});
+
 router.get('/reports/:id', requireAuth, (req, res) => {
   const report = reportDetailRow(Number(req.params.id));
   if (!report) return res.status(404).json({ error: 'Report not found.' });
@@ -268,8 +324,10 @@ router.put('/reports/:id/status', requireAuth, requireRole('personnel', 'adminis
     nextStatus = status;
   }
 
+  const updatedAt = now();
   db.prepare('UPDATE outage_reports SET status = ?, verification_status = ?, staff_remarks = ?, updated_at = ? WHERE id = ?')
-    .run(nextStatus, verificationStatus, remarks || report.staff_remarks || null, now(), report.id);
+    .run(nextStatus, verificationStatus, remarks || report.staff_remarks || null, updatedAt, report.id);
+  recordReportStatusChange(report, nextStatus, req.user, updatedAt);
 
   const updated = db.prepare('SELECT * FROM outage_reports WHERE id = ?').get(report.id);
   audit(req.user, `Report ${nextStatus}`, `Report ${report.report_code} marked ${nextStatus}.`);
@@ -299,8 +357,10 @@ router.put('/reports/:id/duplicate', requireAuth, requireRole('personnel', 'admi
   const { related_code, remarks } = req.body || {};
   const duplicateNote = `Duplicate of ${related_code || 'another report'}. ${remarks || ''}`.trim();
 
+  const updatedAt = now();
   db.prepare("UPDATE outage_reports SET status = 'Duplicate', verification_status = 'Duplicate', staff_remarks = ?, updated_at = ? WHERE id = ?")
-    .run(duplicateNote, now(), report.id);
+    .run(duplicateNote, updatedAt, report.id);
+  recordReportStatusChange(report, 'Duplicate', req.user, updatedAt, 'Staff identified this report as a possible duplicate.');
 
   audit(req.user, 'Duplicate identified', `Report ${report.report_code} marked duplicate.`);
   notifyUsers([report.reporter_id], 'Report identified as duplicate', duplicateNote, 'report');

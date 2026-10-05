@@ -1,6 +1,7 @@
 const express = require('express');
 const { db, now, nextCode } = require('../db');
 const { requireAuth, requireRole, audit, notifyUsers } = require('../auth');
+const { recordReportEvent, recordReportStatusChange } = require('../report-events');
 const { sendSMS } = require('../sms');
 const { calculateETR } = require('../etr');
 
@@ -205,6 +206,8 @@ router.post('/incidents', requireAuth, requireRole('personnel', 'administrator')
       for (const report of linkedReports) {
         saveReportLink.run(incidentId, report.id, ts);
         updateReport.run(incidentId, ts, report.id);
+        const linkedStatus = report.status === 'Officially Confirmed' ? report.status : 'Verified';
+        recordReportStatusChange(report, linkedStatus, req.user, ts, `Linked to incident ${code}.`);
       }
       db.exec('COMMIT');
     } catch (txnError) {
@@ -271,20 +274,46 @@ router.put('/incidents/:id/status', requireAuth, requireRole('personnel', 'admin
   notifyIncidentReporters(incident, 'Outage status update', `Incident ${incident.incident_code} is now "${status}". ${remarks || ''}`, 'incident');
 
   if (status === 'Restored' || status === 'Closed') {
-    const linked = db.prepare('SELECT report_id FROM incident_links WHERE incident_id = ?').all(incident.id);
-    for (const l of linked) {
-      db.prepare("UPDATE outage_reports SET status = 'Resolved', updated_at = ? WHERE id = ?").run(now(), l.report_id);
+    const reportUpdatedAt = now();
+    const linkedReports = db.prepare(`
+      SELECT r.* FROM outage_reports r
+      JOIN incident_links l ON l.report_id = r.id
+      WHERE l.incident_id = ?
+    `).all(incident.id);
+    for (const report of linkedReports) {
+      db.prepare("UPDATE outage_reports SET status = 'Resolved', updated_at = ? WHERE id = ?").run(reportUpdatedAt, report.id);
+      recordReportStatusChange(report, 'Resolved', req.user, reportUpdatedAt, `Incident ${incident.incident_code} was marked ${status.toLowerCase()}.`);
     }
     if (incident.barangay) {
-      db.prepare("UPDATE outage_reports SET status = 'Resolved', updated_at = ? WHERE barangay = ? AND status NOT IN ('Rejected', 'Duplicate', 'Resolved')").run(now(), incident.barangay);
+      const barangayReports = db.prepare(`
+        SELECT * FROM outage_reports
+        WHERE barangay = ? AND status NOT IN ('Rejected', 'Duplicate', 'Resolved')
+      `).all(incident.barangay);
+      db.prepare("UPDATE outage_reports SET status = 'Resolved', updated_at = ? WHERE barangay = ? AND status NOT IN ('Rejected', 'Duplicate', 'Resolved')").run(reportUpdatedAt, incident.barangay);
+      for (const report of barangayReports) {
+        recordReportStatusChange(report, 'Resolved', req.user, reportUpdatedAt, `Incident ${incident.incident_code} was marked ${status.toLowerCase()}.`);
+      }
     }
   } else if (['Ongoing', 'Restoration in Progress', 'In Progress'].includes(status)) {
-    const linked = db.prepare('SELECT report_id FROM incident_links WHERE incident_id = ?').all(incident.id);
-    for (const l of linked) {
-      db.prepare("UPDATE outage_reports SET status = 'In Progress', updated_at = ? WHERE id = ?").run(now(), l.report_id);
+    const reportUpdatedAt = now();
+    const linkedReports = db.prepare(`
+      SELECT r.* FROM outage_reports r
+      JOIN incident_links l ON l.report_id = r.id
+      WHERE l.incident_id = ?
+    `).all(incident.id);
+    for (const report of linkedReports) {
+      db.prepare("UPDATE outage_reports SET status = 'In Progress', updated_at = ? WHERE id = ?").run(reportUpdatedAt, report.id);
+      recordReportStatusChange(report, 'In Progress', req.user, reportUpdatedAt, `Incident ${incident.incident_code} is being handled.`);
     }
     if (incident.barangay) {
-      db.prepare("UPDATE outage_reports SET status = 'In Progress', updated_at = ? WHERE barangay = ? AND status IN ('Submitted', 'Under Review', 'Verified', 'Officially Confirmed')").run(now(), incident.barangay);
+      const barangayReports = db.prepare(`
+        SELECT * FROM outage_reports
+        WHERE barangay = ? AND status IN ('Submitted', 'Under Review', 'Verified', 'Officially Confirmed')
+      `).all(incident.barangay);
+      db.prepare("UPDATE outage_reports SET status = 'In Progress', updated_at = ? WHERE barangay = ? AND status IN ('Submitted', 'Under Review', 'Verified', 'Officially Confirmed')").run(reportUpdatedAt, incident.barangay);
+      for (const report of barangayReports) {
+        recordReportStatusChange(report, 'In Progress', req.user, reportUpdatedAt, `Incident ${incident.incident_code} is being handled.`);
+      }
     }
   }
 
@@ -351,6 +380,14 @@ router.post('/incidents/:id/reports', requireAuth, requireRole('personnel', 'adm
     verification_status = CASE WHEN verification_status = 'Officially Confirmed' THEN verification_status ELSE 'Verified' END, incident_id = ?,
     staff_remarks = COALESCE(?, staff_remarks), updated_at = ? WHERE id = ?`)
     .run(incident.id, remarks ? String(remarks).trim() : null, ts, report.id);
+  recordReportStatusChange(report, report.status === 'Officially Confirmed' ? report.status : 'Verified', req.user, ts, `Linked to incident ${incident.incident_code}.`);
+  recordReportEvent({
+    reportId: report.id,
+    eventType: 'incident',
+    title: `Linked to incident ${incident.incident_code}`,
+    actor: req.user,
+    createdAt: ts,
+  });
   audit(req.user, 'Report linked to incident', `Report ${report.report_code} linked to incident ${incident.incident_code}.`);
   notifyUsers([report.reporter_id], 'Report linked to incident', `Your report ${report.report_code} was linked to incident ${incident.incident_code}.`, 'report');
   res.json({ message: `Report linked to incident ${incident.incident_code}.` });
@@ -369,6 +406,7 @@ router.post('/incidents/:id/related', requireAuth, requireRole('personnel', 'adm
   db.prepare('INSERT OR IGNORE INTO incident_links (incident_id, report_id, link_time) VALUES (?, ?, ?)').run(incident.id, report.id, ts);
   db.prepare("UPDATE outage_reports SET status = 'Duplicate', verification_status = 'Duplicate', incident_id = ?, staff_remarks = ?, updated_at = ? WHERE id = ?")
     .run(incident.id, remarks || `Part of incident ${incident.incident_code}.`, ts, report.id);
+  recordReportStatusChange(report, 'Duplicate', req.user, ts, `Grouped under incident ${incident.incident_code}.`);
 
   audit(req.user, 'Report linked', `Report ${report.report_code} linked to incident ${incident.incident_code}.`);
   notifyUsers([report.reporter_id], 'Report linked to incident', `Your report ${report.report_code} was linked to incident ${incident.incident_code}.`, 'report');

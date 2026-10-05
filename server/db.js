@@ -110,6 +110,18 @@ db.exec(`
     created_at TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS report_status_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id INTEGER NOT NULL REFERENCES outage_reports(id) ON DELETE CASCADE,
+    event_type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    details TEXT,
+    from_status TEXT,
+    to_status TEXT,
+    actor_name TEXT,
+    created_at TEXT NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS outage_incidents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     incident_code TEXT UNIQUE NOT NULL,
@@ -275,12 +287,33 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_scheduled_status_date ON scheduled_outages(status, outage_date, start_time);
   CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications(user_id, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_attachments_report_id ON report_attachments(report_id, id);
+  CREATE INDEX IF NOT EXISTS idx_report_history_report_created ON report_status_history(report_id, created_at, id);
   CREATE INDEX IF NOT EXISTS idx_announcements_status_published ON announcements(status, published_at DESC);
   CREATE INDEX IF NOT EXISTS idx_feedback_report ON citizen_feedback(report_id);
   CREATE INDEX IF NOT EXISTS idx_feedback_incident ON citizen_feedback(incident_id);
   CREATE INDEX IF NOT EXISTS idx_sms_logs_created ON sms_logs(created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_repair_assignments_team ON repair_assignments(team_id);
   CREATE INDEX IF NOT EXISTS idx_repair_assignments_status ON repair_assignments(status);
+`);
+
+db.exec(`
+  INSERT INTO report_status_history
+    (report_id, event_type, title, details, to_status, created_at)
+  SELECT r.id, 'submitted', 'Report submitted', 'Your report was received and is pending review.', 'Submitted', r.reported_at
+  FROM outage_reports r
+  WHERE NOT EXISTS (
+    SELECT 1 FROM report_status_history h WHERE h.report_id = r.id AND h.event_type = 'submitted'
+  );
+
+  INSERT INTO report_status_history
+    (report_id, event_type, title, details, to_status, created_at)
+  SELECT r.id, 'legacy_snapshot', 'Current status when tracking began',
+         'Earlier status-change history was not recorded by the system.', r.status, r.updated_at
+  FROM outage_reports r
+  WHERE r.status <> 'Submitted'
+    AND NOT EXISTS (
+      SELECT 1 FROM report_status_history h WHERE h.report_id = r.id AND h.event_type = 'legacy_snapshot'
+    );
 `);
 
 const ensureColumn = (table, column, definition) => {
