@@ -115,8 +115,8 @@ app.get(['/script.js', '/community/script.js', '/admin/script.js'], (req, res) =
 app.use(['/app', '/community/app', '/admin/app', '/install/app'], express.static(path.join(ROOT, 'app'), {
   setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache, must-revalidate')
 }));
+app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(ROOT, 'community.html')));
 app.use(express.static(ROOT));
-app.get('/', (req, res) => res.sendFile(path.join(ROOT, 'community.html')));
 
 // Error handler
 app.use((err, req, res, next) => {

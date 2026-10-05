@@ -6,28 +6,38 @@
     <title>Valencia PowerWatch · Community User App</title>
     <meta name="description" content="Valencia PowerWatch community mobile app for Valencia City, Bukidnon." />
     <meta name="theme-color" content="#073c68" />
-    <link rel="stylesheet" href="/style.css?v=15" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/assets/powerwatch-logo.svg" />
+    <link rel="apple-touch-icon" href="/assets/powerwatch-logo.svg" />
+    <link rel="stylesheet" href="/style.css?v=16" />
     <script>
       window.POWERWATCH_PORTAL = 'community';
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then((reg) => {
+            reg.update();
+          }).catch(console.error);
+        });
+      }
+      window.addEventListener('error', (e) => {
+        console.error('Portal load error:', e);
+      });
     </script>
   </head>
   <body class="community-body">
-    <div id="app"></div>
-    <script>
-      const v = '2.3_' + Date.now();
-      const coreScript = document.createElement('script');
-      coreScript.src = '/app/core.js?v=' + v;
-      coreScript.onload = () => {
-        const portalScript = document.createElement('script');
-        portalScript.src = '/app/community.js?v=' + v;
-        portalScript.onload = () => {
-          const routerScript = document.createElement('script');
-          routerScript.src = '/app/main.js?v=' + v;
-          document.body.append(routerScript);
-        };
-        document.body.append(portalScript);
-      };
-      document.body.append(coreScript);
-    </script>
+    <div id="app">
+      <div style="min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#073c68;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;padding:24px;box-sizing:border-box;">
+        <img src="/assets/powerwatch-logo.svg" alt="Valencia PowerWatch" style="width:78px;height:78px;margin-bottom:18px;" />
+        <h2 style="margin:0 0 6px 0;font-size:1.4rem;font-weight:800;letter-spacing:-0.5px;">Valencia PowerWatch</h2>
+        <p style="margin:0 0 16px 0;font-size:0.88rem;color:#bae6fd;">Valencia City, Bukidnon</p>
+        <span style="font-size:0.8rem;color:#94a3b8;">Nag-load sa aplikasyon…</span>
+      </div>
+    </div>
+    <script src="/app/core.js?v=16"></script>
+    <script src="/app/community.js?v=16"></script>
+    <script src="/app/main.js?v=16"></script>
   </body>
 </html>
