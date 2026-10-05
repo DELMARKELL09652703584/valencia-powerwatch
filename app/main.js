@@ -62,13 +62,6 @@ function renderLogin(message = '') {
     </aside>
     <section class="login-panel">
       <div class="login-content">
-        <div style="margin-bottom:14px;padding:12px 14px;background:#f0f9ff;border:1px solid #7dd3fc;border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
-          <div style="font-size:0.82rem;color:#0369a1;line-height:1.35;">
-            <strong>👥 Citizen or Resident of Valencia City?</strong><br>
-            <span>Report outages, track ETR, and view public alerts.</span>
-          </div>
-          <a href="/community" class="button primary small" style="text-decoration:none;white-space:nowrap;font-size:0.78rem;padding:6px 12px;">Open Citizen Portal &rarr;</a>
-        </div>
         <h1>Welcome Back!</h1>
         <p class="login-intro">Sign in to your Valencia PowerWatch account.</p>
         ${message ? `<div class="inline-alert">${escapeHtml(message)}</div>` : ''}
