@@ -103,6 +103,33 @@ function renderLogin(message = '') {
   </main>`;
 }
 
+function renderAdminRestrictedAccess() {
+  app.innerHTML = `<main class="login-page">
+    <aside class="login-art admin-login-art">
+      <div class="admin-art-brand"><img src="/assets/powerwatch-logo.svg" alt=""><div><strong>Valencia</strong><b>PowerWatch</b></div></div>
+      <p class="portal-name">Admin / Staff Portal</p>
+      <p class="art-slogan">Access Restricted</p>
+    </aside>
+    <section class="login-panel">
+      <div class="login-content" style="text-align:center;max-width:440px;">
+        <div style="font-size:2.8rem;margin-bottom:8px;">🛡️</div>
+        <h1 style="font-size:1.4rem;margin-bottom:8px;">Staff Access Required</h1>
+        <p class="login-intro" style="margin-bottom:12px;">You are currently signed in as <strong>${escapeHtml(state.user?.full_name || 'Resident')}</strong> (${escapeHtml(roleLabel(state.user?.role || 'resident'))}).</p>
+        <div style="padding:14px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;color:#991b1b;font-size:0.85rem;line-height:1.5;margin-bottom:20px;text-align:left;">
+          ⚠️ <strong>Notice:</strong> The Admin Console is exclusively for Valencia City System Personnel and Administrators. Residents can report outages and track restoration on the User Portal.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button class="button primary full" type="button" data-action="logout">Sign out &amp; Use Staff Account</button>
+          <a href="/user" class="button ghost full" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+            <span>Open User Portal (Citizen App)</span> &rarr;
+          </a>
+        </div>
+      </div>
+      <footer class="login-footer">&copy; ${new Date().getFullYear()} Valencia PowerWatch. All rights reserved.</footer>
+    </section>
+  </main>`;
+}
+
 function renderForgotPassword(message = '') {
   if (IS_ADMIN) {
     app.innerHTML = `<main class="login-page">
@@ -372,6 +399,10 @@ async function submitForm(form) {
     const result = await send('/api/auth/login', 'POST', {
       email: values.email, password: values.password, remember: values.remember === 'on',
     });
+    if (IS_ADMIN && !STAFF_ROLES.includes(result.user?.role)) {
+      await send('/api/auth/logout', 'POST').catch(() => {});
+      throw new Error('Access denied. Resident accounts cannot access the Admin Portal. Please sign in with an Administrator or Personnel account.');
+    }
     state.user = result.user;
     await afterLogin();
     return;
@@ -2614,7 +2645,7 @@ function openSocialAuthModal(provider) {
 
 async function afterLogin() {
   if (IS_ADMIN && state.user && !STAFF_ROLES.includes(state.user.role)) {
-    window.location.replace('/community');
+    renderAdminRestrictedAccess();
     return;
   }
   await refreshConfig();
@@ -2660,7 +2691,7 @@ async function boot() {
     const { user } = await api('/api/auth/me');
     state.user = user;
     if (IS_ADMIN && state.user && !STAFF_ROLES.includes(state.user.role)) {
-      window.location.replace('/community');
+      renderAdminRestrictedAccess();
       return;
     }
     await refreshConfig();
