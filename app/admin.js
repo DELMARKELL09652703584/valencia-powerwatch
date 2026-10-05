@@ -45,6 +45,50 @@ function adminNavIcon(key) {
 function adminShell(content) {
   const nav = visibleAdminNav();
   const info = state.config.system_info || {};
+  const currentNav = nav.find((n) => n.key === state.page);
+  const currentTitle = currentNav?.label || (state.page === 'notifications' ? 'Notifications' : state.page === 'profile' ? 'My Profile' : 'Dashboard');
+  const currentLocality = info.locality || 'Valencia City, Bukidnon';
+
+  const existingShell = app.querySelector('.admin-shell');
+  if (existingShell) {
+    // 1. Update active state of all nav items without destroying DOM or moving sidebar scroll position
+    const navItems = existingShell.querySelectorAll('.admin-nav .nav-item');
+    navItems.forEach((btn) => {
+      const pageKey = btn.dataset.page;
+      const isActive = state.page === pageKey;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-current', isActive ? 'page' : 'false');
+    });
+
+    // 2. Update topbar title & locality
+    const topbarTitle = existingShell.querySelector('.admin-topbar h1');
+    if (topbarTitle) topbarTitle.textContent = currentTitle;
+    const topbarSub = existingShell.querySelector('.admin-topbar .topbar-sub');
+    if (topbarSub) topbarSub.textContent = currentLocality;
+
+    // 3. Update topbar status pulse bar
+    const pulseBar = existingShell.querySelector('.grid-pulse-bar');
+    if (pulseBar) {
+      const hasOutage = Number(state.activeIncidentsCount || 0) > 0;
+      pulseBar.classList.toggle('has-outage', hasOutage);
+      const pulseText = pulseBar.querySelector('span:last-child');
+      if (pulseText) {
+        pulseText.textContent = hasOutage
+          ? `${state.activeIncidentsCount} Outage${state.activeIncidentsCount > 1 ? 's' : ''} Active`
+          : 'Grid Online: 99.2% Normal';
+      }
+    }
+
+    // 4. Update main content only & reset ONLY main content scroll to top
+    const contentArea = document.getElementById('admin-content');
+    if (contentArea) {
+      contentArea.innerHTML = content;
+      contentArea.scrollTop = 0;
+    }
+    return;
+  }
+
+  // Initial full render when opening Admin portal for the first time
   const groups = nav.map((item) => {
     return `<button type="button" class="nav-item ${state.page === item.key ? 'active' : ''}" data-page="${item.key}" aria-current="${state.page === item.key ? 'page' : 'false'}">
       <span class="nav-icon">${adminNavIcon(item.key)}</span><span>${escapeHtml(item.label)}</span>
@@ -57,7 +101,7 @@ function adminShell(content) {
         ${info.logoData ? `<img class="admin-logo" src="${escapeHtml(info.logoData)}" alt="System logo">` : '<img class="admin-logo" src="/assets/powerwatch-logo.svg" alt="Valencia PowerWatch">'}
         <div><strong>Valencia</strong><b>PowerWatch</b><small>Admin / Staff Portal</small></div>
       </div>
-      <nav class="admin-nav">${groups}</nav>
+      <nav class="admin-nav" id="admin-nav-menu">${groups}</nav>
       <div class="admin-sidebar-foot">
         <button type="button" class="admin-user" data-page="profile" aria-label="Open profile for ${escapeHtml(state.user.full_name)}">
           <div class="avatar">${escapeHtml((state.user.full_name || '?').charAt(0).toUpperCase())}</div>
@@ -69,8 +113,8 @@ function adminShell(content) {
     <main class="admin-main">
       <header class="admin-topbar">
         <div>
-          <h1>${escapeHtml(nav.find((n) => n.key === state.page)?.label || (state.page === 'notifications' ? 'Notifications' : state.page === 'profile' ? 'My Profile' : 'Dashboard'))}</h1>
-          <p class="topbar-sub">${escapeHtml(info.locality || 'Valencia City, Bukidnon')}</p>
+          <h1>${escapeHtml(currentTitle)}</h1>
+          <p class="topbar-sub">${escapeHtml(currentLocality)}</p>
         </div>
         <div class="topbar-right" style="display:flex;align-items:center;gap:10px;">
           <div class="grid-pulse-bar ${Number(state.activeIncidentsCount || 0) > 0 ? 'has-outage' : ''}" title="Valencia Grid Health Status">
