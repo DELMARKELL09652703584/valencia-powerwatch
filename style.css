@@ -7057,3 +7057,121 @@ body.dark-mode .admin-shell .form-stack label textarea {
     transition-duration: .01ms !important;
   }
 }
+
+/* Keep icon controls optically centered without changing each control's layout model. */
+.community-body .mobile-tab {
+  line-height: 1.2;
+}
+
+.community-body .mobile-tab-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  transform: none;
+}
+
+.community-body .mobile-tab-icon svg,
+.community-body button > svg,
+.community-body a > svg,
+.admin-shell button > svg,
+.admin-shell a > svg {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.community-body .mobile-tab-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.community-body .mobile-lang-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.community-body .mobile-lang-chip > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
+}
+
+.community-body .mobile-bell {
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.community-body .mobile-bell-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.admin-shell .nav-item {
+  display: flex;
+  align-items: center;
+  line-height: 1.25;
+}
+
+.admin-shell .nav-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  display: grid;
+  place-items: center;
+}
+
+.admin-shell .nav-icon svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.admin-shell .topbar-search-trigger,
+.admin-shell .theme-toggle-btn,
+.admin-shell .admin-topbar .button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.2;
+}
+
+.admin-shell .theme-toggle-btn,
+.admin-shell .admin-topbar .button {
+  justify-content: center;
+}
+
+.admin-shell .theme-toggle-btn > span,
+.admin-shell .admin-topbar .button > span {
+  display: inline-flex;
+  align-items: center;
+}
+
+.admin-shell .notification-bell,
+.admin-shell .verification-icon-btn,
+.admin-shell .report-action-btn,
+.admin-shell .user-view-action {
+  display: inline-grid;
+  place-items: center;
+}
+
+.admin-shell .notification-bell svg,
+.admin-shell .report-action-btn svg {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.admin-shell .dashboard-stat-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.admin-shell .verification-action,
+.admin-shell .dispatch-btn {
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+}
