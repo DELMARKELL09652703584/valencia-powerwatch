@@ -85,9 +85,6 @@ function adminShell(content) {
             <span id="theme-btn-icon">${document.documentElement.classList.contains('dark-mode') ? '☀️' : '🌙'}</span>
             <span id="theme-btn-text">${document.documentElement.classList.contains('dark-mode') ? 'Light' : 'Night Ops'}</span>
           </button>
-          <a href="/community" class="button ghost small" style="text-decoration:none;font-size:0.75rem;padding:6px 11px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;border:1px solid rgba(148,163,184,0.3);color:inherit;" title="Open Citizen / User Portal">
-            <span>👥</span> <span>Citizen App</span>
-          </a>
           <div class="notification-menu">
             <button type="button" class="icon-button notification-bell" data-action="toggle-notification-panel" aria-label="Notifications${state.unread ? `, ${state.unread} unread` : ''}" aria-haspopup="dialog" aria-expanded="${Boolean(state.notificationPanelOpen)}" aria-controls="admin-notification-panel" title="Notifications">
               ${adminNavIcon('notifications')}${state.unread ? `<span class="notification-badge">${state.unread > 99 ? '99+' : state.unread}</span>` : ''}
