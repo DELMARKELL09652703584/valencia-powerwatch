@@ -7175,3 +7175,317 @@ body.dark-mode .admin-shell .form-stack label textarea {
   justify-content: center;
   line-height: 1.2;
 }
+
+/* ==========================================================================
+   2030 SMART GRID SCADA COMMAND CENTER DASHBOARD STYLING
+   ========================================================================== */
+.admin-shell .command-center-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 18px 22px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(240, 249, 255, 0.85));
+  border: 1px solid rgba(186, 230, 253, 0.7);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-shell .command-center-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #0284c7, #38bdf8, #10b981, #0284c7);
+  background-size: 200% 100%;
+  animation: telemetryPulse 6s ease infinite;
+}
+
+@keyframes telemetryPulse {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.admin-shell .command-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.admin-shell .command-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #0369a1;
+  background: #e0f2fe;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid #bae6fd;
+}
+
+.admin-shell .command-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #0284c7;
+  box-shadow: 0 0 6px #0284c7;
+  animation: beaconPulse 1.8s infinite;
+}
+
+@keyframes beaconPulse {
+  0% { opacity: 0.4; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 0.4; transform: scale(0.9); }
+}
+
+.admin-shell .command-timestamp {
+  font-size: 0.73rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.admin-shell .command-center-header h2 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f2744;
+  letter-spacing: -0.02em;
+  margin: 3px 0 6px 0;
+}
+
+.admin-shell .telemetry-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.77rem;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.admin-shell .telemetry-pill.normal {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.admin-shell .telemetry-pill.alert {
+  background: #fff1f2;
+  color: #9f1239;
+  border: 1px solid #fecdd3;
+  animation: alertPulse 2s infinite;
+}
+
+@keyframes alertPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
+  50% { box-shadow: 0 0 12px rgba(239, 68, 68, 0.25); }
+}
+
+.admin-shell .pulse-dot.green {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.admin-shell .pulse-dot.red {
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+}
+
+.admin-shell .command-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 2030 SCADA KPI Metrics Grid */
+.admin-shell .scada-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 13px;
+  margin-top: 4px;
+}
+
+.admin-shell .scada-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 15px 16px;
+  background: #ffffff;
+  border: 1px solid var(--admin-line);
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(15, 39, 68, 0.04);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  overflow: hidden;
+}
+
+.admin-shell .scada-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 39, 68, 0.09);
+  border-color: #38bdf8;
+}
+
+.admin-shell .scada-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.admin-shell .scada-card-icon {
+  font-size: 1.15rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #f1f5f9;
+}
+
+.admin-shell .scada-card-tag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.admin-shell .scada-card.tone-blue .scada-card-tag { background: #e0f2fe; color: #0369a1; }
+.admin-shell .scada-card.tone-amber .scada-card-tag { background: #fef3c7; color: #b45309; }
+.admin-shell .scada-card.tone-red .scada-card-tag { background: #fee2e2; color: #b91c1c; }
+.admin-shell .scada-card.tone-emerald .scada-card-tag { background: #d1fae5; color: #047857; }
+.admin-shell .scada-card.tone-violet .scada-card-tag { background: #ede9fe; color: #6d28d9; }
+.admin-shell .scada-card.tone-teal .scada-card-tag { background: #ccfbf1; color: #0f766e; }
+
+.admin-shell .scada-card-value {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #0f2744;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-bottom: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-shell .scada-card-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.admin-shell .scada-card-sub {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* 2030 SCADA Visual Telemetry Grid */
+.admin-shell .scada-visual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 4px;
+}
+
+@media (max-width: 1024px) {
+  .admin-shell .scada-visual-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Fleet Unit Cards */
+.admin-shell .fleet-unit-card {
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.admin-shell .fleet-unit-card:hover {
+  transform: translateX(3px);
+  border-color: #38bdf8 !important;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.08);
+}
+
+/* ==========================================================================
+   2030 NIGHT OPS MODE (COMMAND CENTER CYBER DARK)
+   ========================================================================== */
+body.dark-mode .admin-shell {
+  --admin-ink: #e2e8f0;
+  --admin-muted: #94a3b8;
+  --admin-line: #1e293b;
+  --admin-canvas: #090e17;
+  --admin-blue: #38bdf8;
+  --admin-blue-deep: #0ea5e9;
+  background:
+    radial-gradient(ellipse at 85% -18rem, rgba(14, 165, 233, 0.12), transparent 48rem),
+    #090e17;
+  color: #e2e8f0;
+}
+
+body.dark-mode .admin-shell .command-center-header {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(11, 18, 33, 0.92));
+  border-color: rgba(56, 189, 248, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+body.dark-mode .admin-shell .command-center-header h2 {
+  color: #f8fafc;
+}
+
+body.dark-mode .admin-shell .command-badge {
+  background: rgba(14, 165, 233, 0.18);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+body.dark-mode .admin-shell .scada-card {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: #1e293b;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .admin-shell .scada-card:hover {
+  border-color: #38bdf8;
+  box-shadow: 0 8px 28px rgba(14, 165, 233, 0.18);
+}
+
+body.dark-mode .admin-shell .scada-card-value {
+  color: #f1f5f9;
+}
+
+body.dark-mode .admin-shell .scada-card-label {
+  color: #cbd5e1;
+}
+
+body.dark-mode .admin-shell .scada-card-icon {
+  background: #1e293b;
+}
+
+body.dark-mode .admin-shell .scada-card.tone-blue .scada-card-tag { background: rgba(14, 165, 233, 0.2); color: #38bdf8; }
+body.dark-mode .admin-shell .scada-card.tone-amber .scada-card-tag { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+body.dark-mode .admin-shell .scada-card.tone-red .scada-card-tag { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+body.dark-mode .admin-shell .scada-card.tone-emerald .scada-card-tag { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+body.dark-mode .admin-shell .scada-card.tone-violet .scada-card-tag { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+body.dark-mode .admin-shell .scada-card.tone-teal .scada-card-tag { background: rgba(20, 184, 166, 0.2); color: #2dd4bf; }
+
+body.dark-mode .admin-shell .fleet-unit-card {
+  background: rgba(15, 23, 42, 0.7) !important;
+  border-color: #1e293b !important;
+}
+
+body.dark-mode .admin-shell .fleet-unit-card:hover {
+  background: rgba(30, 41, 59, 0.8) !important;
+}

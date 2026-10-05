@@ -819,6 +819,46 @@ async function handleClick(event) {
       case 'close-dialog':
         closeDialog();
         return;
+      case 'export-situation-report': {
+        const [incRes, repRes, crewRes] = await Promise.all([
+          api('/api/incidents'),
+          api('/api/reports'),
+          api('/api/repair-teams')
+        ]);
+        const activeInc = (incRes.incidents || []).filter((i) => i.status !== 'Closed');
+        const activeRep = (repRes.reports || []).filter((r) => ['Submitted', 'Under Review', 'Verified', 'In Progress'].includes(r.status));
+        const crews = crewRes.teams || [];
+        
+        let csv = 'VALENCIA POWERWATCH - 2030 SITUATION REPORT\\n';
+        csv += `Generated At: ${new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} PST\\n\\n`;
+        csv += '--- ACTIVE POWER OUTAGE INCIDENTS ---\\n';
+        csv += 'Incident Code,Title,Barangay,Type,Priority,Status,Affected Customers,Started At,Estimated Restoration\\n';
+        activeInc.forEach((i) => {
+          csv += `"${i.incident_code}","${i.title}","${i.barangay}","${i.incident_type || 'Unexpected'}","${i.priority}","${i.status}","${i.customers_affected || 0}","${i.start_time || ''}","${i.estimated_restoration || ''}"\\n`;
+        });
+        csv += '\\n--- UNRESOLVED CITIZEN REPORTS ---\\n';
+        csv += 'Report Code,Barangay,Purok,Status,Repair Status,Assigned Crew,Reported At\\n';
+        activeRep.forEach((r) => {
+          csv += `"${r.report_code}","${r.barangay}","${r.purok || ''}","${r.status}","${r.repair_status || ''}","${r.assigned_team_name || ''}","${r.reported_at || ''}"\\n`;
+        });
+        csv += '\\n--- EMERGENCY REPAIR CREWS STATUS ---\\n';
+        csv += 'Team Code,Name,Lead Technician,Status,Vehicle,Base Station\\n';
+        crews.forEach((c) => {
+          csv += `"${c.team_code}","${c.name}","${c.lead_technician}","${c.status}","${c.vehicle_type}","${c.base_station}"\\n`;
+        });
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Valencia_PowerWatch_SitRep_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setToast('Situation Report CSV downloaded successfully.');
+        return;
+      }
       case 'add-incident-chip': {
         const picker = actionButton.closest('.incident-chip-picker');
         const select = picker?.querySelector('[data-chip-select]');

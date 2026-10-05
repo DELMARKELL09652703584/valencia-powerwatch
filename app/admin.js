@@ -159,23 +159,32 @@ function statCards(stats) {
 }
 
 async function renderAdminDashboard() {
-  adminShell(loadingState('Loading dashboard…'));
-  const [{ stats }, monthly, barangay, incidentStatus] = await Promise.all([
+  adminShell(loadingState('Connecting to Valencia Smart Grid Command Center…'));
+  const [{ stats }, monthly, barangay, incidentStatus, repRes, incRes, teamRes] = await Promise.all([
     api('/api/analytics/dashboard'),
     api('/api/analytics/monthly'),
     api('/api/analytics/barangay'),
     api('/api/analytics/status'),
+    api('/api/reports'),
+    api('/api/incidents'),
+    api('/api/repair-teams')
   ]);
-  const recent = canManage() ? (await api('/api/reports')).reports.slice(0, 6) : [];
-  const active = (await api('/api/incidents')).incidents.slice(0, 4);
+
+  const allReports = repRes.reports || [];
+  const allIncidents = incRes.incidents || [];
+  const teams = teamRes.teams || [];
+  const recent = allReports.slice(0, 6);
+  const active = allIncidents.filter((i) => i.status !== 'Closed').slice(0, 5);
   const resolvedCount = Number(stats.resolved || 0) + Number(stats.restored || 0);
   state.activeIncidentsCount = Number(stats.ongoing || stats.active_incidents || 0);
+
   const cards = [
-    { label: 'Total Reports', value: stats.reports_total, icon: '♙', tone: 'blue', page: 'reports' },
-    { label: 'Pending Verification', value: Number(stats.reports_pending || 0) + Number(stats.reports_under_review || 0), icon: '▣', tone: 'amber', page: 'verification' },
-    { label: 'Active Outages', value: stats.ongoing, icon: '⚡', tone: 'red', page: 'outage-monitoring' },
-    { label: 'Scheduled Outages', value: stats.scheduled, icon: '♟', tone: 'violet', page: 'scheduled' },
-    { label: 'Resolved Incidents', value: resolvedCount, icon: '✓', tone: 'green', page: 'history' },
+    { label: 'Citizen Reports', value: stats.reports_total, tag: 'INTAKE', sub: `${stats.reports_verified || 0} Verified · ${stats.reports_pending || 0} Pending`, tone: 'blue', page: 'reports', icon: '📋' },
+    { label: 'Pending Triage', value: Number(stats.reports_pending || 0) + Number(stats.reports_under_review || 0), tag: 'TRIAGE', sub: 'Requires inspection', tone: 'amber', page: 'verification', icon: '⏳' },
+    { label: 'Active Outages', value: state.activeIncidentsCount, tag: 'OUTAGE', sub: `${stats.affected_customers || 0} Affected Accounts`, tone: 'red', page: 'outage-monitoring', icon: '⚡' },
+    { label: 'Field Repair Units', value: stats.active_dispatches || 0, tag: 'DISPATCH', sub: `${stats.available_crews || 0}/${stats.total_crews || 4} Crews Ready`, tone: 'emerald', page: 'dispatch', icon: '🚛' },
+    { label: 'Scheduled Work', value: stats.scheduled || 0, tag: 'PREVENTIVE', sub: 'Planned Feeder Windows', tone: 'violet', page: 'scheduled', icon: '🗓️' },
+    { label: 'Grid Restored', value: resolvedCount, tag: 'RESTORED', sub: `Avg ETR: ${stats.avg_duration_hours ? stats.avg_duration_hours + 'h' : 'Optimal'}`, tone: 'teal', page: 'history', icon: '✅' },
   ];
 
   const barangayRows = (barangay.data || []).slice(0, 6).map((row) => ({ label: row.barangay, value: Number(row.c) || 0 }));
@@ -183,53 +192,346 @@ async function renderAdminDashboard() {
   if (otherCount) barangayRows.push({ label: 'Others', value: otherCount });
   const barMaximum = Math.max(1, ...barangayRows.map((row) => row.value));
   const barTicks = Array.from({ length: 5 }, (_, index) => Math.ceil(barMaximum * (4 - index) / 4));
-  const barangayBars = barangayRows.map((row) => `<div class="dashboard-bar-item" title="${escapeHtml(row.label)}: ${row.value}"><strong>${row.value}</strong><div><i style="height:${Math.max(3, row.value / barMaximum * 100)}%"></i></div><span>${escapeHtml(row.label)}</span></div>`).join('');
+  const barangayBars = barangayRows.map((row) => `
+    <div class="dashboard-bar-item" title="${escapeHtml(row.label)}: ${row.value} reports" data-page="reports" style="cursor:pointer;">
+      <strong style="color:var(--admin-blue-deep);">${row.value}</strong>
+      <div><i style="height:${Math.max(4, (row.value / barMaximum) * 100)}%;"></i></div>
+      <span>${escapeHtml(row.label)}</span>
+    </div>
+  `).join('');
 
   const monthlyRows = (monthly.data || []).slice(-12);
   const trendMaximum = Math.max(1, ...monthlyRows.flatMap((row) => [Number(row.scheduled) || 0, Number(row.unexpected) || 0]));
-  const chartX = (index) => monthlyRows.length < 2 ? 300 : 34 + index / (monthlyRows.length - 1) * 532;
-  const chartY = (value) => 205 - (Number(value) || 0) / trendMaximum * 170;
+  const chartX = (index) => monthlyRows.length < 2 ? 300 : 34 + (index / (monthlyRows.length - 1)) * 532;
+  const chartY = (value) => 205 - ((Number(value) || 0) / trendMaximum) * 170;
   const scheduledPoints = monthlyRows.map((row, index) => `${chartX(index)},${chartY(row.scheduled)}`).join(' ');
   const unexpectedPoints = monthlyRows.map((row, index) => `${chartX(index)},${chartY(row.unexpected)}`).join(' ');
-  const trendChart = monthlyRows.length ? `<div class="dashboard-trend-legend"><span><i class="scheduled-key"></i>Scheduled</span><span><i class="unexpected-key"></i>Unexpected</span></div>
+  const trendChart = monthlyRows.length ? `<div class="dashboard-trend-legend">
+      <span><i class="scheduled-key"></i>Scheduled Maintenance</span>
+      <span><i class="unexpected-key"></i>Unexpected Faults</span>
+    </div>
     <svg class="dashboard-trend-svg" viewBox="0 0 600 250" role="img" aria-label="Monthly scheduled and unexpected outage trend">
-      ${[0, 1, 2, 3, 4].map((index) => { const y = 205 - index * 42.5; const value = Math.round(trendMaximum * index / 4); return `<line x1="32" y1="${y}" x2="570" y2="${y}" class="trend-grid-line"></line><text x="25" y="${y + 4}" text-anchor="end" class="trend-axis-label">${value}</text>`; }).join('')}
-      ${scheduledPoints ? `<polyline points="${scheduledPoints}" class="trend-line scheduled"></polyline>` : ''}${unexpectedPoints ? `<polyline points="${unexpectedPoints}" class="trend-line unexpected"></polyline>` : ''}
-      ${monthlyRows.map((row, index) => `<circle cx="${chartX(index)}" cy="${chartY(row.scheduled)}" r="4" class="trend-point scheduled"></circle><circle cx="${chartX(index)}" cy="${chartY(row.unexpected)}" r="4" class="trend-point unexpected"></circle><text x="${chartX(index)}" y="236" text-anchor="middle" class="trend-month-label">${escapeHtml(String(row.month).split(' ')[0])}</text>`).join('')}
+      ${[0, 1, 2, 3, 4].map((index) => {
+        const y = 205 - index * 42.5;
+        const value = Math.round(trendMaximum * index / 4);
+        return `<line x1="32" y1="${y}" x2="570" y2="${y}" class="trend-grid-line"></line><text x="25" y="${y + 4}" text-anchor="end" class="trend-axis-label">${value}</text>`;
+      }).join('')}
+      ${scheduledPoints ? `<polyline points="${scheduledPoints}" class="trend-line scheduled"></polyline>` : ''}
+      ${unexpectedPoints ? `<polyline points="${unexpectedPoints}" class="trend-line unexpected"></polyline>` : ''}
+      ${monthlyRows.map((row, index) => `
+        <circle cx="${chartX(index)}" cy="${chartY(row.scheduled)}" r="4.5" class="trend-point scheduled"></circle>
+        <circle cx="${chartX(index)}" cy="${chartY(row.unexpected)}" r="4.5" class="trend-point unexpected"></circle>
+        <text x="${chartX(index)}" y="236" text-anchor="middle" class="trend-month-label">${escapeHtml(String(row.month).split(' ')[0])}</text>
+      `).join('')}
     </svg>` : emptyState('No monthly outage trend', 'Outage trend appears when incidents have a start date.', '📈');
 
-  const statusRows = (incidentStatus.data || []).filter((row) => Number(row.c) > 0);
-  const statusTotal = statusRows.reduce((sum, row) => sum + Number(row.c), 0);
-  const statusColors = ['#1676df', '#169b78', '#efaa20', '#dd4c4e', '#7966c3', '#1aa8c9'];
-  let statusOffset = 0;
-  const statusSlices = statusRows.map((row, index) => {
-    const start = statusOffset;
-    statusOffset += statusTotal ? Number(row.c) / statusTotal * 100 : 0;
-    return { ...row, color: statusColors[index % statusColors.length], start, end: statusOffset, percent: statusTotal ? Math.round(Number(row.c) / statusTotal * 100) : 0 };
-  });
-  const statusGradient = statusSlices.length ? `conic-gradient(${statusSlices.map((slice) => `${slice.color} ${slice.start}% ${slice.end}%`).join(', ')})` : 'conic-gradient(#e5edf3 0 100%)';
+  const nowPst = new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila',
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  }).format(new Date());
 
   adminShell(`<section class="admin-dashboard-page">
-    <header class="dashboard-welcome"><div><p class="dashboard-welcome-label">DASHBOARD</p><h2>Welcome back, <strong>${escapeHtml(state.user?.full_name || 'Administrator')}</strong></h2><span>${escapeHtml(roleLabel(state.user?.role))}</span></div></header>
-    <div class="dashboard-stat-grid">${cards.map((card) => `<button type="button" class="dashboard-stat-card ${card.tone}" data-page="${card.page}"><span class="dashboard-stat-icon">${card.icon}</span><span class="dashboard-stat-label">${escapeHtml(card.label)}</span><strong>${escapeHtml(Number(card.value || 0).toLocaleString())}</strong></button>`).join('')}</div>
-    <div class="dashboard-visual-grid">
-      <section class="dashboard-visual-panel dashboard-bar-panel"><header><h3>Reports by Barangay</h3><span>${stats.reports_total} reports</span></header>
-        ${barangayRows.length ? `<div class="dashboard-bar-chart"><div class="dashboard-bar-axis">${barTicks.map((tick) => `<span>${tick}</span>`).join('')}</div><div class="dashboard-bar-plot">${barangayBars}</div></div>` : `<div class="dashboard-chart-empty">${emptyState('No reports by barangay', 'Barangay totals appear when residents submit reports.', '📊')}</div>`}
+    <header class="dashboard-welcome command-center-header">
+      <div class="command-header-main">
+        <div class="command-badge-row">
+          <span class="command-badge"><span class="command-badge-dot"></span> SCADA 2030 CENTRAL COMMAND</span>
+          <span class="command-timestamp">🕒 ${nowPst} PST (UTC+8)</span>
+        </div>
+        <h2>Valencia Smart Grid Operations</h2>
+        <div class="command-telemetry-status">
+          ${state.activeIncidentsCount > 0
+            ? `<span class="telemetry-pill alert"><span class="pulse-dot red"></span> <strong>${state.activeIncidentsCount} Grid Outages Active</strong> · ${stats.active_dispatches || 0} Response Units Deployed</span>`
+            : `<span class="telemetry-pill normal"><span class="pulse-dot green"></span> <strong>Grid Stability: 99.8% Normal</strong> · Feeder 1–4 Substation Synchronized</span>`}
+        </div>
+      </div>
+      <div class="command-header-actions">
+        <button type="button" class="button small primary" data-action="new-incident" style="display:inline-flex;align-items:center;gap:6px;font-weight:700;">
+          <span>⚡</span> Log Interruption
+        </button>
+        <button type="button" class="button small ghost" data-action="new-announcement" style="display:inline-flex;align-items:center;gap:6px;">
+          <span>📢</span> Broadcast Alert
+        </button>
+        <button type="button" class="button small ghost" data-page="dispatch" style="display:inline-flex;align-items:center;gap:6px;">
+          <span>🚛</span> Dispatch Center
+        </button>
+        <button type="button" class="button small ghost" data-action="export-situation-report" style="display:inline-flex;align-items:center;gap:6px;" title="Export Executive Situation Report CSV">
+          <span>📊</span> SitRep CSV
+        </button>
+      </div>
+    </header>
+
+    <div class="dashboard-stat-grid scada-stat-grid">
+      ${cards.map((card) => `
+        <button type="button" class="dashboard-stat-card scada-card tone-${card.tone}" data-page="${card.page}" title="Open ${escapeHtml(card.label)} module">
+          <div class="scada-card-head">
+            <span class="scada-card-icon">${card.icon}</span>
+            <span class="scada-card-tag">${card.tag}</span>
+          </div>
+          <strong class="scada-card-value">${escapeHtml(Number(card.value || 0).toLocaleString())}</strong>
+          <span class="scada-card-label">${escapeHtml(card.label)}</span>
+          <span class="scada-card-sub">${escapeHtml(card.sub)}</span>
+        </button>
+      `).join('')}
+    </div>
+
+    <div class="dashboard-visual-grid scada-visual-grid">
+      <!-- PANEL 1: GIS Outage Radar Map -->
+      <section class="dashboard-visual-panel radar-map-panel">
+        <header>
+          <div>
+            <h3>📍 Valencia Grid Outage Radar</h3>
+            <span style="font-size:0.75rem;color:var(--admin-muted);">Live tactical GIS visualization</span>
+          </div>
+          <button type="button" class="link-button" data-page="map" style="font-size:0.78rem;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
+            Open Full GIS Map &rarr;
+          </button>
+        </header>
+        <div class="dashboard-radar-canvas" id="dashboard-radar-map" style="height:280px;border-radius:12px;overflow:hidden;border:1px solid var(--admin-line);"></div>
+        <footer style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:10px;font-size:0.75rem;color:#64748b;">
+          <span>⚡ Active Outage Marker</span>
+          <span>📌 Citizen Report Pin</span>
+          <span>🚒 Emergency Response Unit</span>
+        </footer>
       </section>
-      <section class="dashboard-visual-panel dashboard-trend-panel"><header><h3>Monthly Outage Trend</h3></header>${trendChart}</section>
-      <section class="dashboard-visual-panel dashboard-status-panel"><header><h3>Incident Status</h3></header>
-        ${statusSlices.length ? `<div class="dashboard-status-layout"><div class="dashboard-status-donut" style="--status-chart:${statusGradient}" role="img" aria-label="Incident status breakdown"><div><strong>${statusTotal}</strong><span>Incidents</span></div></div><ul>${statusSlices.map((slice) => `<li><i style="--status-color:${slice.color}"></i><span>${escapeHtml(slice.status)}</span><b>${slice.percent}%</b></li>`).join('')}</ul></div>` : `<div class="dashboard-chart-empty">${emptyState('No incident status data', 'Status breakdown appears when incidents are recorded.', '◌')}</div>`}
+
+      <!-- PANEL 2: Barangay Impact Ranking -->
+      <section class="dashboard-visual-panel dashboard-bar-panel">
+        <header>
+          <div>
+            <h3>🏛️ Outage Distribution by Barangay</h3>
+            <span style="font-size:0.75rem;color:var(--admin-muted);">${stats.reports_total || 0} total reported interruptions</span>
+          </div>
+          <button type="button" class="link-button" data-page="reports" style="font-size:0.78rem;">View in Reports &rarr;</button>
+        </header>
+        ${barangayRows.length
+          ? `<div class="dashboard-bar-chart"><div class="dashboard-bar-axis">${barTicks.map((tick) => `<span>${tick}</span>`).join('')}</div><div class="dashboard-bar-plot">${barangayBars}</div></div>`
+          : `<div class="dashboard-chart-empty">${emptyState('No reports by barangay', 'Barangay totals appear when residents submit reports.', '📊')}</div>`}
+      </section>
+
+      <!-- PANEL 3: Monthly & 24H Outage Trend -->
+      <section class="dashboard-visual-panel dashboard-trend-panel">
+        <header>
+          <div>
+            <h3>📈 Grid Outage Telemetry Trend</h3>
+            <span style="font-size:0.75rem;color:var(--admin-muted);">Monthly comparative fault analytics</span>
+          </div>
+          <button type="button" class="link-button" data-page="analytics" style="font-size:0.78rem;">Analytics &rarr;</button>
+        </header>
+        ${trendChart}
+      </section>
+
+      <!-- PANEL 4: Emergency Response Fleet Status -->
+      <section class="dashboard-visual-panel fleet-status-panel">
+        <header>
+          <div>
+            <h3>🚒 Emergency Response Fleet Readiness</h3>
+            <span style="font-size:0.75rem;color:var(--admin-muted);">${teams.length} Valencia City utility units</span>
+          </div>
+          <button type="button" class="link-button" data-page="dispatch" style="font-size:0.78rem;font-weight:700;">
+            Manage Fleet &rarr;
+          </button>
+        </header>
+        <div class="fleet-units-list" style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
+          ${teams.length ? teams.map((t) => {
+            const isAvail = t.status === 'Available';
+            const statusColor = isAvail ? '#10b981' : t.status === 'Dispatched' ? '#0284c7' : '#f59e0b';
+            return `
+              <div class="fleet-unit-card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--admin-line);border-radius:10px;background:rgba(255,255,255,0.7);">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div style="width:34px;height:34px;border-radius:9px;background:${isAvail ? '#ecfdf5' : '#f0f9ff'};border:1px solid ${isAvail ? '#a7f3d0' : '#bae6fd'};display:grid;place-items:center;font-size:16px;">🚒</div>
+                  <div>
+                    <strong style="font-size:0.86rem;display:block;color:var(--admin-ink);">${escapeHtml(t.name)}</strong>
+                    <span style="font-size:0.74rem;color:#64748b;">${escapeHtml(t.vehicle_type)} · Lead: ${escapeHtml(t.lead_technician)}</span>
+                  </div>
+                </div>
+                <div style="text-align:right;">
+                  <span style="display:inline-flex;align-items:center;gap:5px;font-size:0.74rem;font-weight:700;color:${statusColor};background:${isAvail ? '#ecfdf5' : '#eff6ff'};padding:3px 8px;border-radius:6px;border:1px solid ${isAvail ? '#a7f3d0' : '#bfdbfe'};">
+                    <span style="width:6px;height:6px;border-radius:50%;background:${statusColor};"></span>
+                    ${escapeHtml(t.status)}
+                  </span>
+                  <div style="font-size:0.7rem;color:#94a3b8;margin-top:2px;">${escapeHtml(t.base_station?.split(',')[0] || 'Base')}</div>
+                </div>
+              </div>
+            `;
+          }).join('') : '<p class="muted small">No repair crews registered in database.</p>'}
+        </div>
       </section>
     </div>
+
     <div class="dashboard-activity-grid">
-      <section class="panel"><div class="panel-head"><h2>Recent reports</h2>${canManage() ? '<button class="link-button" data-page="reports">View all</button>' : ''}</div>
-        ${recent.length ? `<div class="table-scroll"><table class="data-table"><thead><tr><th>Code</th><th>Barangay</th><th>Reporter</th><th>Status</th><th>Reported</th></tr></thead><tbody>${recent.map((row) => `<tr><td class="mono">${escapeHtml(row.report_code)}</td><td>${escapeHtml(row.barangay)}</td><td>${escapeHtml(row.reporter_name)}</td><td>${statusPill(row.status)}</td><td class="muted">${escapeHtml(formatDateTime(row.reported_at))}</td></tr>`).join('')}</tbody></table></div>` : emptyState('No reports yet', 'Resident reports will appear here once submitted.', '📋')}
+      <!-- QUEUE 1: Recent Citizen Reports -->
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Recent Citizen Reports</h2>
+            <span style="font-size:0.75rem;color:var(--admin-muted);">Incoming resident interruption reports</span>
+          </div>
+          ${canManage() ? '<button class="link-button" data-page="reports">View all &rarr;</button>' : ''}
+        </div>
+        ${recent.length ? `
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Report Code</th>
+                  <th>Barangay &amp; Purok</th>
+                  <th>Location Type</th>
+                  <th>Reporter</th>
+                  <th>Status</th>
+                  <th>Reported Time</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${recent.map((row) => `
+                  <tr>
+                    <td class="mono" style="font-weight:700;color:#0284c7;">${escapeHtml(row.report_code)}</td>
+                    <td>
+                      <strong>Brgy. ${escapeHtml(row.barangay)}</strong>
+                      ${row.purok ? `<div style="font-size:0.75rem;color:#0369a1;">📍 ${escapeHtml(row.purok)}</div>` : ''}
+                    </td>
+                    <td>
+                      ${row.latitude && row.longitude
+                        ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:0.72rem;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;padding:2px 6px;border-radius:4px;font-weight:600;">📍 GPS (${Number(row.latitude).toFixed(3)}, ${Number(row.longitude).toFixed(3)})</span>`
+                        : '<span style="font-size:0.72rem;color:#94a3b8;">Centroid</span>'}
+                    </td>
+                    <td>${escapeHtml(row.reporter_name || 'Resident')}</td>
+                    <td>${statusPill(row.status)}</td>
+                    <td class="muted" style="font-size:0.78rem;">${escapeHtml(formatDateTime(row.reported_at))}</td>
+                    <td>
+                      <button type="button" class="button ghost small" data-action="open-assign-repair-modal" data-id="${row.id}" style="font-size:0.72rem;padding:3px 7px;">
+                        Triage ›
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : emptyState('No reports yet', 'Resident reports will appear here once submitted.', '📋')}
       </section>
-      <section class="panel"><div class="panel-head"><h2>Active incidents</h2><button class="link-button" data-page="incidents">View all</button></div>
-        ${active.length ? `<ul class="feed-list">${active.map((item) => `<li><div><strong>${escapeHtml(item.incident_code)}</strong> — ${escapeHtml(item.title)}</div><div class="feed-meta">${escapeHtml(item.barangay)} · ${statusPill(item.status)}</div><div class="muted small">${escapeHtml(formatDateTime(item.start_time))}</div></li>`).join('')}</ul>` : emptyState('No active incidents', 'The city currently has no ongoing interruptions.', '⚡')}
+
+      <!-- QUEUE 2: Active Grid Incidents -->
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Active Grid Outages</h2>
+            <span style="font-size:0.75rem;color:var(--admin-muted);">Confirmed power interruptions in progress</span>
+          </div>
+          <button class="link-button" data-page="incidents">View all &rarr;</button>
+        </div>
+        ${active.length ? `
+          <ul class="feed-list" style="margin:0;padding:0;list-style:none;">
+            ${active.map((item) => `
+              <li style="padding:12px;border-bottom:1px solid var(--admin-line);display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <div style="flex:1;min-width:0;">
+                  <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px;">
+                    <strong style="color:#e11d48;font-size:0.88rem;">⚡ ${escapeHtml(item.incident_code)}</strong>
+                    <span style="font-weight:700;font-size:0.84rem;color:var(--admin-ink);">${escapeHtml(item.title)}</span>
+                  </div>
+                  <div class="feed-meta" style="font-size:0.78rem;color:#64748b;">
+                    <span>📍 Brgy. ${escapeHtml(item.barangay)}</span>
+                    ${item.customers_affected ? ` · <span>👥 ${item.customers_affected} affected accounts</span>` : ''}
+                    ${item.estimated_restoration ? ` · <span style="color:#0284c7;font-weight:600;">⏱️ ETR: ${escapeHtml(item.estimated_restoration)}</span>` : ''}
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  ${statusPill(item.status)}
+                  <button type="button" class="button ghost small" data-action="view-incident-details" data-id="${item.id}" style="font-size:0.72rem;padding:3px 8px;">
+                    Details ›
+                  </button>
+                </div>
+              </li>
+            `).join('')}
+          </ul>
+        ` : emptyState('No active grid outages', 'The city currently has no ongoing unscheduled interruptions.', '⚡')}
       </section>
     </div>
   </section>`);
+
+  // Initialize interactive GIS Radar Mini-Map
+  const radarElement = document.getElementById('dashboard-radar-map');
+  if (radarElement) {
+    try {
+      await ensureLeaflet();
+      const radarMap = L.map(radarElement, {
+        zoomControl: true,
+        minZoom: 10,
+        maxZoom: 18,
+        attributionControl: false
+      }).setView([7.9064, 125.0941], 12);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        subdomains: 'abc',
+        maxZoom: 18
+      }).addTo(radarMap);
+
+      // Plot active reports with coordinates
+      allReports.filter((r) => r.latitude && r.longitude && r.status !== 'Resolved').forEach((r) => {
+        L.circleMarker([Number(r.latitude), Number(r.longitude)], {
+          radius: 7,
+          color: '#ffffff',
+          fillColor: '#ea580c',
+          fillOpacity: 0.95,
+          weight: 2
+        }).addTo(radarMap).bindPopup(`
+          <div style="font-family:sans-serif;font-size:0.82rem;">
+            <strong style="color:#ea580c;">📌 ${escapeHtml(r.report_code)}</strong><br>
+            <strong>Brgy. ${escapeHtml(r.barangay)}</strong>${r.purok ? ' · ' + escapeHtml(r.purok) : ''}<br>
+            <span>Status: ${escapeHtml(r.status)}</span>
+          </div>
+        `);
+      });
+
+      // Plot active incidents
+      allIncidents.filter((i) => i.latitude && i.longitude && i.status !== 'Closed').forEach((i) => {
+        L.circleMarker([Number(i.latitude), Number(i.longitude)], {
+          radius: 9,
+          color: '#ffffff',
+          fillColor: '#e11d48',
+          fillOpacity: 1,
+          weight: 2.5
+        }).addTo(radarMap).bindPopup(`
+          <div style="font-family:sans-serif;font-size:0.82rem;">
+            <strong style="color:#b91c1c;">⚡ ${escapeHtml(i.incident_code)}</strong><br>
+            <strong>${escapeHtml(i.title)}</strong><br>
+            <span>Brgy. ${escapeHtml(i.barangay)}</span><br>
+            <span>Status: ${escapeHtml(i.status)}</span>
+          </div>
+        `);
+      });
+
+      // Plot repair teams
+      teams.forEach((t) => {
+        if (!t.current_latitude || !t.current_longitude) return;
+        const isAvail = t.status === 'Available';
+        const truckIcon = L.divIcon({
+          className: 'crew-truck-radar-marker',
+          html: `<div style="background:${isAvail ? '#059669' : '#0284c7'};color:#fff;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);" title="${escapeHtml(t.name)}">🚒</div>`,
+          iconSize: [26, 26],
+          iconAnchor: [13, 13]
+        });
+        L.marker([Number(t.current_latitude), Number(t.current_longitude)], { icon: truckIcon })
+          .addTo(radarMap)
+          .bindPopup(`
+            <div style="font-family:sans-serif;font-size:0.82rem;">
+              <strong style="color:#0f172a;">🚒 ${escapeHtml(t.name)}</strong><br>
+              <span>${escapeHtml(t.vehicle_type)}</span><br>
+              <span style="color:${isAvail ? '#059669' : '#0284c7'};font-weight:700;">Status: ${escapeHtml(t.status)}</span>
+            </div>
+          `);
+      });
+
+      window.setTimeout(() => radarMap.invalidateSize(), 200);
+    } catch (e) {
+      console.warn('Radar map load warning:', e);
+    }
+  }
 }
 
 async function renderAdminReports() {
