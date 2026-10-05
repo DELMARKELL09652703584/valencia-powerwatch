@@ -835,6 +835,7 @@ async function handleClick(event) {
   try {
     switch (action) {
       case 'logout':
+        if (typeof stopAdminTelemetryHeartbeat === 'function') stopAdminTelemetryHeartbeat();
         await send('/api/auth/logout', 'POST');
         state.user = null;
         state.unread = 0;
@@ -1052,6 +1053,26 @@ async function handleClick(event) {
         await render();
         document.querySelector('[data-action="toggle-notification-panel"]')?.focus();
         return;
+      case 'toggle-admin-sound': {
+        const currentlyMuted = typeof isScadaAudioMuted === 'function' ? isScadaAudioMuted() : false;
+        const newMuted = !currentlyMuted;
+        if (typeof setScadaAudioMuted === 'function') {
+          setScadaAudioMuted(newMuted);
+        }
+        if (!newMuted && typeof playScadaAlertChime === 'function') {
+          playScadaAlertChime('high');
+        }
+        setToast(!newMuted ? '🔊 SCADA Audio Alerts Enabled (Telemetry Ping Active)' : '🔇 Audio Alerts Muted');
+        return;
+      }
+      case 'dismiss-scada-banner': {
+        const banner = document.getElementById('scada-emergency-banner');
+        if (banner) {
+          banner.classList.add('fading');
+          setTimeout(() => banner.remove(), 250);
+        }
+        return;
+      }
       case 'toggle-admin-theme': {
         const isDark = document.documentElement.classList.toggle('dark-mode');
         document.body?.classList.toggle('dark-mode', isDark);
@@ -2648,6 +2669,9 @@ async function afterLogin() {
     renderAdminRestrictedAccess();
     return;
   }
+  if (IS_ADMIN && state.user && STAFF_ROLES.includes(state.user.role)) {
+    if (typeof startAdminTelemetryHeartbeat === 'function') startAdminTelemetryHeartbeat();
+  }
   await refreshConfig();
   await refreshUnread();
   state.page = 'dashboard';
@@ -2693,6 +2717,9 @@ async function boot() {
     if (IS_ADMIN && state.user && !STAFF_ROLES.includes(state.user.role)) {
       renderAdminRestrictedAccess();
       return;
+    }
+    if (IS_ADMIN && state.user && STAFF_ROLES.includes(state.user.role)) {
+      if (typeof startAdminTelemetryHeartbeat === 'function') startAdminTelemetryHeartbeat();
     }
     await refreshConfig();
     await refreshUnread();

@@ -860,6 +860,26 @@ async function renderMobileProfile() {
   `, { activeTab: 'profile' });
 }
 
+function computeReportProgressStage(report) {
+  const rStatus = String(report.status || '').trim();
+  const incStatus = String(report.incident?.status || '').trim();
+  const repStatus = String(report.repair_status || '').trim();
+  const isResolved = rStatus === 'Resolved' || ['Closed', 'Restored', 'Resolved'].includes(incStatus) || repStatus === 'Resolved';
+  const isCrew = isResolved
+    || ['In Progress', 'Ongoing', 'Restoration in Progress'].includes(rStatus)
+    || ['Ongoing', 'Restoration in Progress', 'Closed', 'Restored', 'Resolved'].includes(incStatus)
+    || ['Dispatched', 'En Route', 'Arrived On Site', 'In Progress', 'Resolved'].includes(repStatus)
+    || Boolean(report.assigned_team_name || report.repair_team_id);
+  const isVerified = isCrew
+    || ['Verified', 'Officially Confirmed', 'Under Review'].includes(rStatus)
+    || ['Verified', 'Officially Confirmed', 'Under Review'].includes(report.verification_status);
+
+  if (isResolved) return { stage: 4, label: 'Power Restored', bisaya: 'Nauli Na', tone: 'emerald', icon: '⚡' };
+  if (isCrew) return { stage: 3, label: 'Crew Dispatched', bisaya: 'On-site Repair', tone: 'blue', icon: '👷' };
+  if (isVerified) return { stage: 2, label: 'Under Verification', bisaya: 'Gi-verify', tone: 'amber', icon: '🔍' };
+  return { stage: 1, label: 'Report Submitted', bisaya: 'Nadawat', tone: 'slate', icon: '📝' };
+}
+
 async function renderMobileReports() {
   const [{ reports }, { history }] = await Promise.all([
     api('/api/reports/mine'),
@@ -883,17 +903,35 @@ async function renderMobileReports() {
         <button class="mobile-segment ${selectedStatus === status ? 'active' : ''}" data-action="filter-my-reports" data-value="${escapeHtml(status)}">${escapeHtml(status === 'pending' ? 'Pending' : status || 'All')}</button>
       `).join('')}
     </div>
-    ${reportsForStatus.length ? reportsForStatus.map((report) => `
-      <button class="mobile-report-item" data-action="view-my-report" data-id="${report.id}">
-        <span class="mobile-report-pin">⌖</span>
-        <span class="mobile-report-copy">
-          <strong>${escapeHtml(report.report_code)}</strong>
-          <span>${escapeHtml(formatDateTime(report.date_time_noticed))}</span>
-          <span>${escapeHtml(report.barangay)}</span>
-        </span>
-        ${statusPill(report.status)}
-      </button>
-    `).join('') : `<div class="mobile-card">${emptyState('No reports yet', 'Your submitted interruption reports will appear here.', '📝')}</div>`}
+    ${reportsForStatus.length ? reportsForStatus.map((report) => {
+      const prog = computeReportProgressStage(report);
+      return `<button class="mobile-report-item" data-action="view-my-report" data-id="${report.id}">
+        <div class="mobile-report-item-top">
+          <span class="mobile-report-pin">⌖</span>
+          <span class="mobile-report-copy">
+            <strong>${escapeHtml(report.report_code)}</strong>
+            <span>${escapeHtml(formatDateTime(report.date_time_noticed))}</span>
+            <span>📍 ${escapeHtml(report.barangay)}</span>
+          </span>
+          ${statusPill(report.status)}
+        </div>
+        <div class="report-mini-stepper">
+          <div class="mini-stepper-track">
+            <span class="mini-stepper-seg ${prog.stage >= 1 ? 'filled' : ''} ${prog.stage === 1 ? 'active' : ''}"></span>
+            <span class="mini-stepper-seg ${prog.stage >= 2 ? 'filled' : ''} ${prog.stage === 2 ? 'active' : ''}"></span>
+            <span class="mini-stepper-seg ${prog.stage >= 3 ? 'filled' : ''} ${prog.stage === 3 ? 'active' : ''}"></span>
+            <span class="mini-stepper-seg ${prog.stage >= 4 ? 'filled' : ''} ${prog.stage === 4 ? 'active' : ''}"></span>
+          </div>
+          <div class="mini-stepper-meta">
+            <span class="mini-stepper-label tone-${prog.tone}">
+              <span>${prog.icon}</span>
+              <strong>${prog.label}</strong> <small>(${prog.bisaya})</small>
+            </span>
+            <span class="mini-stepper-step">Hakbang ${prog.stage}/4</span>
+          </div>
+        </div>
+      </button>`;
+    }).join('') : `<div class="mobile-card">${emptyState('No reports yet', 'Your submitted interruption reports will appear here.', '📝')}</div>`}
     ${history.length ? `<section class="mobile-card mobile-history-summary">
       <header class="mobile-card-head"><h2>Recent outage history</h2><button class="link-button" data-mobile-tab="history">View all</button></header>
       <div class="mobile-card-body">${history.slice(0, 2).map((incident) => `
@@ -905,28 +943,47 @@ async function renderMobileReports() {
 
 async function renderMobileReportDetail() {
   const { report } = await api(`/api/reports/${Number(state.mobileReportId)}`);
-  const reportStatus = String(report.status || '').trim();
-  const incidentStatus = String(report.incident?.status || '').trim();
+  const prog = computeReportProgressStage(report);
+  const isResolved = prog.stage === 4;
 
-  const isResolved = reportStatus === 'Resolved' || ['Closed', 'Restored', 'Resolved'].includes(incidentStatus);
-  const isInProgress = ['In Progress', 'Ongoing', 'Restoration in Progress'].includes(reportStatus)
-    || ['Ongoing', 'Restoration in Progress', 'Closed', 'Restored', 'Resolved'].includes(incidentStatus)
-    || isResolved;
-  const isVerified = ['Verified', 'Officially Confirmed'].includes(reportStatus)
-    || ['Verified', 'Officially Confirmed'].includes(report.verification_status)
-    || isInProgress
-    || isResolved;
-  const isUnderReview = ['Under Review', 'Under Verification'].includes(reportStatus)
-    || report.verification_status === 'Under Review'
-    || isVerified;
-
-  const steps = [
-    ['Report Submitted', report.reported_at],
-    ['Under Verification', isUnderReview ? (report.updated_at || report.reported_at) : null],
-    ['Verified', isVerified ? (report.updated_at || report.reported_at) : null],
-    ['In Progress', isInProgress ? (report.updated_at || report.reported_at) : null],
-    ['Resolved', isResolved ? (report.updated_at || report.reported_at) : null],
+  const stages = [
+    {
+      step: 1,
+      name: 'Report Submitted',
+      bisaya: 'Nadawat',
+      icon: '📝',
+      time: report.reported_at,
+      desc: 'Nadawat na sa Valencia PowerWatch control center ang imong report ug gi-queue para sa validation ug screening.'
+    },
+    {
+      step: 2,
+      name: 'Under Verification',
+      bisaya: 'Gi-verify',
+      icon: '🔍',
+      time: prog.stage >= 2 ? (report.updated_at || report.reported_at) : null,
+      desc: 'Gisusi ug gi-validate sa technical dispatchers ang outage report dungan sa feeder grid telemetry ug mga silingang konsumante.'
+    },
+    {
+      step: 3,
+      name: 'Crew Dispatched',
+      bisaya: 'On-site Repair',
+      icon: '👷',
+      time: prog.stage >= 3 ? (report.updated_at || report.reported_at) : null,
+      desc: report.assigned_team_name 
+        ? `Ang Emergency Response Crew (${escapeHtml(report.assigned_team_name)}) anaa na sa lokasyon ug aktibong nag-ayo sa linya/transformer.`
+        : 'Gipadala na ang maintenance repair crew sa maong dapit aron ayuhon ang depekto sa kuryente.'
+    },
+    {
+      step: 4,
+      name: 'Power Restored',
+      bisaya: 'Nauli Na',
+      icon: '⚡',
+      time: prog.stage >= 4 ? (report.updated_at || report.reported_at) : null,
+      desc: 'Malampusong nauli ug normal na ang suplay sa kuryente sa maong lugar. Palihog kumpirmahi ug hatagi og feedback sa ubos!'
+    }
   ];
+
+  const fillPercent = Math.min(100, Math.max(0, ((prog.stage - 1) / 3) * 100));
 
   const etrTime = report.incident?.estimated_restoration || report.estimated_restoration;
   const etrMarkup = isResolved ? `
@@ -983,6 +1040,52 @@ async function renderMobileReportDetail() {
     <section class="mobile-card report-detail-card">
       <div class="mobile-detail-top"><span class="mobile-report-pin large">⌖</span><div><strong>${escapeHtml(report.report_code)}</strong><span>${escapeHtml(formatDateTime(report.date_time_noticed))}</span></div>${statusPill(report.status)}</div>
       ${etrMarkup}
+
+      <!-- 2030 Delivery-Style Visual Progress Stepper -->
+      <section class="visual-progress-stepper-card">
+        <div class="visual-stepper-header">
+          <div>
+            <span class="visual-stepper-eyebrow">VALENCIA POWERWATCH 2030 TRACKER</span>
+            <h3>Real-Time Restoration Progress</h3>
+          </div>
+          <span class="visual-stepper-status-badge tone-${prog.tone}">
+            ${prog.icon} ${prog.label}
+          </span>
+        </div>
+
+        <div class="visual-stepper-diagram">
+          <div class="visual-stepper-line-bg"></div>
+          <div class="visual-stepper-line-fill" style="width: ${fillPercent}%;"></div>
+          
+          <div class="visual-stepper-nodes">
+            ${stages.map((st) => {
+              const isCompleted = st.step < prog.stage || (st.step === 4 && prog.stage === 4);
+              const isCurrent = st.step === prog.stage && prog.stage < 4;
+              const isPending = st.step > prog.stage;
+              return `
+                <div class="visual-stepper-node ${isCompleted ? 'completed' : ''} ${isCurrent ? 'active' : ''} ${isPending ? 'pending' : ''}">
+                  <div class="visual-node-circle">
+                    ${isCompleted ? '<span class="node-check">✓</span>' : `<span class="node-icon">${st.icon}</span>`}
+                    ${isCurrent ? '<span class="node-beacon"></span>' : ''}
+                  </div>
+                  <strong class="visual-node-title">${escapeHtml(st.name)}</strong>
+                  <span class="visual-node-bisaya">${escapeHtml(st.bisaya)}</span>
+                  <time class="visual-node-time">${st.time ? escapeHtml(formatDateTime(st.time)) : 'Pending'}</time>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <div class="visual-stage-callout tone-${prog.tone}">
+          <div class="callout-icon">${stages[prog.stage - 1].icon}</div>
+          <div class="callout-copy">
+            <strong>Hakbang ${prog.stage}: ${stages[prog.stage - 1].name} (${stages[prog.stage - 1].bisaya})</strong>
+            <p>${stages[prog.stage - 1].desc}</p>
+          </div>
+        </div>
+      </section>
+
       <div class="mobile-detail-row"><strong>Interruption Type</strong><span>${escapeHtml(report.possible_outage_type || 'Power outage')}</span></div>
       <div class="mobile-detail-row"><strong>Barangay</strong><span>${escapeHtml(report.barangay)}</span></div>
       <div class="mobile-detail-row"><strong>Location</strong><span>${escapeHtml(report.location || (hasCoordinates(report) ? `${report.latitude}, ${report.longitude}` : 'Not provided'))}</span></div>
@@ -994,31 +1097,6 @@ async function renderMobileReportDetail() {
         ? `<video src="${escapeHtml(attachment.file_path)}" controls aria-label="${escapeHtml(attachment.original_name)}"></video>`
         : `<img src="${escapeHtml(attachment.file_path)}" alt="${escapeHtml(attachment.original_name)}">`).join('')}</div>`
         : report.photo_path ? `<h2>Attachments</h2><img class="mobile-report-photo" src="${escapeHtml(report.photo_path)}" alt="Evidence attached to this report">` : ''}
-      <section class="live-tracker-card">
-        <div class="live-tracker-header">
-          <div>
-            <strong style="font-size:0.95rem;color:var(--ink);">🚀 Live Restoration Tracker</strong>
-            <p style="margin:2px 0 0;font-size:0.78rem;color:var(--muted);">Grid Incident Lifecycle</p>
-          </div>
-          <span class="tracker-badge" style="${isResolved ? 'background:#dcfce7;color:#15803d;' : 'background:#eff6ff;color:#1d4ed8;'}">
-            ${isResolved ? '✓ Fully Restored' : '⚡ Ongoing Operation'}
-          </span>
-        </div>
-        <div class="tracker-timeline">
-          ${steps.map(([label, date], index) => {
-            const isCompleted = Boolean(date);
-            const isCurrent = isCompleted && (index === steps.length - 1 || !steps[index + 1][1]);
-            const stepIcons = ['📝', '🔍', '✅', '👷', '⚡'];
-            return `
-              <div class="tracker-step ${isCompleted ? 'completed' : ''} ${isCurrent ? 'active' : ''}">
-                <div class="tracker-step-dot">${isCompleted ? (isCurrent && !isResolved ? '●' : '✓') : stepIcons[index] || (index + 1)}</div>
-                <div class="tracker-step-title">${escapeHtml(label)}</div>
-                <div class="tracker-step-time">${date ? escapeHtml(formatDateTime(date)) : 'Awaiting confirmation'}</div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </section>
     </section>
     ${feedbackCardMarkup}
   `, {

@@ -42,6 +42,269 @@ function adminNavIcon(key) {
   return `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[key] || paths.dashboard}</svg>`;
 }
 
+// ==========================================================================
+// SCADA 2030 REAL-TIME TELEMETRY, WEB AUDIO PING & LIVE ALERTS ENGINE
+// ==========================================================================
+let scadaAudioContext = null;
+let adminTelemetryInterval = null;
+let lastPolledReportId = 0;
+let isHeartbeatInitialized = false;
+let scadaBannerDismissTimer = null;
+
+function isScadaAudioMuted() {
+  try {
+    return localStorage.getItem('powerwatch_scada_muted') === 'true';
+  } catch (e) {
+    return false;
+  }
+}
+
+function setScadaAudioMuted(muted) {
+  try {
+    localStorage.setItem('powerwatch_scada_muted', muted ? 'true' : 'false');
+  } catch (e) {}
+  updateScadaAudioButtonsUI();
+}
+
+function updateScadaAudioButtonsUI() {
+  const muted = isScadaAudioMuted();
+  document.querySelectorAll('[data-action="toggle-admin-sound"]').forEach((btn) => {
+    btn.classList.toggle('muted', muted);
+    btn.classList.toggle('active', !muted);
+    btn.title = muted ? 'Audio Alerts: MUTED (Click to activate audio telemetry chime)' : 'Audio Alerts: ACTIVE (Click to mute)';
+    const icon = btn.querySelector('.sound-btn-icon');
+    const text = btn.querySelector('.sound-btn-text');
+    if (icon) icon.textContent = muted ? '🔇' : '🔊';
+    if (text) text.textContent = muted ? 'Muted' : 'Sound: ON';
+  });
+}
+
+function getScadaAudioContext() {
+  try {
+    if (!scadaAudioContext) {
+      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtxClass) {
+        scadaAudioContext = new AudioCtxClass();
+      }
+    }
+    if (scadaAudioContext && scadaAudioContext.state === 'suspended') {
+      scadaAudioContext.resume().catch(() => {});
+    }
+    return scadaAudioContext;
+  } catch (e) {
+    return null;
+  }
+}
+
+function playScadaAlertChime(urgency = 'high') {
+  if (isScadaAudioMuted()) return;
+  try {
+    const ctx = getScadaAudioContext();
+    if (!ctx) return;
+
+    const t = ctx.currentTime;
+
+    // Harmonic 1: Primary crystal sine frequency (880 Hz -> 1046.5 Hz - A5 to C6)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(880, t);
+    osc1.frequency.exponentialRampToValueAtTime(1046.5, t + 0.16);
+
+    gain1.gain.setValueAtTime(0.001, t);
+    gain1.gain.exponentialRampToValueAtTime(0.28, t + 0.02);
+    gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(t);
+    osc1.stop(t + 0.39);
+
+    // Harmonic 2: SCADA telemetry bell harmonic (1320 Hz -> 1760 Hz - E6 to A6)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(1320, t + 0.11);
+    osc2.frequency.exponentialRampToValueAtTime(1760, t + 0.26);
+
+    gain2.gain.setValueAtTime(0.001, t + 0.11);
+    gain2.gain.exponentialRampToValueAtTime(0.22, t + 0.14);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.52);
+
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(t + 0.11);
+    osc2.stop(t + 0.53);
+  } catch (err) {
+    console.warn('[SCADA Telemetry] Web Audio ping synthesis suppressed:', err);
+  }
+}
+
+function showScadaEmergencyBanner(newReports = []) {
+  if (!newReports || !newReports.length) return;
+  const existing = document.getElementById('scada-emergency-banner');
+  if (existing) existing.remove();
+  if (scadaBannerDismissTimer) clearTimeout(scadaBannerDismissTimer);
+
+  const latest = newReports[0];
+  const count = newReports.length;
+
+  const banner = document.createElement('aside');
+  banner.id = 'scada-emergency-banner';
+  banner.className = 'scada-emergency-banner';
+  banner.setAttribute('role', 'alert');
+  banner.setAttribute('aria-live', 'assertive');
+
+  banner.innerHTML = `
+    <div class="scada-banner-inner">
+      <div class="scada-banner-left">
+        <span class="scada-banner-beacon"></span>
+        <span class="scada-banner-icon">🚨</span>
+        <div class="scada-banner-info">
+          <div class="scada-banner-head">
+            <strong>REAL-TIME OUTAGE INTAKE ALERT</strong>
+            <span class="scada-banner-badge">${count > 1 ? `+${count} New Reports Received` : 'New Report Received'}</span>
+            <span class="scada-banner-time">⚡ Just now</span>
+          </div>
+          <div class="scada-banner-body">
+            <span class="scada-banner-loc">📍 Brgy. <strong>${escapeHtml(latest.barangay)}</strong></span>
+            ${latest.location ? `<span class="scada-banner-subloc">(${escapeHtml(latest.location)})</span>` : ''}
+            <span class="scada-banner-desc">— "${escapeHtml(latest.description || latest.possible_outage_type || 'Unspecified power interruption')}"</span>
+            <span class="scada-banner-code">${escapeHtml(latest.report_code)}</span>
+          </div>
+        </div>
+      </div>
+      <div class="scada-banner-actions">
+        <button type="button" class="button small primary scada-banner-cta" data-page="verification" data-action="dismiss-scada-banner">
+          🔍 Verify in Queue (${count})
+        </button>
+        <button type="button" class="scada-banner-close" data-action="dismiss-scada-banner" aria-label="Dismiss alert" title="Dismiss">
+          ✕
+        </button>
+      </div>
+    </div>
+  `;
+
+  const adminMain = document.querySelector('.admin-main');
+  if (adminMain) {
+    adminMain.prepend(banner);
+  } else {
+    document.body.prepend(banner);
+  }
+
+  scadaBannerDismissTimer = setTimeout(() => {
+    banner.classList.add('fading');
+    setTimeout(() => banner.remove(), 350);
+  }, 14000);
+}
+
+async function tickAdminTelemetry() {
+  if (!IS_ADMIN || !state.user || !STAFF_ROLES.includes(state.user.role)) return;
+  if (document.hidden) return;
+
+  try {
+    const url = `/api/admin/telemetry-heartbeat?since_report_id=${lastPolledReportId}`;
+    const data = await api(url);
+    if (!data) return;
+
+    if (!isHeartbeatInitialized) {
+      lastPolledReportId = data.latestReportId || 0;
+      isHeartbeatInitialized = true;
+      return;
+    }
+
+    if (data.newReports && data.newReports.length > 0) {
+      lastPolledReportId = Math.max(lastPolledReportId, data.latestReportId || 0);
+      playScadaAlertChime('high');
+      showScadaEmergencyBanner(data.newReports);
+      setToast(`🚨 Bag-ong Report: Brgy. ${data.newReports[0].barangay} (${data.newReports[0].report_code})`);
+    } else if (data.latestReportId) {
+      lastPolledReportId = Math.max(lastPolledReportId, data.latestReportId);
+    }
+
+    if (data.metrics) {
+      // 1. Unread notifications bell
+      if (typeof data.metrics.unreadNotifications === 'number') {
+        state.unread = data.metrics.unreadNotifications;
+        const bell = document.querySelector('.notification-bell');
+        if (bell) {
+          let badge = bell.querySelector('.notification-badge');
+          if (state.unread > 0) {
+            if (!badge) {
+              badge = document.createElement('span');
+              badge.className = 'notification-badge';
+              bell.appendChild(badge);
+            }
+            badge.textContent = state.unread > 99 ? '99+' : state.unread;
+          } else if (badge) {
+            badge.remove();
+          }
+        }
+      }
+
+      // 2. Active Outages Pulse Bar
+      if (typeof data.metrics.activeIncidents === 'number') {
+        state.activeIncidentsCount = data.metrics.activeIncidents;
+        const pulseBar = document.querySelector('.grid-pulse-bar');
+        if (pulseBar) {
+          const hasOutage = state.activeIncidentsCount > 0;
+          pulseBar.classList.toggle('has-outage', hasOutage);
+          const pulseText = pulseBar.querySelector('span:last-child');
+          if (pulseText) {
+            pulseText.textContent = hasOutage
+              ? `${state.activeIncidentsCount} Outage${state.activeIncidentsCount > 1 ? 's' : ''} Active`
+              : 'Grid Online: 99.2% Normal';
+          }
+        }
+      }
+
+      // 3. Live Dashboard Metric Numbers if active on dashboard
+      if (state.page === 'dashboard') {
+        const triageVal = document.querySelector('[data-scada-stat="triage"] .scada-card-value');
+        if (triageVal && typeof data.metrics.pendingReports === 'number') {
+          triageVal.textContent = data.metrics.pendingReports.toLocaleString();
+        }
+        const outageVal = document.querySelector('[data-scada-stat="outage"] .scada-card-value');
+        if (outageVal && typeof data.metrics.activeIncidents === 'number') {
+          outageVal.textContent = data.metrics.activeIncidents.toLocaleString();
+        }
+        const dispatchVal = document.querySelector('[data-scada-stat="dispatch"] .scada-card-value');
+        if (dispatchVal && typeof data.metrics.ongoingRepairs === 'number') {
+          dispatchVal.textContent = data.metrics.ongoingRepairs.toLocaleString();
+        }
+      }
+    }
+  } catch (err) {
+    // Intermittent network blip; retry on next tick
+  }
+}
+
+function startAdminTelemetryHeartbeat() {
+  if (adminTelemetryInterval) clearInterval(adminTelemetryInterval);
+  isHeartbeatInitialized = false;
+  lastPolledReportId = 0;
+  tickAdminTelemetry();
+  adminTelemetryInterval = setInterval(tickAdminTelemetry, 7000);
+}
+
+function stopAdminTelemetryHeartbeat() {
+  if (adminTelemetryInterval) {
+    clearInterval(adminTelemetryInterval);
+    adminTelemetryInterval = null;
+  }
+  isHeartbeatInitialized = false;
+  const banner = document.getElementById('scada-emergency-banner');
+  if (banner) banner.remove();
+}
+
+window.isScadaAudioMuted = isScadaAudioMuted;
+window.setScadaAudioMuted = setScadaAudioMuted;
+window.updateScadaAudioButtonsUI = updateScadaAudioButtonsUI;
+window.playScadaAlertChime = playScadaAlertChime;
+window.showScadaEmergencyBanner = showScadaEmergencyBanner;
+window.startAdminTelemetryHeartbeat = startAdminTelemetryHeartbeat;
+window.stopAdminTelemetryHeartbeat = stopAdminTelemetryHeartbeat;
+
 function adminShell(content) {
   const nav = visibleAdminNav();
   const info = state.config.system_info || {};
@@ -77,6 +340,19 @@ function adminShell(content) {
           ? `${state.activeIncidentsCount} Outage${state.activeIncidentsCount > 1 ? 's' : ''} Active`
           : 'Grid Online: 99.2% Normal';
       }
+    }
+
+    // 3.5 Update sound toggle button state
+    const soundBtn = existingShell.querySelector('[data-action="toggle-admin-sound"]');
+    if (soundBtn) {
+      const isMuted = isScadaAudioMuted();
+      soundBtn.classList.toggle('muted', isMuted);
+      soundBtn.classList.toggle('active', !isMuted);
+      soundBtn.title = isMuted ? 'Audio Alerts: MUTED (Click to activate audio telemetry chime)' : 'Audio Alerts: ACTIVE (Click to mute)';
+      const icon = soundBtn.querySelector('.sound-btn-icon');
+      const text = soundBtn.querySelector('.sound-btn-text');
+      if (icon) icon.textContent = isMuted ? '🔇' : '🔊';
+      if (text) text.textContent = isMuted ? 'Muted' : 'Sound: ON';
     }
 
     // 4. Update main content only & reset ONLY main content scroll to top
@@ -124,6 +400,10 @@ function adminShell(content) {
           <button type="button" class="topbar-search-trigger" data-action="open-command-palette" title="Quick Search (Ctrl + K)">
             <span>🔍 Search...</span>
             <kbd>Ctrl K</kbd>
+          </button>
+          <button type="button" class="topbar-sound-btn ${isScadaAudioMuted() ? 'muted' : 'active'}" data-action="toggle-admin-sound" title="${isScadaAudioMuted() ? 'Audio Alerts: MUTED (Click to activate audio telemetry chime)' : 'Audio Alerts: ACTIVE (Click to mute)'}">
+            <span class="sound-btn-icon">${isScadaAudioMuted() ? '🔇' : '🔊'}</span>
+            <span class="sound-btn-text">${isScadaAudioMuted() ? 'Muted' : 'Sound: ON'}</span>
           </button>
           <button type="button" class="theme-toggle-btn" data-action="toggle-admin-theme" title="Toggle Command Center Night Ops Mode">
             <span id="theme-btn-icon">${document.documentElement.classList.contains('dark-mode') ? '☀️' : '🌙'}</span>
@@ -311,7 +591,7 @@ async function renderAdminDashboard() {
 
     <div class="dashboard-stat-grid scada-stat-grid">
       ${cards.map((card) => `
-        <button type="button" class="dashboard-stat-card scada-card tone-${card.tone}" data-page="${card.page}" title="Open ${escapeHtml(card.label)} module">
+        <button type="button" class="dashboard-stat-card scada-card tone-${card.tone}" data-scada-stat="${card.tag.toLowerCase()}" data-page="${card.page}" title="Open ${escapeHtml(card.label)} module">
           <div class="scada-card-head">
             <span class="scada-card-icon">${card.icon}</span>
             <span class="scada-card-tag">${card.tag}</span>

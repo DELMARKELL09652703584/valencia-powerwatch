@@ -264,4 +264,41 @@ router.get('/backup', requireAuth, requireRole('administrator'), (req, res) => {
   res.download(DB_PATH, `valencia-powerwatch-${stamp}.db`);
 });
 
+// ---------------- Real-Time Telemetry & Audio Ping Heartbeat ----------------
+router.get('/telemetry-heartbeat', requireAuth, requireRole('administrator', 'personnel', 'utility'), (req, res) => {
+  const sinceId = Number(req.query.since_report_id) || 0;
+
+  const maxRow = db.prepare('SELECT MAX(id) AS max_id FROM outage_reports').get();
+  const latestReportId = maxRow && maxRow.max_id ? Number(maxRow.max_id) : 0;
+
+  const newReports = (sinceId > 0 && latestReportId > sinceId)
+    ? db.prepare(`
+        SELECT r.id, r.report_code, r.barangay, r.location, r.description, r.status, r.verification_status,
+               r.possible_outage_type, r.reported_at, u.full_name AS reporter_name
+        FROM outage_reports r
+        LEFT JOIN users u ON u.id = r.reporter_id
+        WHERE r.id > ?
+        ORDER BY r.id DESC
+        LIMIT 10
+      `).all(sinceId)
+    : [];
+
+  const pendingReportsCount = db.prepare("SELECT COUNT(*) AS c FROM outage_reports WHERE verification_status = 'Pending' OR status = 'Submitted'").get().c;
+  const activeIncidentsCount = db.prepare("SELECT COUNT(*) AS c FROM outage_incidents WHERE status IN ('Reported', 'Investigating', 'In Progress')").get().c;
+  const ongoingRepairsCount = db.prepare("SELECT COUNT(*) AS c FROM repair_assignments WHERE status IN ('Dispatched', 'En Route', 'Arrived On Site', 'In Progress')").get().c;
+  const unreadNotifsCount = db.prepare("SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND read = 0").get(req.user.id).c;
+
+  res.json({
+    latestReportId,
+    newReports,
+    metrics: {
+      pendingReports: Number(pendingReportsCount),
+      activeIncidents: Number(activeIncidentsCount),
+      ongoingRepairs: Number(ongoingRepairsCount),
+      unreadNotifications: Number(unreadNotifsCount),
+    },
+    serverTime: now(),
+  });
+});
+
 module.exports = router;
