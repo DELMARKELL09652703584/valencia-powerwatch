@@ -691,7 +691,7 @@ button:disabled {
   z-index: 40;
   right: max(12px, env(safe-area-inset-right));
   bottom: calc(82px + env(safe-area-inset-bottom));
-  width: 370px;
+  width: auto;
   max-width: calc(100% - 24px);
   pointer-events: none;
 }
@@ -702,7 +702,7 @@ button:disabled {
   align-items: center;
   justify-content: center;
   gap: 9px;
-  margin-left: auto;
+  margin-left: 0;
   padding: 0 16px;
   border: 1px solid rgba(255, 255, 255, .5);
   border-radius: 999px;
@@ -714,6 +714,14 @@ button:disabled {
   font-weight: 750;
   cursor: pointer;
   pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.powerwatch-chat-launcher:active,
+.powerwatch-chat-launcher.is-dragging {
+  cursor: grabbing;
 }
 
 .powerwatch-chat-launcher:hover {
@@ -743,7 +751,8 @@ button:disabled {
   position: absolute;
   right: 0;
   bottom: 60px;
-  width: 100%;
+  width: var(--chat-panel-width, min(370px, calc(100vw - 24px)));
+  max-width: calc(100vw - 24px);
   max-height: min(570px, calc(100dvh - 190px));
   display: grid;
   grid-template-rows: auto minmax(120px, 1fr) auto auto auto;
@@ -753,6 +762,16 @@ button:disabled {
   background: #f8fbfd;
   box-shadow: 0 18px 52px rgba(8, 39, 67, .24);
   pointer-events: auto;
+}
+
+.powerwatch-chatbot[data-panel-side="below"] .powerwatch-chat-panel {
+  top: 60px;
+  bottom: auto;
+}
+
+.powerwatch-chatbot[data-panel-align="left"] .powerwatch-chat-panel {
+  right: auto;
+  left: 0;
 }
 
 .powerwatch-chat-panel[hidden] {

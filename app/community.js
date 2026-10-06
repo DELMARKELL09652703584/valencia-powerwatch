@@ -334,7 +334,7 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
         </form>
         <p class="powerwatch-chat-disclaimer">System answers use PowerWatch records and help guides. For emergencies, contact the proper local service.</p>
       </section>
-      <button type="button" class="powerwatch-chat-launcher" data-chatbot-action="toggle" aria-controls="powerwatch-chat-panel" aria-expanded="false" aria-label="Ask PowerWatch Assistant">
+      <button type="button" class="powerwatch-chat-launcher" data-chatbot-action="toggle" aria-controls="powerwatch-chat-panel" aria-expanded="false" aria-label="Ask PowerWatch Assistant" title="Drag to move · Tap to chat">
         <span class="powerwatch-chat-launcher-icon" aria-hidden="true">✦</span><span>Ask PowerWatch</span>
       </button>
     </section>` : ''}

@@ -2,8 +2,91 @@
 
 (() => {
   const conversation = [];
+  const POSITION_KEY = 'powerwatch-chat-position';
   let sending = false;
   let panelOpen = false;
+  let dragState = null;
+  let suppressLauncherClick = false;
+
+  const launcherMargins = () => ({
+    left: 12,
+    top: 12,
+    right: 12,
+    bottom: window.innerWidth <= 780 ? 88 : 16,
+  });
+
+  const clampLauncher = (left, top, launcher) => {
+    const margins = launcherMargins();
+    return {
+      left: Math.max(margins.left, Math.min(left, window.innerWidth - launcher.offsetWidth - margins.right)),
+      top: Math.max(margins.top, Math.min(top, window.innerHeight - launcher.offsetHeight - margins.bottom)),
+    };
+  };
+
+  const placeLauncher = (left, top, launcher) => {
+    const position = clampLauncher(left, top, launcher);
+    const container = document.getElementById('powerwatch-chatbot');
+    if (!container) return;
+    container.style.left = `${position.left}px`;
+    container.style.top = `${position.top}px`;
+    container.style.right = 'auto';
+    container.style.bottom = 'auto';
+    return position;
+  };
+
+  const updatePanelPlacement = () => {
+    const container = document.getElementById('powerwatch-chatbot');
+    const launcher = container?.querySelector('.powerwatch-chat-launcher');
+    if (!container || !launcher) return;
+
+    const rect = launcher.getBoundingClientRect();
+    const panelWidth = Math.min(370, window.innerWidth - 24);
+    const roomBelow = window.innerHeight - rect.bottom;
+    const roomAbove = rect.top;
+    container.dataset.panelSide = roomBelow >= Math.min(570, window.innerHeight - 24) || roomBelow >= roomAbove
+      ? 'below'
+      : 'above';
+    container.dataset.panelAlign = rect.left + rect.width / 2 < window.innerWidth / 2
+      ? 'left'
+      : 'right';
+    container.style.setProperty('--chat-panel-width', `${panelWidth}px`);
+  };
+
+  const restoreLauncherPosition = () => {
+    const launcher = document.querySelector('.powerwatch-chat-launcher');
+    const container = document.getElementById('powerwatch-chatbot');
+    if (!launcher || !container) return;
+
+    let saved;
+    try {
+      saved = JSON.parse(localStorage.getItem(POSITION_KEY));
+    } catch {
+      saved = null;
+    }
+
+    if (Number.isFinite(saved?.x) && Number.isFinite(saved?.y)) {
+      const maxLeft = Math.max(12, window.innerWidth - launcher.offsetWidth - 12);
+      const maxTop = Math.max(12, window.innerHeight - launcher.offsetHeight - launcherMargins().bottom);
+      placeLauncher(saved.x * maxLeft, saved.y * maxTop, launcher);
+    }
+    updatePanelPlacement();
+  };
+
+  const saveLauncherPosition = (launcher) => {
+    const container = document.getElementById('powerwatch-chatbot');
+    if (!container) return;
+    const rect = launcher.getBoundingClientRect();
+    const maxLeft = Math.max(12, window.innerWidth - launcher.offsetWidth - 12);
+    const maxTop = Math.max(12, window.innerHeight - launcher.offsetHeight - launcherMargins().bottom);
+    try {
+      localStorage.setItem(POSITION_KEY, JSON.stringify({
+        x: Math.min(1, Math.max(0, rect.left / maxLeft)),
+        y: Math.min(1, Math.max(0, rect.top / maxTop)),
+      }));
+    } catch {
+      // Dragging still works when browser storage is unavailable.
+    }
+  };
 
   const renderConversation = () => {
     const messages = document.getElementById('powerwatch-chat-messages');
@@ -109,9 +192,62 @@
     if (!panel) return;
     panel.hidden = !panelOpen;
     renderConversation();
+    restoreLauncherPosition();
   });
 
+  document.addEventListener('pointerdown', (event) => {
+    const launcher = event.target.closest('.powerwatch-chat-launcher');
+    if (!launcher || !event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) return;
+    const rect = launcher.getBoundingClientRect();
+    dragState = {
+      launcher,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      left: rect.left,
+      top: rect.top,
+      moved: false,
+    };
+    launcher.setPointerCapture(event.pointerId);
+  });
+
+  document.addEventListener('pointermove', (event) => {
+    if (!dragState || event.pointerId !== dragState.pointerId) return;
+    const deltaX = event.clientX - dragState.startX;
+    const deltaY = event.clientY - dragState.startY;
+    if (!dragState.moved && Math.hypot(deltaX, deltaY) < 6) return;
+    dragState.moved = true;
+    suppressLauncherClick = true;
+    dragState.launcher.classList.add('is-dragging');
+    event.preventDefault();
+    placeLauncher(dragState.left + deltaX, dragState.top + deltaY, dragState.launcher);
+    updatePanelPlacement();
+  });
+
+  const finishDragging = (event) => {
+    if (!dragState || event.pointerId !== dragState.pointerId) return;
+    const { launcher, moved } = dragState;
+    if (moved) {
+      saveLauncherPosition(launcher);
+      updatePanelPlacement();
+    }
+    launcher.classList.remove('is-dragging');
+    dragState = null;
+    if (moved) window.setTimeout(() => { suppressLauncherClick = false; }, 500);
+  };
+
+  document.addEventListener('pointerup', finishDragging);
+  document.addEventListener('pointercancel', finishDragging);
+  window.addEventListener('resize', restoreLauncherPosition);
+
   document.addEventListener('click', (event) => {
+    if (suppressLauncherClick && event.target.closest('.powerwatch-chat-launcher')) {
+      event.preventDefault();
+      event.stopPropagation();
+      suppressLauncherClick = false;
+      return;
+    }
+
     const prompt = event.target.closest('[data-chatbot-prompt]');
     if (prompt) {
       const question = prompt.dataset.chatbotPrompt;
