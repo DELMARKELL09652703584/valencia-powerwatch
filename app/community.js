@@ -370,17 +370,19 @@ function formatRelativeTime(value) {
 
 async function renderMobileHome() {
   const cachedWeather = readWeatherCache();
-  const [{ stats }, { notifications }, { announcements }, { incidents = [] }, { scheduled = [] }] = await Promise.all([
+  const [{ stats }, { notifications }, { announcements }, { incidents = [] }, { scheduled = [] }, outageInsights] = await Promise.all([
     api('/api/analytics/dashboard'),
     api('/api/notifications'),
     api('/api/announcements').catch(() => ({ announcements: [] })),
     api('/api/incidents').catch(() => ({ incidents: [] })),
     api('/api/scheduled/upcoming').catch(() => ({ scheduled: [] })),
+    api('/api/analytics/insights'),
   ]);
   state.mobileNotifications = notifications;
 
   const userBarangay = state.user?.barangay || 'Poblacion';
-  const myIncident = incidents.find((inc) => (inc.affected_barangays || [inc.barangay]).some((b) => b && b.toLowerCase() === userBarangay.toLowerCase()) && inc.status !== 'Closed');
+  const myIncident = incidents.find((inc) => (inc.affected_barangays || [inc.barangay]).some((b) => b && b.toLowerCase() === userBarangay.toLowerCase())
+    && !['Closed', 'Restored', 'Resolved'].includes(inc.status));
   const myScheduled = scheduled.find((s) => s.barangay && s.barangay.toLowerCase() === userBarangay.toLowerCase() && s.status !== 'Completed');
 
   let barangayHeroMarkup = '';
@@ -423,8 +425,8 @@ async function renderMobileHome() {
           <span class="bsh-badge">Grid Normal</span>
           <span class="bsh-barangay">Brgy. ${escapeHtml(userBarangay)}</span>
         </div>
-        <h3>Power Supply Online &amp; Stable</h3>
-        <p>Walay reported nga brownout sa imong barangay karon. Normal ang boltahe ug distribution grid.</p>
+        <h3>No active outage incidents recorded</h3>
+        <p>Walay active outage incident nga naa sa system para sa imong barangay karon. Dili kini real-time voltage reading.</p>
         <div class="bsh-actions">
           <button type="button" class="button ghost small" data-mobile-tab="report" style="background:#fff;border-color:#bbf7d0;color:#166534;font-weight:700;">⚡ Report Outage</button>
           <button type="button" class="button ghost small" data-mobile-tab="map" style="background:#fff;border-color:#bbf7d0;color:#166534;">🗺️ Live Map</button>
@@ -439,6 +441,17 @@ async function renderMobileHome() {
     { label: t('resolved_today', 'Resolved Today'), value: stats.resolved_today, icon: '⬡', tone: 'success', tab: 'history' },
     { label: t('total_reports', 'Total Reports'), value: stats.reports_total, icon: '✦', tone: 'primary', tab: 'reports' },
   ];
+  const monthlyMaximum = Math.max(1, ...outageInsights.monthly.map((item) => Number(item.count) || 0));
+  const trendCopy = outageInsights.trend.direction === 'up'
+    ? `${outageInsights.current.unexpected_incidents} confirmed unexpected incidents in the last 90 days, up ${outageInsights.trend.change_percent}% from the previous 90 days.`
+    : outageInsights.trend.direction === 'down'
+      ? `${outageInsights.current.unexpected_incidents} confirmed unexpected incidents in the last 90 days, down ${Math.abs(outageInsights.trend.change_percent)}% from the previous 90 days.`
+      : outageInsights.trend.direction === 'new_activity'
+        ? `${outageInsights.current.unexpected_incidents} confirmed unexpected incidents in the last 90 days; none were recorded in the previous 90-day comparison period.`
+        : `${outageInsights.current.unexpected_incidents} confirmed unexpected incidents in the last 90 days, the same as the previous 90 days.`;
+  const forecastCopy = outageInsights.projection.status === 'available'
+    ? `Baseline estimate: about ${outageInsights.projection.next_month_unexpected_incidents} confirmed unexpected incidents next month, using the average of six complete months (${outageInsights.projection.sample_incidents} incidents across ${outageInsights.projection.sample_months} active months). This is not an official outage notice.`
+    : `No forecast yet. Six complete months contain ${outageInsights.projection.sample_incidents} confirmed unexpected incidents across ${outageInsights.projection.sample_months} active months; the baseline requires at least 12 incidents across 3 months.`;
   const updates = notifications.slice(0, 3);
 
   mobileShell(`
@@ -453,6 +466,25 @@ async function renderMobileHome() {
         <strong>${escapeHtml(String(card.value))}</strong>
       </button>`).join('')}
     </div>
+    <section class="bi-insights-panel" aria-labelledby="community-bi-title">
+      <header class="bi-insights-header">
+        <div><span class="bi-eyebrow">DATA-BASED INSIGHT · ${escapeHtml(userBarangay)}</span><h2 id="community-bi-title">Local outage trends</h2></div>
+        <span class="bi-period">Last 90 days</span>
+      </header>
+      <p class="bi-insight-summary">${escapeHtml(trendCopy)}</p>
+      <div class="bi-monthly-chart" role="img" aria-label="Monthly unexpected incidents in ${escapeHtml(userBarangay)} for the last six complete months">
+        ${outageInsights.monthly.map((item) => `<div class="bi-month-column" title="${escapeHtml(item.month)}: ${item.count} unexpected incidents">
+          <b>${item.count}</b><span style="height:${Math.max(4, (item.count / monthlyMaximum) * 54)}px"></span><small>${escapeHtml(item.month.split(' ')[0])}</small>
+        </div>`).join('')}
+      </div>
+      <div class="bi-metric-row">
+        <div><span>Active incidents</span><strong>${outageInsights.current.active_incidents}</strong></div>
+        <div><span>Open community reports</span><strong>${outageInsights.current.open_unlinked_reports}</strong></div>
+        <div><span>Median repair arrival</span><strong>${outageInsights.current.median_dispatch_response_hours === null ? 'No data' : `${outageInsights.current.median_dispatch_response_hours}h`}</strong></div>
+      </div>
+      <p class="bi-projection ${outageInsights.projection.status === 'available' ? 'available' : 'limited'}">${escapeHtml(forecastCopy)}</p>
+      <small class="bi-data-note">Based on system incidents and reports for your barangay. Averages/medians describe recorded cases only; this is not a utility voltage monitor.</small>
+    </section>
     <section class="recent-updates">
       <header class="recent-updates-head"><h2>${t('recent_updates', 'Recent Updates')}</h2><button type="button" class="link-button" data-mobile-tab="notifications">${t('view_all', 'View All')}</button></header>
       ${updates.length ? updates.map((notice) => {

@@ -484,21 +484,23 @@ function statCards(stats) {
 
 async function renderAdminDashboard() {
   adminShell(loadingState('Connecting to Valencia Smart Grid Command Center…'));
-  const [{ stats }, monthly, barangay, incidentStatus, repRes, incRes, teamRes] = await Promise.all([
+  const [{ stats }, monthly, barangay, incidentStatus, repRes, incRes, teamRes, insightsRes] = await Promise.all([
     api('/api/analytics/dashboard'),
     api('/api/analytics/monthly'),
     api('/api/analytics/barangay'),
     api('/api/analytics/status'),
     api('/api/reports'),
     api('/api/incidents'),
-    api('/api/repair-teams')
+    api('/api/repair-teams'),
+    api('/api/analytics/insights'),
   ]);
 
   const allReports = repRes.reports || [];
   const allIncidents = incRes.incidents || [];
   const teams = teamRes.teams || [];
+  const insights = insightsRes;
   const recent = allReports.slice(0, 6);
-  const active = allIncidents.filter((i) => i.status !== 'Closed').slice(0, 5);
+  const active = allIncidents.filter((i) => !['Closed', 'Restored', 'Resolved'].includes(i.status)).slice(0, 5);
   const resolvedCount = Number(stats.resolved || 0) + Number(stats.restored || 0);
   state.activeIncidentsCount = Number(stats.ongoing || stats.active_incidents || 0);
 
@@ -533,6 +535,17 @@ async function renderAdminDashboard() {
   `).join('');
 
   const monthlyRows = (monthly.data || []).slice(-12);
+  const trendCopy = insights.trend.direction === 'up'
+    ? `${insights.current.unexpected_incidents} confirmed unexpected incidents in the last 90 days, up ${insights.trend.change_percent}% from the previous 90 days.`
+    : insights.trend.direction === 'down'
+      ? `${insights.current.unexpected_incidents} confirmed unexpected incidents in the last 90 days, down ${Math.abs(insights.trend.change_percent)}% from the previous 90 days.`
+      : insights.trend.direction === 'new_activity'
+        ? `${insights.current.unexpected_incidents} confirmed unexpected incidents in the last 90 days; none were recorded in the previous comparison period.`
+        : `${insights.current.unexpected_incidents} confirmed unexpected incidents in the last 90 days, unchanged from the previous 90 days.`;
+  const forecastCopy = insights.projection.status === 'available'
+    ? `Baseline estimate: about ${insights.projection.next_month_unexpected_incidents} confirmed unexpected incidents next month, calculated as the six-month average (${insights.projection.sample_incidents} incidents across ${insights.projection.sample_months} active months). It is not a scheduled outage or certainty.`
+    : `Forecast withheld: the six complete months contain ${insights.projection.sample_incidents} confirmed unexpected incidents across ${insights.projection.sample_months} active months. At least 12 incidents across 3 months are required.`;
+  const medianHours = (value) => value === null ? 'No data' : `${value}h`;
   const trendMaximum = Math.max(1, ...monthlyRows.flatMap((row) => [Number(row.scheduled) || 0, Number(row.unexpected) || 0]));
   const chartX = (index) => monthlyRows.length < 2 ? 300 : 34 + (index / (monthlyRows.length - 1)) * 532;
   const chartY = (value) => 205 - ((Number(value) || 0) / trendMaximum) * 170;
@@ -578,7 +591,7 @@ async function renderAdminDashboard() {
         <div class="command-telemetry-status">
           ${state.activeIncidentsCount > 0
             ? `<span class="telemetry-pill alert"><span class="pulse-dot red"></span> <strong>${state.activeIncidentsCount} Grid Outages Active</strong> · ${stats.active_dispatches || 0} Response Units Deployed</span>`
-            : `<span class="telemetry-pill normal"><span class="pulse-dot green"></span> <strong>Grid Stability: 99.8% Normal</strong> · Feeder 1–4 Substation Synchronized</span>`}
+            : `<span class="telemetry-pill normal"><span class="pulse-dot green"></span> <strong>No active incidents recorded</strong> · Status reflects PowerWatch records, not live grid telemetry</span>`}
         </div>
       </div>
       <div class="command-header-actions">
@@ -623,6 +636,22 @@ async function renderAdminDashboard() {
         </div>
       `).join('')}
     </div>
+
+    <section class="bi-insights-panel admin-bi-panel" aria-labelledby="admin-bi-title">
+      <header class="bi-insights-header">
+        <div><span class="bi-eyebrow">EXPLAINABLE BUSINESS INTELLIGENCE · ${escapeHtml(insights.scope.name)}</span><h2 id="admin-bi-title">Operational trends &amp; response insights</h2></div>
+        <span class="bi-period">90-day comparison</span>
+      </header>
+      <p class="bi-insight-summary">${escapeHtml(trendCopy)}</p>
+      <div class="bi-insight-grid">
+        <article><span>Unexpected incidents</span><strong>${insights.current.unexpected_incidents}</strong><small>Previous 90 days: ${insights.previous.unexpected_incidents}</small></article>
+        <article><span>Leading current hotspot</span><strong>${escapeHtml(insights.hotspots[0]?.barangay || 'No incidents')}</strong><small>${insights.hotspots[0] ? `${insights.hotspots[0].incidents} unexpected incidents in 90 days` : 'No mapped incident history for this period'}</small></article>
+        <article><span>Median dispatch → arrival</span><strong>${escapeHtml(medianHours(insights.current.median_dispatch_response_hours))}</strong><small>${insights.current.response_sample_size} completed arrival records</small></article>
+        <article><span>Median restoration time</span><strong>${escapeHtml(medianHours(insights.current.median_restoration_hours))}</strong><small>${insights.current.restoration_sample_size} completed restoration records</small></article>
+      </div>
+      <p class="bi-projection ${insights.projection.status === 'available' ? 'available' : 'limited'}">${escapeHtml(forecastCopy)}</p>
+      <small class="bi-data-note">Source: recorded system incidents, open resident reports, and repair assignments. Comparison uses the prior 90 days; medians use completed cases. Estimates are descriptive, not official outage advisories.</small>
+    </section>
 
     <div class="dashboard-visual-grid scada-visual-grid">
       <!-- PANEL 1: GIS Outage Radar Map -->

@@ -4,7 +4,9 @@ const { DatabaseSync } = require('node:sqlite');
 const crypto = require('node:crypto');
 
 const ROOT = path.resolve(__dirname, '..');
-const DATA_DIR = path.join(ROOT, 'data');
+const DATA_DIR = process.env.POWERWATCH_DATA_DIR
+  ? path.resolve(process.env.POWERWATCH_DATA_DIR)
+  : path.join(ROOT, 'data');
 const UPLOAD_DIR = path.join(ROOT, 'uploads');
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
