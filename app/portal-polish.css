@@ -2038,3 +2038,206 @@ body.admin-body :disabled,
 body.community-body :disabled {
   opacity: .78;
 }
+
+:root {
+  --pw-bg: #060d1a;
+  --pw-panel: #0d192c;
+  --pw-raised: #13223a;
+  --pw-input: #081426;
+  --pw-line: #344b68;
+  --pw-text: #f1f5ff;
+  --pw-body: #d2deee;
+  --pw-muted: #a8bbd3;
+  --pw-primary: #3b82f6;
+  --pw-accent: #67e8f9;
+  --pw-ok: #6ee7b7;
+  --pw-warn: #fde68a;
+  --pw-danger: #fda4af;
+}
+
+body.admin-body .admin-content :is(.analytics-metric-card, .analytics-chart-panel, .analytics-kpi, .analytics-chart-empty) {
+  border-color: var(--pw-line) !important;
+  background: var(--pw-panel) !important;
+  color: var(--pw-body) !important;
+}
+
+body.admin-body .admin-content .analytics-metric-card :is(span, small, p, label) {
+  color: var(--pw-muted) !important;
+}
+
+body.admin-body .admin-content .analytics-metric-card :is(strong, b) {
+  color: var(--pw-text) !important;
+}
+
+body.admin-body .analytics-page :is(.analytics-chart-panel, .analytics-metric-card, .analytics-controls) {
+  border-color: var(--pw-line);
+  background-color: var(--pw-panel);
+}
+
+body.admin-body .analytics-page :is(.analytics-page-heading, .analytics-chart-panel h3, .analytics-controls label) {
+  color: var(--pw-text);
+}
+
+body.admin-body .analytics-page :is(.analytics-date-field span, .analytics-chart-panel small, .analytics-chart-axis, .analytics-chart-empty) {
+  color: var(--pw-body);
+}
+
+body.admin-body .analytics-page :is(input, select, textarea) {
+  border-color: var(--pw-line);
+  background: var(--pw-input);
+  color: var(--pw-text);
+}
+
+body.admin-body .analytics-page :is(input, select, textarea)::placeholder {
+  color: var(--pw-muted);
+  opacity: 1;
+}
+
+body.admin-body .login-page {
+  background: var(--pw-bg);
+  color: var(--pw-body);
+}
+
+body.admin-body .login-panel {
+  border-color: var(--pw-line);
+  background: var(--pw-panel);
+  color: var(--pw-body);
+}
+
+body.admin-body .login-panel :is(h1, h2, strong, b) {
+  color: var(--pw-text);
+}
+
+body.admin-body .login-panel :is(.login-intro, .login-footer, .form-stack label, .admin-login-options label) {
+  color: var(--pw-body);
+}
+
+body.admin-body .login-panel :is(input:not([type="checkbox"]), select, textarea) {
+  border-color: var(--pw-line);
+  background: var(--pw-input);
+  color: var(--pw-text);
+}
+
+body.admin-body .login-panel :is(input, select, textarea)::placeholder {
+  color: var(--pw-muted);
+  opacity: 1;
+}
+
+body.admin-body .login-panel .login-options a,
+body.admin-body .admin-login-options button {
+  color: #9fd5ff;
+}
+
+body.admin-body .login-footer {
+  border-color: var(--pw-line);
+}
+
+body.admin-body .admin-content :is(.panel, .stat-card, .incident-card, .announcement-card, .analytics-chart-panel, .analytics-kpi, .analytics-metric-card, .metric-card, .chart-card, .report-card, .user-management-panel),
+body.community-body :is(.mobile-card, .mobile-outage-card, .mobile-dashboard-card, .mobile-report-item, .mobile-history-item, .mobile-notification-item, .mobile-profile-head, .mobile-settings-list, .recent-updates, .mobile-weather) {
+  border-color: var(--pw-line);
+  color: var(--pw-body);
+}
+
+body.admin-body .admin-content :is(.panel, .stat-card, .incident-card, .announcement-card, .analytics-chart-panel, .analytics-kpi, .analytics-metric-card, .metric-card, .chart-card, .report-card, .user-management-panel) :is(h1, h2, h3, h4, h5, h6, strong, b),
+body.community-body :is(.mobile-card, .mobile-outage-card, .mobile-dashboard-card, .mobile-report-item, .mobile-history-item, .mobile-notification-item, .mobile-profile-head, .mobile-settings-list, .recent-updates, .mobile-weather) :is(h1, h2, h3, h4, h5, h6, strong, b) {
+  color: var(--pw-text);
+}
+
+body.admin-body .admin-content :is(.panel, .stat-card, .incident-card, .announcement-card, .analytics-chart-panel, .analytics-kpi, .analytics-metric-card, .metric-card, .chart-card, .report-card, .user-management-panel) :is(p, span, small, label, li, td, th, time, .muted),
+body.community-body :is(.mobile-card, .mobile-outage-card, .mobile-dashboard-card, .mobile-report-item, .mobile-history-item, .mobile-notification-item, .mobile-profile-head, .mobile-settings-list, .recent-updates, .mobile-weather) :is(p, span, small, label, li, time, .muted) {
+  color: var(--pw-body);
+}
+
+body.admin-body :is(.button.primary, .analytics-export-button),
+body.community-body :is(.button.primary, .mobile-form button, .mobile-auth-form button) {
+  border-color: rgba(159, 213, 255, .36);
+  background: linear-gradient(115deg, var(--pw-primary), #087ea4);
+  color: #fff;
+}
+
+body.admin-body :is(.button.secondary, .button.ghost),
+body.community-body :is(.button.secondary, .button.ghost) {
+  border-color: var(--pw-line);
+  background: var(--pw-raised);
+  color: var(--pw-body);
+}
+
+body.admin-body :is(a, button, input, select, textarea):focus-visible,
+body.community-body :is(a, button, input, select, textarea):focus-visible {
+  outline-color: var(--pw-accent);
+}
+
+body.admin-body .analytics-page .analytics-date-field {
+  border-color: var(--pw-line);
+  background: var(--pw-input);
+  color: var(--pw-body);
+}
+
+body.admin-body .analytics-page .analytics-date-field input {
+  color-scheme: dark;
+}
+
+body.admin-body .analytics-page .analytics-reset-button {
+  border-color: var(--pw-line);
+  background: var(--pw-raised);
+  color: var(--pw-body);
+}
+
+body.admin-body .analytics-page .analytics-reset-button:hover {
+  border-color: #58769a;
+  background: #1a2c47;
+}
+
+body.admin-body .scada-card .scada-card-tag {
+  border-color: rgba(103, 232, 249, .34) !important;
+  background: #112d47 !important;
+  color: #9be8f5 !important;
+}
+
+body.admin-body .scada-card.tone-blue .scada-card-tag {
+  border-color: rgba(103, 232, 249, .34) !important;
+  background: #112d47 !important;
+  color: #9be8f5 !important;
+}
+
+body.admin-body .scada-card.tone-amber .scada-card-tag {
+  border-color: rgba(251, 191, 36, .34) !important;
+  background: #382d16 !important;
+  color: #ffd875 !important;
+}
+
+body.admin-body .scada-card.tone-red .scada-card-tag {
+  border-color: rgba(251, 113, 133, .34) !important;
+  background: #3a1d2b !important;
+  color: #ff9caf !important;
+}
+
+body.admin-body .scada-card:is(.tone-emerald, .tone-teal) .scada-card-tag {
+  border-color: rgba(52, 211, 153, .34) !important;
+  background: #10352f !important;
+  color: #73efc2 !important;
+}
+
+body.admin-body .scada-card.tone-violet .scada-card-tag {
+  border-color: rgba(167, 139, 250, .34) !important;
+  background: #29234b !important;
+  color: #c6b7ff !important;
+}
+
+body.community-body .hero-normal .bsh-badge {
+  border: 1px solid rgba(110, 231, 183, .46) !important;
+  background: #0d3428 !important;
+  color: #adf5d4 !important;
+}
+
+body.community-body .hero-outage .bsh-badge {
+  border: 1px solid rgba(253, 164, 175, .46) !important;
+  background: #3b1824 !important;
+  color: #ffc1ca !important;
+}
+
+body.community-body .hero-scheduled .bsh-badge {
+  border: 1px solid rgba(253, 230, 138, .48) !important;
+  background: #3b2d0b !important;
+  color: #fff0ad !important;
+}
