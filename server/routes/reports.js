@@ -171,7 +171,7 @@ router.post('/reports', requireAuth, requireRole('resident'), parseReportAttachm
 // Active community outage reports for Map display (all authenticated roles)
 router.get('/reports/map', requireAuth, (req, res) => {
   const rows = db.prepare(`
-    SELECT r.id, r.report_code, r.barangay, r.purok, r.location, r.location_source, r.location_accuracy_m, r.affected_area,
+    SELECT r.id, r.report_code, r.incident_id, r.barangay, r.purok, r.location, r.location_source, r.location_accuracy_m, r.affected_area,
            r.latitude, r.longitude, r.possible_outage_type, r.description,
            r.status, r.verification_status, r.repair_status, r.assigned_team_name,
            r.reported_at, r.reporter_id,

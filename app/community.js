@@ -1133,6 +1133,9 @@ async function renderMobileMap() {
   ]);
   const isHeatmap = state.mobileMapMode === 'heat';
   const isSatellite = state.mobileMapLayer === 'satellite';
+  const activeIncidents = incidents.filter((item) => !['Restored', 'Resolved', 'Closed'].includes(item.status));
+  const activeIncidentIds = new Set(activeIncidents.map((item) => Number(item.id)));
+  const activeUnlinkedReports = (reports || []).filter((item) => !activeIncidentIds.has(Number(item.incident_id)));
 
   const coordinatesFor = (item) => {
     if (hasCoordinates(item)) return [Number(item.latitude), Number(item.longitude)];
@@ -1142,6 +1145,26 @@ async function renderMobileMap() {
   const reportCoordinatesFor = (report) => hasCoordinates(report)
     ? [Number(report.latitude), Number(report.longitude)]
     : null;
+  const activeMapSignals = [
+    ...activeIncidents.map((item) => ({ coordinates: coordinatesFor(item), barangay: item.barangay })),
+    ...activeUnlinkedReports.map((item) => ({ coordinates: reportCoordinatesFor(item), barangay: item.barangay })),
+  ].filter((item) => item.coordinates);
+  const hotspotsByBarangay = [...activeMapSignals.reduce((areas, item) => {
+    const name = item.barangay || 'Valencia City';
+    const current = areas.get(name) || { count: 0, latitude: 0, longitude: 0 };
+    current.count += 1;
+    current.latitude += item.coordinates[0];
+    current.longitude += item.coordinates[1];
+    areas.set(name, current);
+    return areas;
+  }, new Map()).entries()]
+    .map(([barangay, area]) => ({
+      barangay,
+      count: area.count,
+      latitude: area.latitude / area.count,
+      longitude: area.longitude / area.count,
+    }))
+    .sort((a, b) => b.count - a.count || a.barangay.localeCompare(b.barangay));
 
   const formatEtr = (val) => {
     if (!val) return 'Assessing field repair window';
@@ -1161,7 +1184,7 @@ async function renderMobileMap() {
     <div class="mobile-map-legend" style="display:flex;align-items:center;gap:10px;">
       <span style="font-weight:700;color:#c93b2b;">🔥 Outage Density:</span>
       <span class="heatmap-gradient-bar" style="width:110px;height:8px;display:inline-block;" aria-hidden="true"></span>
-      <span style="font-size:0.72rem;color:#64748b;">(Cool → Hot)</span>
+      <span style="font-size:0.72rem;color:#64748b;">Cool = fewer nearby records · Hot = more</span>
     </div>
   ` : `
     <div class="mobile-map-legend" style="display:flex;flex-wrap:wrap;gap:8px 12px;font-size:0.75rem;">
@@ -1176,16 +1199,28 @@ async function renderMobileMap() {
 
     <div class="mobile-map-controls" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
       <div class="mobile-segments" role="group" aria-label="Map display mode" style="flex:1;min-width:180px;margin-bottom:0;">
-        <button type="button" class="mobile-segment ${!isHeatmap ? 'active' : ''}" data-action="set-mobile-map-mode" data-value="markers">📍 Outage Pins</button>
-        <button type="button" class="mobile-segment ${isHeatmap ? 'active' : ''}" data-action="set-mobile-map-mode" data-value="heat">🔥 Hotspot Heatmap</button>
+        <button type="button" class="mobile-segment ${!isHeatmap ? 'active' : ''}" data-action="set-mobile-map-mode" data-value="pins" aria-pressed="${!isHeatmap}">📍 Outage Pins</button>
+        <button type="button" class="mobile-segment ${isHeatmap ? 'active' : ''}" data-action="set-mobile-map-mode" data-value="heat" aria-pressed="${isHeatmap}">🔥 Hotspot Heatmap</button>
       </div>
       <div class="mobile-segments" role="group" aria-label="Base map layer" style="margin-bottom:0;">
-        <button type="button" class="mobile-segment ${!isSatellite ? 'active' : ''}" data-action="set-mobile-map-layer" data-value="street" title="Standard Street Map">🗺️ Street</button>
-        <button type="button" class="mobile-segment ${isSatellite ? 'active' : ''}" data-action="set-mobile-map-layer" data-value="satellite" title="Satellite Aerial Photo">🛰️ Satellite</button>
+        <button type="button" class="mobile-segment ${!isSatellite ? 'active' : ''}" data-action="set-mobile-map-layer" data-value="street" title="Roads and place labels for finding an area" aria-pressed="${!isSatellite}">🗺️ Street</button>
+        <button type="button" class="mobile-segment ${isSatellite ? 'active' : ''}" data-action="set-mobile-map-layer" data-value="satellite" title="Aerial imagery and road labels for field context" aria-pressed="${isSatellite}">🛰️ Satellite</button>
       </div>
     </div>
+    <p class="mobile-map-help">${isHeatmap
+      ? `Heat shows ${activeMapSignals.length} mapped active incidents and open reports not yet linked to an incident. Scheduled outages are excluded. Choose a barangay below to zoom in.`
+      : 'Tap a pin for its status and location details. Your reports include verification and repair information; incident pins open outage details.'}</p>
+    <p class="mobile-map-help">Street map emphasizes roads and place labels for locating an area; it is not 360-degree Street View. Satellite view adds aerial context and road labels; imagery is not live outage evidence.</p>
     ${legendMarkup}
     <div class="community-map" id="community-map" aria-label="Map of Valencia City outages"></div>
+    ${isHeatmap ? `<section class="mobile-card map-hotspot-list">
+      <header class="mobile-card-head"><h2>Active outage hotspots</h2><span>${activeMapSignals.length} mapped records</span></header>
+      <div class="mobile-card-body">${hotspotsByBarangay.length ? hotspotsByBarangay.slice(0, 6).map((area) => `
+        <button type="button" class="map-hotspot-row" data-action="focus-community-map" data-lat="${area.latitude}" data-lng="${area.longitude}">
+          <span><strong>${escapeHtml(area.barangay)}</strong><small>Tap to focus map</small></span>
+          <b>${area.count} active record${area.count === 1 ? '' : 's'}</b>
+        </button>`).join('') : '<p class="muted small">No active outage records with mappable locations are available.</p>'}</div>
+    </section>` : ''}
 
     ${myReports.length ? `
     <section class="mobile-card" style="border:1.5px solid #fed7aa;background:#fffaf5;">
@@ -1209,7 +1244,7 @@ async function renderMobileMap() {
               </div>
               ${statusPill(item.status)}
               <div style="display:flex;gap:6px;width:100%;margin-top:6px;">
-                <button type="button" class="button ghost small" data-action="view-report-details" data-id="${item.id}">Details ›</button>
+                <button type="button" class="button ghost small" data-action="view-my-report" data-id="${item.id}">Details ›</button>
                 ${coords ? `<button type="button" class="button small" data-action="focus-community-map" data-lat="${coords[0]}" data-lng="${coords[1]}" style="background:#ea580c;color:#fff;border-radius:8px;font-weight:600;">📍 Focus on Map</button>` : ''}
               </div>
             </div>
@@ -1248,6 +1283,7 @@ async function renderMobileMap() {
   if (!mapElement) return;
   await ensureLeaflet();
 
+  state.communityOutageMap?.remove();
   const map = L.map(mapElement, {
     zoomControl: false,
     minZoom: 11,
@@ -1285,15 +1321,7 @@ async function renderMobileMap() {
   L.control.zoom({ position: 'bottomright' }).addTo(map);
 
   if (isHeatmap) {
-    const heatPoints = [];
-    const addHeat = (item, intensity, exactReportLocation = false) => {
-      const coords = exactReportLocation ? reportCoordinatesFor(item) : coordinatesFor(item);
-      if (coords) heatPoints.push([coords[0], coords[1], intensity]);
-    };
-    incidents.forEach((i) => addHeat(i, 1.0));
-    myReports.forEach((r) => addHeat(r, 0.85, true));
-    (reports || []).forEach((r) => addHeat(r, 0.7, true));
-    scheduled.forEach((s) => addHeat(s, 0.35));
+    const heatPoints = activeMapSignals.map(({ coordinates }) => [coordinates[0], coordinates[1], 1]);
     if (typeof L.heatLayer === 'function' && heatPoints.length) {
       L.heatLayer(heatPoints, {
         radius: 30,
@@ -1341,6 +1369,10 @@ async function renderMobileMap() {
               <span>Purok/Area: <strong style="color:#0284c7;">${escapeHtml(myRep.purok || myRep.affected_area)}</strong></span>
             </div>` : ''}
             <div class="map-popup-row">
+              <span class="map-popup-icon">✅</span>
+              <span>Verification: <strong>${escapeHtml(myRep.verification_status || 'Pending')}</strong></span>
+            </div>
+            <div class="map-popup-row">
               <span class="map-popup-icon">🛠️</span>
               <span>Repair Status: <strong style="color:${isProgress ? '#d97706' : isResolved ? '#16a34a' : '#64748b'};">${escapeHtml(myRep.repair_status || 'Pending Assignment')}</strong></span>
             </div>
@@ -1354,7 +1386,7 @@ async function renderMobileMap() {
               <span>Reported: ${escapeHtml(formatDate(myRep.reported_at))}</span>
             </div>
           </div>
-          <button type="button" class="map-popup-btn" style="background:#ea580c;color:#fff;" data-action="view-report-details" data-id="${myRep.id}">Track My Report Details ›</button>
+          <button type="button" class="map-popup-btn" style="background:#ea580c;color:#fff;" data-action="view-my-report" data-id="${myRep.id}">Track My Report Details ›</button>
         </div>
       `;
 
@@ -1395,6 +1427,10 @@ async function renderMobileMap() {
               <span class="map-popup-icon">🔄</span>
               <span>Status: <strong>${escapeHtml(rep.repair_status || rep.status)}</strong></span>
             </div>
+            <div class="map-popup-row">
+              <span class="map-popup-icon">✅</span>
+              <span>Verification: <strong>${escapeHtml(rep.verification_status || 'Pending')}</strong></span>
+            </div>
           </div>
         </div>
       `;
@@ -1409,7 +1445,7 @@ async function renderMobileMap() {
     });
 
     // 3. Plot active incidents
-    incidents.forEach((incident) => {
+    activeIncidents.forEach((incident) => {
       const coordinates = coordinatesFor(incident);
       if (!coordinates) return;
       const sev = getSeverity(incident);

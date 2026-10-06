@@ -1718,18 +1718,22 @@ async function renderAdminMap() {
     ...savedLayers,
   };
   const activeIncidents = incidents.filter((item) => !['Restored', 'Closed', 'Resolved', 'Reported', 'Under Verification'].includes(item.status));
-  const verificationReports = reports.filter((item) => !item.incident_id && ['Submitted', 'Under Review', 'Under Verification'].includes(item.status));
   const verificationIncidents = incidents.filter((item) => ['Reported', 'Under Verification'].includes(item.status));
-  const verificationRecords = [...verificationReports, ...verificationIncidents];
+  const openReports = reports.filter((item) => !item.incident_id && !['Rejected', 'Duplicate', 'Resolved'].includes(item.status));
   const resolvedIncidents = incidents.filter((item) => ['Restored', 'Closed', 'Resolved'].includes(item.status));
+  const heatIncidents = [...activeIncidents, ...verificationIncidents];
+  const heatReports = openReports;
+  const heatSignals = [...heatIncidents, ...heatReports];
   const mapCenter = [Number(mapSettings.latitude) || 7.906, Number(mapSettings.longitude) || 125.094];
   const marker = (color, radius = 9) => `<span class="map-legend-marker" style="--marker-color:${color};--marker-size:${radius * 2}px"></span>`;
   const countWithCoordinates = (records) => records.filter((item) => hasCoordinates(item)
     || (!item.report_code && barangays.some((center) => center.name === item.barangay && hasCoordinates(center)))).length;
 
   const barangayCounts = {};
-  [...incidents, ...reports].forEach((item) => {
-    if (item.barangay) {
+  heatSignals.forEach((item) => {
+    const hasMapLocation = hasCoordinates(item)
+      || (!item.report_code && barangays.some((center) => center.name === item.barangay && hasCoordinates(center)));
+    if (item.barangay && hasMapLocation) {
       barangayCounts[item.barangay] = (barangayCounts[item.barangay] || 0) + 1;
     }
   });
@@ -1788,7 +1792,7 @@ async function renderAdminMap() {
           <ul class="power-map-legend">
             <li>${marker('#e5484d')}<span>Active Outage</span><b>${activeIncidents.length}</b></li>
             <li>${marker('#147bd1')}<span>Scheduled Outage</span><b>${scheduled.length}</b></li>
-            <li>${marker('#f0a629')}<span>Under Verification</span><b>${countWithCoordinates(verificationRecords)}</b></li>
+            <li>${marker('#f0a629')}<span>Open Reports &amp; Verification</span><b>${countWithCoordinates([...openReports, ...verificationIncidents])}</b></li>
             <li>${marker('#25a66a')}<span>Resolved Incident</span><b>${resolvedIncidents.length}</b></li>
             <li><span class="map-boundary-key" aria-hidden="true"></span><span>Barangay Centers</span><b>${barangays.length}</b></li>
             <li class="power-map-legend-heatmap">
@@ -1801,6 +1805,7 @@ async function renderAdminMap() {
                 <span>Moderate</span>
                 <span>Critical Hotspot</span>
               </div>
+              <small>Current incidents and open unlinked reports only; scheduled and resolved outages are excluded.</small>
             </li>
           </ul>
         </section>
@@ -1830,26 +1835,28 @@ async function renderAdminMap() {
           <label style="background:#fff5f5;border:1px solid #fecaca;padding:6px 9px;border-radius:7px;margin-bottom:4px;">
             <input type="checkbox" data-map-layer="heatmap" ${layers.heatmap ? 'checked' : ''}>
             <span style="font-weight:700;color:#b91c1c;">🔥 Outage Density Heatmap</span>
-            <b class="heatmap-badge">Live</b>
+            <b class="heatmap-badge">Current</b>
           </label>
           <label><input type="checkbox" data-map-layer="active" ${layers.active ? 'checked' : ''}><span>Active Outages</span><b>${countWithCoordinates(activeIncidents)}</b></label>
-          <label><input type="checkbox" data-map-layer="verification" ${layers.verification ? 'checked' : ''}><span>Under Verification</span><b>${countWithCoordinates(verificationRecords)}</b></label>
+          <label><input type="checkbox" data-map-layer="verification" ${layers.verification ? 'checked' : ''}><span>Open Reports &amp; Verification</span><b>${countWithCoordinates([...openReports, ...verificationIncidents])}</b></label>
           <label><input type="checkbox" data-map-layer="resolved" ${layers.resolved ? 'checked' : ''}><span>Resolved Incidents</span><b>${countWithCoordinates(resolvedIncidents)}</b></label>
           <label><input type="checkbox" data-map-layer="scheduled" ${layers.scheduled ? 'checked' : ''}><span>Scheduled Outages</span><b>${countWithCoordinates(scheduled)}</b></label>
           <label><input type="checkbox" data-map-layer="barangays" ${layers.barangays ? 'checked' : ''}><span>Barangay Centers</span><b>${barangays.length}</b></label>
           <label><input type="checkbox" data-map-layer="roads" ${layers.roads ? 'checked' : ''}><span>Roads</span></label>
-          <label><input type="checkbox" data-map-street-features ${layers.rivers ? 'checked' : ''}><span>Rivers</span></label>
+          <label><input type="checkbox" data-map-street-features ${layers.rivers ? 'checked' : ''}><span>Street Map</span></label>
           <label><input type="checkbox" data-map-satellite ${layers.satellite ? 'checked' : ''}><span>Satellite View</span></label>
-          <p class="map-boundary-note">Rivers are shown on the OpenStreetMap street basemap. Satellite imagery and the street basemap are alternate backgrounds. Official barangay boundary polygons are not configured; barangay centers are shown instead.</p>
+          <p class="map-boundary-note">Pins open individual outage or report details and dispatch actions. Heatmap shows current incidents and open unlinked reports; scheduled and resolved outages are excluded. Street Map uses labeled roads and places, not 360-degree Street View; Satellite View adds aerial context for field response. Official barangay boundary polygons are not configured; barangay centers are shown instead.</p>
         </section>
         ${topHotspots.length ? `
         <section class="power-map-panel power-map-hotspots-panel">
           <h3>🔥 Top Outage Hotspots</h3>
           <ul class="power-map-legend" style="gap:7px;">
             ${topHotspots.map(([brgy, count], idx) => `
-              <li style="display:flex;justify-content:space-between;align-items:center;">
+              <li>
+                <button type="button" class="map-hotspot-row" data-map-hotspot="${escapeHtml(brgy)}">
                 <span style="font-size:0.83rem;font-weight:600;"><span style="color:#e5484d;font-weight:800;margin-right:6px;">#${idx + 1}</span>${escapeHtml(brgy)}</span>
-                <b style="font-size:0.78rem;background:#f1f5f9;padding:2px 7px;border-radius:6px;color:#1e293b;">${count} incident${count === 1 ? '' : 's'}</b>
+                <b style="font-size:0.78rem;background:#f1f5f9;padding:2px 7px;border-radius:6px;color:#1e293b;">${count} active record${count === 1 ? '' : 's'}</b>
+                </button>
               </li>
             `).join('')}
           </ul>
@@ -1909,9 +1916,8 @@ async function renderAdminMap() {
     heatPoints.push([coords[0], coords[1], intensity]);
   };
   activeIncidents.forEach((item) => addHeatItem(item, 1.0));
-  verificationRecords.forEach((item) => addHeatItem(item, 0.75));
-  resolvedIncidents.forEach((item) => addHeatItem(item, 0.45));
-  scheduled.forEach((item) => addHeatItem(item, 0.35));
+  verificationIncidents.forEach((item) => addHeatItem(item, 0.75));
+  heatReports.forEach((item) => addHeatItem(item, 0.75));
 
   const heatLayer = (typeof L.heatLayer === 'function' && heatPoints.length) ? L.heatLayer(heatPoints, {
     radius: 32,
@@ -1988,15 +1994,19 @@ async function renderAdminMap() {
         .addTo(category.layer).bindPopup(adminPopup, { maxWidth: 280 });
     }
   });
-  verificationReports.forEach((report) => {
+  openReports.forEach((report) => {
     const coordinates = locationFor(report);
     if (coordinates) {
       const repPopup = `
         <div class="map-popup-card">
           <strong>${escapeHtml(report.report_code)}</strong>
           <div>${escapeHtml(report.barangay)} · ${escapeHtml(report.status)}</div>
+          <small class="muted">Verification: ${escapeHtml(report.verification_status || 'Pending')} · Repair: ${escapeHtml(report.repair_status || 'Not assigned')}</small>
           <small class="muted">${escapeHtml(report.description || '')}</small>
           <button type="button" class="map-popup-btn route-btn" data-action="show-admin-route" data-lat="${coordinates[0]}" data-lng="${coordinates[1]}" data-label="Report ${escapeHtml(report.report_code)} (${escapeHtml(report.barangay)})">🧭 Dispatch Route Guide</button>
+          <button type="button" class="map-popup-btn" style="background:#334155;" data-action="view-report" data-id="${report.id}">Inspect Report Record ›</button>
+          ${['Submitted', 'Under Review', 'Under Verification'].includes(report.status)
+            ? `<button type="button" class="map-popup-btn" data-action="verify-report" data-id="${report.id}">Verify Report</button>` : ''}
         </div>
       `;
       L.circleMarker(coordinates, { pane: 'markerPane', radius: 8, color: '#fff', fillColor: '#f0a629', fillOpacity: .98, weight: 2.5 })
@@ -2092,6 +2102,16 @@ async function renderAdminMap() {
         .setContent(`<div style="padding:4px;"><strong style="color:#0369a1;font-size:0.95rem;">📍 Brgy. ${escapeHtml(name)}</strong><p style="margin:2px 0 0;font-size:0.78rem;color:#64748b;">Valencia City, Bukidnon</p></div>`)
         .openOn(map);
     }
+  });
+  document.querySelectorAll('[data-map-hotspot]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const barangay = barangays.find((item) => item.name === button.dataset.mapHotspot);
+      if (barangay && hasCoordinates(barangay)) {
+        map.flyTo([Number(barangay.latitude), Number(barangay.longitude)], 15, { duration: .6 });
+      } else if (barangay) {
+        setToast(`Map coordinates are not set for ${barangay.name}.`);
+      }
+    });
   });
 
   document.getElementById('toggle-fullscreen-btn')?.addEventListener('click', () => {

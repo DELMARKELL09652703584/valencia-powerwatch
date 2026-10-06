@@ -970,6 +970,94 @@ button:disabled {
   line-height: 1.4;
 }
 
+.community-body .mobile-map-help {
+  margin: 0 0 8px;
+  color: #5a7083;
+  font-size: .74rem;
+  line-height: 1.45;
+}
+
+.heatmap-gradient-bar {
+  width: 110px;
+  height: 8px;
+  display: inline-block;
+  flex: 0 0 110px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #1468d4, #18b7c7, #a8cc38, #f0a126, #d53532);
+}
+
+.community-body .map-hotspot-list {
+  margin-top: 10px;
+}
+
+.community-body .map-hotspot-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 0;
+  border-bottom: 1px solid #e7eef3;
+  background: #fff;
+  color: #27445d;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.community-body .map-hotspot-row:last-child {
+  border-bottom: 0;
+}
+
+.community-body .map-hotspot-row span {
+  display: grid;
+  gap: 3px;
+}
+
+.community-body .map-hotspot-row small {
+  color: #728598;
+  font-size: .68rem;
+}
+
+.community-body .map-hotspot-row b {
+  flex: 0 0 auto;
+  color: #a7372b;
+  font-size: .74rem;
+}
+
+.community-body .map-hotspot-row:focus-visible {
+  outline: 3px solid rgba(49, 166, 206, .45);
+  outline-offset: -3px;
+}
+
+.map-tools .admin-map-mode-actions,
+.map-tools .admin-map-base-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.map-tools .admin-map-mode-actions .button,
+.map-tools .admin-map-base-actions .button {
+  min-width: 0;
+  padding: 8px 7px;
+  font-size: .76rem;
+}
+
+.map-tools .map-hotspot-admin-row {
+  display: grid;
+  gap: 3px;
+  margin: 7px 0;
+  text-align: left;
+}
+
+.map-tools .map-hotspot-admin-row span {
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 500;
+}
+
 @media (min-width: 781px) {
   .powerwatch-chatbot {
     right: max(24px, env(safe-area-inset-right));

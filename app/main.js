@@ -1587,11 +1587,13 @@ async function handleClick(event) {
         await render();
         return;
       case 'set-mobile-map-mode':
-        state.mobileMapMode = value;
+        state.mobileMapMode = value === 'heat' ? 'heat' : 'pins';
+        localStorage.setItem('powerwatch.mobile-map-mode', state.mobileMapMode);
         await render();
         return;
       case 'set-mobile-map-layer':
-        state.mobileMapLayer = value;
+        state.mobileMapLayer = value === 'satellite' ? 'satellite' : 'street';
+        localStorage.setItem('powerwatch.mobile-map-layer', state.mobileMapLayer);
         state.communityCyberMode = false;
         await render();
         return;

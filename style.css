@@ -1330,6 +1330,9 @@ body.admin-body {
 .power-map-layer-panel label input { width: 17px; height: 17px; margin: 0; accent-color: #1178dc; cursor: pointer; }
 .power-map-layer-panel label b { color: #71869a; font-size: .69rem; font-weight: 700; }
 .power-map-hotspots-panel ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 7px; }
+.power-map-hotspots-panel .map-hotspot-row { width: 100%; min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 9px; border: 1px solid #e1eaf1; border-radius: 7px; background: #f8fbfd; color: #304b64; text-align: left; cursor: pointer; }
+.power-map-hotspots-panel .map-hotspot-row:hover { border-color: #a8c8df; background: #eef7ff; }
+.power-map-hotspots-panel .map-hotspot-row:focus-visible { outline: 3px solid rgba(49, 166, 206, .45); outline-offset: 2px; }
 .map-boundary-note { margin-top: 9px; padding-top: 9px; border-top: 1px solid #e3edf3; color: #71869a; font-size: .69rem; line-height: 1.45; }
 .power-map-monitoring-link { min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 13px; border: 1px solid #d0e1eb; border-radius: 8px; background: #f8fbfd; color: #1a5b8d; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; }
 .power-map-monitoring-link:hover { border-color: #8bbadf; background: #eef7ff; }
