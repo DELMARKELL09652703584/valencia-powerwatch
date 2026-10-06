@@ -17,25 +17,6 @@
     <link rel="stylesheet" href="/app/portal-polish.css?v=1" />
     <script>
       window.POWERWATCH_PORTAL = 'community';
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          const serviceWorkerUrl = new URL('/sw.js', window.location.origin).href;
-          const communityScope = new URL('/community', window.location.origin).href;
-          navigator.serviceWorker.getRegistrations()
-            .then((registrations) => Promise.all(registrations
-              .filter((registration) => {
-                const worker = registration.active || registration.waiting || registration.installing;
-                return registration.scope === `${window.location.origin}/` && worker?.scriptURL === serviceWorkerUrl;
-              })
-              .map((registration) => registration.unregister())))
-            .then(() => navigator.serviceWorker.register(serviceWorkerUrl, {
-              scope: communityScope,
-              updateViaCache: 'none'
-            }))
-            .then((registration) => registration.update().catch(console.error))
-            .catch(console.error);
-        });
-      }
       window.addEventListener('error', (e) => {
         console.error('Portal load error:', e);
       });
@@ -71,5 +52,6 @@
     <script src="/app/core.js?v=19"></script>
     <script src="/app/community.js?v=21"></script>
     <script src="/app/main.js?v=21"></script>
+    <script src="/app/pwa-update.js?v=1"></script>
   </body>
 </html>

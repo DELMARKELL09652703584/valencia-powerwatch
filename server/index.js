@@ -1,4 +1,5 @@
 const path = require('node:path');
+const fs = require('node:fs/promises');
 require('dotenv').config();
 const express = require('express');
 const compression = require('compression');
@@ -101,11 +102,17 @@ app.get('/manifest.json', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, must-revalidate');
   res.sendFile(path.join(ROOT, 'manifest.json'));
 });
-app.get('/sw.js', (req, res) => {
+app.get('/sw.js', async (req, res, next) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-cache, must-revalidate');
   res.setHeader('Service-Worker-Allowed', '/community');
-  res.sendFile(path.join(ROOT, 'sw.js'));
+  try {
+    const workerSource = await fs.readFile(path.join(ROOT, 'sw.js'), 'utf8');
+    const buildId = JSON.stringify(process.env.RENDER_GIT_COMMIT || 'development');
+    res.send(workerSource.replace("'__POWERWATCH_BUILD_ID__'", buildId));
+  } catch (error) {
+    next(error);
+  }
 });
 app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(ROOT, 'admin.html')));
 app.get(['/user', '/user.html', '/citizen', '/citizen.html', '/community', '/community.html'], (req, res) => res.sendFile(path.join(ROOT, 'community.html')));
