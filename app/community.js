@@ -314,9 +314,34 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
     ${showTabs ? `<nav class="mobile-tabs">${MOBILE_TABS.map((tab) => `<button class="mobile-tab ${activeTab === tab.key ? 'active' : ''}" data-mobile-tab="${tab.key}">
       <span class="mobile-tab-icon">${tab.icon}</span><span>${escapeHtml(t(tab.key, tab.label))}</span>
     </button>`).join('')}</nav>` : ''}
+    ${user.role === 'resident' ? `<section class="powerwatch-chatbot" id="powerwatch-chatbot">
+      <section class="powerwatch-chat-panel" id="powerwatch-chat-panel" role="dialog" aria-label="PowerWatch assistant" aria-modal="false" hidden>
+        <header class="powerwatch-chat-header">
+          <span class="powerwatch-chat-avatar" aria-hidden="true">⚡</span>
+          <div><strong>PowerWatch Assistant</strong><span>System help and current information</span></div>
+          <button type="button" class="powerwatch-chat-close" data-chatbot-action="close" aria-label="Close assistant">×</button>
+        </header>
+        <div class="powerwatch-chat-messages" id="powerwatch-chat-messages" aria-live="polite" aria-relevant="additions text"></div>
+        <div class="powerwatch-chat-prompts" id="powerwatch-chat-prompts">
+          <button type="button" data-chatbot-prompt="How do I report an outage?">Report an outage</button>
+          <button type="button" data-chatbot-prompt="How do I track my report?">Track my report</button>
+          <button type="button" data-chatbot-prompt="Are there current outages or schedules?">Current outages</button>
+        </div>
+        <form class="powerwatch-chat-form" id="powerwatch-chat-form">
+          <label class="visually-hidden" for="powerwatch-chat-input">Ask the PowerWatch assistant</label>
+          <textarea id="powerwatch-chat-input" name="question" rows="1" maxlength="500" placeholder="Ask about reports, outages, or the app…" required></textarea>
+          <button type="submit" aria-label="Send message">Send</button>
+        </form>
+        <p class="powerwatch-chat-disclaimer">System answers use PowerWatch records and help guides. For emergencies, contact the proper local service.</p>
+      </section>
+      <button type="button" class="powerwatch-chat-launcher" data-chatbot-action="toggle" aria-controls="powerwatch-chat-panel" aria-expanded="false" aria-label="Ask PowerWatch Assistant">
+        <span class="powerwatch-chat-launcher-icon" aria-hidden="true">✦</span><span>Ask PowerWatch</span>
+      </button>
+    </section>` : ''}
   </div>
   ${dialogMarkup()}
   <div class="toast" role="status" hidden></div>`;
+  document.dispatchEvent(new Event('powerwatch:portal-rendered'));
 }
 
 function mobileHero(title, subtitle, tone = 'blue') {

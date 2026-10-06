@@ -18,6 +18,7 @@ const analyticsRoutes = require('./routes/analytics');
 const adminRoutes = require('./routes/admin');
 const feedbackRoutes = require('./routes/feedback');
 const repairRoutes = require('./routes/repair');
+const chatbotRoutes = require('./routes/chatbot');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -27,8 +28,6 @@ const sessionCleanupTimer = setInterval(cleanupExpiredSessions, 15 * 60 * 1000);
 sessionCleanupTimer.unref();
 
 app.use(compression());
-app.use(express.json({ limit: '8mb' }));
-
 // Lightweight cookie parser (only the session cookie is needed)
 app.use((req, res, next) => {
   const header = req.headers.cookie || '';
@@ -43,6 +42,8 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use('/api/chatbot', express.json({ limit: '2kb' }));
+app.use(express.json({ limit: '8mb' }));
 app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'Valencia PowerWatch' }));
 
 app.use('/api', authRoutes);
@@ -57,6 +58,7 @@ app.use('/api/history', historyRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', feedbackRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 app.get('/uploads/:filename', (req, res, next) => {
   const filename = req.params.filename;
@@ -134,7 +136,10 @@ app.use(express.static(ROOT));
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(500).json({ error: 'An unexpected error occurred on the server.' });
+  const requestedStatus = Number(err.status || err.statusCode);
+  const status = requestedStatus >= 400 && requestedStatus < 500 ? requestedStatus : 500;
+  const message = status === 413 ? 'Request body exceeds the allowed size.' : 'An unexpected error occurred on the server.';
+  res.status(status).json({ error: message });
 });
 
 app.listen(PORT, () => {

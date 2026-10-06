@@ -8,6 +8,7 @@ const STATIC_ASSETS = [
   '/app/core.js',
   '/app/community.js',
   '/app/main.js',
+  '/app/chatbot.js',
   '/app/pwa-update.js',
   '/assets/powerwatch-logo.svg',
   '/assets/powerwatch-icon-180.png',

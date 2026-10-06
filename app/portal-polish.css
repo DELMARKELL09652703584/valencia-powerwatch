@@ -686,6 +686,282 @@ button:disabled {
   opacity: .7;
 }
 
+.powerwatch-chatbot {
+  position: fixed;
+  z-index: 40;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: calc(82px + env(safe-area-inset-bottom));
+  width: 370px;
+  max-width: calc(100% - 24px);
+  pointer-events: none;
+}
+
+.powerwatch-chat-launcher {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-left: auto;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, .5);
+  border-radius: 999px;
+  background: linear-gradient(120deg, #0b5f91, #087b87);
+  box-shadow: 0 8px 22px rgba(5, 44, 75, .25);
+  color: #fff;
+  font: inherit;
+  font-size: .85rem;
+  font-weight: 750;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.powerwatch-chat-launcher:hover {
+  filter: brightness(1.08);
+}
+
+.powerwatch-chat-launcher:focus-visible,
+.powerwatch-chat-close:focus-visible,
+.powerwatch-chat-form button:focus-visible,
+.powerwatch-chat-prompts button:focus-visible,
+.powerwatch-chat-action:focus-visible {
+  outline: 3px solid rgba(49, 166, 206, .45);
+  outline-offset: 2px;
+}
+
+.powerwatch-chat-launcher-icon {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .17);
+  font-size: 1.1rem;
+}
+
+.powerwatch-chat-panel {
+  position: absolute;
+  right: 0;
+  bottom: 60px;
+  width: 100%;
+  max-height: min(570px, calc(100dvh - 190px));
+  display: grid;
+  grid-template-rows: auto minmax(120px, 1fr) auto auto auto;
+  overflow: hidden;
+  border: 1px solid #d5e3ed;
+  border-radius: 18px;
+  background: #f8fbfd;
+  box-shadow: 0 18px 52px rgba(8, 39, 67, .24);
+  pointer-events: auto;
+}
+
+.powerwatch-chat-panel[hidden] {
+  display: none;
+}
+
+.powerwatch-chat-header {
+  min-height: 66px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  background: linear-gradient(115deg, #082f51, #0c648e);
+  color: #fff;
+}
+
+.powerwatch-chat-avatar {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, .3);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .13);
+  color: #ffda67;
+  font-size: 1.15rem;
+}
+
+.powerwatch-chat-header > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.powerwatch-chat-header strong {
+  font-size: .88rem;
+}
+
+.powerwatch-chat-header > div > span {
+  color: #d7ebf7;
+  font-size: .69rem;
+}
+
+.powerwatch-chat-close {
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.powerwatch-chat-messages {
+  min-height: 120px;
+  max-height: min(330px, 42dvh);
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 13px;
+}
+
+.powerwatch-chat-welcome {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e2eaf0;
+  border-radius: 13px 13px 13px 4px;
+  background: #fff;
+  color: #42596d;
+  font-size: .8rem;
+  line-height: 1.5;
+}
+
+.powerwatch-chat-message {
+  max-width: 94%;
+  padding: 10px 11px;
+  border-radius: 13px;
+  overflow-wrap: anywhere;
+}
+
+.powerwatch-chat-message.from-user {
+  justify-self: end;
+  border-bottom-right-radius: 4px;
+  background: #e2f1f8;
+  color: #173f5a;
+}
+
+.powerwatch-chat-message.from-assistant {
+  justify-self: start;
+  border: 1px solid #e1e9ee;
+  border-bottom-left-radius: 4px;
+  background: #fff;
+  color: #334c61;
+}
+
+.powerwatch-chat-message p {
+  margin: 0;
+  white-space: pre-line;
+  font-size: .79rem;
+  line-height: 1.5;
+}
+
+.powerwatch-chat-source {
+  display: block;
+  margin-top: 7px;
+  color: #718397;
+  font-size: .66rem;
+}
+
+.powerwatch-chat-action {
+  display: block;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #08739c;
+  font: inherit;
+  font-size: .76rem;
+  font-weight: 750;
+  text-align: left;
+  cursor: pointer;
+}
+
+.powerwatch-chat-prompts {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 0 12px 9px;
+}
+
+.powerwatch-chat-prompts button {
+  flex: 0 0 auto;
+  padding: 7px 9px;
+  border: 1px solid #cfdfeb;
+  border-radius: 999px;
+  background: #fff;
+  color: #31516a;
+  font: inherit;
+  font-size: .69rem;
+  cursor: pointer;
+}
+
+.powerwatch-chat-form {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid #e3eaf0;
+  background: #fff;
+}
+
+.powerwatch-chat-form textarea {
+  min-width: 0;
+  min-height: 42px;
+  max-height: 100px;
+  flex: 1;
+  resize: vertical;
+  padding: 10px 11px;
+  border: 1px solid #cedce6;
+  border-radius: 12px;
+  background: #fbfdfe;
+  color: #203a50;
+  font: inherit;
+  font-size: .8rem;
+}
+
+.powerwatch-chat-form button {
+  min-height: 42px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 11px;
+  background: #086f91;
+  color: #fff;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.powerwatch-chat-form button:disabled {
+  cursor: wait;
+  opacity: .65;
+}
+
+.powerwatch-chat-disclaimer {
+  margin: 0;
+  padding: 0 12px 9px;
+  background: #fff;
+  color: #78899a;
+  font-size: .61rem;
+  line-height: 1.4;
+}
+
+@media (min-width: 781px) {
+  .powerwatch-chatbot {
+    right: max(24px, env(safe-area-inset-right));
+    bottom: 24px;
+  }
+
+  .powerwatch-chat-panel {
+    max-height: min(620px, calc(100dvh - 115px));
+  }
+}
+
 @media (max-width: 480px) {
   .pwa-update-notice {
     align-items: stretch;
