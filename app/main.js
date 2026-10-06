@@ -19,10 +19,7 @@ function renderWelcomeScreen() {
     <div class="mobile-welcome-brand"><img class="welcome-logo" src="/assets/powerwatch-logo.svg" alt="Valencia PowerWatch logo"><h1>Valencia</h1><strong>PowerWatch</strong></div>
     <p>Community Power Interruption Reporting, Verification, and Information Management System for Valencia City, Bukidnon</p>
     <button class="button primary mobile-welcome-start" type="button" data-action="get-started">Get Started <span aria-hidden="true">→</span></button>
-    <a href="/install" class="button ghost full mobile-welcome-install" style="margin-top:10px;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
-      <span>I-install sa Cellphone (App)</span>
-    </a>
+    ${mobileInstallButton()}
     <div class="toast" role="status" hidden></div>
   </main>`;
 }
@@ -42,6 +39,7 @@ function renderLogin(message = '') {
           <div class="auth-options-row"><label><input type="checkbox" name="remember" checked> Remember me</label><button type="button" data-action="forgot-password">Forgot Password?</button></div>
           <button class="button primary mobile-auth-submit" type="submit">Login</button>
         </form>
+        ${mobileInstallButton()}
         <div class="auth-divider"><span>or continue with</span></div>
         <div class="social-row">
           <button type="button" class="social-btn social-google-btn" data-action="start-oauth" data-provider="google" title="Continue with Google">
@@ -219,6 +217,7 @@ function renderRegister(message = '') {
           <label>Confirm Password<span class="mobile-password-field"><input name="confirm_password" type="password" minlength="6" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="new-password" required><button type="button" data-action="toggle-password" aria-label="Show password">&#9673;</button></span></label>
           <button class="button primary mobile-auth-submit" type="submit">Register</button>
         </form>
+        ${mobileInstallButton()}
         <div class="auth-divider"><span>or sign up with</span></div>
         <div class="social-row">
           <button type="button" class="social-btn social-google-btn" data-action="start-oauth" data-provider="google" title="Register with Google">
