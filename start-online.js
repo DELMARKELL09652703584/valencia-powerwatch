@@ -3,6 +3,9 @@ const path = require('path');
 const fs = require('fs');
 const http = require('http');
 
+const RENDER_BASE_URL = 'https://valencia-powerwatch.onrender.com';
+const LOCAL_BASE_URL = 'http://localhost:4000';
+
 console.log('========================================================================');
 console.log('   VALENCIA POWERWATCH - STARTING PUBLIC ONLINE DEPLOYMENT...           ');
 console.log('========================================================================');
@@ -51,35 +54,40 @@ function startTunnel() {
       const installUrl = `${publicUrl}/install`;
       const communityUrl = `${publicUrl}/community`;
       const adminUrl = `${publicUrl}/admin`;
+      const officialInstallUrl = `${RENDER_BASE_URL}/install`;
 
       fs.writeFileSync(path.join(__dirname, 'public-url.txt'), installUrl);
 
       console.log('');
       console.log('========================================================================');
-      console.log('   🎉 VALENCIA POWERWATCH IS NOW PUBLICLY LIVE ON THE INTERNET!         ');
+      console.log('   VALENCIA POWERWATCH PORTAL LINKS                                     ');
+      console.log('   Render is the official, stable online site.                          ');
       console.log('========================================================================');
       console.log('');
-      console.log('  📲 DOWNLOAD & INSTALL PAGE (Para sa QR Code / Android Phone Install):');
-      console.log(`     👉 ${installUrl}`);
+      console.log('  ADMIN PORTAL (Desktop / Web):');
+      console.log(`     Online (Internet): ${RENDER_BASE_URL}/admin`);
+      console.log(`     Local:              ${LOCAL_BASE_URL}/admin`);
       console.log('');
-      console.log('  📱 USER / COMMUNITY WEB PORTAL (Direct Browser Access):');
-      console.log(`     👉 ${communityUrl}`);
+      console.log('  USER / COMMUNITY PORTAL (Mobile / PWA):');
+      console.log(`     Online (Internet): ${RENDER_BASE_URL}/community`);
+      console.log(`     Local:              ${LOCAL_BASE_URL}/community`);
       console.log('');
-      console.log('  🛡️  ADMIN PORTAL (Para sa Administrator):');
-      console.log(`     👉 ${adminUrl}`);
+      console.log('  INSTALL / QR CODE PAGE:');
+      console.log(`     Online (Internet): ${officialInstallUrl}`);
       console.log('');
+      console.log('  Temporary Cloudflare Tunnel (changes when this process restarts):');
+      console.log(`     Admin:     ${adminUrl}`);
+      console.log(`     Community: ${communityUrl}`);
+      console.log(`     Install:   ${installUrl}`);
       console.log('========================================================================');
-      console.log('  ✓ Gikopya na sa imong Clipboard ang Download/Install link (Ctrl+V)!');
-      console.log('  ✓ Gi-ablihan na pod nako diretso sa imong Chrome ang Install Page!');
+      console.log('  The official Render install page will open and be copied to the clipboard.');
       console.log('');
-      console.log('  ⚠️  AYAW I-CLOSE kining itom nga window samtang nag-test o nag-demo ka!');
+      console.log('  Keep this window open only if you need the temporary Cloudflare Tunnel.');
       console.log('========================================================================');
 
-      // Auto-open in Chrome
-      exec(`start "" "${installUrl}"`);
+      exec(`start "" "${officialInstallUrl}"`);
 
-      // Copy to clipboard
-      exec(`powershell -command "Set-Clipboard -Value '${installUrl}'"`);
+      exec(`powershell -command "Set-Clipboard -Value '${officialInstallUrl}'"`);
     }
   };
 

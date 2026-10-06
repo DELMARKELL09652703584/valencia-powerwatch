@@ -8,15 +8,22 @@
 
 Valencia PowerWatch is a centralized, real-time power outage monitoring and verification platform designed for Valencia City, Bukidnon. It connects residents reporting local outages directly with utility administrators and emergency dispatchers.
 
-### 🌐 Current Active Online Links (Accessible Worldwide)
-* **📱 Community / Resident Portal (Public):**  
-  👉 `https://results-layers-configuring-albany.trycloudflare.com/community`  
-  *(Works on smartphones, tablets, laptops across Smart, Globe, DITO, and all Wi-Fi networks)*
-* **🛡️ Administrator Portal (Secured & Restricted):**  
-  👉 `https://results-layers-configuring-albany.trycloudflare.com/admin`  
-  *(Protected by role-based access control. Resident logins are blocked and redirected)*
-* **🩺 API Health Check:**  
-  👉 `https://results-layers-configuring-albany.trycloudflare.com/api/health`
+### 🌐 Portal Links
+Render is the official, stable online deployment:
+
+* **🖥️ Admin Portal (Desktop / Web)**
+  * Online (Internet): <https://valencia-powerwatch.onrender.com/admin>
+  * Local: <http://localhost:4000/admin>
+* **📱 User / Community Portal (Mobile / PWA)**
+  * Online (Internet): <https://valencia-powerwatch.onrender.com/community>
+  * Local: <http://localhost:4000/community>
+* **📲 Install / QR Code Page**
+  * Online (Internet): <https://valencia-powerwatch.onrender.com/install>
+* **🩺 API Health Check**
+  * Online (Internet): <https://valencia-powerwatch.onrender.com/api/health>
+  * Local: <http://localhost:4000/api/health>
+
+The Cloudflare Tunnel started by `start-public-online.bat` is temporary. Its link changes when the tunnel restarts; use the Render links above as the permanent public addresses.
 
 ---
 
