@@ -1047,6 +1047,29 @@ body.admin-body {
 .dashboard-charts { grid-template-columns: 1.25fr 1fr .9fr; margin-bottom: 18px; }
 .dashboard-charts .panel { min-width: 0; }
 .dashboard-charts .bar-chart { height: 230px; }
+.bi-insights-panel { min-width: 0; display: grid; gap: 12px; padding: 16px; border: 1px solid #d4e2ec; border-radius: 12px; background: linear-gradient(135deg, #fff 0%, #f7fbff 100%); box-shadow: 0 3px 12px rgba(20, 52, 79, .04); color: #183957; }
+.bi-insights-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.bi-insights-header h2 { margin: 2px 0 0; color: #173653; font-size: 1rem; font-weight: 800; }
+.bi-eyebrow { color: #4d7799; font-size: .64rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.bi-period { flex: 0 0 auto; padding: 4px 8px; border: 1px solid #d9e8f1; border-radius: 999px; background: #eff7fc; color: #49677f; font-size: .68rem; font-weight: 700; }
+.bi-insight-summary { margin: 0; color: #36546c; font-size: .82rem; line-height: 1.5; }
+.bi-insight-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
+.bi-insight-grid article { min-width: 0; display: grid; align-content: start; gap: 5px; padding: 10px 11px; border: 1px solid #e0eaf1; border-radius: 9px; background: rgba(255,255,255,.88); }
+.bi-insight-grid article > span,.bi-metric-row span { color: #61798c; font-size: .69rem; font-weight: 700; }
+.bi-insight-grid article strong { overflow-wrap: anywhere; color: #163958; font-size: 1.12rem; font-weight: 800; }
+.bi-insight-grid article small { color: #71869a; font-size: .66rem; line-height: 1.4; }
+.bi-projection { margin: 0; padding: 9px 11px; border: 1px solid #d8e7f1; border-radius: 8px; background: #f2f8fc; color: #34566f; font-size: .74rem; line-height: 1.5; }
+.bi-projection.available { border-color: #c4e7d6; background: #f0faf4; color: #236142; }
+.bi-projection.limited { border-color: #f0dfbc; background: #fffaf0; color: #73521b; }
+.bi-data-note { color: #71869a; font-size: .66rem; line-height: 1.45; }
+.bi-monthly-chart { min-width: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: end; gap: 8px; min-height: 92px; padding: 8px 4px 0; border-bottom: 1px solid #dce6ed; }
+.bi-month-column { min-width: 0; display: grid; justify-items: center; align-content: end; gap: 4px; }
+.bi-month-column b { color: #345a78; font-size: .68rem; }
+.bi-month-column > span { width: min(24px, 70%); min-height: 4px; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, #38a4dd, #1269bd); }
+.bi-month-column small { color: #71869a; font-size: .62rem; }
+.bi-metric-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.bi-metric-row > div { min-width: 0; display: grid; gap: 4px; padding: 9px; border: 1px solid #e0eaf1; border-radius: 8px; background: rgba(255,255,255,.88); }
+.bi-metric-row strong { overflow-wrap: anywhere; color: #163958; font-size: 1rem; }
 .admin-dashboard-page { display: grid; gap: 13px; min-width: 0; color: #15324f; }
 .dashboard-welcome { min-height: 49px; display: flex; align-items: center; }
 .dashboard-welcome-label { margin-bottom: 2px; color: #6b8297; font-size: .66rem; font-weight: 800; letter-spacing: .1em; }
@@ -1169,6 +1192,7 @@ body.admin-body {
 
 @media (max-width: 900px) {
   .dashboard-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .bi-insight-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dashboard-focus-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dashboard-visual-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dashboard-status-panel { grid-column: 1 / -1; }
@@ -2719,6 +2743,11 @@ body.admin-body {
   .data-table { font-size: .82rem; }
   .data-table th, .data-table td { padding: 9px 11px; }
   .dashboard-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bi-insights-panel { padding: 13px; }
+  .bi-insights-header { align-items: flex-start; }
+  .bi-period { font-size: .62rem; }
+  .bi-insight-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bi-metric-row { grid-template-columns: 1fr; }
   .dashboard-stat-grid .stat-card:last-child { grid-column: 1 / -1; }
   .monitoring-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .verification-toolbar { align-items: flex-start; }
