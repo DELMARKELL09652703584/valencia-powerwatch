@@ -682,9 +682,10 @@ function setToast(message) {
 
 function statusTone(status = '') {
   const value = String(status).toLowerCase();
-  if (['resolved', 'restored', 'verified', 'officially confirmed', 'published', 'active', 'completed'].some((k) => value.includes(k))) return 'ok';
+  if (['pending', 'submitted', 'awaiting verification', 'awaiting review'].some((k) => value.includes(k))) return 'warn';
+  if (['resolved', 'restored', 'verified', 'officially confirmed', 'published', 'completed'].some((k) => value.includes(k)) || (value.includes('active') && !value.includes('inactive'))) return 'ok';
   if (['ongoing', 'under review', 'under verification', 'being implemented', 'restoration in progress', 'scheduled', 'in preparation', 'draft'].some((k) => value.includes(k))) return 'busy';
-  if (['cancelled', 'rejected', 'inactive', 'deleted'].some((k) => value.includes(k))) return 'bad';
+  if (['cancelled', 'rejected', 'critical', 'inactive', 'deleted'].some((k) => value.includes(k))) return 'bad';
   return 'neutral';
 }
 

@@ -1135,18 +1135,18 @@ button:disabled {
 /* Midnight navy and electric-blue portal palette. */
 :root {
   color-scheme: dark;
-  --primary: #3b82f6;
+  --primary: #60a5fa;
   --primary-dark: #2563eb;
   --primary-soft: #142b50;
-  --accent: #22d3ee;
-  --ok: #34d399;
-  --warn: #fbbf24;
-  --bad: #fb7185;
-  --busy: #a78bfa;
-  --ink: #e8f1ff;
-  --ink-soft: #c1d0e4;
-  --muted: #8fa5c1;
-  --line: #263955;
+  --accent: #67e8f9;
+  --ok: #6ee7b7;
+  --warn: #fde68a;
+  --bad: #fda4af;
+  --busy: #7dd3fc;
+  --ink: #f1f5ff;
+  --ink-soft: #d2deee;
+  --muted: #a8bbd3;
+  --line: #344b68;
   --bg: #060d1a;
   --panel: #0d192c;
   --surface-raised: #13223a;
@@ -1159,18 +1159,18 @@ body.community-body,
 body.community-body .mobile-shell,
 body.community-body .mobile-welcome,
 body.community-body .mobile-auth-page {
-  --primary: #3b82f6;
+  --primary: #60a5fa;
   --primary-dark: #2563eb;
   --primary-soft: #142b50;
-  --accent: #22d3ee;
-  --ok: #34d399;
-  --warn: #fbbf24;
-  --bad: #fb7185;
-  --busy: #a78bfa;
-  --ink: #e8f1ff;
-  --ink-soft: #c1d0e4;
-  --muted: #8fa5c1;
-  --line: #263955;
+  --accent: #67e8f9;
+  --ok: #6ee7b7;
+  --warn: #fde68a;
+  --bad: #fda4af;
+  --busy: #7dd3fc;
+  --ink: #f1f5ff;
+  --ink-soft: #d2deee;
+  --muted: #a8bbd3;
+  --line: #344b68;
   --bg: #060d1a;
   --panel: #0d192c;
   --surface-raised: #13223a;
@@ -1503,4 +1503,538 @@ body.community-body .powerwatch-chat-message.from-user {
 body.admin-body :focus-visible,
 body.community-body :focus-visible {
   outline-color: rgba(34, 211, 238, .7);
+}
+
+body.admin-body :is(.topbar-search-trigger, .topbar-sound-btn, .theme-toggle-btn) {
+  border-color: #304665;
+  background: #111f34;
+  color: #dceaff;
+}
+
+body.admin-body :is(.topbar-search-trigger, .topbar-sound-btn, .theme-toggle-btn):hover {
+  border-color: #3b82f6;
+  background: #142b50;
+}
+
+body.admin-body .command-center-header,
+body.admin-body .dashboard-focus-item,
+body.admin-body .admin-bi-panel,
+body.admin-body .dashboard-visual-panel {
+  border-color: #263955;
+  background: linear-gradient(145deg, #0d192c, #101e35) !important;
+  color: #e8f1ff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .22);
+}
+
+body.admin-body .command-center-header {
+  border-top-color: #22d3ee;
+}
+
+body.admin-body :is(.command-center-header, .dashboard-focus-item, .admin-bi-panel, .dashboard-visual-panel) :is(h2, h3, h4, strong, b, p, small, span, time) {
+  color: #dceaff;
+}
+
+body.admin-body .command-center-header h2 {
+  color: #f1f7ff;
+}
+
+body.admin-body .command-timestamp,
+body.admin-body .dashboard-visual-panel :is(header span, footer span) {
+  color: #9eb3cc !important;
+}
+
+body.admin-body .command-badge {
+  border-color: rgba(34, 211, 238, .3);
+  background: #112d47;
+  color: #8be8f7;
+}
+
+body.admin-body .telemetry-pill.normal {
+  border-color: rgba(52, 211, 153, .3);
+  background: #10352f;
+  color: #73efc2;
+}
+
+body.admin-body .telemetry-pill.alert {
+  border-color: rgba(251, 113, 133, .35);
+  background: #3a1d2b;
+  color: #ff9caf;
+}
+
+body.admin-body .command-header-actions .button.ghost {
+  border-color: #304665;
+  background: #13233b;
+  color: #dceaff;
+}
+
+body.admin-body .command-header-actions .button.ghost:hover {
+  border-color: #3b82f6;
+  background: #18345a;
+}
+
+body.admin-body .dashboard-stat-card.scada-card {
+  border-color: #263955;
+  background: #0d192c !important;
+  color: #e8f1ff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .2);
+}
+
+body.admin-body .dashboard-stat-card.scada-card:hover {
+  border-color: rgba(34, 211, 238, .55);
+  background: #12223a !important;
+}
+
+body.admin-body .scada-card-icon {
+  border: 1px solid #304665;
+  background: #172941;
+  color: #67e8f9;
+}
+
+body.admin-body .scada-card-value,
+body.admin-body .scada-card-label {
+  color: #e8f1ff;
+}
+
+body.admin-body .scada-card-sub {
+  color: #9eb3cc;
+}
+
+body.admin-body .scada-card-tag {
+  border-color: rgba(34, 211, 238, .22);
+  background: #112d47;
+  color: #8be8f7;
+}
+
+body.admin-body .scada-card.tone-amber .scada-card-tag,
+body.admin-body .scada-card.tone-amber .scada-card-icon {
+  border-color: rgba(251, 191, 36, .3);
+  background: #382d16;
+  color: #ffd875;
+}
+
+body.admin-body .scada-card.tone-red .scada-card-tag,
+body.admin-body .scada-card.tone-red .scada-card-icon {
+  border-color: rgba(251, 113, 133, .3);
+  background: #3a1d2b;
+  color: #ff9caf;
+}
+
+body.admin-body .scada-card.tone-emerald .scada-card-tag,
+body.admin-body .scada-card.tone-emerald .scada-card-icon,
+body.admin-body .scada-card.tone-teal .scada-card-tag,
+body.admin-body .scada-card.tone-teal .scada-card-icon {
+  border-color: rgba(52, 211, 153, .3);
+  background: #10352f;
+  color: #73efc2;
+}
+
+body.admin-body .scada-card.tone-violet .scada-card-tag,
+body.admin-body .scada-card.tone-violet .scada-card-icon {
+  border-color: rgba(167, 139, 250, .3);
+  background: #29234b;
+  color: #c6b7ff;
+}
+
+body.admin-body .focus-icon {
+  border-color: #304665;
+  background: #172941;
+  color: #67e8f9;
+}
+
+body.admin-body .focus-critical .focus-icon {
+  border-color: rgba(251, 113, 133, .3);
+  background: #3a1d2b;
+  color: #ff9caf;
+}
+
+body.admin-body .focus-warning .focus-icon {
+  border-color: rgba(251, 191, 36, .3);
+  background: #382d16;
+  color: #ffd875;
+}
+
+body.admin-body .focus-success .focus-icon {
+  border-color: rgba(52, 211, 153, .3);
+  background: #10352f;
+  color: #73efc2;
+}
+
+body.admin-body .bi-period {
+  border-color: #304665;
+  background: #13233b;
+  color: #c1d0e4;
+}
+
+body.admin-body .bi-insight-grid > article {
+  border-color: #263955;
+  background: rgba(19, 35, 59, .9);
+  color: #c1d0e4;
+}
+
+body.admin-body .bi-insight-grid > article strong {
+  color: #67e8f9;
+}
+
+body.admin-body .bi-insight-grid > article small,
+body.admin-body .bi-data-note {
+  color: #9eb3cc;
+}
+
+body.admin-body .bi-projection.limited {
+  border-color: rgba(251, 191, 36, .28);
+  background: #302819;
+  color: #ffdc8a;
+}
+
+body.admin-body .bi-projection.available {
+  border-color: rgba(52, 211, 153, .28);
+  background: #10352f;
+  color: #73efc2;
+}
+
+body.admin-body .dashboard-visual-panel :is(.dashboard-chart-empty, .analytics-chart-empty) {
+  color: #9eb3cc;
+}
+
+body.admin-body .dashboard-visual-panel .dashboard-bar-axis {
+  color: #8fa5c1;
+}
+
+body.admin-body .dashboard-visual-panel .dashboard-bar-plot,
+body.admin-body .dashboard-visual-panel .dashboard-bar-track {
+  background-color: #192a42;
+}
+
+body.admin-body .fleet-unit-card {
+  border-color: #304665 !important;
+  background: #13233b !important;
+  color: #dceaff;
+}
+
+body.admin-body .fleet-unit-card > div:first-child > div > strong {
+  color: #e8f1ff !important;
+}
+
+body.admin-body .fleet-unit-card > div:first-child > div > span {
+  color: #9eb3cc !important;
+}
+
+body.admin-body .fleet-unit-card > div > div:first-child {
+  border-color: #304665 !important;
+  background: #172941 !important;
+}
+
+/* Keep secondary text, links, and small labels readable on every dark surface. */
+body.admin-body .admin-content :where(p, span, small, label, li, td, th, time, dt, dd, figcaption, legend, .muted) {
+  color: #d2deee !important;
+}
+
+body.admin-body .admin-content :where(h1, h2, h3, h4, h5, h6, strong, b) {
+  color: #f1f5ff !important;
+}
+
+body.admin-body .admin-content :where(a:not(.button):not(.btn):not(.primary), .link-button, .text-button, .analytics-link) {
+  color: #67e8f9 !important;
+}
+
+body.admin-body .admin-content :where(.data-table, table) td :where(a, button, .link-button, .mono) {
+  color: #67e8f9 !important;
+}
+
+body.admin-body .admin-content :where(.input, input, select, textarea) {
+  border-color: #405875;
+  background-color: #081426;
+  color: #f1f5ff;
+}
+
+body.admin-body .admin-content :where(.input, input, select, textarea)::placeholder {
+  color: #a8bbd3;
+  opacity: 1;
+}
+
+body.admin-body .admin-content :where(.input, input, select, textarea):disabled {
+  border-color: #344b68;
+  background-color: #15243a;
+  color: #b8c9df;
+  opacity: 1;
+}
+
+body.admin-body .admin-sidebar :where(.nav-item, .admin-user, .admin-user-meta span) {
+  color: #d2deee;
+}
+
+body.admin-body .admin-sidebar .nav-item.active {
+  color: #fff;
+}
+
+body.admin-body .admin-topbar :where(h1, h2, p, span, small, time) {
+  color: #d2deee;
+}
+
+body.admin-body .admin-topbar :where(h1, h2, strong) {
+  color: #f1f5ff;
+}
+
+body.admin-body .admin-topbar :where(.grid-pulse-bar, .topbar-search-trigger, .topbar-sound-btn, .theme-toggle-btn, .icon-button) {
+  border-color: #405875;
+  background-color: #111f34;
+  color: #e5f0ff;
+}
+
+body.admin-body .admin-content .pill-busy,
+body.admin-body .admin-content :is(.report-status.ongoing, .incident-status-badge.ongoing, .monitoring-status.ongoing, .status-tag.ongoing, .status-ongoing, .scheduled-status-badge.implementing, .report-status.review, .verification-status-badge.review, .incident-status-badge.review, .monitoring-status.monitoring-review, .scheduled-status-badge.scheduled, .scheduled-status-badge.preparing) {
+  border-color: rgba(125, 211, 252, .48) !important;
+  background: #0c304a !important;
+  color: #c2f0ff !important;
+}
+
+body.admin-body .admin-content :is(.report-status.pending, .verification-status-badge.pending, .status-tag.pending, .pill-warn) {
+  border-color: rgba(253, 230, 138, .48) !important;
+  background: #3b2d0b !important;
+  color: #fff0ad !important;
+}
+
+body.admin-body .admin-content :is(.report-status.verified, .verification-status-badge.verified, .status-tag.verified, .report-status.resolved, .incident-status-badge.resolved, .monitoring-status.resolved, .scheduled-status-badge.completed, .pill-ok) {
+  border-color: rgba(110, 231, 183, .46) !important;
+  background: #0d3428 !important;
+  color: #adf5d4 !important;
+}
+
+body.admin-body .admin-content :is(.report-status.rejected, .verification-status-badge.rejected, .status-tag.rejected, .report-status.critical, .verification-status-badge.critical, .incident-status-badge.critical, .status-tag.critical, .status-critical, .scheduled-status-badge.cancelled, .pill-bad) {
+  border-color: rgba(253, 164, 175, .46) !important;
+  background: #3b1824 !important;
+  color: #ffc1ca !important;
+}
+
+body.admin-body .admin-content :is(.report-status.neutral, .incident-status-badge.neutral, .monitoring-status.neutral, .pill-neutral, .status-neutral) {
+  border-color: #405875 !important;
+  background: #1b2a40 !important;
+  color: #d2deee !important;
+}
+
+body.admin-body :where(.action-dialog, .admin-notification-panel, .command-palette, .dropdown-menu, .popover) {
+  border-color: #405875;
+  background-color: #0d192c;
+  color: #f1f5ff;
+}
+
+body.admin-body .action-dialog :where(.dialog-head, .dialog-body, .dialog-foot) {
+  border-color: #344b68;
+  background: #0d192c;
+  color: #d2deee;
+}
+
+body.admin-body .action-dialog:has(.create-incident-form) .dialog-head {
+  background: #13233b;
+}
+
+body.admin-body .action-dialog :where(input, select, textarea) {
+  border-color: #405875;
+  background-color: #081426;
+  color: #f1f5ff;
+}
+
+body.admin-body .action-dialog :where(input, select, textarea)::placeholder {
+  color: #a8bbd3;
+  opacity: 1;
+}
+
+body.admin-body .action-dialog :where(h1, h2, h3, h4, p, span, small, label, strong, b) {
+  color: #d2deee;
+}
+
+body.admin-body .action-dialog :where(h1, h2, h3, h4, strong, b) {
+  color: #f1f5ff;
+}
+
+body.admin-body .admin-notification-panel :where(h1, h2, h3, h4, p, span, small, strong, time) {
+  color: #d2deee;
+}
+
+body.admin-body .admin-notification-panel :where(h2, h3, strong) {
+  color: #f1f5ff;
+}
+
+body.admin-body .toast {
+  border: 1px solid #405875;
+  background: #13233b;
+  color: #f1f5ff;
+}
+
+body.admin-body .admin-dashboard-page :where(.dashboard-chart-empty, .dashboard-bar-axis, .dashboard-bar-item, .bi-data-note, .command-timestamp, .scada-card-sub) {
+  color: #d2deee !important;
+}
+
+body.admin-body .admin-dashboard-page .data-table :where(td, td span, td div, td strong, td a) {
+  color: #d2deee !important;
+}
+
+body.admin-body .admin-dashboard-page .data-table :where(td a, td button, td .link-button, td .mono) {
+  color: #67e8f9 !important;
+}
+
+body.admin-body .admin-dashboard-page .fleet-unit-card :where(strong, span, small) {
+  color: #d2deee !important;
+}
+
+body.admin-body .admin-dashboard-page .fleet-unit-card :where(strong) {
+  color: #f1f5ff !important;
+}
+
+body.admin-body .admin-dashboard-page .fleet-unit-card :where([style*="background:#ecfdf5"], [style*="background:#eff6ff"]) {
+  border-color: #405875 !important;
+  background: #0d3428 !important;
+  color: #adf5d4 !important;
+}
+
+body.community-body :where(h1, h2, h3, h4, h5, h6, strong, b) {
+  color: #f1f5ff !important;
+}
+
+body.community-body :where(p, span, small, label, li, time, dt, dd, figcaption, legend, .muted) {
+  color: #d2deee !important;
+}
+
+body.community-body :where(a:not(.button):not(.btn):not(.primary), .link-button, .text-button) {
+  color: #67e8f9 !important;
+}
+
+body.community-body :where(input, select, textarea, .input) {
+  border-color: #405875;
+  background-color: #081426 !important;
+  color: #f1f5ff !important;
+}
+
+body.community-body :where(input, select, textarea, .input)::placeholder {
+  color: #a8bbd3;
+  opacity: 1;
+}
+
+body.community-body :where(input, select, textarea, .input):disabled {
+  border-color: #344b68;
+  background-color: #15243a !important;
+  color: #b8c9df !important;
+  opacity: 1;
+}
+
+body.community-body :where(.mobile-tab, .mobile-settings-row, .map-hotspot-row) {
+  color: #d2deee;
+}
+
+body.community-body .mobile-tab.active {
+  color: #67e8f9;
+}
+
+body.community-body .mobile-welcome :where(p, small, span),
+body.community-body .mobile-auth-page :where(p, small, span, label) {
+  color: #d2deee;
+}
+
+body.community-body .mobile-welcome :where(h1, h2, h3, strong),
+body.community-body .mobile-auth-page :where(h1, h2, h3, strong) {
+  color: #f1f5ff;
+}
+
+body.community-body .mobile-auth-page .mobile-auth-content {
+  background: #0d192c !important;
+  color: #d2deee;
+}
+
+body.community-body .mobile-auth-page :where(.mobile-auth-form label, .mobile-auth-switch, .login-footer) {
+  color: #d2deee !important;
+}
+
+body.community-body .mobile-auth-page .login-footer {
+  border-color: #344b68;
+  background: #13233b;
+}
+
+body.community-body .pwa-update-notice,
+body.community-body .powerwatch-chat-panel,
+body.community-body .action-dialog {
+  border: 1px solid #405875;
+  background-color: #0d192c;
+  color: #f1f5ff;
+}
+
+body.community-body .action-dialog :where(.dialog-head, .dialog-body, .dialog-foot) {
+  border-color: #344b68;
+  background: #0d192c;
+  color: #d2deee;
+}
+
+body.community-body .action-dialog :where(input, select, textarea) {
+  border-color: #405875;
+  background-color: #081426;
+  color: #f1f5ff;
+}
+
+body.community-body .action-dialog :where(input, select, textarea)::placeholder {
+  color: #a8bbd3;
+  opacity: 1;
+}
+
+body.community-body .pwa-update-notice,
+body.community-body .powerwatch-chat-panel {
+  border-color: #405875;
+  background-color: #0d192c;
+  color: #f1f5ff;
+}
+
+body.community-body .pwa-update-copy,
+body.community-body .pwa-update-copy strong,
+body.community-body .powerwatch-chat-panel :where(p, span, small, strong, button) {
+  color: #d2deee !important;
+}
+
+body.community-body .powerwatch-chat-panel :where(strong, .powerwatch-chat-header strong) {
+  color: #f1f5ff !important;
+}
+
+body.community-body .powerwatch-chat-form button,
+body.community-body .button.primary,
+body.community-body .mobile-form button,
+body.community-body .mobile-auth-form button {
+  color: #fff !important;
+}
+
+body.community-body :is(.pill-busy, .report-status.ongoing, .incident-status-badge.ongoing, .monitoring-status.ongoing, .status-tag.ongoing, .status-ongoing, .scheduled-status-badge.implementing, .report-status.review, .verification-status-badge.review, .incident-status-badge.review, .monitoring-status.monitoring-review, .scheduled-status-badge.scheduled, .scheduled-status-badge.preparing) {
+  border-color: rgba(125, 211, 252, .48) !important;
+  background: #0c304a !important;
+  color: #c2f0ff !important;
+}
+
+body.community-body :is(.report-status.pending, .verification-status-badge.pending, .status-tag.pending, .pill-warn) {
+  border-color: rgba(253, 230, 138, .48) !important;
+  background: #3b2d0b !important;
+  color: #fff0ad !important;
+}
+
+body.community-body :is(.report-status.verified, .verification-status-badge.verified, .status-tag.verified, .report-status.resolved, .incident-status-badge.resolved, .monitoring-status.resolved, .scheduled-status-badge.completed, .pill-ok) {
+  border-color: rgba(110, 231, 183, .46) !important;
+  background: #0d3428 !important;
+  color: #adf5d4 !important;
+}
+
+body.community-body :is(.report-status.rejected, .verification-status-badge.rejected, .status-tag.rejected, .report-status.critical, .verification-status-badge.critical, .incident-status-badge.critical, .status-tag.critical, .status-critical, .scheduled-status-badge.cancelled, .pill-bad) {
+  border-color: rgba(253, 164, 175, .46) !important;
+  background: #3b1824 !important;
+  color: #ffc1ca !important;
+}
+
+body.community-body :is(.report-status.neutral, .incident-status-badge.neutral, .monitoring-status.neutral, .pill-neutral, .status-neutral) {
+  border-color: #405875 !important;
+  background: #1b2a40 !important;
+  color: #d2deee !important;
+}
+
+body.admin-body :focus-visible,
+body.community-body :focus-visible {
+  outline: 3px solid #67e8f9;
+  outline-offset: 2px;
+}
+
+body.admin-body :disabled,
+body.community-body :disabled {
+  opacity: .78;
 }
