@@ -369,7 +369,7 @@ async function renderMobileHome() {
           <span class="bsh-barangay">Brgy. ${escapeHtml(userBarangay)}</span>
         </div>
         <h3>Advisory: Upcoming Maintenance</h3>
-        <p>Interruption scheduled on ${escapeHtml(formatSystemDate(myScheduled.outage_date))} (${escapeHtml(String(myScheduled.start_time || '').slice(0, 5))} - ${escapeHtml(String(myScheduled.end_time || '').slice(0, 5))}).</p>
+        <p>Interruption scheduled on ${escapeHtml(formatSystemDate(myScheduled.outage_date))} (${escapeHtml(String(myScheduled.start_time || '').slice(0, 5))} - ${escapeHtml(String(myScheduled.expected_end_time || '').slice(0, 5))}).</p>
         <div class="bsh-actions">
           <button type="button" class="button secondary small" data-mobile-tab="outages">View Advisory &rarr;</button>
         </div>
