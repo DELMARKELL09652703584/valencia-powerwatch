@@ -1131,3 +1131,376 @@ button:disabled {
     transition-duration: .01ms !important;
   }
 }
+
+/* Midnight navy and electric-blue portal palette. */
+:root {
+  color-scheme: dark;
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
+  --primary-soft: #142b50;
+  --accent: #22d3ee;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --bad: #fb7185;
+  --busy: #a78bfa;
+  --ink: #e8f1ff;
+  --ink-soft: #c1d0e4;
+  --muted: #8fa5c1;
+  --line: #263955;
+  --bg: #060d1a;
+  --panel: #0d192c;
+  --surface-raised: #13223a;
+  --shadow: 0 2px 12px rgba(0, 0, 0, .2), 0 12px 30px rgba(0, 0, 0, .16);
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, .42);
+}
+
+body.admin-body .admin-shell,
+body.community-body,
+body.community-body .mobile-shell,
+body.community-body .mobile-welcome,
+body.community-body .mobile-auth-page {
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
+  --primary-soft: #142b50;
+  --accent: #22d3ee;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --bad: #fb7185;
+  --busy: #a78bfa;
+  --ink: #e8f1ff;
+  --ink-soft: #c1d0e4;
+  --muted: #8fa5c1;
+  --line: #263955;
+  --bg: #060d1a;
+  --panel: #0d192c;
+  --surface-raised: #13223a;
+  --shadow: 0 2px 12px rgba(0, 0, 0, .2), 0 12px 30px rgba(0, 0, 0, .16);
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, .42);
+}
+
+body.admin-body,
+body.admin-body .admin-shell,
+body.admin-body .admin-main,
+body.admin-body .admin-content,
+body.community-body,
+body.community-body .mobile-shell,
+body.community-body .mobile-content {
+  background-color: #060d1a;
+  color: #e8f1ff;
+}
+
+body.admin-body .admin-sidebar {
+  border-color: #1d2b43;
+  background: linear-gradient(180deg, #080f1e, #0b1424);
+  color: #e8f1ff;
+}
+
+body.admin-body .admin-brand,
+body.admin-body .admin-sidebar-foot {
+  border-color: #263955;
+}
+
+body.admin-body .admin-brand :is(strong, b),
+body.admin-body .admin-user-meta strong {
+  color: #e8f1ff;
+}
+
+body.admin-body .admin-brand small,
+body.admin-body .admin-user-meta span {
+  color: #8fa5c1;
+}
+
+body.admin-body .admin-nav .nav-item {
+  color: #b7c8df;
+}
+
+body.admin-body .admin-nav .nav-item:hover {
+  background: rgba(59, 130, 246, .14);
+  color: #fff;
+}
+
+body.admin-body .admin-nav .nav-item.active,
+body.admin-body .admin-nav .nav-item[aria-current="page"] {
+  border-color: rgba(59, 130, 246, .3);
+  background: linear-gradient(100deg, rgba(37, 99, 235, .38), rgba(34, 211, 238, .12));
+  color: #fff;
+}
+
+body.admin-body .admin-topbar {
+  border-color: #263955;
+  background: rgba(8, 17, 32, .96);
+  color: #e8f1ff;
+}
+
+body.admin-body .admin-topbar :is(h1, h2, strong, button),
+body.admin-body .admin-content :is(h1, h2, h3, h4, strong, b) {
+  color: #e8f1ff;
+}
+
+body.admin-body .admin-content :is(.muted, small, .topbar-sub, .admin-clock) {
+  color: #8fa5c1;
+}
+
+body.admin-body .admin-content :is(.panel, .stat-card, .incident-card, .announcement-card, .analytics-chart-panel, .analytics-kpi, .analytics-metric-card, .metric-card, .chart-card, .report-card, .user-management-panel) {
+  border-color: #263955 !important;
+  background: #0d192c !important;
+  color: #e8f1ff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, .2), 0 12px 30px rgba(0, 0, 0, .16);
+}
+
+body.admin-body .admin-content :is(.panel, .stat-card, .incident-card, .announcement-card, .analytics-chart-panel, .analytics-kpi, .analytics-metric-card, .metric-card, .chart-card, .report-card) :is(h1, h2, h3, h4, strong, b, label) {
+  color: #e8f1ff;
+}
+
+body.admin-body .admin-content :is(input, select, textarea, .input) {
+  border-color: #304665;
+  background: #081426;
+  color: #e8f1ff;
+}
+
+body.admin-body .admin-content :is(input, select, textarea, .input)::placeholder {
+  color: #849ab6;
+}
+
+body.admin-body .admin-content :is(input, select, textarea, .input):focus {
+  border-color: #22d3ee;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, .16);
+}
+
+body.admin-body .admin-content :is(table, .data-table) {
+  color: #c1d0e4;
+}
+
+body.admin-body .admin-content :is(table, .data-table) :is(th, thead) {
+  background: #13223a;
+  color: #dceaff;
+}
+
+body.admin-body .admin-content :is(table, .data-table) :is(th, td) {
+  border-color: #263955;
+}
+
+body.admin-body .admin-content :is(table, .data-table) tbody tr:hover {
+  background: rgba(59, 130, 246, .08);
+}
+
+body.admin-body .button.primary,
+body.community-body .button.primary,
+body.community-body .mobile-form button,
+body.community-body .mobile-auth-form button {
+  border-color: rgba(147, 197, 253, .24);
+  background: linear-gradient(115deg, #2563eb, #087ea4);
+  color: #fff;
+}
+
+body.admin-body .button.secondary,
+body.community-body .button.secondary {
+  border-color: rgba(34, 211, 238, .24);
+  background: #112849;
+  color: #c5f4ff;
+}
+
+body.admin-body .button.ghost,
+body.community-body .button.ghost {
+  border-color: #304665;
+  background: #111f34;
+  color: #c1d0e4;
+}
+
+body.admin-body .button.danger,
+body.community-body .button.danger {
+  border-color: rgba(251, 113, 133, .3);
+  background: #351d2b;
+  color: #ffb0bd;
+}
+
+body.admin-body :is(.report-status.pending, .verification-status-badge.pending, .status-tag.pending, .pill-warn) {
+  border-color: rgba(251, 191, 36, .32);
+  background: #382d16;
+  color: #ffd875;
+}
+
+body.admin-body :is(.report-status.review, .verification-status-badge.review, .incident-status-badge.review, .monitoring-status.monitoring-review, .scheduled-status-badge.scheduled, .scheduled-status-badge.preparing) {
+  border-color: rgba(34, 211, 238, .28);
+  background: #112d47;
+  color: #8be8f7;
+}
+
+body.admin-body :is(.report-status.verified, .verification-status-badge.verified, .status-tag.verified, .report-status.resolved, .incident-status-badge.resolved, .monitoring-status.resolved, .scheduled-status-badge.completed, .pill-ok) {
+  border-color: rgba(52, 211, 153, .3);
+  background: #10352f;
+  color: #73efc2;
+}
+
+body.admin-body :is(.report-status.ongoing, .incident-status-badge.ongoing, .monitoring-status.ongoing, .status-tag.ongoing, .status-ongoing, .scheduled-status-badge.implementing) {
+  border-color: rgba(34, 211, 238, .28);
+  background: #112d47;
+  color: #8be8f7;
+}
+
+body.admin-body :is(.report-status.rejected, .verification-status-badge.rejected, .status-tag.rejected, .report-status.critical, .verification-status-badge.critical, .incident-status-badge.critical, .status-tag.critical, .status-critical, .scheduled-status-badge.cancelled, .pill-bad) {
+  border-color: rgba(251, 113, 133, .3);
+  background: #3a1d2b;
+  color: #ff9caf;
+}
+
+body.admin-body :is(.report-status.neutral, .incident-status-badge.neutral, .monitoring-status.neutral, .pill-neutral, .status-neutral) {
+  border-color: #304665;
+  background: #1b2a40;
+  color: #c1d0e4;
+}
+
+body.admin-body .analytics-bar-track {
+  background: #192a42;
+}
+
+body.admin-body .analytics-bar-track i {
+  background: linear-gradient(180deg, #22d3ee, #3b82f6);
+}
+
+body.admin-body :is(.leaflet-popup-content-wrapper, .leaflet-popup-tip, .leaflet-control-zoom, .map-tools) {
+  border-color: #263955;
+  background: #0d192c;
+  color: #e8f1ff;
+}
+
+body.community-body .mobile-shell,
+body.community-body .mobile-welcome,
+body.community-body .mobile-auth-page {
+  border-color: #1d2b43;
+  background-color: #0a1424;
+  color: #e8f1ff;
+  box-shadow: 0 0 0 1px rgba(77, 135, 205, .12), 0 18px 48px rgba(0, 0, 0, .35);
+}
+
+body.community-body .mobile-shell {
+  background-image: linear-gradient(180deg, #0b1628, #091321);
+}
+
+body.community-body .mobile-header,
+body.community-body .mobile-home-header {
+  background: linear-gradient(115deg, #071326, #0c3770 68%, #087b98);
+}
+
+body.community-body :is(.mobile-card, .mobile-outage-card, .mobile-profile-head, .mobile-settings-list, .barangay-status-hero, .recent-updates, .mobile-weather, .mobile-dashboard-card, .mobile-report-item, .mobile-history-item, .mobile-notification-item) {
+  border-color: #263955;
+  background: #0d192c !important;
+  color: #e8f1ff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, .2), 0 12px 30px rgba(0, 0, 0, .16);
+}
+
+body.community-body :is(.mobile-content, .mobile-card, .mobile-outage-card, .mobile-profile-head, .mobile-dashboard-card, .mobile-report-item, .mobile-history-item, .mobile-notification-item) :is(h1, h2, h3, h4, strong, b) {
+  color: #e8f1ff;
+}
+
+body.community-body :is(.mobile-content, .mobile-card, .mobile-outage-card, .mobile-dashboard-card) :is(p, small, .muted) {
+  color: #c1d0e4;
+}
+
+body.community-body .mobile-tabs {
+  border-color: #263955;
+  background: rgba(8, 17, 32, .97);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, .3);
+}
+
+body.community-body .mobile-tab {
+  color: #8fa5c1;
+}
+
+body.community-body .mobile-tab.active {
+  color: #67e8f9;
+}
+
+body.community-body :is(.mobile-form, .mobile-auth-form) label {
+  color: #c1d0e4;
+}
+
+body.community-body :is(.mobile-form, .mobile-auth-form) :is(input, select, textarea) {
+  border-color: #304665;
+  background: #081426 !important;
+  color: #e8f1ff !important;
+}
+
+body.community-body :is(.mobile-form, .mobile-auth-form) :is(input, select, textarea)::placeholder {
+  color: #849ab6;
+}
+
+body.community-body :is(input, select, textarea, .input) {
+  border-color: #304665;
+  background-color: #081426 !important;
+  color: #e8f1ff;
+}
+
+body.community-body :is(input, select, textarea, .input):focus {
+  border-color: #22d3ee;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, .16);
+}
+
+body.community-body :is(input, select, textarea, .input)::placeholder {
+  color: #849ab6;
+}
+
+body.community-body :is(.map-hotspot-row, .mobile-settings-row) {
+  border-color: #263955;
+  background: #0d192c;
+  color: #c1d0e4;
+}
+
+body.community-body :is(.report-status.pending, .verification-status-badge.pending, .status-tag.pending, .pill-warn) {
+  border-color: rgba(251, 191, 36, .32);
+  background: #382d16;
+  color: #ffd875;
+}
+
+body.community-body :is(.report-status.review, .verification-status-badge.review, .incident-status-badge.review, .monitoring-status.monitoring-review, .scheduled-status-badge.scheduled, .scheduled-status-badge.preparing) {
+  border-color: rgba(34, 211, 238, .28);
+  background: #112d47;
+  color: #8be8f7;
+}
+
+body.community-body :is(.report-status.verified, .verification-status-badge.verified, .status-tag.verified, .report-status.resolved, .incident-status-badge.resolved, .monitoring-status.resolved, .scheduled-status-badge.completed, .pill-ok) {
+  border-color: rgba(52, 211, 153, .3);
+  background: #10352f;
+  color: #73efc2;
+}
+
+body.community-body :is(.report-status.ongoing, .incident-status-badge.ongoing, .monitoring-status.ongoing, .status-tag.ongoing, .status-ongoing, .scheduled-status-badge.implementing) {
+  border-color: rgba(34, 211, 238, .28);
+  background: #112d47;
+  color: #8be8f7;
+}
+
+body.community-body :is(.report-status.rejected, .verification-status-badge.rejected, .status-tag.rejected, .report-status.critical, .verification-status-badge.critical, .incident-status-badge.critical, .status-tag.critical, .status-critical, .scheduled-status-badge.cancelled, .pill-bad) {
+  border-color: rgba(251, 113, 133, .3);
+  background: #3a1d2b;
+  color: #ff9caf;
+}
+
+body.community-body :is(.report-status.neutral, .incident-status-badge.neutral, .monitoring-status.neutral, .pill-neutral, .status-neutral) {
+  border-color: #304665;
+  background: #1b2a40;
+  color: #c1d0e4;
+}
+
+body.community-body .powerwatch-chat-panel,
+body.community-body .pwa-update-notice {
+  border-color: #263955;
+  background: #0d192c;
+  color: #e8f1ff;
+}
+
+body.community-body :is(.powerwatch-chat-welcome, .powerwatch-chat-message.from-assistant, .powerwatch-chat-prompts button, .powerwatch-chat-form, .powerwatch-chat-disclaimer) {
+  border-color: #263955;
+  background: #111f34;
+  color: #c1d0e4;
+}
+
+body.community-body .powerwatch-chat-message.from-user {
+  background: #15345c;
+  color: #d9efff;
+}
+
+body.admin-body :focus-visible,
+body.community-body :focus-visible {
+  outline-color: rgba(34, 211, 238, .7);
+}
