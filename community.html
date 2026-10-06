@@ -6,21 +6,34 @@
     <title>Valencia PowerWatch · Community User App</title>
     <meta name="description" content="Valencia PowerWatch community mobile app for Valencia City, Bukidnon." />
     <meta name="theme-color" content="#073c68" />
+    <meta name="application-name" content="Valencia PowerWatch" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/svg+xml" href="/assets/powerwatch-logo.svg" />
-    <link rel="apple-touch-icon" href="/assets/powerwatch-logo.svg" />
-    <link rel="stylesheet" href="/style.css?v=21" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/powerwatch-icon-180.png" />
+    <link rel="stylesheet" href="/style.css?v=22" />
     <link rel="stylesheet" href="/app/portal-polish.css?v=1" />
     <script>
       window.POWERWATCH_PORTAL = 'community';
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then((reg) => {
-            reg.update();
-          }).catch(console.error);
+          const serviceWorkerUrl = new URL('/sw.js', window.location.origin).href;
+          const communityScope = new URL('/community', window.location.origin).href;
+          navigator.serviceWorker.getRegistrations()
+            .then((registrations) => Promise.all(registrations
+              .filter((registration) => {
+                const worker = registration.active || registration.waiting || registration.installing;
+                return registration.scope === `${window.location.origin}/` && worker?.scriptURL === serviceWorkerUrl;
+              })
+              .map((registration) => registration.unregister())))
+            .then(() => navigator.serviceWorker.register(serviceWorkerUrl, {
+              scope: communityScope,
+              updateViaCache: 'none'
+            }))
+            .then((registration) => registration.update().catch(console.error))
+            .catch(console.error);
         });
       }
       window.addEventListener('error', (e) => {
@@ -37,8 +50,26 @@
         <span style="font-size:0.8rem;color:#94a3b8;">Nag-load sa aplikasyon…</span>
       </div>
     </div>
+    <dialog id="pwa-install-dialog" class="action-dialog pwa-install-dialog" aria-labelledby="pwa-install-title">
+      <header class="dialog-head">
+        <h2 id="pwa-install-title">Add Valencia PowerWatch</h2>
+        <button type="button" class="dialog-close" data-action="close-pwa-install" aria-label="Close">×</button>
+      </header>
+      <div class="dialog-body">
+        <p>Install PowerWatch to open it from your home screen.</p>
+        <ol class="pwa-install-steps">
+          <li><strong>iPhone or iPad:</strong> Open this page in Safari, tap <strong>Share</strong>, then choose <strong>Add to Home Screen</strong>.</li>
+          <li><strong>Android:</strong> In Chrome, open the menu (⋮) and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>
+          <li><strong>Desktop:</strong> In Chrome or Edge, use the install icon in the address bar or the browser menu.</li>
+        </ol>
+        <p class="muted small">If the install option is missing, open the secure Valencia PowerWatch URL directly in a supported browser and try again.</p>
+      </div>
+      <footer class="dialog-foot">
+        <button type="button" class="button primary" data-action="close-pwa-install">Got it</button>
+      </footer>
+    </dialog>
     <script src="/app/core.js?v=19"></script>
-    <script src="/app/community.js?v=20"></script>
-    <script src="/app/main.js?v=20"></script>
+    <script src="/app/community.js?v=21"></script>
+    <script src="/app/main.js?v=21"></script>
   </body>
 </html>

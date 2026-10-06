@@ -146,6 +146,19 @@ function mobileNotificationBell() {
   </button>`;
 }
 
+function mobileInstallButton() {
+  const installed = navigator.standalone === true
+    || window.matchMedia?.('(display-mode: standalone)').matches
+    || document.documentElement.classList.contains('pwa-installed');
+  if (installed) return '';
+  return `<button type="button" class="mobile-install-button" data-action="install-app" aria-label="Install Valencia PowerWatch" title="Install Valencia PowerWatch">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 18v3h14v-3"></path>
+    </svg>
+    <span>Install</span>
+  </button>`;
+}
+
 function mobileNotificationPanelMarkup() {
   if (!state.mobileNotificationPanelOpen) return '';
   const notices = (state.mobileNotificationPreview || []).slice(0, 6);
@@ -256,7 +269,7 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
           </svg>
         </button>
         <h1 class="mobile-header-title">${escapeHtml(subpageHeader.title)}</h1>
-        <div class="mobile-header-right">${subpageHeader.rightAction || mobileNotificationBell()}</div>
+        <div class="mobile-header-right">${subpageHeader.rightAction || `${mobileInstallButton()}${mobileNotificationBell()}`}</div>
         ${mobileNotificationPanelMarkup()}
       </header>`;
   } else if (homeHeader) {
@@ -267,6 +280,7 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
           <span class="mobile-home-greeting"><span>${greeting}</span><strong>${escapeHtml(user.full_name || 'Resident')}</strong></span>
         </div>
         <div class="mobile-header-actions">
+          ${mobileInstallButton()}
           <button type="button" class="mobile-lang-chip" data-action="toggle-mobile-language" title="English / Sinugbuanong Binisaya">
             <span>${getLanguage() === 'ceb' ? '🇵🇭 CEB' : '🇺🇸 EN'}</span>
           </button>
@@ -282,6 +296,7 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
           <div><strong>Valencia</strong><b>PowerWatch</b></div>
         </div>
         <div class="mobile-header-actions">
+          ${mobileInstallButton()}
           <button type="button" class="mobile-lang-chip" data-action="toggle-mobile-language" title="English / Sinugbuanong Binisaya">
             <span>${getLanguage() === 'ceb' ? '🇵🇭 CEB' : '🇺🇸 EN'}</span>
           </button>

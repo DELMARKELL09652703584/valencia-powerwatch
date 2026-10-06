@@ -1,26 +1,33 @@
 {
   "name": "Valencia PowerWatch",
   "short_name": "PowerWatch",
+  "id": "/community",
   "description": "Community Power Interruption Reporting, Verification, and Information Management System for Valencia City, Bukidnon",
   "start_url": "/community?source=pwa",
-  "scope": "/",
+  "scope": "/community",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#073c68",
   "theme_color": "#073c68",
-  "orientation": "portrait",
   "categories": ["utilities", "productivity", "government"],
   "icons": [
     {
-      "src": "/assets/powerwatch-logo.svg",
+      "src": "/assets/powerwatch-icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/assets/powerwatch-logo.svg",
+      "src": "/assets/powerwatch-icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/powerwatch-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

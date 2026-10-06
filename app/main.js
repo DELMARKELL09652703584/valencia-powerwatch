@@ -1,5 +1,19 @@
 /* Authentication screens, router, actions, and boot */
 
+let deferredPwaInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  deferredPwaInstallPrompt = event;
+  document.documentElement.classList.add('pwa-install-available');
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredPwaInstallPrompt = null;
+  document.documentElement.classList.add('pwa-installed');
+  document.querySelectorAll('.mobile-install-button, .mobile-install-cta').forEach((button) => button.remove());
+});
+
 function renderWelcomeScreen() {
   app.innerHTML = `<main class="mobile-welcome">
     <div class="mobile-welcome-brand"><img class="welcome-logo" src="/assets/powerwatch-logo.svg" alt="Valencia PowerWatch logo"><h1>Valencia</h1><strong>PowerWatch</strong></div>
@@ -853,6 +867,26 @@ async function handleClick(event) {
       case 'close-dialog':
         closeDialog();
         return;
+      case 'install-app': {
+        if (deferredPwaInstallPrompt) {
+          const installPrompt = deferredPwaInstallPrompt;
+          deferredPwaInstallPrompt = null;
+          await installPrompt.prompt();
+          const choice = await installPrompt.userChoice;
+          if (choice.outcome === 'accepted') {
+            setToast('Valencia PowerWatch was added to your device.');
+          }
+          return;
+        }
+        const installDialog = document.getElementById('pwa-install-dialog');
+        if (installDialog && !installDialog.open) installDialog.showModal();
+        return;
+      }
+      case 'close-pwa-install': {
+        const installDialog = document.getElementById('pwa-install-dialog');
+        if (installDialog?.open) installDialog.close();
+        return;
+      }
       case 'export-situation-report': {
         const [incRes, repRes, crewRes] = await Promise.all([
           api('/api/incidents'),

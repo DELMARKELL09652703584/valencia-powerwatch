@@ -96,9 +96,15 @@ app.use('/vendor/leaflet', express.static(path.join(ROOT, 'node_modules', 'leafl
 app.use('/vendor/leaflet-heat', express.static(path.join(ROOT, 'node_modules', 'leaflet.heat', 'dist')));
 
 app.get(['/install', '/install.html', '/download', '/download.html'], (req, res) => res.sendFile(path.join(ROOT, 'download.html')));
-app.get('/manifest.json', (req, res) => res.sendFile(path.join(ROOT, 'manifest.json')));
+app.get('/manifest.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  res.sendFile(path.join(ROOT, 'manifest.json'));
+});
 app.get('/sw.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  res.setHeader('Service-Worker-Allowed', '/community');
   res.sendFile(path.join(ROOT, 'sw.js'));
 });
 app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(ROOT, 'admin.html')));

@@ -1,21 +1,20 @@
-const CACHE_NAME = 'powerwatch-v21';
+const CACHE_NAME = 'powerwatch-v22';
 const STATIC_ASSETS = [
-  '/',
   '/community',
   '/community.html',
-  '/download',
-  '/install',
-  '/download.html',
   '/style.css',
-  '/style.css?v=21',
+  '/style.css?v=22',
   '/app/portal-polish.css?v=1',
   '/app/core.js',
   '/app/core.js?v=19',
   '/app/community.js',
-  '/app/community.js?v=20',
-  '/app/main.js',
-  '/app/main.js?v=20',
+  '/app/community.js?v=21',
+  '/app/main.js?v=21',
   '/assets/powerwatch-logo.svg',
+  '/assets/powerwatch-icon-180.png',
+  '/assets/powerwatch-icon-192.png',
+  '/assets/powerwatch-icon-512.png',
+  '/assets/powerwatch-icon-maskable-512.png',
   '/manifest.json'
 ];
 
@@ -46,18 +45,19 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Let API and Admin requests go directly to network
-  if (event.request.url.includes('/api/') || event.request.url.includes('/admin')) {
+  const requestUrl = new URL(event.request.url);
+  if (event.request.method !== 'GET' || requestUrl.origin !== self.location.origin) {
     return;
   }
 
-  // Network-first strategy: fetch fresh content online, fallback to cache offline
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const clone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          caches.open(CACHE_NAME)
+            .then((cache) => cache.put(event.request, clone))
+            .catch((error) => console.warn('PWA cache update failed:', error));
         }
         return networkResponse;
       })
@@ -67,6 +67,7 @@ self.addEventListener('fetch', (event) => {
           if (event.request.mode === 'navigate') {
             return caches.match('/community');
           }
+          return Response.error();
         });
       })
   );

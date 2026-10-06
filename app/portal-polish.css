@@ -562,6 +562,75 @@ button:disabled {
   color: #145b8d;
 }
 
+.community-body .mobile-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+}
+
+.community-body .mobile-install-button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 1px solid rgba(255, 255, 255, .42);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .12);
+  color: #fff;
+  font-size: .75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.community-body .mobile-install-button:hover {
+  background: rgba(255, 255, 255, .2);
+}
+
+.community-body .mobile-install-cta {
+  width: 100%;
+}
+
+.pwa-install-dialog {
+  width: min(440px, calc(100vw - 28px));
+}
+
+.pwa-install-steps {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+  padding-left: 22px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.pwa-install-steps strong {
+  color: var(--ink);
+}
+
+.community-body .mobile-welcome .mobile-install-button {
+  min-height: 46px;
+  margin: 12px auto 0;
+  padding-inline: 18px;
+  border-color: rgba(255, 255, 255, .7);
+  background: rgba(4, 48, 78, .35);
+  font-size: .9rem;
+}
+
+@media (max-width: 360px) {
+  .community-body .mobile-install-button span {
+    display: none;
+  }
+
+  .community-body .mobile-install-button {
+    width: 38px;
+    padding: 0;
+  }
+}
+
 .community-body .mobile-auth-content {
   width: 100%;
 }
