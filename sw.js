@@ -1,4 +1,4 @@
-const CACHE_NAME = 'powerwatch-v20';
+const CACHE_NAME = 'powerwatch-v21';
 const STATIC_ASSETS = [
   '/',
   '/community',
@@ -7,13 +7,14 @@ const STATIC_ASSETS = [
   '/install',
   '/download.html',
   '/style.css',
-  '/style.css?v=20',
+  '/style.css?v=21',
+  '/app/portal-polish.css?v=1',
   '/app/core.js',
   '/app/core.js?v=19',
   '/app/community.js',
   '/app/community.js?v=20',
   '/app/main.js',
-  '/app/main.js?v=19',
+  '/app/main.js?v=20',
   '/assets/powerwatch-logo.svg',
   '/manifest.json'
 ];

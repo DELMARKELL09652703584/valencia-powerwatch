@@ -318,6 +318,7 @@ async function render() {
 
 async function goToPage(page) {
   if (!ADMIN_PAGES[page]) return;
+  if (state.page !== page) window.scrollTo(0, 0);
   state.page = page;
   try {
     await render();
@@ -331,6 +332,7 @@ async function goToPage(page) {
 
 async function goToTab(tab) {
   if (!MOBILE_PAGES[tab]) return;
+  if (state.mobileTab !== tab) window.scrollTo(0, 0);
   state.mobileTab = tab;
   try {
     await render();

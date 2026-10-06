@@ -1,0 +1,618 @@
+:root {
+  --primary: #155b91;
+  --primary-dark: #104875;
+  --primary-soft: #eaf3fb;
+  --accent: #168477;
+  --ok: #157347;
+  --warn: #9a5b00;
+  --bad: #b42318;
+  --busy: #6546a5;
+  --ink: #172b3d;
+  --ink-soft: #52677a;
+  --muted: #718397;
+  --line: #d9e3ec;
+  --bg: #f3f6fa;
+  --panel: #fff;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 2px 8px rgba(21, 52, 78, .045), 0 10px 28px rgba(21, 52, 78, .055);
+  --shadow-lg: 0 18px 48px rgba(15, 30, 55, .18);
+}
+
+html {
+  scroll-behavior: auto;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(20, 120, 166, .42);
+  outline-offset: 2px;
+}
+
+.button,
+.icon-button,
+.link-button,
+.nav-item,
+.mobile-tab,
+.mobile-dashboard-card,
+.recent-update-row,
+.mobile-settings-row {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.button:disabled,
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Keep every Admin module inside the same fixed navigation and content grid. */
+.admin-shell,
+.admin-shell.page-admin-dashboard,
+.admin-shell.page-barangays,
+.admin-shell.page-analytics,
+.admin-shell.page-audit,
+.admin-shell.page-settings {
+  --sidebar-w: 260px;
+  --primary: #155b91;
+  --primary-dark: #104875;
+  --primary-soft: #eaf3fb;
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  grid-template-rows: minmax(100vh, auto);
+  min-height: 100vh;
+  min-height: 100dvh;
+  align-items: stretch;
+}
+
+.admin-shell > .admin-sidebar,
+.admin-shell.page-admin-dashboard > .admin-sidebar,
+.admin-shell.page-barangays > .admin-sidebar,
+.admin-shell.page-analytics > .admin-sidebar,
+.admin-shell.page-audit > .admin-sidebar,
+.admin-shell.page-settings > .admin-sidebar {
+  position: sticky;
+  inset: 0 auto auto 0;
+  grid-column: 1;
+  grid-row: 1;
+  align-self: start;
+  width: auto;
+  min-width: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  z-index: 31;
+}
+
+.admin-shell > .admin-main,
+.admin-shell.page-admin-dashboard > .admin-main,
+.admin-shell.page-barangays > .admin-main,
+.admin-shell.page-analytics > .admin-main,
+.admin-shell.page-audit > .admin-main,
+.admin-shell.page-settings > .admin-main {
+  display: flex;
+  grid-column: 2;
+  grid-row: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.admin-shell .admin-brand,
+.admin-shell.page-admin-dashboard .admin-brand {
+  min-height: 82px;
+  padding: 14px 16px;
+  gap: 12px;
+}
+
+.admin-shell .admin-logo,
+.admin-shell.page-admin-dashboard .admin-logo {
+  width: 48px;
+  height: 48px;
+}
+
+.admin-shell .admin-brand strong,
+.admin-shell .admin-brand b,
+.admin-shell.page-admin-dashboard .admin-brand strong,
+.admin-shell.page-admin-dashboard .admin-brand b {
+  font-size: 1.02rem;
+}
+
+.admin-shell .admin-brand small,
+.admin-shell.page-admin-dashboard .admin-brand small {
+  display: block;
+}
+
+.admin-shell .admin-nav,
+.admin-shell.page-admin-dashboard .admin-nav,
+.admin-shell.page-audit .admin-nav,
+.admin-shell.page-settings .admin-nav {
+  min-height: 0;
+  padding: 12px 10px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  overflow-anchor: none;
+}
+
+.admin-shell .nav-item,
+.admin-shell.page-admin-dashboard .nav-item {
+  min-height: 44px;
+  gap: 11px;
+  margin: 2px 0;
+  padding: 8px 11px;
+  border-radius: 10px;
+  font-size: .88rem;
+  transform: none;
+}
+
+.admin-shell .nav-item:hover,
+.admin-shell.page-admin-dashboard .nav-item:hover,
+.admin-shell.page-admin-dashboard .nav-item:active {
+  transform: none;
+}
+
+.admin-shell .nav-icon,
+.admin-shell.page-admin-dashboard .nav-icon {
+  width: 24px;
+  height: 24px;
+  font-size: 1rem;
+  filter: none;
+}
+
+.admin-shell .admin-sidebar-foot,
+.admin-shell.page-admin-dashboard .admin-sidebar-foot {
+  flex: 0 0 auto;
+  padding: 12px;
+}
+
+.admin-shell .admin-user,
+.admin-shell.page-admin-dashboard .admin-user {
+  min-height: 40px;
+  margin-bottom: 10px;
+}
+
+.admin-shell .admin-user-meta strong,
+.admin-shell.page-admin-dashboard .admin-user-meta strong {
+  font-size: .82rem;
+}
+
+.admin-shell .admin-user-meta span,
+.admin-shell.page-admin-dashboard .admin-user-meta span {
+  font-size: .72rem;
+}
+
+.admin-shell .admin-sidebar-foot .button,
+.admin-shell.page-admin-dashboard .admin-sidebar-foot .button {
+  min-height: 40px;
+  padding: 8px 12px;
+  font-size: .84rem;
+}
+
+.admin-shell .admin-topbar,
+.admin-shell.page-barangays .admin-topbar,
+.admin-shell.page-analytics .admin-topbar,
+.admin-shell.page-audit .admin-topbar,
+.admin-shell.page-settings .admin-topbar {
+  position: sticky;
+  inset: 0 0 auto;
+  z-index: 20;
+  grid-column: auto;
+  grid-row: auto;
+  min-height: 76px;
+  padding: 14px clamp(18px, 2.5vw, 34px);
+  border-bottom: 1px solid var(--line);
+  background: rgba(248, 251, 253, .94);
+  color: var(--ink);
+  backdrop-filter: blur(14px);
+}
+
+.admin-shell .admin-topbar h1,
+.admin-shell.page-barangays .admin-topbar h1,
+.admin-shell.page-analytics .admin-topbar h1 {
+  color: var(--ink);
+  font-size: 1.2rem;
+  line-height: 1.25;
+}
+
+.admin-shell .topbar-sub,
+.admin-shell.page-barangays .topbar-sub,
+.admin-shell.page-analytics .topbar-sub {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.admin-shell .topbar-role {
+  display: inline;
+  margin-left: 8px;
+}
+
+.admin-shell .admin-clock,
+.admin-shell.page-barangays .admin-clock,
+.admin-shell.page-analytics .admin-clock {
+  display: block;
+  color: var(--ink-soft);
+}
+
+.admin-shell .topbar-right,
+.admin-shell.page-barangays .topbar-right,
+.admin-shell.page-analytics .topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-shell .admin-content,
+.admin-shell.page-barangays .admin-content,
+.admin-shell.page-analytics .admin-content,
+.admin-shell.page-audit .admin-content,
+.admin-shell.page-settings .admin-content {
+  grid-column: auto;
+  grid-row: auto;
+  min-width: 0;
+  padding: 24px clamp(18px, 2.5vw, 34px) 40px;
+  background: transparent;
+}
+
+.admin-shell .panel,
+.admin-shell .stat-card,
+.admin-shell .incident-card,
+.admin-shell .announcement-card,
+.admin-shell .analytics-chart-panel {
+  border-radius: 12px;
+}
+
+.admin-shell .table-scroll,
+.admin-shell .panel:has(.data-table) {
+  scrollbar-color: #b7c8d6 transparent;
+  scrollbar-width: thin;
+}
+
+.admin-shell .admin-sidebar,
+.admin-shell .admin-main {
+  overflow-anchor: none;
+}
+
+@media (min-width: 781px) and (max-width: 1100px) {
+  .admin-shell,
+  .admin-shell.page-admin-dashboard,
+  .admin-shell.page-barangays,
+  .admin-shell.page-analytics,
+  .admin-shell.page-audit,
+  .admin-shell.page-settings {
+    --sidebar-w: 232px;
+  }
+
+  .admin-shell .admin-content,
+  .admin-shell.page-barangays .admin-content,
+  .admin-shell.page-analytics .admin-content,
+  .admin-shell.page-audit .admin-content,
+  .admin-shell.page-settings .admin-content {
+    padding-inline: 18px;
+  }
+}
+
+@media (max-width: 780px) {
+  .admin-shell,
+  .admin-shell.page-admin-dashboard,
+  .admin-shell.page-barangays,
+  .admin-shell.page-analytics,
+  .admin-shell.page-audit,
+  .admin-shell.page-settings {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .admin-shell > .admin-sidebar,
+  .admin-shell.page-admin-dashboard > .admin-sidebar,
+  .admin-shell.page-barangays > .admin-sidebar,
+  .admin-shell.page-analytics > .admin-sidebar,
+  .admin-shell.page-audit > .admin-sidebar,
+  .admin-shell.page-settings > .admin-sidebar {
+    position: sticky;
+    inset: 0 0 auto;
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .admin-shell > .admin-main,
+  .admin-shell.page-admin-dashboard > .admin-main,
+  .admin-shell.page-barangays > .admin-main,
+  .admin-shell.page-analytics > .admin-main,
+  .admin-shell.page-audit > .admin-main,
+  .admin-shell.page-settings > .admin-main {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  .admin-shell .admin-brand,
+  .admin-shell.page-admin-dashboard .admin-brand {
+    min-height: 58px;
+    padding: 8px 14px;
+  }
+
+  .admin-shell .admin-logo,
+  .admin-shell.page-admin-dashboard .admin-logo {
+    width: 40px;
+    height: 40px;
+  }
+
+  .admin-shell .admin-brand small,
+  .admin-shell.page-admin-dashboard .admin-brand small {
+    display: none;
+  }
+
+  .admin-shell .admin-nav,
+  .admin-shell.page-admin-dashboard .admin-nav,
+  .admin-shell.page-audit .admin-nav,
+  .admin-shell.page-settings .admin-nav {
+    display: flex;
+    gap: 4px;
+    max-width: 100%;
+    padding: 6px 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+  }
+
+  .admin-shell .nav-group,
+  .admin-shell.page-admin-dashboard .nav-group {
+    display: none;
+  }
+
+  .admin-shell .nav-item,
+  .admin-shell.page-admin-dashboard .nav-item {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 42px;
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  .admin-shell .admin-sidebar-foot,
+  .admin-shell.page-admin-dashboard .admin-sidebar-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 12px;
+  }
+
+  .admin-shell .admin-user,
+  .admin-shell.page-admin-dashboard .admin-user {
+    min-width: 0;
+    margin: 0;
+  }
+
+  .admin-shell .admin-sidebar-foot .button,
+  .admin-shell.page-admin-dashboard .admin-sidebar-foot .button {
+    width: auto;
+  }
+
+  .admin-shell .admin-topbar,
+  .admin-shell.page-barangays .admin-topbar,
+  .admin-shell.page-analytics .admin-topbar,
+  .admin-shell.page-audit .admin-topbar,
+  .admin-shell.page-settings .admin-topbar {
+    position: relative;
+    inset: auto;
+    min-height: 66px;
+    padding: 12px 16px;
+  }
+
+  .admin-shell .topbar-right {
+    gap: 7px;
+  }
+
+  .admin-shell .admin-weather,
+  .admin-shell .admin-clock {
+    display: none;
+  }
+
+  .admin-shell .admin-content,
+  .admin-shell.page-barangays .admin-content,
+  .admin-shell.page-analytics .admin-content,
+  .admin-shell.page-audit .admin-content,
+  .admin-shell.page-settings .admin-content {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-shell .admin-topbar,
+  .admin-shell.page-barangays .admin-topbar,
+  .admin-shell.page-analytics .admin-topbar,
+  .admin-shell.page-audit .admin-topbar,
+  .admin-shell.page-settings .admin-topbar {
+    align-items: flex-start;
+    gap: 10px;
+    padding-inline: 12px;
+  }
+
+  .admin-shell .admin-topbar h1,
+  .admin-shell.page-barangays .admin-topbar h1,
+  .admin-shell.page-analytics .admin-topbar h1 {
+    font-size: 1.05rem;
+  }
+
+  .admin-shell .admin-content,
+  .admin-shell.page-barangays .admin-content,
+  .admin-shell.page-analytics .admin-content,
+  .admin-shell.page-audit .admin-content,
+  .admin-shell.page-settings .admin-content {
+    padding: 12px;
+  }
+}
+
+/* Keep the resident portal app-like at every viewport size. */
+.community-body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background: #eaf0f5;
+  color: #172f43;
+}
+
+.community-body #app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+}
+
+.community-body .mobile-shell,
+.community-body .mobile-welcome,
+.community-body .mobile-auth-page {
+  width: min(100%, 430px);
+  max-width: 430px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin-inline: auto;
+  background-color: #f5f8fb;
+  box-shadow: 0 0 0 1px rgba(25, 66, 96, .08), 0 18px 48px rgba(25, 66, 96, .1);
+}
+
+.community-body .mobile-shell {
+  overflow-x: clip;
+  background-image: linear-gradient(180deg, #f7fafc 0%, #f2f6fa 100%);
+}
+
+.community-body .mobile-header,
+.community-body .mobile-home-header {
+  z-index: 25;
+  background: linear-gradient(118deg, #0b3558, #0b6394);
+  box-shadow: 0 4px 14px rgba(12, 50, 77, .12);
+}
+
+.community-body .mobile-home-header {
+  border-radius: 0 0 20px 20px;
+}
+
+.community-body .mobile-content {
+  width: 100%;
+  padding-right: 16px;
+  padding-left: 16px;
+  gap: 14px;
+}
+
+.community-body .mobile-card,
+.community-body .mobile-outage-card,
+.community-body .mobile-profile-head,
+.community-body .mobile-settings-list,
+.community-body .barangay-status-hero,
+.community-body .recent-updates,
+.community-body .mobile-weather,
+.community-body .mobile-dashboard-card {
+  border-radius: 14px;
+  border-color: #dce6ee;
+  box-shadow: 0 2px 8px rgba(21, 52, 78, .04), 0 8px 20px rgba(21, 52, 78, .045);
+}
+
+.community-body .mobile-dashboard-grid {
+  gap: 11px;
+}
+
+.community-body .mobile-dashboard-card {
+  min-height: 112px;
+  padding: 14px;
+  background: #fff;
+}
+
+.community-body .mobile-dashboard-card:active,
+.community-body .recent-update-row:active,
+.community-body .mobile-settings-row:active {
+  transform: scale(.99);
+}
+
+.community-body .mobile-tabs {
+  left: 50%;
+  right: auto;
+  width: min(100%, 430px);
+  transform: translateX(-50%);
+  padding-bottom: max(6px, env(safe-area-inset-bottom));
+  border-radius: 16px 16px 0 0;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 -5px 18px rgba(21, 52, 78, .1);
+}
+
+.community-body .mobile-tab {
+  min-height: 60px;
+  gap: 4px;
+  font-size: .68rem;
+}
+
+.community-body .mobile-tab.active {
+  color: #145b8d;
+}
+
+.community-body .mobile-auth-content {
+  width: 100%;
+}
+
+.community-body .mobile-form label,
+.community-body .mobile-auth-form label {
+  color: #40586c;
+}
+
+.community-body .mobile-form label input,
+.community-body .mobile-form label select,
+.community-body .mobile-form label textarea,
+.community-body .mobile-auth-form label input,
+.community-body .mobile-auth-form label select {
+  min-height: 44px;
+  border-color: #cbd9e4;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.community-body .mobile-form button,
+.community-body .mobile-auth-form button,
+.community-body .mobile-report-actions .button {
+  min-height: 44px;
+}
+
+.community-body .mobile-report-item,
+.community-body .mobile-history-item,
+.community-body .mobile-notification-item,
+.community-body .mobile-settings-row,
+.community-body .mobile-tab,
+.community-body .mobile-bell {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (min-width: 600px) {
+  .community-body .mobile-shell,
+  .community-body .mobile-welcome,
+  .community-body .mobile-auth-page {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
