@@ -2,24 +2,14 @@ services:
   - type: web
     name: valencia-powerwatch
     runtime: node
-    plan: starter
+    plan: free
     branch: main
     buildCommand: npm ci && node --test
     startCommand: node server/index.js
     autoDeploy: true
     healthCheckPath: /api/health
-    disk:
-      name: valencia-powerwatch-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: PORT
         value: 10000
       - key: NODE_VERSION
         value: 22.12.0
-      - key: POWERWATCH_DATA_DIR
-        value: /var/data
-      - key: POWERWATCH_UPLOAD_DIR
-        value: /var/data/uploads
-      - key: POWERWATCH_MIGRATE_LOCAL_DB
-        value: "true"

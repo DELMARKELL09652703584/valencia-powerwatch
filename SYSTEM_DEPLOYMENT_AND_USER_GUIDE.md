@@ -25,8 +25,8 @@ Render is the official, stable online deployment:
 
 The Cloudflare Tunnel started by `start-public-online.bat` is temporary. Its link changes when the tunnel restarts; use the Render links above as the permanent public addresses.
 
-### Render data persistence
-The Render service must use a paid web-service plan with a persistent disk mounted at `/var/data`. The SQLite database and uploaded evidence are stored on that disk so accounts and records survive deploys and restarts. Render's free service filesystem is ephemeral; do not switch this service back to the free plan if account persistence is required. The first persistent-disk startup can copy the deployed `data/powerwatch.db` into the disk when it is empty, but it cannot recover account changes that were already lost from an earlier ephemeral filesystem.
+### Render free-plan data limits
+This service is configured for Render's Free plan to avoid monthly charges. Free instances do not support persistent disks, and their filesystem is ephemeral. SQLite accounts, outage records, and uploaded evidence can therefore be lost when Render restarts or redeploys the service. The app's startup migration can seed a new data directory from the bundled `data/powerwatch.db`, but that is not a backup of live changes and cannot recover data already lost from an earlier instance. If persistent account and report storage becomes essential, a paid plan with a persistent disk will be required; otherwise, continue with the Free plan knowing this limitation.
 
 ---
 
