@@ -958,7 +958,8 @@ async function renderAdminReports() {
     const status = String(value || '').toLowerCase();
     if (status === 'under review' || status === 'under verification') return 'report-status review';
     if (status === 'in progress' || status === 'ongoing') return 'report-status ongoing';
-    if (status === 'verified' || status === 'officially confirmed' || status === 'resolved') return 'report-status verified';
+    if (status === 'verified' || status === 'officially confirmed') return 'report-status verified';
+    if (status === 'resolved') return 'report-status resolved';
     if (status === 'rejected' || status === 'duplicate') return 'report-status rejected';
     if (status === 'submitted' || status === 'pending') return 'report-status pending';
     return 'report-status neutral';

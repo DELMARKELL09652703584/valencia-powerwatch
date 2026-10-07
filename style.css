@@ -1,19 +1,19 @@
 /* Valencia PowerWatch - Admin/Staff desktop + Community mobile */
 
 :root {
-  --primary: #0d4f9a;
-  --primary-dark: #0a3d7a;
-  --primary-soft: #e8f1fb;
-  --accent: #0f9d76;
-  --ok: #17805c;
-  --warn: #c97a09;
-  --bad: #c8372d;
-  --busy: #6b4fbb;
-  --ink: #16202e;
-  --ink-soft: #56637a;
-  --muted: #7b8798;
-  --line: #dfe5ee;
-  --bg: #f4f7fb;
+  --primary: #0b5cad;
+  --primary-dark: #094b93;
+  --primary-soft: #e5effa;
+  --accent: #0e8f6f;
+  --ok: #17804f;
+  --warn: #b45309;
+  --bad: #c02f2f;
+  --busy: #5b45a6;
+  --ink: #0e1a2b;
+  --ink-soft: #40536b;
+  --muted: #6f7e94;
+  --line: #d5dfeb;
+  --bg: #f3f6fa;
   --panel: #ffffff;
   --radius: 12px;
   --radius-sm: 8px;
@@ -5942,16 +5942,20 @@ body.admin-body {
 
 /* ---------- 1. Dark Mode / Command Center Palette ---------- */
 :root.dark-mode, body.dark-mode {
-  --primary: #3b82f6;
-  --primary-dark: #2563eb;
-  --primary-soft: #172554;
-  --accent: #10b981;
-  --ink: #f8fafc;
-  --ink-soft: #94a3b8;
-  --muted: #64748b;
-  --line: #1e293b;
-  --bg: #090e17;
-  --panel: #111a2e;
+  --primary: #5aa7f8;
+  --primary-dark: #3f8ce6;
+  --primary-soft: #16304f;
+  --accent: #2dd4a7;
+  --ok: #4ade80;
+  --warn: #ffc66e;
+  --bad: #ff8a7a;
+  --busy: #b39cff;
+  --ink: #edf4fc;
+  --ink-soft: #b6c4d8;
+  --muted: #8b9cbb;
+  --line: #2c3e57;
+  --bg: #0b1424;
+  --panel: #111d30;
   --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.6);
 }
@@ -8963,3 +8967,101 @@ body.dark-mode .mini-stepper-step {
 .community-body .report-timeline-status { display: inline-block; margin-top: 4px; color: #356482; font-size: .78rem; font-weight: 700; }
 .community-body .report-timeline-content p { margin: 5px 0; color: #52677a; font-size: .82rem; line-height: 1.45; overflow-wrap: anywhere; }
 .community-body .report-timeline-content small { color: #738496; font-size: .74rem; }
+
+/* ============================================================
+   Valencia PowerWatch — Unified semantic status system
+   Single source of truth for Pending / Review / Verified /
+   Ongoing / Resolved / Rejected / Critical / Neutral across
+   both portals, automatically adapting to Light and Dark.
+   ============================================================ */
+
+:root {
+  --st-pending-bg: #fff3d6;  --st-pending-fg: #8a5603;
+  --st-review-bg: #e2effb;   --st-review-fg: #0f6ba6;
+  --st-verified-bg: #d9f6e7; --st-verified-fg: #157a47;
+  --st-ongoing-bg: #dff6f9;  --st-ongoing-fg: #0e7490;
+  --st-resolved-bg: #d3f2ec; --st-resolved-fg: #0f766e;
+  --st-rejected-bg: #fde4e4; --st-rejected-fg: #c22e2e;
+  --st-critical-bg: #dc2626; --st-critical-fg: #ffffff;
+  --st-neutral-bg: #e9eef5;  --st-neutral-fg: #5b6c81;
+}
+
+body.dark-mode, :root.dark-mode {
+  --st-pending-bg: #3a2e0e;  --st-pending-fg: #ffd875;
+  --st-review-bg: #112d47;   --st-review-fg: #8be8f7;
+  --st-verified-bg: #0d3428; --st-verified-fg: #6ee7b7;
+  --st-ongoing-bg: #0c304a;  --st-ongoing-fg: #7dd3fc;
+  --st-resolved-bg: #10352b; --st-resolved-fg: #73efc2;
+  --st-rejected-bg: #3b1824; --st-rejected-fg: #fda4af;
+  --st-critical-bg: #bd2a2a; --st-critical-fg: #ffffff;
+  --st-neutral-bg: #1b2a40;  --st-neutral-fg: #c1d0e4;
+}
+
+/* ---- Community pills (statusPill) ---- */
+.pill-pending { background: var(--st-pending-bg); color: var(--st-pending-fg); }
+.pill-review { background: var(--st-review-bg); color: var(--st-review-fg); }
+.pill-verified { background: var(--st-verified-bg); color: var(--st-verified-fg); }
+.pill-ongoing { background: var(--st-ongoing-bg); color: var(--st-ongoing-fg); }
+.pill-resolved { background: var(--st-resolved-bg); color: var(--st-resolved-fg); }
+.pill-rejected { background: var(--st-rejected-bg); color: var(--st-rejected-fg); }
+.pill-critical { background: var(--st-critical-bg); color: var(--st-critical-fg); }
+.pill-warn { background: var(--st-pending-bg); color: var(--st-pending-fg); }
+.pill-busy { background: var(--st-review-bg); color: var(--st-review-fg); }
+.pill-ok { background: var(--st-verified-bg); color: var(--st-verified-fg); }
+.pill-bad { background: var(--st-rejected-bg); color: var(--st-rejected-fg); }
+
+/* ---- Admin / shared report status ---- */
+.report-status.pending { background: var(--st-pending-bg); color: var(--st-pending-fg); }
+.report-status.review { background: var(--st-review-bg); color: var(--st-review-fg); }
+.report-status.verified { background: var(--st-verified-bg); color: var(--st-verified-fg); }
+.report-status.ongoing { border: 1px solid transparent; border: 1px solid color-mix(in srgb, var(--st-ongoing-fg) 30%, transparent); background: var(--st-ongoing-bg); color: var(--st-ongoing-fg); }
+.report-status.resolved { background: var(--st-resolved-bg); color: var(--st-resolved-fg); }
+.report-status.rejected { background: var(--st-rejected-bg); color: var(--st-rejected-fg); }
+.report-status.critical { background: var(--st-critical-bg); color: var(--st-critical-fg); }
+.report-status.neutral { background: var(--st-neutral-bg); color: var(--st-neutral-fg); }
+.report-status.monitoring-review { background: var(--st-review-bg); color: var(--st-review-fg); }
+
+/* ---- Verification status ---- */
+.verification-status-badge.pending { background: var(--st-pending-bg); border-color: #e9c15d; color: var(--st-pending-fg); }
+.verification-status-badge.review { background: var(--st-review-bg); border-color: #a9cff5; color: var(--st-review-fg); }
+.verification-status-badge.verified { background: var(--st-verified-bg); border-color: #a4dfc2; color: var(--st-verified-fg); }
+.verification-status-badge.rejected { background: var(--st-rejected-bg); border-color: #f2b2b2; color: var(--st-rejected-fg); }
+.verification-status-badge.critical { background: var(--st-critical-bg); border-color: #dc2626; color: var(--st-critical-fg); }
+.verification-status-badge.neutral { background: var(--st-neutral-bg); border-color: #d5e0e9; color: var(--st-neutral-fg); }
+
+/* ---- Incident / monitoring status ---- */
+.incident-status-badge.ongoing { background: var(--st-ongoing-bg); color: var(--st-ongoing-fg); }
+.incident-status-badge.review { background: var(--st-review-bg); color: var(--st-review-fg); }
+.incident-status-badge.resolved { background: var(--st-resolved-bg); color: var(--st-resolved-fg); }
+.incident-status-badge.critical { background: var(--st-critical-bg); color: var(--st-critical-fg); }
+.incident-status-badge.neutral { background: var(--st-neutral-bg); color: var(--st-neutral-fg); }
+
+.monitoring-status.review, .monitoring-status.monitoring-review { background: var(--st-review-bg); color: var(--st-review-fg); }
+.monitoring-status.ongoing { background: var(--st-ongoing-bg); color: var(--st-ongoing-fg); }
+.monitoring-status.resolved { background: var(--st-resolved-bg); color: var(--st-resolved-fg); }
+.monitoring-status.critical { background: var(--st-critical-bg); color: var(--st-critical-fg); }
+.monitoring-status.cancelled { background: var(--st-rejected-bg); color: var(--st-rejected-fg); }
+.monitoring-status.neutral { background: var(--st-neutral-bg); color: var(--st-neutral-fg); }
+
+/* ---- Dispatch badges ---- */
+.dispatch-badge.pending, .dispatch-badge.dispatched { background: var(--st-pending-bg); color: var(--st-pending-fg); }
+.dispatch-badge.en-route { background: var(--st-review-bg); color: var(--st-review-fg); }
+.dispatch-badge.arrived { background: var(--st-pending-bg); color: var(--st-pending-fg); }
+.dispatch-badge.in-progress { background: var(--st-ongoing-bg); color: var(--st-ongoing-fg); }
+.dispatch-badge.resolved { background: var(--st-resolved-bg); color: var(--st-resolved-fg); }
+
+/* ---- Scheduled outage status ---- */
+.scheduled-status-badge.scheduled { background: var(--st-pending-bg); color: var(--st-pending-fg); }
+.scheduled-status-badge.preparing { background: var(--st-review-bg); color: var(--st-review-fg); }
+.scheduled-status-badge.implementing { background: var(--st-ongoing-bg); color: var(--st-ongoing-fg); }
+.scheduled-status-badge.completed { background: var(--st-resolved-bg); color: var(--st-resolved-fg); }
+.scheduled-status-badge.cancelled { background: var(--st-rejected-bg); color: var(--st-rejected-fg); }
+
+/* ---- Legacy status-pill variant map ---- */
+.status-pill.pending { background: var(--st-pending-bg); color: var(--st-pending-fg); }
+.status-pill.info { background: var(--st-review-bg); color: var(--st-review-fg); }
+.status-pill.success { background: var(--st-verified-bg); color: var(--st-verified-fg); }
+.status-pill.ongoing { background: var(--st-ongoing-bg); color: var(--st-ongoing-fg); }
+.status-pill.resolved { background: var(--st-resolved-bg); color: var(--st-resolved-fg); }
+.status-pill.danger { background: var(--st-rejected-bg); color: var(--st-rejected-fg); }
+.status-pill.critical { background: var(--st-critical-bg); color: var(--st-critical-fg); }

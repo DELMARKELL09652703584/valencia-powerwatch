@@ -682,10 +682,13 @@ function setToast(message) {
 
 function statusTone(status = '') {
   const value = String(status).toLowerCase();
-  if (['pending', 'submitted', 'awaiting verification', 'awaiting review'].some((k) => value.includes(k))) return 'warn';
-  if (['resolved', 'restored', 'verified', 'officially confirmed', 'published', 'completed'].some((k) => value.includes(k)) || (value.includes('active') && !value.includes('inactive'))) return 'ok';
-  if (['ongoing', 'under review', 'under verification', 'being implemented', 'restoration in progress', 'scheduled', 'in preparation', 'draft'].some((k) => value.includes(k))) return 'busy';
-  if (['cancelled', 'rejected', 'critical', 'inactive', 'deleted'].some((k) => value.includes(k))) return 'bad';
+  if (['critical'].some((k) => value.includes(k))) return 'critical';
+  if (['pending', 'submitted', 'awaiting verification', 'awaiting review', 'scheduled', 'planned'].some((k) => value.includes(k))) return 'pending';
+  if (['under review', 'under verification', 'review', 'preparing', 'in preparation', 'draft'].some((k) => value.includes(k))) return 'review';
+  if (['ongoing', 'in progress', 'restoration in progress', 'being implemented', 'implementing'].some((k) => value.includes(k))) return 'ongoing';
+  if (['verified', 'officially confirmed', 'published'].some((k) => value.includes(k))) return 'verified';
+  if (['resolved', 'restored', 'completed'].some((k) => value.includes(k)) || (value.includes('active') && !value.includes('inactive'))) return 'resolved';
+  if (['cancelled', 'rejected', 'duplicate', 'inactive', 'deleted'].some((k) => value.includes(k))) return 'rejected';
   return 'neutral';
 }
 
