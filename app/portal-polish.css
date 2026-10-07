@@ -5725,6 +5725,7 @@ body.community-body .mobile-tabs {
 body.community-body .mobile-tab {
   min-width: 0;
   min-height: 62px;
+  position: relative;
   display: grid;
   grid-template-rows: 24px auto;
   align-content: center;
@@ -5740,12 +5741,14 @@ body.community-body .mobile-tab {
   font-weight: 650;
   line-height: 1.15;
   white-space: nowrap;
+  transition: color 180ms ease, transform 160ms cubic-bezier(.2, .8, .2, 1);
 }
 
 body.community-body .mobile-tab-icon,
 body.community-body .mobile-tab-icon svg {
   width: 22px;
   height: 22px;
+  transition: transform 180ms cubic-bezier(.2, .8, .2, 1);
 }
 
 body.community-body .mobile-tab-label {
@@ -5763,10 +5766,47 @@ body.community-body .mobile-tab.active {
   font-weight: 750;
 }
 
+body.community-body .mobile-tab::after {
+  position: absolute;
+  right: 50%;
+  bottom: 1px;
+  width: 20px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  content: "";
+  transform: translateX(50%) scaleX(0);
+  transition: transform 180ms ease;
+}
+
+body.community-body .mobile-tab.active::after {
+  transform: translateX(50%) scaleX(1);
+}
+
+body.community-body .mobile-tab.active .mobile-tab-icon {
+  transform: translateY(-1px) scale(1.06);
+}
+
+body.community-body .mobile-tab:active {
+  transform: scale(.94);
+}
+
+body.community-body .mobile-tab:active .mobile-tab-icon {
+  transform: scale(.9);
+}
+
 body.dark-mode.community-body .mobile-tab.active {
   border-color: transparent !important;
   background: transparent !important;
   color: #fff !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.community-body .mobile-tab,
+  body.community-body .mobile-tab::after,
+  body.community-body .mobile-tab-icon {
+    transition: none;
+  }
 }
 
 body.dark-mode.community-body .mobile-home-greeting > span {
