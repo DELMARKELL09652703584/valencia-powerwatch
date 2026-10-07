@@ -1464,6 +1464,14 @@ async function handleClick(event) {
         state.filters.myReportStatus = 'pending';
         await goToTab('reports');
         return;
+      case 'open-current-outages':
+        state.filters.mobileType = '';
+        await goToTab('outages');
+        return;
+      case 'open-scheduled-outages':
+        state.filters.mobileType = 'Scheduled';
+        await goToTab('outages');
+        return;
       case 'feedback-star': {
         const rating = Math.max(1, Math.min(5, Number(value)));
         state.feedbackRating = rating;

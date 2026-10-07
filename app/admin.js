@@ -524,7 +524,6 @@ async function renderAdminDashboard() {
     { icon: '📊', label: 'Customer Impact', value: `${stats.affected_customers || 0}`, sub: 'affected accounts', tone: 'critical' },
     { icon: '🚨', label: 'Priority Areas', value: topBarangays.length ? `${topBarangays[0]?.barangay || 'N/A'}` : 'No active alert', sub: topBarangays.length > 1 ? `${topBarangays[1]?.barangay || 'Monitoring stable'}` : 'Monitoring stable', tone: 'warning' },
     { icon: '🛠️', label: 'Crew Readiness', value: `${stats.available_crews || 0}/${stats.total_crews || 4}`, sub: 'units on standby', tone: 'success' },
-    { icon: '🧭', label: 'Grid Status', value: state.activeIncidentsCount > 0 ? `${state.activeIncidentsCount} active` : 'Stable', sub: 'operations pulse', tone: 'neutral' },
   ];
 
   const barangayRows = (barangay.data || []).slice(0, 6).map((row) => ({ label: row.barangay, value: Number(row.c) || 0 }));
@@ -590,7 +589,7 @@ async function renderAdminDashboard() {
     <header class="dashboard-welcome command-center-header">
       <div class="command-header-main">
         <div class="command-badge-row">
-          <span class="command-badge"><span class="command-badge-dot"></span> SCADA 2030 CENTRAL COMMAND</span>
+          <span class="command-badge"><span class="command-badge-dot"></span> CITY POWER OPERATIONS</span>
           <span class="command-timestamp">🕒 ${nowPst} PST (UTC+8)</span>
         </div>
         <h2>Valencia Smart Grid Operations</h2>
@@ -630,7 +629,8 @@ async function renderAdminDashboard() {
       `).join('')}
     </div>
 
-    <div class="dashboard-focus-grid">
+    <section class="dashboard-focus-grid" aria-label="Operational snapshot">
+      <h2 class="dashboard-section-label">Operational snapshot</h2>
       ${focusCards.map((item) => `
         <div class="dashboard-focus-item focus-${item.tone}">
           <div class="focus-item-header">
@@ -641,7 +641,7 @@ async function renderAdminDashboard() {
           <small>${escapeHtml(item.sub)}</small>
         </div>
       `).join('')}
-    </div>
+    </section>
 
     <section class="bi-insights-panel admin-bi-panel" aria-labelledby="admin-bi-title">
       <header class="bi-insights-header">
@@ -664,8 +664,8 @@ async function renderAdminDashboard() {
       <section class="dashboard-visual-panel radar-map-panel">
         <header>
           <div>
-            <h3>📍 Valencia Grid Outage Radar</h3>
-            <span style="font-size:0.75rem;color:var(--admin-muted);">Live tactical GIS visualization</span>
+            <h3>📍 Incident &amp; Repair Team Map</h3>
+            <span style="font-size:0.75rem;color:var(--admin-muted);">Reported locations and available crews</span>
           </div>
           <button type="button" class="link-button" data-page="map" style="font-size:0.78rem;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
             Open Full GIS Map &rarr;
@@ -683,7 +683,7 @@ async function renderAdminDashboard() {
       <section class="dashboard-visual-panel dashboard-bar-panel">
         <header>
           <div>
-            <h3>🏛️ Outage Distribution by Barangay</h3>
+            <h3>🏛️ Reports by Barangay</h3>
             <span style="font-size:0.75rem;color:var(--admin-muted);">${stats.reports_total || 0} total reported interruptions</span>
           </div>
           <button type="button" class="link-button" data-page="reports" style="font-size:0.78rem;">View in Reports &rarr;</button>
@@ -697,8 +697,8 @@ async function renderAdminDashboard() {
       <section class="dashboard-visual-panel dashboard-trend-panel">
         <header>
           <div>
-            <h3>📈 Grid Outage Telemetry Trend</h3>
-            <span style="font-size:0.75rem;color:var(--admin-muted);">Monthly comparative fault analytics</span>
+            <h3>📈 Monthly Outage Trends</h3>
+            <span style="font-size:0.75rem;color:var(--admin-muted);">Scheduled maintenance vs unexpected faults</span>
           </div>
           <button type="button" class="link-button" data-page="analytics" style="font-size:0.78rem;">Analytics &rarr;</button>
         </header>
@@ -709,7 +709,7 @@ async function renderAdminDashboard() {
       <section class="dashboard-visual-panel fleet-status-panel">
         <header>
           <div>
-            <h3>🚒 Emergency Response Fleet Readiness</h3>
+            <h3>🚒 Repair Team Readiness</h3>
             <span style="font-size:0.75rem;color:var(--admin-muted);">${teams.length} Valencia City utility units</span>
           </div>
           <button type="button" class="link-button" data-page="dispatch" style="font-size:0.78rem;font-weight:700;">

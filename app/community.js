@@ -396,10 +396,6 @@ async function renderMobileHome() {
         </div>
         <h3>${escapeHtml(myIncident.title || 'Power Outage Reported')}</h3>
         <p>${escapeHtml(myIncident.description || 'Line crews have been notified. Response and field assessment ongoing.')}</p>
-        <div class="bsh-actions">
-          <button type="button" class="button danger small" data-mobile-tab="outages">Track Outage &rarr;</button>
-          <button type="button" class="button ghost small" data-mobile-tab="map">View Map</button>
-        </div>
       </section>
     `;
   } else if (myScheduled) {
@@ -412,9 +408,6 @@ async function renderMobileHome() {
         </div>
         <h3>Advisory: Upcoming Maintenance</h3>
         <p>Interruption scheduled on ${escapeHtml(formatSystemDate(myScheduled.outage_date))} (${escapeHtml(String(myScheduled.start_time || '').slice(0, 5))} - ${escapeHtml(String(myScheduled.expected_end_time || '').slice(0, 5))}).</p>
-        <div class="bsh-actions">
-          <button type="button" class="button secondary small" data-mobile-tab="outages">View Advisory &rarr;</button>
-        </div>
       </section>
     `;
   } else {
@@ -427,19 +420,19 @@ async function renderMobileHome() {
         </div>
         <h3>No active outage incidents recorded</h3>
         <p>Walay active outage incident nga naa sa system para sa imong barangay karon. Dili kini real-time voltage reading.</p>
-        <div class="bsh-actions">
-          <button type="button" class="button ghost small" data-mobile-tab="report">⚡ Report Outage</button>
-          <button type="button" class="button ghost small" data-mobile-tab="map">🗺️ Live Map</button>
-        </div>
       </section>
     `;
   }
 
   const dashboardCards = [
-    { label: t('active_outages', 'Active Outages'), value: stats.active_incidents, icon: '🔔', tone: 'danger', tab: 'outages' },
-    { label: t('pending_reports', 'Pending Reports'), value: stats.reports_pending, icon: '▣', tone: 'warning', action: 'dashboard-pending-reports' },
-    { label: t('resolved_today', 'Resolved Today'), value: stats.resolved_today, icon: '⬡', tone: 'success', tab: 'history' },
-    { label: t('total_reports', 'Total Reports'), value: stats.reports_total, icon: '✦', tone: 'primary', tab: 'reports' },
+    { label: 'Active outages', value: stats.active_incidents, icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 10-12h-7z"/></svg>', tone: 'danger', action: 'open-current-outages' },
+    { label: 'Pending reports', value: stats.reports_pending, icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><path d="m9 14 2 2 4-4"/></svg>', tone: 'warning', action: 'dashboard-pending-reports' },
+  ];
+  const shortcuts = [
+    { label: 'Current outages', icon: '<path d="M13 2 4 14h7l-1 8 10-12h-7z"/>', action: 'open-current-outages' },
+    { label: 'Scheduled outages', icon: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>', action: 'open-scheduled-outages' },
+    { label: 'Outage map', icon: '<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15m6-12v15"/>', tab: 'map' },
+    { label: 'Notifications', icon: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M10 21h4"/>', tab: 'notifications', count: Number(state.unread || 0) },
   ];
   const monthlyMaximum = Math.max(1, ...outageInsights.monthly.map((item) => Number(item.count) || 0));
   const trendCopy = outageInsights.trend.direction === 'up'
@@ -452,61 +445,94 @@ async function renderMobileHome() {
   const forecastCopy = outageInsights.projection.status === 'available'
     ? `Baseline estimate: about ${outageInsights.projection.next_month_unexpected_incidents} confirmed unexpected incidents next month, using the average of six complete months (${outageInsights.projection.sample_incidents} incidents across ${outageInsights.projection.sample_months} active months). This is not an official outage notice.`
     : `No forecast yet. Six complete months contain ${outageInsights.projection.sample_incidents} confirmed unexpected incidents across ${outageInsights.projection.sample_months} active months; the baseline requires at least 12 incidents across 3 months.`;
-  const updates = notifications.slice(0, 3);
+  const updates = [
+    ...notifications.map((notice) => ({
+      kind: 'notification',
+      id: notice.id,
+      title: notice.title,
+      summary: notice.message || '',
+      timestamp: notice.created_at,
+      type: notice.type,
+    })),
+    ...announcements.map((announcement) => ({
+      kind: 'announcement',
+      id: announcement.id,
+      title: announcement.title,
+      summary: announcement.category,
+      timestamp: announcement.published_at || announcement.created_at,
+      type: 'announcement',
+    })),
+  ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 4);
 
   mobileShell(`
-    ${barangayHeroMarkup}
-    <section class="mobile-weather" id="home-weather" aria-label="Current weather in Valencia City" aria-live="polite">
-      ${weatherWidgetMarkup(cachedWeather?.data, !cachedWeather)}
-    </section>
-    <div class="mobile-dashboard-grid">
+    <section class="home-dashboard" aria-label="Community dashboard">
+      <div class="home-dashboard-context">
+        <span class="home-area-label">YOUR AREA · BRGY. ${escapeHtml(userBarangay)}</span>
+        <section class="mobile-weather" id="home-weather" aria-label="Current weather in Valencia City" aria-live="polite">
+          ${weatherWidgetMarkup(cachedWeather?.data, !cachedWeather)}
+        </section>
+      </div>
+      ${barangayHeroMarkup}
+      <section class="home-primary-actions" aria-label="Main actions">
+        <button type="button" class="home-report-action" data-mobile-tab="report">
+          <span class="home-action-icon" aria-hidden="true">+</span>
+          <span><strong>Report a power interruption</strong><small>Send a report with location and evidence</small></span>
+          <span class="home-action-arrow" aria-hidden="true">›</span>
+        </button>
+        <button type="button" class="home-track-action" data-mobile-tab="reports">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><path d="m9 14 2 2 4-4"/></svg>
+          <span>Track my report</span><span aria-hidden="true">›</span>
+        </button>
+      </section>
+      <section class="home-shortcuts" aria-label="Power and account updates">
+        ${shortcuts.map((shortcut) => `<button type="button" class="home-shortcut" ${shortcut.action ? `data-action="${shortcut.action}"` : `data-mobile-tab="${shortcut.tab}"`}>
+          <span class="home-shortcut-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${shortcut.icon}</svg>${shortcut.count ? `<span class="home-shortcut-count">${shortcut.count > 99 ? '99+' : shortcut.count}</span>` : ''}</span>
+          <span>${shortcut.label}</span>
+        </button>`).join('')}
+      </section>
+      <section class="home-summary" aria-labelledby="home-summary-title">
+        <h2 id="home-summary-title">At a glance</h2>
+        <div class="home-summary-grid">
       ${dashboardCards.map((card) => `<button type="button" class="mobile-dashboard-card" data-dashboard-tone="${card.tone}" ${card.action ? `data-action="${card.action}"` : `data-mobile-tab="${card.tab}"`}>
         <span class="dashboard-card-icon" aria-hidden="true">${card.icon}</span>
         <span class="dashboard-card-label">${card.label}</span>
         <strong>${escapeHtml(String(card.value))}</strong>
       </button>`).join('')}
-    </div>
-    <section class="bi-insights-panel" aria-labelledby="community-bi-title">
-      <header class="bi-insights-header">
-        <div><span class="bi-eyebrow">DATA-BASED INSIGHT · ${escapeHtml(userBarangay)}</span><h2 id="community-bi-title">Local outage trends</h2></div>
-        <span class="bi-period">Last 90 days</span>
-      </header>
-      <p class="bi-insight-summary">${escapeHtml(trendCopy)}</p>
-      <div class="bi-monthly-chart" role="img" aria-label="Monthly unexpected incidents in ${escapeHtml(userBarangay)} for the last six complete months">
-        ${outageInsights.monthly.map((item) => `<div class="bi-month-column" title="${escapeHtml(item.month)}: ${item.count} unexpected incidents">
-          <b>${item.count}</b><span style="height:${Math.max(4, (item.count / monthlyMaximum) * 54)}px"></span><small>${escapeHtml(item.month.split(' ')[0])}</small>
-        </div>`).join('')}
-      </div>
-      <div class="bi-metric-row">
-        <div><span>Active incidents</span><strong>${outageInsights.current.active_incidents}</strong></div>
-        <div><span>Open community reports</span><strong>${outageInsights.current.open_unlinked_reports}</strong></div>
-        <div><span>Median repair arrival</span><strong>${outageInsights.current.median_dispatch_response_hours === null ? 'No data' : `${outageInsights.current.median_dispatch_response_hours}h`}</strong></div>
-      </div>
-      <p class="bi-projection ${outageInsights.projection.status === 'available' ? 'available' : 'limited'}">${escapeHtml(forecastCopy)}</p>
-      <small class="bi-data-note">Based on system incidents and reports for your barangay. Averages/medians describe recorded cases only; this is not a utility voltage monitor.</small>
-    </section>
+        </div>
+      </section>
     <section class="recent-updates">
-      <header class="recent-updates-head"><h2>${t('recent_updates', 'Recent Updates')}</h2><button type="button" class="link-button" data-mobile-tab="notifications">${t('view_all', 'View All')}</button></header>
-      ${updates.length ? updates.map((notice) => {
-        const restored = /restor|resolved|complete/i.test(`${notice.title} ${notice.message || ''}`);
-        const scheduledNotice = notice.type === 'scheduled' || /scheduled/i.test(notice.title);
-        const tone = restored ? 'success' : scheduledNotice ? 'info' : 'danger';
-        const icon = restored ? '⌖' : scheduledNotice ? 'i' : '⚠';
-        return `<button type="button" class="recent-update-row" data-action="view-notification" data-id="${notice.id}">
-          <span class="recent-update-icon" data-update-tone="${tone}">${icon}</span>
-          <span class="recent-update-copy"><strong>${escapeHtml(notice.title)}</strong><small>${escapeHtml(notice.message || '')}</small><time>${escapeHtml(formatRelativeTime(notice.created_at))}</time></span>
+      <header class="recent-updates-head"><h2>${t('recent_updates', 'Latest updates')}</h2><div class="home-feed-links"><button type="button" class="link-button" data-mobile-tab="notifications">Notifications</button><button type="button" class="link-button" data-mobile-tab="announcements">Announcements</button></div></header>
+      ${updates.length ? updates.map((item) => {
+        const restored = /restor|resolved|complete/i.test(`${item.title} ${item.summary}`);
+        const scheduledNotice = item.type === 'scheduled' || /scheduled/i.test(item.title);
+        const tone = item.kind === 'announcement' ? 'info' : restored ? 'success' : scheduledNotice ? 'info' : 'danger';
+        const icon = item.kind === 'announcement' ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a2 2 0 0 0 2 2h2l3 5h3l-2-6 8 3V7l-8 3H5a2 2 0 0 0-2 1z"/></svg>' : notificationTypeIcon(item.type);
+        const action = item.kind === 'announcement' ? 'view-announcement' : 'view-notification';
+        return `<button type="button" class="recent-update-row" data-action="${action}" data-id="${escapeHtml(String(item.id))}">
+          <span class="recent-update-icon" data-update-tone="${tone}" aria-hidden="true">${icon}</span>
+          <span class="recent-update-copy"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.summary)}</small><time>${escapeHtml(formatRelativeTime(item.timestamp))}</time></span>
           <span class="recent-update-chevron" aria-hidden="true">›</span>
         </button>`;
       }).join('') : `<p class="recent-updates-empty">${t('no_recent_updates', 'No recent updates.')}</p>`}
     </section>
-    <section class="recent-updates home-announcements">
-      <header class="recent-updates-head"><h2>Announcements</h2><button type="button" class="link-button" data-mobile-tab="announcements">View all</button></header>
-      ${announcements.length ? announcements.slice(0, 3).map((announcement) => `
-        <button type="button" class="recent-update-row" data-action="view-announcement" data-id="${announcement.id}">
-          <span class="recent-update-icon announcement-update-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a2 2 0 0 0 2 2h2l3 5h3l-2-6 8 3V7l-8 3H5a2 2 0 0 0-2 1z"></path></svg></span>
-          <span class="recent-update-copy"><strong>${escapeHtml(announcement.title)}</strong><small>${escapeHtml(announcement.category)}</small><time>${escapeHtml(formatRelativeTime(announcement.published_at || announcement.created_at))}</time></span>
-          <span class="recent-update-chevron" aria-hidden="true">›</span>
-        </button>`).join('') : '<p class="recent-updates-empty">No announcements right now.</p>'}
+    <details class="bi-insights-panel home-trends">
+      <summary><span>Local outage trends</span><small>Barangay · last 90 days</small></summary>
+      <div class="home-trends-content">
+        <p class="bi-insight-summary">${escapeHtml(trendCopy)}</p>
+        <div class="bi-monthly-chart" role="img" aria-label="Monthly unexpected incidents in ${escapeHtml(userBarangay)} for the last six complete months">
+          ${outageInsights.monthly.map((item) => `<div class="bi-month-column" title="${escapeHtml(item.month)}: ${item.count} unexpected incidents">
+            <b>${item.count}</b><span style="height:${Math.max(4, (item.count / monthlyMaximum) * 54)}px"></span><small>${escapeHtml(item.month.split(' ')[0])}</small>
+          </div>`).join('')}
+        </div>
+        <div class="bi-metric-row">
+          <div><span>Active incidents</span><strong>${outageInsights.current.active_incidents}</strong></div>
+          <div><span>Open community reports</span><strong>${outageInsights.current.open_unlinked_reports}</strong></div>
+          <div><span>Median repair arrival</span><strong>${outageInsights.current.median_dispatch_response_hours === null ? 'No data' : `${outageInsights.current.median_dispatch_response_hours}h`}</strong></div>
+        </div>
+        <p class="bi-projection ${outageInsights.projection.status === 'available' ? 'available' : 'limited'}">${escapeHtml(forecastCopy)}</p>
+        <small class="bi-data-note">Based on system incidents and reports for your barangay. Averages/medians describe recorded cases only; this is not a utility voltage monitor.</small>
+      </div>
+    </details>
     </section>
   `, { activeTab: 'home', homeHeader: true });
 
