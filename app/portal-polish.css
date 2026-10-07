@@ -5822,6 +5822,16 @@ body.dark-mode.community-body .mobile-tab.active::after {
   box-shadow: 0 0 7px rgba(103, 232, 249, .7);
 }
 
+body.community-body .mobile-home-greeting > span {
+  color: #e4f0fc !important;
+  text-shadow: 0 1px 2px rgba(0, 20, 44, .35);
+}
+
+body.community-body .mobile-home-greeting strong {
+  color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0, 20, 44, .35);
+}
+
 @media (prefers-reduced-motion: reduce) {
   body.community-body .mobile-tab,
   body.community-body .mobile-tab::after,
