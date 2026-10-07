@@ -2506,7 +2506,7 @@ async function renderAdminAnalytics() {
       </section>
     </div>
     <div class="analytics-metrics-grid">${cards.map((card) => `<article class="analytics-metric-card ${card.tone}"><span>${escapeHtml(card.label)}</span><strong>${escapeHtml(Number(card.value || 0).toLocaleString())}</strong></article>`).join('')}</div>
-    <section class="panel" style="margin-top:20px;padding:20px;border-radius:12px;background:#fff;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+    <section class="panel analytics-feedback-panel" style="margin-top:20px;padding:20px;border-radius:12px;background:#fff;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <div>
           <h3 style="margin:0;font-size:1.15rem;color:#0f2942;display:flex;align-items:center;gap:8px;">
