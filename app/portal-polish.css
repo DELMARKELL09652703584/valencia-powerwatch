@@ -5625,6 +5625,70 @@ body.community-body .home-trends > summary small {
   }
 }
 
+body.dark-mode.community-body .stepper {
+  border-bottom: 1px solid var(--pw-line);
+  background: var(--pw-raised);
+}
+
+body.dark-mode.community-body .stepper .step > span:last-child {
+  color: var(--pw-body) !important;
+}
+
+body.dark-mode.community-body .stepper .step-number {
+  border-color: #58708d;
+  background: var(--pw-panel);
+  color: var(--pw-body);
+}
+
+body.dark-mode.community-body .stepper .step.active > span:last-child {
+  color: #a9d8ff !important;
+}
+
+body.dark-mode.community-body .stepper .step.active .step-number {
+  border-color: var(--pw-primary);
+  background: var(--pw-primary);
+  color: #fff;
+}
+
+body.dark-mode.community-body .stepper .step.complete > span:last-child {
+  color: #a7e8ce !important;
+}
+
+body.dark-mode.community-body .stepper .step.complete .step-number {
+  border-color: #168064;
+  background: #168064;
+  color: #fff;
+}
+
+body.dark-mode.community-body #report-assigned-barangay-badge {
+  border-color: #28684f !important;
+  background: #10352b !important;
+}
+
+body.dark-mode.community-body #report-assigned-barangay-badge > div > div > div {
+  color: #a7f3d0 !important;
+}
+
+body.dark-mode.community-body #report-assigned-barangay-badge #assigned-barangay-name {
+  color: #d1fae5 !important;
+}
+
+body.dark-mode.community-body #report-assigned-barangay-badge .pill-ok {
+  border-color: #327b5d;
+  background: #174a3c;
+  color: #c7f9df !important;
+}
+
+body.dark-mode.community-body .mobile-gps {
+  border-color: var(--pw-line);
+  background: var(--pw-panel);
+  color: var(--pw-body);
+}
+
+body.dark-mode.community-body .mobile-gps .muted.small {
+  color: var(--pw-muted) !important;
+}
+
 @media (max-width: 360px) {
   body.admin-body .login-page {
     grid-template-columns: minmax(0, 1fr);
