@@ -1974,6 +1974,95 @@ body.admin-body .admin-notification-panel :where(h2, h3, strong) {
   color: #f1f5ff;
 }
 
+body.admin-body .admin-notification-panel {
+  border-color: #405875;
+  background: #0d192c;
+  color: #d2deee;
+}
+
+body.admin-body .admin-notification-panel .notification-panel-heading {
+  border-bottom-color: #344b68;
+}
+
+body.admin-body .admin-notification-panel .notification-panel-heading span,
+body.admin-body .admin-notification-panel .notification-panel-open > span,
+body.admin-body .admin-notification-panel .notification-panel-open time,
+body.admin-body .admin-notification-panel .notification-panel-empty {
+  color: #b8c8dc !important;
+}
+
+body.admin-body .admin-notification-panel .notification-panel-list,
+body.admin-body .admin-notification-panel .notification-panel-item {
+  background: #0d192c;
+}
+
+body.admin-body .admin-notification-panel .notification-panel-item {
+  border-bottom-color: #344b68;
+}
+
+body.admin-body .admin-notification-panel .notification-panel-item.unread {
+  background: #14243a;
+}
+
+body.admin-body .admin-notification-panel .notification-panel-open {
+  color: #f1f5ff;
+}
+
+body.admin-body .admin-notification-panel .notification-panel-close {
+  border-color: #405875;
+  background: #172b46;
+  color: #f1f5ff;
+}
+
+body.admin-body .admin-notification-panel .notification-panel-close:hover {
+  border-color: #67a8df;
+  background: #203b5d;
+  color: #fff;
+}
+
+body.admin-body .admin-notification-panel .notification-panel-mark-all {
+  color: #67e8f9;
+}
+
+body.admin-body .admin-notification-panel .notification-panel-mark-all:hover {
+  background: #17334b;
+  color: #a5f3fc;
+}
+
+body.admin-body .admin-notification-panel .notification-panel-read {
+  border-color: #286b4f;
+  background: #0d3428;
+  color: #adf5d4;
+}
+
+body.admin-body .admin-notification-panel .notification-panel-read:hover {
+  border-color: #48a879;
+  background: #154936;
+  color: #d1fae5;
+}
+
+body.admin-body .admin-notification-panel .notification-panel-footer {
+  border-top-color: #344b68;
+  background: #0a1526;
+}
+
+body.admin-body .admin-notification-panel .notification-panel-footer button {
+  border-color: #405875;
+  background: #172b46;
+  color: #a5e9ff;
+}
+
+body.admin-body .admin-notification-panel .notification-panel-footer button:hover {
+  border-color: #4b91c5;
+  background: #203b5d;
+  color: #fff;
+}
+
+body.admin-body .admin-notification-panel :is(button, a):focus-visible {
+  outline: 3px solid #67e8f9;
+  outline-offset: 2px;
+}
+
 body.admin-body .toast {
   border: 1px solid #405875;
   background: #13233b;
