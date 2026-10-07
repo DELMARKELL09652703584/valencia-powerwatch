@@ -5669,6 +5669,52 @@ body.dark-mode.community-body .mobile-gps .muted.small {
   color: var(--pw-muted) !important;
 }
 
+body.dark-mode.community-body .possible-duplicate-notice,
+body.dark-mode.community-body .possible-duplicate-clear {
+  border-color: #80632f !important;
+  background: #332a1a !important;
+  color: #f2d995 !important;
+}
+
+body.dark-mode.community-body .possible-duplicate-notice strong {
+  color: #ffe6a8 !important;
+}
+
+body.dark-mode.community-body .possible-duplicate-notice p,
+body.dark-mode.community-body .possible-duplicate-notice li,
+body.dark-mode.community-body .possible-duplicate-notice li span {
+  color: #e9d9b4 !important;
+}
+
+body.dark-mode.community-body .possible-duplicate-notice li {
+  border-color: #67522e !important;
+  background: #282316 !important;
+}
+
+body.dark-mode.community-body .possible-duplicate-notice li small {
+  color: #d8c28e !important;
+}
+
+body.dark-mode.community-body .possible-duplicate-notice.is-unavailable {
+  border-color: #985546 !important;
+  background: #3a211e !important;
+  color: #ffd2c8 !important;
+}
+
+body.dark-mode.community-body .possible-duplicate-notice.is-unavailable strong {
+  color: #ffe1d9 !important;
+}
+
+body.dark-mode.community-body .possible-duplicate-notice.is-unavailable p {
+  color: #f0c9c0 !important;
+}
+
+body.dark-mode.community-body .possible-duplicate-clear {
+  border-color: #34775a !important;
+  background: #15372b !important;
+  color: #baf1d3 !important;
+}
+
 body.dark-mode.community-body .mobile-home-greeting > span {
   color: #d3e6f5 !important;
 }
