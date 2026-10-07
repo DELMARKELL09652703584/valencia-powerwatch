@@ -1396,8 +1396,13 @@ body.dark-mode.admin-body :is(.report-status.neutral, .incident-status-badge.neu
 }
 
 
-body.admin-body .analytics-bar-track {
+body.dark-mode.admin-body .analytics-bar-track {
   background: #192a42;
+}
+
+body.dark-mode.admin-body .analytics-page .analytics-bar-plot {
+  border-bottom-color: #344862;
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(25% - 1px), #30435b calc(25% - 1px), #30435b 25%);
 }
 
 
