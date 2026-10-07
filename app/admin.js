@@ -832,7 +832,7 @@ async function renderAdminDashboard() {
   const radarElement = document.getElementById('dashboard-radar-map');
   if (radarElement) {
     try {
-      await ensureLeaflet();
+      await loadAdminMapLibrary();
       const radarMap = L.map(radarElement, {
         zoomControl: true,
         minZoom: 10,
@@ -1809,9 +1809,9 @@ async function renderAdminMap() {
           <button type="button" data-map-home aria-label="Return to Valencia City extent" title="Return to Valencia City">⌂</button>
           <button type="button" data-map-geolocate aria-label="Show my current location" title="Show my location">◎</button>
           <button type="button" data-map-toggle-heat aria-label="Toggle Outage Heatmap" title="Toggle Outage Heatmap" class="${layers.heatmap ? 'active' : ''}">🔥</button>
-          <button type="button" data-action="toggle-admin-route" aria-label="Toggle Blue Route Guide" title="Toggle Blue Route Guide" style="background:#2563eb;color:#fff;font-weight:750;">🧭</button>
-          <button type="button" data-action="toggle-admin-cyber" class="${state.adminCyberMode ? 'active' : ''}" aria-label="Toggle Cyber 2030 Dark Matrix" title="Cyber 2030 Dark Mode" style="background:#0f172a;color:#38bdf8;font-weight:750;">🌌</button>
-          <button type="button" data-action="toggle-admin-feeders" class="${state.adminFeedersMode !== false ? 'active' : ''}" aria-label="Toggle Smart Grid Feeder Lines" title="Toggle 13.2kV Distribution Feeders" style="background:#0284c7;color:#fff;font-weight:750;">⚡</button>
+          <button type="button" class="map-control-route" data-action="toggle-admin-route" aria-label="Toggle Blue Route Guide" title="Toggle Blue Route Guide">🧭</button>
+          <button type="button" class="map-control-cyber ${state.adminCyberMode ? 'active' : ''}" data-action="toggle-admin-cyber" aria-label="Toggle Cyber 2030 Dark Matrix" title="Cyber 2030 Dark Mode">🌌</button>
+          <button type="button" class="map-control-feeders ${state.adminFeedersMode !== false ? 'active' : ''}" data-action="toggle-admin-feeders" aria-label="Toggle Smart Grid Feeder Lines" title="Toggle 13.2kV Distribution Feeders">⚡</button>
         </div>
         <label class="power-map-focus"><span>⌖</span><select data-map-focus aria-label="Focus map on a barangay"><option value="">Find a barangay</option>${barangays.map((item) => `<option value="${escapeHtml(item.name)}">${escapeHtml(item.name)}</option>`).join('')}</select></label>
       </div>
@@ -1851,29 +1851,29 @@ async function renderAdminMap() {
             </select>
           </div>
           <h3>Layers &amp; Smart Grid</h3>
-          <label style="background:#f0f9ff;border:1px solid #bae6fd;padding:6px 9px;border-radius:7px;margin-bottom:4px;cursor:pointer;">
+          <label class="map-layer-option map-layer-option-feeders">
             <input type="checkbox" data-action="toggle-admin-feeders" ${state.adminFeedersMode !== false ? 'checked' : ''}>
-            <span style="font-weight:700;color:#0369a1;">⚡ 13.2kV Feeders (Pulsing)</span>
-            <b class="heatmap-badge" style="background:#0284c7;color:#fff;">2030</b>
+            <span>⚡ 13.2kV Feeders (Pulsing)</span>
+            <b class="heatmap-badge">2030</b>
           </label>
-          <label style="background:#0f172a;color:#e2e8f0;border:1px solid #334155;padding:6px 9px;border-radius:7px;margin-bottom:4px;cursor:pointer;">
+          <label class="map-layer-option map-layer-option-cyber">
             <input type="checkbox" data-action="toggle-admin-cyber" ${state.adminCyberMode ? 'checked' : ''}>
-            <span style="font-weight:750;color:#38bdf8;">🌌 Cyber 2030 Dark Matrix</span>
-            <b class="heatmap-badge" style="background:#0284c7;color:#fff;">Sci-Fi</b>
+            <span>🌌 Cyber 2030 Dark Matrix</span>
+            <b class="heatmap-badge">Sci-Fi</b>
           </label>
-          <label style="background:#fff5f5;border:1px solid #fecaca;padding:6px 9px;border-radius:7px;margin-bottom:4px;">
+          <label class="map-layer-option map-layer-option-heatmap">
             <input type="checkbox" data-map-layer="heatmap" ${layers.heatmap ? 'checked' : ''}>
-            <span style="font-weight:700;color:#b91c1c;">🔥 Outage Density Heatmap</span>
+            <span>🔥 Outage Density Heatmap</span>
             <b class="heatmap-badge">Current</b>
           </label>
-          <label><input type="checkbox" data-map-layer="active" ${layers.active ? 'checked' : ''}><span>Active Outages</span><b>${countWithCoordinates(activeIncidents)}</b></label>
-          <label><input type="checkbox" data-map-layer="verification" ${layers.verification ? 'checked' : ''}><span>Open Reports &amp; Verification</span><b>${countWithCoordinates([...openReports, ...verificationIncidents])}</b></label>
-          <label><input type="checkbox" data-map-layer="resolved" ${layers.resolved ? 'checked' : ''}><span>Resolved Incidents</span><b>${countWithCoordinates(resolvedIncidents)}</b></label>
-          <label><input type="checkbox" data-map-layer="scheduled" ${layers.scheduled ? 'checked' : ''}><span>Scheduled Outages</span><b>${countWithCoordinates(scheduled)}</b></label>
-          <label><input type="checkbox" data-map-layer="barangays" ${layers.barangays ? 'checked' : ''}><span>Barangay Centers</span><b>${barangays.length}</b></label>
-          <label><input type="checkbox" data-map-layer="roads" ${layers.roads ? 'checked' : ''}><span>Roads</span></label>
-          <label><input type="checkbox" data-map-street-features ${layers.rivers ? 'checked' : ''}><span>Street Map</span></label>
-          <label><input type="checkbox" data-map-satellite ${layers.satellite ? 'checked' : ''}><span>Satellite View</span></label>
+          <label class="map-layer-option"><input type="checkbox" data-map-layer="active" ${layers.active ? 'checked' : ''}><span>Active Outages</span><b>${countWithCoordinates(activeIncidents)}</b></label>
+          <label class="map-layer-option"><input type="checkbox" data-map-layer="verification" ${layers.verification ? 'checked' : ''}><span>Open Reports &amp; Verification</span><b>${countWithCoordinates([...openReports, ...verificationIncidents])}</b></label>
+          <label class="map-layer-option"><input type="checkbox" data-map-layer="resolved" ${layers.resolved ? 'checked' : ''}><span>Resolved Incidents</span><b>${countWithCoordinates(resolvedIncidents)}</b></label>
+          <label class="map-layer-option"><input type="checkbox" data-map-layer="scheduled" ${layers.scheduled ? 'checked' : ''}><span>Scheduled Outages</span><b>${countWithCoordinates(scheduled)}</b></label>
+          <label class="map-layer-option"><input type="checkbox" data-map-layer="barangays" ${layers.barangays ? 'checked' : ''}><span>Barangay Centers</span><b>${barangays.length}</b></label>
+          <label class="map-layer-option"><input type="checkbox" data-map-layer="roads" ${layers.roads ? 'checked' : ''}><span>Roads</span></label>
+          <label class="map-layer-option"><input type="checkbox" data-map-street-features ${layers.rivers ? 'checked' : ''}><span>Street Map</span></label>
+          <label class="map-layer-option"><input type="checkbox" data-map-satellite ${layers.satellite ? 'checked' : ''}><span>Satellite View</span></label>
           <p class="map-boundary-note">Pins open individual outage or report details and dispatch actions. Heatmap shows current incidents and open unlinked reports; scheduled and resolved outages are excluded. Street Map uses labeled roads and places, not 360-degree Street View; Satellite View adds aerial context for field response. Official barangay boundary polygons are not configured; barangay centers are shown instead.</p>
         </section>
         ${topHotspots.length ? `

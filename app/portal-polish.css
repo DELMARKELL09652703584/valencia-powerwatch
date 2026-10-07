@@ -1408,6 +1408,8 @@ body.community-body .mobile-tab {
 }
 
 body.community-body .mobile-tab.active {
+  border: 1px solid rgba(34, 211, 238, .28);
+  background: #15345c;
   color: #67e8f9;
 }
 
@@ -1503,4 +1505,121 @@ body.community-body .powerwatch-chat-message.from-user {
 body.admin-body :focus-visible,
 body.community-body :focus-visible {
   outline-color: rgba(34, 211, 238, .7);
+}
+
+body.admin-body .reports-close {
+  border: 1px solid #304665;
+  border-radius: 9px;
+  background: #111f34;
+  color: #dceaff;
+  opacity: 1;
+}
+
+body.admin-body .reports-close:hover {
+  border-color: #22d3ee;
+  background: #15345c;
+  color: #fff;
+}
+
+body.admin-body .power-map-controls button {
+  border-color: #304665;
+  background: #111f34;
+  color: #dceaff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+}
+
+body.admin-body .power-map-controls button:hover {
+  border-color: #22d3ee;
+  background: #15345c;
+  color: #fff;
+}
+
+body.admin-body .power-map-controls .map-control-route {
+  border-color: #2563eb;
+  background: #1d4ed8;
+  color: #fff;
+}
+
+body.admin-body .power-map-controls .map-control-cyber {
+  border-color: #304665;
+  background: #0d192c;
+  color: #67e8f9;
+}
+
+body.admin-body .power-map-controls .map-control-feeders {
+  border-color: #0369a1;
+  background: #0369a1;
+  color: #fff;
+}
+
+body.admin-body .power-map-layer-panel {
+  border-color: #263955;
+  background: #0d192c;
+  color: #e8f1ff;
+}
+
+body.admin-body .power-map-layer-panel > label.map-layer-option {
+  min-height: 38px;
+  padding: 6px 9px;
+  border: 1px solid #263955;
+  border-radius: 8px;
+  background: #081426;
+  color: #c1d0e4;
+}
+
+body.admin-body .power-map-layer-panel > label.map-layer-option span {
+  color: #dceaff;
+}
+
+body.admin-body .power-map-layer-panel > label.map-layer-option b {
+  color: #c1d0e4;
+}
+
+body.admin-body .power-map-layer-panel > label.map-layer-option input {
+  accent-color: #22d3ee;
+}
+
+body.admin-body .power-map-layer-panel > label.map-layer-option-feeders {
+  border-color: #155b91;
+  background: #112d47;
+}
+
+body.admin-body .power-map-layer-panel > label.map-layer-option-feeders .heatmap-badge {
+  border: 1px solid #155b91;
+  background: #0b3c61;
+  color: #bdeaff;
+}
+
+body.admin-body .power-map-layer-panel > label.map-layer-option-cyber {
+  border-color: #304665;
+  background: #0b1424;
+}
+
+body.admin-body .power-map-layer-panel > label.map-layer-option-cyber span {
+  color: #67e8f9;
+}
+
+body.admin-body .power-map-layer-panel > label.map-layer-option-cyber .heatmap-badge {
+  border: 1px solid #304665;
+  background: #13223a;
+  color: #c1d0e4;
+}
+
+body.admin-body .power-map-layer-panel > label.map-layer-option-heatmap {
+  border-color: rgba(251, 113, 133, .38);
+  background: #351d2b;
+}
+
+body.admin-body .power-map-layer-panel > label.map-layer-option-heatmap span {
+  color: #ffb0bd;
+}
+
+body.admin-body .power-map-layer-panel > label.map-layer-option-heatmap .heatmap-badge {
+  border: 1px solid rgba(251, 113, 133, .38);
+  background: #3a1d2b;
+  color: #ffb0bd;
+}
+
+body.admin-body .power-map-layer-panel :is(.map-boundary-note, .power-map-layer-panel label b) {
+  color: #a9bad1;
 }

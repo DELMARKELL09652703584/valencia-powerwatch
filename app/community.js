@@ -428,8 +428,8 @@ async function renderMobileHome() {
         <h3>No active outage incidents recorded</h3>
         <p>Walay active outage incident nga naa sa system para sa imong barangay karon. Dili kini real-time voltage reading.</p>
         <div class="bsh-actions">
-          <button type="button" class="button ghost small" data-mobile-tab="report" style="background:#fff;border-color:#bbf7d0;color:#166534;font-weight:700;">⚡ Report Outage</button>
-          <button type="button" class="button ghost small" data-mobile-tab="map" style="background:#fff;border-color:#bbf7d0;color:#166534;">🗺️ Live Map</button>
+          <button type="button" class="button ghost small" data-mobile-tab="report">⚡ Report Outage</button>
+          <button type="button" class="button ghost small" data-mobile-tab="map">🗺️ Live Map</button>
         </div>
       </section>
     `;

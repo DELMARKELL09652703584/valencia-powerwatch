@@ -284,16 +284,6 @@ router.put('/incidents/:id/status', requireAuth, requireRole('personnel', 'admin
       db.prepare("UPDATE outage_reports SET status = 'Resolved', updated_at = ? WHERE id = ?").run(reportUpdatedAt, report.id);
       recordReportStatusChange(report, 'Resolved', req.user, reportUpdatedAt, `Incident ${incident.incident_code} was marked ${status.toLowerCase()}.`);
     }
-    if (incident.barangay) {
-      const barangayReports = db.prepare(`
-        SELECT * FROM outage_reports
-        WHERE barangay = ? AND status NOT IN ('Rejected', 'Duplicate', 'Resolved')
-      `).all(incident.barangay);
-      db.prepare("UPDATE outage_reports SET status = 'Resolved', updated_at = ? WHERE barangay = ? AND status NOT IN ('Rejected', 'Duplicate', 'Resolved')").run(reportUpdatedAt, incident.barangay);
-      for (const report of barangayReports) {
-        recordReportStatusChange(report, 'Resolved', req.user, reportUpdatedAt, `Incident ${incident.incident_code} was marked ${status.toLowerCase()}.`);
-      }
-    }
   } else if (['Ongoing', 'Restoration in Progress', 'In Progress'].includes(status)) {
     const reportUpdatedAt = now();
     const linkedReports = db.prepare(`
@@ -304,16 +294,6 @@ router.put('/incidents/:id/status', requireAuth, requireRole('personnel', 'admin
     for (const report of linkedReports) {
       db.prepare("UPDATE outage_reports SET status = 'In Progress', updated_at = ? WHERE id = ?").run(reportUpdatedAt, report.id);
       recordReportStatusChange(report, 'In Progress', req.user, reportUpdatedAt, `Incident ${incident.incident_code} is being handled.`);
-    }
-    if (incident.barangay) {
-      const barangayReports = db.prepare(`
-        SELECT * FROM outage_reports
-        WHERE barangay = ? AND status IN ('Submitted', 'Under Review', 'Verified', 'Officially Confirmed')
-      `).all(incident.barangay);
-      db.prepare("UPDATE outage_reports SET status = 'In Progress', updated_at = ? WHERE barangay = ? AND status IN ('Submitted', 'Under Review', 'Verified', 'Officially Confirmed')").run(reportUpdatedAt, incident.barangay);
-      for (const report of barangayReports) {
-        recordReportStatusChange(report, 'In Progress', req.user, reportUpdatedAt, `Incident ${incident.incident_code} is being handled.`);
-      }
     }
   }
 

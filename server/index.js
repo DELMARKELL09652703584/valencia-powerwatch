@@ -118,7 +118,11 @@ app.get('/sw.js', async (req, res, next) => {
 });
 app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(ROOT, 'admin.html')));
 app.get(['/user', '/user.html', '/citizen', '/citizen.html', '/community', '/community.html'], (req, res) => res.sendFile(path.join(ROOT, 'community.html')));
-app.get(['/auth/oauth-dialog', '/auth/oauth-popup'], (req, res) => res.sendFile(path.join(ROOT, 'oauth-dialog.html')));
+app.get(['/auth/oauth-dialog', '/auth/oauth-popup'], (req, res) => {
+  const provider = String(req.query.provider || '');
+  if (!['google', 'facebook'].includes(provider)) return res.status(400).send('Unsupported sign-in provider.');
+  return res.redirect(`/api/auth/oauth/${encodeURIComponent(provider)}`);
+});
 app.get(['/style.css', '/community/style.css', '/admin/style.css', '/install/style.css'], (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, must-revalidate');
   res.sendFile(path.join(ROOT, 'style.css'));
