@@ -159,6 +159,15 @@ function mobileInstallButton() {
   </button>`;
 }
 
+function mobileThemeToggle() {
+  const isDark = document.documentElement.classList.contains('dark-mode');
+  const label = isDark ? 'Switch to Light mode' : 'Switch to Night Ops dark mode';
+  return `<button type="button" class="mobile-theme-toggle" data-action="toggle-admin-theme" aria-pressed="${isDark}" aria-label="${label}" title="${label}">
+    <span id="theme-btn-icon" aria-hidden="true">${isDark ? '☀️' : '🌙'}</span>
+    <span id="theme-btn-text" class="mobile-theme-label">${isDark ? 'Light' : 'Night Ops'}</span>
+  </button>`;
+}
+
 function mobileNotificationPanelMarkup() {
   if (!state.mobileNotificationPanelOpen) return '';
   const notices = (state.mobileNotificationPreview || []).slice(0, 6);
@@ -269,7 +278,7 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
           </svg>
         </button>
         <h1 class="mobile-header-title">${escapeHtml(subpageHeader.title)}</h1>
-        <div class="mobile-header-right">${subpageHeader.rightAction || `${mobileInstallButton()}${mobileNotificationBell()}`}</div>
+        <div class="mobile-header-right">${mobileThemeToggle()}${subpageHeader.rightAction || `${mobileInstallButton()}${mobileNotificationBell()}`}</div>
         ${mobileNotificationPanelMarkup()}
       </header>`;
   } else if (homeHeader) {
@@ -280,6 +289,7 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
           <span class="mobile-home-greeting"><span>${greeting}</span><strong>${escapeHtml(user.full_name || 'Resident')}</strong></span>
         </div>
         <div class="mobile-header-actions">
+          ${mobileThemeToggle()}
           ${mobileInstallButton()}
           <button type="button" class="mobile-lang-chip" data-action="toggle-mobile-language" title="English / Sinugbuanong Binisaya">
             <span>${getLanguage() === 'ceb' ? '🇵🇭 CEB' : '🇺🇸 EN'}</span>
@@ -296,6 +306,7 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
           <div><strong>Valencia</strong><b>PowerWatch</b></div>
         </div>
         <div class="mobile-header-actions">
+          ${mobileThemeToggle()}
           ${mobileInstallButton()}
           <button type="button" class="mobile-lang-chip" data-action="toggle-mobile-language" title="English / Sinugbuanong Binisaya">
             <span>${getLanguage() === 'ceb' ? '🇵🇭 CEB' : '🇺🇸 EN'}</span>

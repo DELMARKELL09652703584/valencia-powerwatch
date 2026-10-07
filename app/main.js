@@ -37,6 +37,7 @@ window.addEventListener('appinstalled', () => {
 
 function renderWelcomeScreen() {
   app.innerHTML = `<main class="mobile-welcome">
+    <div class="mobile-theme-toolbar mobile-theme-toolbar-welcome">${mobileThemeToggle()}</div>
     <div class="mobile-welcome-brand"><img class="welcome-logo" src="/assets/powerwatch-logo.svg" alt="Valencia PowerWatch logo"><h1>Valencia</h1><strong>PowerWatch</strong></div>
     <p>Community Power Interruption Reporting, Verification, and Information Management System for Valencia City, Bukidnon</p>
     <button class="button primary mobile-welcome-start" type="button" data-action="get-started">Get Started <span aria-hidden="true">→</span></button>
@@ -52,6 +53,7 @@ function renderLogin(message = '', loginIdentifier = null, rememberIdentifier = 
     const shouldRememberIdentifier = rememberIdentifier ?? true;
     app.innerHTML = `<main class="mobile-auth-page">
       <section class="mobile-auth-content">
+        <div class="mobile-theme-toolbar">${mobileThemeToggle()}</div>
         <div class="mobile-auth-brand"><img class="auth-brand-logo" src="/assets/powerwatch-logo.svg" alt=""><div><strong>Valencia</strong><b>PowerWatch</b></div></div>
         <h1>Welcome back</h1>
         <p>Sign in to report interruptions and stay updated.</p>
@@ -189,7 +191,7 @@ function renderForgotPassword(message = '') {
     return;
   }
   app.innerHTML = `<main class="mobile-auth-page">
-    <header class="mobile-auth-header"><button type="button" class="mobile-auth-back" data-action="back-login" aria-label="Back to login">&#8249;</button><span>Valencia PowerWatch</span></header>
+    <header class="mobile-auth-header"><button type="button" class="mobile-auth-back" data-action="back-login" aria-label="Back to login">&#8249;</button><span>Valencia PowerWatch</span>${IS_COMMUNITY ? mobileThemeToggle() : ''}</header>
     <section class="mobile-auth-content">
       <h1>Forgot Password?</h1>
       <p>Enter your account email and we will send a secure reset link.</p>
@@ -207,7 +209,7 @@ function renderForgotPassword(message = '') {
 
 function renderResetPassword(token, message = '') {
   app.innerHTML = `<main class="mobile-auth-page">
-    <header class="mobile-auth-header"><span>Valencia PowerWatch</span></header>
+    <header class="mobile-auth-header"><span>Valencia PowerWatch</span>${IS_COMMUNITY ? mobileThemeToggle() : ''}</header>
     <section class="mobile-auth-content">
       <h1>Reset Password</h1>
       <p>Choose a new password for your account.</p>
@@ -226,7 +228,7 @@ function renderResetPassword(token, message = '') {
 function renderRegister(message = '') {
   if (IS_COMMUNITY) {
     app.innerHTML = `<main class="mobile-auth-page">
-      <header class="mobile-auth-header"><button type="button" class="mobile-auth-back" data-action="back-login" aria-label="Back to login">&#8249;</button><span>Valencia PowerWatch</span></header>
+      <header class="mobile-auth-header"><button type="button" class="mobile-auth-back" data-action="back-login" aria-label="Back to login">&#8249;</button><span>Valencia PowerWatch</span>${mobileThemeToggle()}</header>
       <section class="mobile-auth-content">
         <h1>Create Account</h1>
         <p>Join Valencia PowerWatch to stay informed and report power interruptions.</p>
