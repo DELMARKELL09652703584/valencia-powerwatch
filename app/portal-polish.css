@@ -3843,6 +3843,123 @@ body.community-body .home-summary-grid .dashboard-card-icon {
   font-weight: 800;
 }
 
+body.community-body .mobile-notification-panel {
+  border-color: #3b536f !important;
+  background: #111d2f !important;
+  color: #e8f1fb !important;
+  box-shadow: 0 22px 54px rgba(0, 0, 0, .58), 0 0 0 1px rgba(148, 163, 184, .12) !important;
+}
+
+body.community-body .mobile-notification-panel-head,
+body.community-body .mobile-notification-panel-footer {
+  border-color: #344a64 !important;
+  background: #0d1829 !important;
+}
+
+body.community-body .notif-panel-title-row strong {
+  color: #f1f7ff !important;
+}
+
+body.community-body .notif-panel-sub {
+  color: #bdcce0 !important;
+}
+
+body.community-body .notif-badge-pill {
+  background: #7f1d2d !important;
+  color: #fff1f2 !important;
+}
+
+body.community-body .notif-badge-pill.notif-badge-done {
+  background: #164e63 !important;
+  color: #cffafe !important;
+}
+
+body.community-body .mobile-notification-preview,
+body.community-body .mobile-notification-preview.unread {
+  border-bottom-color: #344a64 !important;
+  background: #17263a !important;
+}
+
+body.community-body .mobile-notification-preview:hover {
+  background: #20344d !important;
+}
+
+body.community-body .mobile-notif-type-icon {
+  background: #263a53 !important;
+  color: #e2edfa !important;
+}
+
+body.community-body .mobile-notif-type-icon.incident {
+  background: #542432 !important;
+  color: #fecdd3 !important;
+}
+
+body.community-body .mobile-notif-type-icon.report,
+body.community-body .mobile-notif-type-icon.general {
+  background: #123b55 !important;
+  color: #a5f3fc !important;
+}
+
+body.community-body .mobile-notif-type-icon.scheduled {
+  background: #392b5b !important;
+  color: #ddd6fe !important;
+}
+
+body.community-body .mobile-notif-type-icon.announcement {
+  background: #513b18 !important;
+  color: #fde68a !important;
+}
+
+body.community-body .notif-item-title {
+  color: #f1f7ff !important;
+}
+
+body.community-body .notif-item-time,
+body.community-body .notif-item-msg {
+  color: #c2d0e2 !important;
+}
+
+body.community-body .mobile-notification-mark-all,
+body.community-body .notif-view-all-link,
+body.community-body .notif-settings-link,
+body.community-body .mobile-notification-panel-close {
+  border-color: #52708f !important;
+  background: #1a2b42 !important;
+  color: #eaf4ff !important;
+}
+
+body.community-body .mobile-notification-mark-all:hover,
+body.community-body .notif-view-all-link:hover,
+body.community-body .notif-settings-link:hover,
+body.community-body .mobile-notification-panel-close:hover {
+  border-color: #67e8f9 !important;
+  background: #23405d !important;
+  color: #fff !important;
+}
+
+body.community-body .mobile-notification-preview-read {
+  border-color: #2f855a !important;
+  background: #123b31 !important;
+  color: #bbf7d0 !important;
+}
+
+body.community-body .notif-item-read-icon {
+  color: #b7c7db !important;
+}
+
+body.community-body .mobile-notification-panel-empty strong {
+  color: #f1f7ff !important;
+}
+
+body.community-body .mobile-notification-panel-empty p {
+  color: #c2d0e2 !important;
+}
+
+body.community-body .mobile-notification-panel :is(button, a):focus-visible {
+  outline: 3px solid #67e8f9 !important;
+  outline-offset: 2px;
+}
+
 body.community-body .home-summary-grid .dashboard-card-icon svg {
   width: 16px;
   height: 16px;
