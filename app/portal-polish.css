@@ -5271,3 +5271,172 @@ body.admin-body .admin-dashboard-page .admin-bi-panel .bi-data-note {
     transition-duration: .01ms !important;
   }
 }
+
+body.community-body {
+  --pw-bg: #f3f7fb;
+  --pw-shell: #f8fafc;
+  --pw-panel: #fff;
+  --pw-raised: #edf3f8;
+  --pw-input: #fff;
+  --pw-line: #d5e1eb;
+  --pw-text: #142c43;
+  --pw-body: #40596f;
+  --pw-muted: #586f84;
+  --pw-primary: #155b91;
+  --pw-primary-hover: #104a78;
+  --pw-accent: #087f73;
+  --pw-link: #075e9a;
+  --pw-ok: #176b46;
+  --pw-warn: #8a4b08;
+  --pw-danger: #a52a37;
+  --primary: var(--pw-primary);
+  --primary-dark: var(--pw-primary-hover);
+  --primary-soft: #e8f2fb;
+  --accent: var(--pw-accent);
+  --ok: var(--pw-ok);
+  --warn: var(--pw-warn);
+  --bad: var(--pw-danger);
+  --ink: var(--pw-text);
+  --ink-soft: var(--pw-body);
+  --muted: var(--pw-muted);
+  --line: var(--pw-line);
+  --bg: var(--pw-bg);
+  --panel: var(--pw-panel);
+  color-scheme: light;
+  background: var(--pw-bg);
+  color: var(--pw-body);
+}
+
+body.dark-mode.community-body {
+  --pw-bg: #0c1424;
+  --pw-shell: #101d30;
+  --pw-panel: #142238;
+  --pw-raised: #1b2d45;
+  --pw-input: #101c2f;
+  --pw-line: #354b65;
+  --pw-text: #f3f7fc;
+  --pw-body: #d0dbea;
+  --pw-muted: #adbed1;
+  --pw-primary: #2563d9;
+  --pw-primary-hover: #1d4ed8;
+  --pw-accent: #5eead4;
+  --pw-link: #7dd3fc;
+  --pw-ok: #6ee7b7;
+  --pw-warn: #fcd34d;
+  --pw-danger: #fda4af;
+  --primary-soft: #1b2d45;
+  color-scheme: dark;
+}
+
+body.dark-mode.community-body .mobile-theme-toggle {
+  border-color: #4b6481 !important;
+  background: var(--pw-raised) !important;
+  color: var(--pw-text) !important;
+}
+
+body.community-body #app,
+body.community-body .mobile-shell,
+body.community-body .mobile-content {
+  background-color: var(--pw-bg);
+  color: var(--pw-body);
+}
+
+body.community-body .mobile-shell {
+  background:
+    radial-gradient(ellipse at 90% 8%, rgba(21, 91, 145, .055), transparent 27rem),
+    var(--pw-bg);
+}
+
+body.community-body .mobile-header:not(.mobile-home-header):not(.mobile-subpage-header):not(.mobile-auth-header),
+body.community-body .mobile-tabs {
+  border-color: var(--pw-line);
+  background: color-mix(in srgb, var(--pw-panel) 96%, transparent);
+  color: var(--pw-text);
+}
+
+body.community-body .mobile-header-brand strong,
+body.community-body .mobile-home-greeting strong,
+body.community-body :is(.mobile-card-head h2, .recent-updates-head h2, .mobile-hero h1, .mobile-dashboard-card strong) {
+  color: var(--pw-text);
+}
+
+body.community-body :is(.mobile-home-greeting > span, .dashboard-card-label, .mobile-hero p) {
+  color: var(--pw-muted);
+}
+
+body.community-body :is(.mobile-card, .mobile-hero, .mobile-weather, .mobile-dashboard-card, .mobile-report-item, .mobile-outage-card, .mobile-history-item, .mobile-notification-item, .mobile-notification-panel, .mobile-profile-card, .mobile-profile-head, .mobile-settings-card, .mobile-settings-list, .mobile-settings-row, .mobile-form, .mobile-auth-form, .recent-updates) {
+  border-color: var(--pw-line);
+  background-color: var(--pw-panel);
+  color: var(--pw-body);
+}
+
+body.community-body .mobile-hero {
+  background: linear-gradient(135deg, var(--pw-panel), var(--pw-shell));
+}
+
+body.community-body :is(.mobile-card-head, .recent-updates-head, .recent-update-row, .mobile-notification-preview) {
+  border-color: var(--pw-line);
+}
+
+body.community-body .recent-update-row:hover {
+  background: var(--pw-raised);
+}
+
+body.community-body :is(.mobile-tab, .mobile-segment, .mobile-lang-chip, .mobile-bell, .mobile-theme-toggle, .mobile-form button.secondary, .mobile-auth-form button.secondary) {
+  border-color: var(--pw-line);
+  background: var(--pw-raised);
+  color: var(--pw-body);
+}
+
+body.community-body .mobile-tab.active,
+body.community-body .mobile-segment.active {
+  border-color: transparent;
+  background: var(--pw-primary-soft);
+  color: var(--pw-primary);
+}
+
+body.community-body :is(.mobile-form input, .mobile-form select, .mobile-form textarea, .mobile-auth-form input, .mobile-auth-form select, .mobile-auth-form textarea, .mobile-content input, .mobile-content select, .mobile-content textarea) {
+  border-color: var(--pw-line);
+  background-color: var(--pw-input);
+  color: var(--pw-text);
+}
+
+body.community-body :is(.mobile-form input, .mobile-form select, .mobile-form textarea, .mobile-auth-form input, .mobile-auth-form select, .mobile-auth-form textarea)::placeholder {
+  color: var(--pw-muted);
+  opacity: 1;
+}
+
+body.community-body :is(.mobile-content a:not(.button):not(.btn), .mobile-link) {
+  color: var(--pw-link);
+}
+
+body.community-body :is(.mobile-theme-toggle, .mobile-tab, .mobile-segment, .mobile-lang-chip, .mobile-bell, .mobile-form button, .mobile-auth-form button, .mobile-install-button):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--pw-accent) 72%, transparent);
+  outline-offset: 2px;
+}
+
+body.community-body .community-map .map-popup-card:not(.holographic) {
+  border-color: var(--pw-line);
+  background: var(--pw-panel);
+  color: var(--pw-body);
+}
+
+body.community-body .community-map .map-popup-card:not(.holographic) :is(.map-popup-title, .map-popup-code) {
+  color: var(--pw-text);
+}
+
+body.community-body .community-map .map-popup-card:not(.holographic) .map-popup-meta {
+  border-color: var(--pw-line);
+  background: var(--pw-raised);
+  color: var(--pw-body);
+}
+
+body.community-body :is(.mobile-shell, .mobile-header, .mobile-content, .mobile-tabs, .mobile-card, .mobile-hero, .mobile-dashboard-card, .mobile-outage-card, .mobile-notification-panel, .mobile-notification-item, .mobile-settings-card, .mobile-settings-row, .mobile-form input, .mobile-form select, .mobile-form textarea, .mobile-auth-form, .mobile-auth-form input, .mobile-auth-form select, .mobile-auth-form textarea, .mobile-theme-toggle, .mobile-tab, .mobile-segment) {
+  transition: background-color .22s ease, color .22s ease, border-color .22s ease, box-shadow .22s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.community-body :is(.mobile-shell, .mobile-header, .mobile-content, .mobile-tabs, .mobile-card, .mobile-hero, .mobile-dashboard-card, .mobile-outage-card, .mobile-notification-panel, .mobile-notification-item, .mobile-settings-card, .mobile-settings-row, .mobile-form input, .mobile-form select, .mobile-form textarea, .mobile-auth-form, .mobile-auth-form input, .mobile-auth-form select, .mobile-auth-form textarea, .mobile-theme-toggle, .mobile-tab, .mobile-segment) {
+    transition: none;
+  }
+}
