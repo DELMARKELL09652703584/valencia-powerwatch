@@ -2696,11 +2696,15 @@ body.admin-body .admin-content :is([class*="-table-wrap"], .table-scroll) tbody 
   background: var(--pw-raised);
 }
 
-body.admin-body .admin-content :is(.page-arrow, .page-number, .verification-icon-btn, .user-view-action, .barangay-view-action, [class$="-reset-button"]),
+body.admin-body .admin-content :is(.page-arrow, .page-number, .verification-icon-btn, .report-action-btn, .user-view-action, .barangay-view-action, [class$="-reset-button"]),
 body.community-body :is(.button.ghost, .button.secondary, .mobile-segment, .mobile-form button.secondary) {
   border-color: var(--pw-line);
   background: var(--pw-raised) !important;
   color: var(--pw-body);
+}
+
+body.admin-body .admin-content .report-action-btn {
+  color: #67e8f9 !important;
 }
 
 body.admin-body .admin-content :is(.page-arrow.active, .page-number.active, .page-arrow[aria-current="page"], .page-number[aria-current="page"]) {
@@ -2725,7 +2729,7 @@ body.community-body :is(.button.primary, .mobile-form button.primary, .mobile-au
   background: linear-gradient(115deg, var(--pw-primary-hover), #155e75);
 }
 
-body.admin-body .admin-content :is(.button.ghost, .button.secondary, .page-arrow, .page-number, .verification-icon-btn, .user-view-action, .barangay-view-action, [class$="-reset-button"]):hover,
+body.admin-body .admin-content :is(.button.ghost, .button.secondary, .page-arrow, .page-number, .verification-icon-btn, .report-action-btn, .user-view-action, .barangay-view-action, [class$="-reset-button"]):hover,
 body.community-body :is(.button.ghost, .button.secondary, .mobile-segment):hover {
   border-color: #58708e;
   background: #1c2e47 !important;
