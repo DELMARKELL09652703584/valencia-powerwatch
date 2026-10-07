@@ -8967,6 +8967,23 @@ body.dark-mode .mini-stepper-step {
 .community-body .report-timeline-status { display: inline-block; margin-top: 4px; color: #356482; font-size: .78rem; font-weight: 700; }
 .community-body .report-timeline-content p { margin: 5px 0; color: #52677a; font-size: .82rem; line-height: 1.45; overflow-wrap: anywhere; }
 .community-body .report-timeline-content small { color: #738496; font-size: .74rem; }
+.community-body .mobile-etr-badge { margin: 12px 0; padding: 12px; border: 1.5px solid; border-radius: 10px; }
+.community-body .mobile-etr-badge.is-restored { border-color: #10b981; background: #ecfdf5; }
+.community-body .mobile-etr-badge.is-pending { border-color: #0284c7; background: #eef7ff; }
+.community-body .mobile-etr-heading { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.community-body .mobile-etr-badge.is-restored .mobile-etr-heading { color: #047857; }
+.community-body .mobile-etr-badge.is-pending .mobile-etr-heading { color: #0369a1; }
+.community-body .mobile-etr-badge p { margin: 4px 0 0; font-size: .82rem; }
+.community-body .mobile-etr-badge.is-restored p { color: #065f46; }
+.community-body .mobile-etr-badge.is-pending p { color: #334155; }
+.community-body .report-feedback-card { margin-top: 14px; padding: 16px; border: 1.5px solid #10b981; border-radius: 12px; background: #f8fafc; box-shadow: 0 2px 8px rgba(0, 0, 0, .04); }
+.community-body .report-feedback-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.community-body .report-feedback-heading h3 { margin: 0; color: #0f172a; font-size: 1rem; }
+.community-body .report-feedback-question { margin: 0 0 12px; color: #475569; font-size: .85rem; }
+.community-body .report-feedback-option { display: flex; align-items: center; gap: 6px; font-size: .88rem; cursor: pointer; font-weight: 600; }
+.community-body .report-feedback-option.is-restored { color: #059669; }
+.community-body .report-feedback-option.is-not-restored { color: #dc2626; }
+.community-body .report-feedback-rating-label { display: block; margin-bottom: 4px; color: #334155; font-size: .85rem; font-weight: 600; }
 
 /* ============================================================
    Valencia PowerWatch — Unified semantic status system

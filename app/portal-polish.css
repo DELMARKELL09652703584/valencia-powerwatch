@@ -5869,6 +5869,84 @@ body.dark-mode.community-body .mobile-home-greeting strong {
   color: #fff !important;
 }
 
+body.dark-mode.community-body .mobile-report-timeline {
+  border-color: var(--pw-line);
+  background: var(--pw-panel);
+}
+
+body.dark-mode.community-body .mobile-report-timeline h3 {
+  color: var(--pw-text);
+}
+
+body.dark-mode.community-body .report-timeline-eyebrow,
+body.dark-mode.community-body .report-timeline-content > strong {
+  color: var(--pw-text);
+}
+
+body.dark-mode.community-body .report-timeline-status {
+  color: #8bdcf2;
+}
+
+body.dark-mode.community-body .report-timeline-content p {
+  color: var(--pw-body);
+}
+
+body.dark-mode.community-body .report-timeline-content small {
+  color: var(--pw-muted);
+}
+
+body.dark-mode.community-body .report-timeline-item:not(:last-child)::before {
+  background: var(--pw-line);
+}
+
+body.dark-mode.community-body .report-timeline-icon,
+body.dark-mode.community-body .report-timeline-item.is-latest .report-timeline-icon {
+  border-color: #3b5877;
+  background: #172a42;
+}
+
+body.dark-mode.community-body .mobile-etr-badge {
+  border-color: #39718a;
+  background: #10283a;
+}
+
+body.dark-mode.community-body .mobile-etr-badge.is-restored {
+  border-color: #16866a;
+  background: #0d302b;
+}
+
+body.dark-mode.community-body .mobile-etr-badge .mobile-etr-heading,
+body.dark-mode.community-body .mobile-etr-badge p {
+  color: #d4e6f4;
+}
+
+body.dark-mode.community-body .mobile-etr-badge.is-restored .mobile-etr-heading {
+  color: #a7f3d0;
+}
+
+body.dark-mode.community-body .mobile-etr-badge.is-restored p {
+  color: #c4f3df;
+}
+
+body.dark-mode.community-body .report-feedback-card {
+  border-color: #16866a;
+  background: #0d192c !important;
+}
+
+body.dark-mode.community-body .report-feedback-heading h3,
+body.dark-mode.community-body .report-feedback-question,
+body.dark-mode.community-body .report-feedback-rating-label {
+  color: var(--pw-text);
+}
+
+body.dark-mode.community-body .report-feedback-option.is-restored {
+  color: #86efac;
+}
+
+body.dark-mode.community-body .report-feedback-option.is-not-restored {
+  color: #fda4af;
+}
+
 @media (max-width: 360px) {
   body.admin-body .login-page {
     grid-template-columns: minmax(0, 1fr);

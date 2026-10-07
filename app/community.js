@@ -1037,41 +1037,41 @@ async function renderMobileReportDetail() {
 
   const etrTime = report.incident?.estimated_restoration || report.estimated_restoration;
   const etrMarkup = isResolved ? `
-    <div class="mobile-etr-badge" style="background:#ecfdf5;border:1.5px solid #10b981;border-radius:10px;padding:12px;margin:12px 0;">
-      <div style="display:flex;align-items:center;gap:8px;font-weight:700;color:#047857;">
+    <div class="mobile-etr-badge is-restored">
+      <div class="mobile-etr-heading">
         <span>⚡</span>
         <span>${t('etr_label', 'Estimated Restoration (ETR)')}: Restored</span>
       </div>
-      <p style="margin:4px 0 0;font-size:0.82rem;color:#065f46;">Power restoration completed and verified.</p>
+      <p>Power restoration completed and verified.</p>
     </div>` : `
-    <div class="mobile-etr-badge" style="background:#eef7ff;border:1.5px solid #0284c7;border-radius:10px;padding:12px;margin:12px 0;">
-      <div style="display:flex;align-items:center;gap:8px;font-weight:700;color:#0369a1;">
+    <div class="mobile-etr-badge is-pending">
+      <div class="mobile-etr-heading">
         <span>⏱️</span>
         <span>${t('etr_label', 'Estimated Restoration (ETR)')}: ${etrTime ? formatDateTime(etrTime) : 'No estimate available yet'}</span>
       </div>
-      <p style="margin:4px 0 0;font-size:0.82rem;color:#334155;">
+      <p>
         ${escapeHtml(report.incident?.etr_reason || 'An estimate will appear here if authorized staff records one for the linked incident.')}
       </p>
     </div>`;
 
   const feedbackCardMarkup = isResolved ? `
-    <section class="mobile-card" style="border:1.5px solid #10b981;background:#f8fafc;border-radius:12px;padding:16px;margin-top:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-      <header style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+    <section class="mobile-card report-feedback-card">
+      <header class="report-feedback-heading">
         <span style="font-size:1.3rem;">⭐</span>
-        <h3 style="margin:0;font-size:1rem;color:#0f172a;">${t('rate_service', 'Rate Restoration Service')}</h3>
+        <h3>${t('rate_service', 'Rate Restoration Service')}</h3>
       </header>
-      <p style="margin:0 0 12px 0;font-size:0.85rem;color:#475569;">${t('power_restored_q', 'Was electrical power restored at your residence?')}</p>
+      <p class="report-feedback-question">${t('power_restored_q', 'Was electrical power restored at your residence?')}</p>
       <form class="mobile-form" data-form="citizen-report-feedback" data-report-id="${report.id}" data-incident-id="${report.incident_id || ''}">
         <div style="display:flex;gap:16px;margin-bottom:12px;">
-          <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;cursor:pointer;font-weight:600;color:#059669;">
+          <label class="report-feedback-option is-restored">
             <input type="radio" name="restoration_confirmed" value="1" checked> ${t('yes_restored', 'Yes, Power Restored')}
           </label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;cursor:pointer;font-weight:600;color:#dc2626;">
+          <label class="report-feedback-option is-not-restored">
             <input type="radio" name="restoration_confirmed" value="0"> ${t('not_yet', 'Not Yet Restored')}
           </label>
         </div>
         <div class="feedback-star-control" style="margin-bottom:10px;">
-          <span style="font-size:0.85rem;font-weight:600;color:#334155;margin-bottom:4px;display:block;">Satisfaction Rating:</span>
+          <span class="report-feedback-rating-label">Satisfaction Rating:</span>
           <div class="feedback-stars" role="group" aria-label="Choose a rating">
             ${[1, 2, 3, 4, 5].map((rating) => `<button type="button" class="feedback-star ${rating <= (state.citizenRating || 5) ? 'selected' : ''}" data-action="citizen-feedback-star" data-value="${rating}" aria-label="${rating} star${rating === 1 ? '' : 's'}">★</button>`).join('')}
           </div>

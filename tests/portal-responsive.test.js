@@ -22,7 +22,7 @@ test('portal layouts remain constrained on narrow mobile screens', () => {
   assert.match(styles, /@media \(max-width: 600px\)\s*\{\s*body\.community-body \.mobile-home-header\s*\{[^}]*gap:\s*4px;[^}]*padding:\s*6px 14px 8px;/s);
   assert.match(styles, /@media \(max-width: 360px\)\s*\{\s*body\.admin-body \.login-page\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
   assert.match(styles, /body\.admin-body \.login-page \.social-row\s*\{\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=57/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=58/);
   assert.match(adminPage, /\/app\/portal-polish\.css\?v=37/);
 });
 
