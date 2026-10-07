@@ -2063,6 +2063,76 @@ body.admin-body .admin-notification-panel :is(button, a):focus-visible {
   outline-offset: 2px;
 }
 
+body.admin-body .login-page .login-panel {
+  background: #f4f8fc;
+  color: #18334d;
+}
+
+body.admin-body .login-page .login-panel h1 {
+  color: #153650;
+}
+
+body.admin-body .login-page .login-panel :is(.login-intro, .form-stack label, .admin-login-options label) {
+  color: #405b74;
+}
+
+body.admin-body .login-page .login-panel .login-footer {
+  border-color: #d4e0ea;
+  background: #edf3f8;
+  color: #526b82;
+}
+
+body.admin-body .login-page .login-panel .admin-login-options button {
+  color: #075b9a;
+  font-weight: 700;
+}
+
+body.admin-body .login-page .login-panel .password-control button {
+  color: #365974;
+}
+
+body.admin-body .login-page .login-panel .form-stack :is(input:not([type="checkbox"]), select, textarea) {
+  border-color: #b8c9d8;
+  background-color: #fff;
+  color: #17324d;
+}
+
+body.admin-body .login-page .login-panel .form-stack :is(input, select, textarea)::placeholder {
+  color: #60788e;
+  opacity: 1;
+}
+
+body.admin-body .login-page .login-panel .form-stack input:-webkit-autofill,
+body.admin-body .login-page .login-panel .form-stack input:-webkit-autofill:hover,
+body.admin-body .login-page .login-panel .form-stack input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #17324d;
+  box-shadow: inset 0 0 0 1000px #fff;
+  caret-color: #17324d;
+}
+
+body.admin-body .login-page .login-panel .admin-login-options input {
+  accent-color: #1769b1;
+}
+
+body.admin-body .login-page .login-panel .login-content > div[style*="background:#f0f9ff"] {
+  border-color: #66b9e8 !important;
+  background: #eaf6fd !important;
+  color: #075b88 !important;
+}
+
+body.admin-body .login-page .login-panel .login-content > div[style*="background:#f0f9ff"] > div:first-child {
+  color: #075b88 !important;
+}
+
+body.admin-body .login-page .login-panel .auth-divider {
+  color: #526b82;
+}
+
+body.admin-body .login-page .login-panel :is(button, input):focus-visible {
+  outline: 3px solid #1478b8;
+  outline-offset: 2px;
+}
+
 body.admin-body .toast {
   border: 1px solid #405875;
   background: #13233b;
