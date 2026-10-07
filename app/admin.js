@@ -434,9 +434,9 @@ function adminShell(content) {
             <span class="sound-btn-icon">${isScadaAudioMuted() ? '🔇' : '🔊'}</span>
             <span class="sound-btn-text">${isScadaAudioMuted() ? 'Muted' : 'Sound: ON'}</span>
           </button>
-          <button type="button" class="theme-toggle-btn" data-action="toggle-admin-theme" title="Toggle Command Center Night Ops Mode">
-            <span id="theme-btn-icon">${document.documentElement.classList.contains('dark-mode') ? '☀️' : '🌙'}</span>
-            <span id="theme-btn-text">${document.documentElement.classList.contains('dark-mode') ? 'Light' : 'Night Ops'}</span>
+          <button type="button" class="theme-toggle-btn" data-action="toggle-admin-theme" aria-pressed="${document.documentElement.classList.contains('dark-mode')}" aria-label="${document.documentElement.classList.contains('dark-mode') ? 'Switch to light mode' : 'Switch to Night Ops dark mode'}" title="${document.documentElement.classList.contains('dark-mode') ? 'Switch to light mode' : 'Switch to Night Ops dark mode'}">
+            <span id="theme-btn-icon" aria-hidden="true">${document.documentElement.classList.contains('dark-mode') ? '☀️' : '🌙'}</span>
+            <span id="theme-btn-text">${document.documentElement.classList.contains('dark-mode') ? 'Light mode' : 'Night Ops'}</span>
           </button>
           <div class="notification-menu">${adminNotificationMenuContent()}</div>
         </div>

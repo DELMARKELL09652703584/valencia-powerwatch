@@ -1139,12 +1139,27 @@ async function handleClick(event) {
       case 'toggle-admin-theme': {
         const isDark = document.documentElement.classList.toggle('dark-mode');
         document.body?.classList.toggle('dark-mode', isDark);
-        try { localStorage.setItem('powerwatch_theme', isDark ? 'dark' : 'light'); } catch (e) {}
+        let persistenceMessage = '';
+        try {
+          localStorage.setItem('powerwatch_theme', isDark ? 'dark' : 'light');
+        } catch (error) {
+          console.error('Theme preference could not be saved:', error);
+          persistenceMessage = ' Theme preference could not be saved in this browser.';
+        }
+        const themeButton = document.querySelector('[data-action="toggle-admin-theme"]');
         const iconEl = document.getElementById('theme-btn-icon');
         const textEl = document.getElementById('theme-btn-text');
+        if (themeButton) {
+          const label = isDark ? 'Switch to light mode' : 'Switch to Night Ops dark mode';
+          themeButton.setAttribute('aria-pressed', String(isDark));
+          themeButton.setAttribute('aria-label', label);
+          themeButton.title = label;
+        }
         if (iconEl) iconEl.textContent = isDark ? '☀️' : '🌙';
-        if (textEl) textEl.textContent = isDark ? 'Light' : 'Night Ops';
-        setToast(isDark ? '🌙 Night Ops Command Center mode enabled' : '☀️ Standard Light mode enabled');
+        if (textEl) textEl.textContent = isDark ? 'Light mode' : 'Night Ops';
+        const themeMeta = document.querySelector('meta[name="theme-color"]');
+        if (themeMeta) themeMeta.setAttribute('content', isDark ? '#0b1220' : '#0b5cad');
+        setToast((isDark ? '🌙 Night Ops dark mode enabled.' : '☀️ Light mode enabled.') + persistenceMessage);
         return;
       }
       case 'open-command-palette':
@@ -2972,6 +2987,8 @@ try {
   if (localStorage.getItem('powerwatch_theme') === 'dark') {
     document.documentElement.classList.add('dark-mode');
     document.body?.classList.add('dark-mode');
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeMeta) themeMeta.setAttribute('content', '#0b1220');
   }
 } catch (e) {}
 

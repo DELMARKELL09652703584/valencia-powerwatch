@@ -1,0 +1,71 @@
+body.admin-body .admin-shell > .admin-sidebar,
+body.admin-body .admin-shell .admin-brand,
+body.admin-body .admin-shell .admin-sidebar-foot,
+body.admin-body .admin-shell .admin-nav .nav-item,
+body.admin-body .admin-main,
+body.admin-body .admin-topbar,
+body.admin-body .admin-content,
+body.admin-body .admin-content :is(.panel, .scada-card, .table-card, input, select, textarea, button) {
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+body.admin-body:not(.dark-mode) .admin-shell > .admin-sidebar {
+  border-color: #d8e2ee;
+  background: linear-gradient(180deg, #f8fbff, #edf4fb);
+  color: #1e3652;
+}
+
+body.admin-body:not(.dark-mode) .admin-shell .admin-brand,
+body.admin-body:not(.dark-mode) .admin-shell .admin-sidebar-foot {
+  border-color: #d8e2ee;
+  background: transparent;
+}
+
+body.admin-body:not(.dark-mode) .admin-shell .admin-brand :is(strong, b),
+body.admin-body:not(.dark-mode) .admin-shell .admin-user-meta strong {
+  color: #16324f;
+}
+
+body.admin-body:not(.dark-mode) .admin-shell .admin-brand small,
+body.admin-body:not(.dark-mode) .admin-shell .admin-user-meta span {
+  color: #60758d;
+}
+
+body.admin-body:not(.dark-mode) .admin-shell .admin-nav .nav-item {
+  color: #435a73;
+}
+
+body.admin-body:not(.dark-mode) .admin-shell .admin-nav .nav-item:hover {
+  background: #e3eef9;
+  color: #123d6a;
+}
+
+body.admin-body:not(.dark-mode) .admin-shell .admin-nav .nav-item.active,
+body.admin-body:not(.dark-mode) .admin-shell .admin-nav .nav-item[aria-current="page"] {
+  border-color: #b9d7f3;
+  background: linear-gradient(100deg, #dcecff, #eaf5ff) !important;
+  color: #124c83 !important;
+  box-shadow: inset 3px 0 #2582d7;
+}
+
+body.admin-body:not(.dark-mode) .admin-shell .admin-sidebar-foot .button.ghost {
+  border-color: #cbd8e6;
+  background: #fff;
+  color: #29435f;
+}
+
+body.admin-body:not(.dark-mode) .admin-shell .command-center-header h2 {
+  color: #0f2744;
+}
+
+body.dark-mode.admin-body .admin-shell .command-center-header h2 {
+  color: #f1f7ff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.admin-body .admin-shell *,
+  body.admin-body .admin-shell *::before,
+  body.admin-body .admin-shell *::after {
+    transition-duration: .01ms !important;
+  }
+}
