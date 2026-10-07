@@ -1070,6 +1070,19 @@ button:disabled {
 }
 
 @media (max-width: 480px) {
+  .powerwatch-chat-launcher {
+    min-height: 44px;
+    gap: 7px;
+    padding: 0 12px;
+    font-size: .78rem !important;
+  }
+
+  .powerwatch-chat-launcher-icon {
+    width: 22px;
+    height: 22px;
+    font-size: 1rem;
+  }
+
   .pwa-update-notice {
     align-items: stretch;
     flex-direction: column;
