@@ -1949,9 +1949,9 @@ body.dark-mode.admin-body .dashboard-visual-panel .dashboard-bar-axis {
 }
 
 
-body.admin-body .dashboard-visual-panel .dashboard-bar-plot,
-body.admin-body .dashboard-visual-panel .dashboard-bar-track {
+body.dark-mode.admin-body .dashboard-visual-panel .dashboard-bar-plot {
   background-color: #192a42;
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(25% - 1px), #30435b calc(25% - 1px), #30435b 25%);
 }
 
 
@@ -2334,6 +2334,14 @@ body.dark-mode.admin-body .toast {
 
 body.dark-mode.admin-body .admin-dashboard-page :where(.dashboard-chart-empty, .dashboard-bar-axis, .dashboard-bar-item, .bi-data-note, .command-timestamp, .scada-card-sub) {
   color: #d2deee !important;
+}
+
+body.dark-mode.admin-body .admin-dashboard-page .dashboard-bar-item strong {
+  color: #e6eef8;
+}
+
+body.dark-mode.admin-body .admin-dashboard-page .dashboard-bar-item span {
+  color: #b6c5d8;
 }
 
 
