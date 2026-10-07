@@ -565,31 +565,15 @@ function seedIfFresh() {
   return true;
 }
 
-// Ensure Admin credentials DELMARKEL2003 / ADMIN2023* are permanently active & intact
+// Create the built-in admin accounts only when their identifiers are unused.
 const ensureAdminAccount = () => {
   const existingAdmin = db.prepare(`
-    SELECT * FROM users 
+    SELECT id FROM users
     WHERE LOWER(COALESCE(username, '')) = LOWER('DELMARKEL2003') 
-       OR LOWER(email) = LOWER('DELMARKEL2003')
        OR LOWER(email) = LOWER('dsaroay@gmail.com')
-       OR id = 9
   `).get();
 
-  if (existingAdmin) {
-    db.prepare(`
-      UPDATE users SET 
-        username = 'DELMARKEL2003',
-        email = 'dsaroay@gmail.com',
-        full_name = 'Delmarkel Saro-ay',
-        contact_number = '09652703584',
-        address = 'Brgy. Guinoyuran, Valencia City, Bukidnon',
-        barangay = 'Guinoyuran',
-        password_hash = ?,
-        role = 'administrator',
-        status = 'Active'
-      WHERE id = ?
-    `).run(hashPassword('ADMIN2023*'), existingAdmin.id);
-  } else {
+  if (!existingAdmin) {
     db.prepare(`
       INSERT INTO users (full_name, username, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
       VALUES (?, ?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)
@@ -601,10 +585,7 @@ const ensureAdminAccount = () => {
   }
 
   const demoAdmin = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get('admin@powerwatch.ph');
-  if (demoAdmin) {
-    db.prepare("UPDATE users SET password_hash = ?, role = 'administrator', status = 'Active' WHERE id = ?")
-      .run(hashPassword('admin123'), demoAdmin.id);
-  } else {
+  if (!demoAdmin) {
     db.prepare(`
       INSERT INTO users (full_name, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
       VALUES (?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)

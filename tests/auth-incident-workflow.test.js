@@ -127,6 +127,44 @@ after(async () => {
   if (testDirectory && fs.existsSync(testDirectory)) fs.rmSync(testDirectory, { recursive: true, force: true });
 });
 
+test('resident credentials still work after logout terminates the session', { timeout: TEST_TIMEOUT_MS }, async () => {
+  const email = `returning-resident-${Date.now()}@example.test`;
+  const password = 'returning-resident-password';
+  const registerResponse = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      full_name: 'Returning Resident',
+      email,
+      password,
+      barangay: 'Poblacion',
+    }),
+  });
+  assert.equal(registerResponse.status, 200);
+  const initialCookie = cookieFrom(registerResponse);
+  assert.ok(initialCookie);
+
+  const logoutResponse = await fetch(`${baseUrl}/api/auth/logout`, {
+    method: 'POST',
+    headers: { cookie: initialCookie },
+  });
+  assert.equal(logoutResponse.status, 200);
+  const expiredSession = await fetch(`${baseUrl}/api/auth/me`, { headers: { cookie: initialCookie } });
+  assert.equal(expiredSession.status, 401);
+
+  const loginResponse = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  assert.equal(loginResponse.status, 200);
+  const newCookie = cookieFrom(loginResponse);
+  assert.ok(newCookie);
+  const activeSession = await fetch(`${baseUrl}/api/auth/me`, { headers: { cookie: newCookie } });
+  assert.equal(activeSession.status, 200);
+  assert.equal((await activeSession.json()).user.email, email);
+});
+
 test('unverified social-login claims cannot create accounts or sessions', { timeout: TEST_TIMEOUT_MS }, async () => {
   const response = await fetch(`${baseUrl}/api/auth/oauth/social-login`, {
     method: 'POST',
