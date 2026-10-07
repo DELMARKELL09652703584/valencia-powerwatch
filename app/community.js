@@ -432,7 +432,6 @@ async function renderMobileHome() {
     { label: 'Current outages', icon: '<path d="M13 2 4 14h7l-1 8 10-12h-7z"/>', action: 'open-current-outages' },
     { label: 'Scheduled outages', icon: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>', action: 'open-scheduled-outages' },
     { label: 'Outage map', icon: '<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15m6-12v15"/>', tab: 'map' },
-    { label: 'Notifications', icon: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M10 21h4"/>', tab: 'notifications', count: Number(state.unread || 0) },
   ];
   const monthlyMaximum = Math.max(1, ...outageInsights.monthly.map((item) => Number(item.count) || 0));
   const trendCopy = outageInsights.trend.direction === 'up'
@@ -446,14 +445,6 @@ async function renderMobileHome() {
     ? `Baseline estimate: about ${outageInsights.projection.next_month_unexpected_incidents} confirmed unexpected incidents next month, using the average of six complete months (${outageInsights.projection.sample_incidents} incidents across ${outageInsights.projection.sample_months} active months). This is not an official outage notice.`
     : `No forecast yet. Six complete months contain ${outageInsights.projection.sample_incidents} confirmed unexpected incidents across ${outageInsights.projection.sample_months} active months; the baseline requires at least 12 incidents across 3 months.`;
   const updates = [
-    ...notifications.map((notice) => ({
-      kind: 'notification',
-      id: notice.id,
-      title: notice.title,
-      summary: notice.message || '',
-      timestamp: notice.created_at,
-      type: notice.type,
-    })),
     ...announcements.map((announcement) => ({
       kind: 'announcement',
       id: announcement.id,
@@ -500,15 +491,12 @@ async function renderMobileHome() {
       </button>`).join('')}
         </div>
       </section>
-    <section class="recent-updates">
-      <header class="recent-updates-head"><h2>${t('recent_updates', 'Latest updates')}</h2><div class="home-feed-links"><button type="button" class="link-button" data-mobile-tab="notifications">Notifications</button><button type="button" class="link-button" data-mobile-tab="announcements">Announcements</button></div></header>
-      ${updates.length ? updates.map((item) => {
-        const restored = /restor|resolved|complete/i.test(`${item.title} ${item.summary}`);
-        const scheduledNotice = item.type === 'scheduled' || /scheduled/i.test(item.title);
-        const tone = item.kind === 'announcement' ? 'info' : restored ? 'success' : scheduledNotice ? 'info' : 'danger';
-        const icon = item.kind === 'announcement' ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a2 2 0 0 0 2 2h2l3 5h3l-2-6 8 3V7l-8 3H5a2 2 0 0 0-2 1z"/></svg>' : notificationTypeIcon(item.type);
-        const action = item.kind === 'announcement' ? 'view-announcement' : 'view-notification';
-        return `<button type="button" class="recent-update-row" data-action="${action}" data-id="${escapeHtml(String(item.id))}">
+      <section class="recent-updates">
+        <header class="recent-updates-head"><h2>${t('recent_updates', 'Latest updates')}</h2><div class="home-feed-links"><button type="button" class="link-button" data-mobile-tab="announcements">Announcements</button></div></header>
+        ${updates.length ? updates.map((item) => {
+          const tone = 'info';
+          const icon = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a2 2 0 0 0 2 2h2l3 5h3l-2-6 8 3V7l-8 3H5a2 2 0 0 0-2 1z"/></svg>';
+          return `<button type="button" class="recent-update-row" data-action="view-announcement" data-id="${escapeHtml(String(item.id))}">
           <span class="recent-update-icon" data-update-tone="${tone}" aria-hidden="true">${icon}</span>
           <span class="recent-update-copy"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.summary)}</small><time>${escapeHtml(formatRelativeTime(item.timestamp))}</time></span>
           <span class="recent-update-chevron" aria-hidden="true">›</span>
