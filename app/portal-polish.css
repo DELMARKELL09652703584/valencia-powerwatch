@@ -5762,7 +5762,7 @@ body.community-body .mobile-tab.active {
   border-color: transparent !important;
   background: transparent !important;
   box-shadow: none !important;
-  color: var(--pw-primary);
+  color: #0b74d1 !important;
   font-weight: 750;
 }
 
@@ -5784,6 +5784,7 @@ body.community-body .mobile-tab.active::after {
 }
 
 body.community-body .mobile-tab.active .mobile-tab-icon {
+  filter: drop-shadow(0 1px 3px rgba(11, 116, 209, .3));
   transform: translateY(-1px) scale(1.06);
 }
 
@@ -5804,7 +5805,11 @@ body.community-body .mobile-tab:active::after {
 body.dark-mode.community-body .mobile-tab.active {
   border-color: transparent !important;
   background: transparent !important;
-  color: #fff !important;
+  color: #67e8f9 !important;
+}
+
+body.dark-mode.community-body .mobile-tab.active .mobile-tab-icon {
+  filter: drop-shadow(0 0 5px rgba(103, 232, 249, .4));
 }
 
 @media (prefers-reduced-motion: reduce) {
