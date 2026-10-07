@@ -1,6 +1,27 @@
 /* Authentication screens, router, actions, and boot */
 
 let deferredPwaInstallPrompt = null;
+const COMMUNITY_LOGIN_IDENTIFIER_KEY = 'powerwatch.community.login-identifier';
+
+function readCommunityLoginIdentifier() {
+  if (!IS_COMMUNITY) return '';
+  try {
+    return localStorage.getItem(COMMUNITY_LOGIN_IDENTIFIER_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+function saveCommunityLoginIdentifier(identifier, remember) {
+  if (!IS_COMMUNITY) return;
+  try {
+    const value = String(identifier || '').trim();
+    if (remember && value) localStorage.setItem(COMMUNITY_LOGIN_IDENTIFIER_KEY, value);
+    else localStorage.removeItem(COMMUNITY_LOGIN_IDENTIFIER_KEY);
+  } catch {
+    return;
+  }
+}
 
 window.addEventListener('beforeinstallprompt', (event) => {
   event.preventDefault();
@@ -24,9 +45,11 @@ function renderWelcomeScreen() {
   </main>`;
 }
 
-function renderLogin(message = '') {
+function renderLogin(message = '', loginIdentifier = null, rememberIdentifier = null) {
   if (IS_COMMUNITY) {
     if (state.mobileAuthScreen === 'register') return renderRegister();
+    const rememberedIdentifier = loginIdentifier ?? readCommunityLoginIdentifier();
+    const shouldRememberIdentifier = rememberIdentifier ?? true;
     app.innerHTML = `<main class="mobile-auth-page">
       <section class="mobile-auth-content">
         <div class="mobile-auth-brand"><img class="auth-brand-logo" src="/assets/powerwatch-logo.svg" alt=""><div><strong>Valencia</strong><b>PowerWatch</b></div></div>
@@ -34,9 +57,9 @@ function renderLogin(message = '') {
         <p>Sign in to report interruptions and stay updated.</p>
         ${message ? `<div class="inline-alert">${escapeHtml(message)}</div>` : ''}
         <form class="mobile-auth-form" data-form="login">
-          <label>Email or mobile number<input name="email" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" required></label>
-          <label>Password<span class="mobile-password-field"><input name="password" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="current-password" required><button type="button" data-action="toggle-password" aria-label="Show password">&#9673;</button></span></label>
-          <div class="auth-options-row"><label><input type="checkbox" name="remember" checked> Remember me</label><button type="button" data-action="forgot-password">Forgot Password?</button></div>
+          <label>Email or mobile number<input name="email" type="text" value="${escapeHtml(rememberedIdentifier)}" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" required></label>
+          <label>Password<span class="mobile-password-field"><input name="password" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" required><button type="button" data-action="toggle-password" aria-label="Show password">&#9673;</button></span></label>
+          <div class="auth-options-row"><label><input type="checkbox" name="remember" ${shouldRememberIdentifier ? 'checked' : ''}> Remember me</label><button type="button" data-action="forgot-password">Forgot Password?</button></div>
           <button class="button primary mobile-auth-submit" type="submit">Login</button>
         </form>
         ${mobileInstallButton()}
@@ -411,6 +434,7 @@ async function submitForm(form) {
   const target = form;
 
   if (type === 'login') {
+    saveCommunityLoginIdentifier(values.email, values.remember === 'on');
     const result = await send('/api/auth/login', 'POST', {
       email: values.email, password: values.password, remember: values.remember === 'on',
     });
@@ -856,8 +880,8 @@ async function handleClick(event) {
         state.unread = 0;
         state.page = 'dashboard';
         state.mobileTab = 'home';
-        if (IS_ADMIN) renderLogin();
-        else renderWelcomeScreen();
+        state.mobileAuthScreen = 'login';
+        renderLogin();
         return;
       case 'get-started':
         state.mobileAuthScreen = 'login';
@@ -2572,6 +2596,19 @@ document.addEventListener('click', async (event) => {
   await handleClick(event);
 });
 
+document.addEventListener('input', (event) => {
+  const input = event.target;
+  if (!IS_COMMUNITY || !input.matches('form[data-form="login"] input[name="email"]')) return;
+  const form = input.form;
+  saveCommunityLoginIdentifier(input.value, form?.elements.remember?.checked === true);
+});
+
+document.addEventListener('change', (event) => {
+  const checkbox = event.target;
+  if (!IS_COMMUNITY || !checkbox.matches('form[data-form="login"] input[name="remember"]')) return;
+  saveCommunityLoginIdentifier(checkbox.form?.elements.email?.value, checkbox.checked);
+});
+
 document.addEventListener('submit', async (event) => {
   const form = event.target.closest('form[data-form]');
   if (!form) return;
@@ -2584,7 +2621,11 @@ document.addEventListener('submit', async (event) => {
   } catch (error) {
     const formType = form.dataset.form;
     if (formType === 'login') {
-      renderLogin(error.message || 'Invalid email, mobile number, or password.');
+      renderLogin(
+        error.message || 'Invalid email, mobile number, or password.',
+        form.elements.email?.value || '',
+        form.elements.remember?.checked === true,
+      );
       return;
     }
     if (formType === 'register') {
