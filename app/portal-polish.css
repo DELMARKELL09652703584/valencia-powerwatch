@@ -1371,8 +1371,8 @@ body.admin-body .admin-content :is(table, .data-table) tbody tr:hover {
 
 body.dark-mode.admin-body .button.primary,
 body.dark-mode.community-body .button.primary,
-body.dark-mode.community-body .mobile-form button:not(.button.ghost):not(.button.secondary),
-body.dark-mode.community-body .mobile-auth-form button:not(.button.ghost):not(.button.secondary) {
+body.dark-mode.community-body .mobile-form button:not(.button.ghost):not(.button.secondary):not(.mobile-segment),
+body.dark-mode.community-body .mobile-auth-form button:not(.button.ghost):not(.button.secondary):not(.mobile-segment) {
   border-color: rgba(147, 197, 253, .24);
   background: linear-gradient(115deg, #2563eb, #087ea4);
   color: #fff;
@@ -2552,8 +2552,8 @@ body.dark-mode.community-body .powerwatch-chat-panel :where(strong, .powerwatch-
 
 body.community-body .powerwatch-chat-form button,
 body.community-body .button.primary,
-body.community-body .mobile-form button:not(.button.ghost):not(.button.secondary),
-body.community-body .mobile-auth-form button:not(.button.ghost):not(.button.secondary) {
+body.community-body .mobile-form button:not(.button.ghost):not(.button.secondary):not(.mobile-segment),
+body.community-body .mobile-auth-form button:not(.button.ghost):not(.button.secondary):not(.mobile-segment) {
   color: #fff !important;
 }
 
@@ -2753,7 +2753,7 @@ body.dark-mode.community-body :is(.mobile-card, .mobile-outage-card, .mobile-das
 
 
 body.dark-mode.admin-body :is(.button.primary, .analytics-export-button),
-body.dark-mode.community-body :is(.button.primary, .mobile-form button:not(.button.ghost):not(.button.secondary), .mobile-auth-form button:not(.button.ghost):not(.button.secondary)) {
+body.dark-mode.community-body :is(.button.primary, .mobile-form button:not(.button.ghost):not(.button.secondary):not(.mobile-segment), .mobile-auth-form button:not(.button.ghost):not(.button.secondary):not(.mobile-segment)) {
   border-color: rgba(159, 213, 255, .36);
   background: linear-gradient(115deg, var(--pw-primary), #087ea4);
   color: #fff;
