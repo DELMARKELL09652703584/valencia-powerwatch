@@ -147,16 +147,7 @@ function mobileNotificationBell() {
 }
 
 function mobileInstallButton() {
-  const installed = navigator.standalone === true
-    || window.matchMedia?.('(display-mode: standalone)').matches
-    || document.documentElement.classList.contains('pwa-installed');
-  if (installed) return '';
-  return `<button type="button" class="mobile-install-button" data-action="install-app" aria-label="Install Valencia PowerWatch" title="Install Valencia PowerWatch">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 18v3h14v-3"></path>
-    </svg>
-    <span>Install</span>
-  </button>`;
+  return '';
 }
 
 function mobileThemeToggle() {

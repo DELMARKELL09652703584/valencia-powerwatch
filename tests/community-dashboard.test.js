@@ -17,7 +17,7 @@ test('community dashboard keeps personal notifications out of the home feed', ()
   assert.ok(homeRendererEnd > homeRendererStart);
   assert.doesNotMatch(homeRenderer, /\/api\/(?:notifications|announcements)/);
   assert.doesNotMatch(communityScript, /class="recent-updates"/);
-  assert.match(communityPage, /\/app\/community\.js\?v=27/);
+  assert.match(communityPage, /\/app\/community\.js\?v=28/);
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=54/);
   assert.match(portalStyles, /body\.community-body \.home-report-action\s*\{/);
   assert.match(portalStyles, /body\.community-body \.home-track-action svg\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;[^}]*fill:\s*none;/s);
@@ -144,6 +144,15 @@ test('community bottom navigation shows accessible icon and text labels', () => 
   assert.match(portalStyles, /body\.community-body \.mobile-tab\.active::after\s*\{[^}]*transform:\s*translateX\(50%\) scaleX\(1\);/s);
   assert.match(portalStyles, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*body\.community-body \.mobile-tab,/s);
   assert.match(portalStyles, /body\.community-body \.mobile-tab-icon,\s*body\.community-body \.mobile-tab-icon svg\s*\{[^}]*width:\s*22px;[^}]*height:\s*22px;/s);
-  assert.match(communityPage, /\/app\/community\.js\?v=27/);
+  assert.match(communityPage, /\/app\/community\.js\?v=28/);
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=54/);
+});
+
+test('User Portal no longer renders Install buttons', () => {
+  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
+  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+
+  assert.match(communityScript, /function mobileInstallButton\(\)\s*\{\s*return '';\s*\}/);
+  assert.equal((communityScript.match(/\$\{mobileInstallButton\(\)\}/g) || []).length, 3);
+  assert.equal((mainScript.match(/\$\{mobileInstallButton\(\)\}/g) || []).length, 3);
 });
