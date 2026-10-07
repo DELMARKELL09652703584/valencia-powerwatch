@@ -305,6 +305,23 @@ window.showScadaEmergencyBanner = showScadaEmergencyBanner;
 window.startAdminTelemetryHeartbeat = startAdminTelemetryHeartbeat;
 window.stopAdminTelemetryHeartbeat = stopAdminTelemetryHeartbeat;
 
+function adminNotificationMenuContent() {
+  return `
+    <button type="button" class="icon-button notification-bell" data-action="toggle-notification-panel" aria-label="Notifications${state.unread ? `, ${state.unread} unread` : ''}" aria-haspopup="dialog" aria-expanded="${Boolean(state.notificationPanelOpen)}" aria-controls="admin-notification-panel" title="Notifications">
+      ${adminNavIcon('notifications')}${state.unread ? `<span class="notification-badge">${state.unread > 99 ? '99+' : state.unread}</span>` : ''}
+    </button>
+    ${state.notificationPanelOpen ? `<section class="admin-notification-panel" id="admin-notification-panel" role="dialog" aria-label="Recent notifications">
+      <header class="notification-panel-heading"><div><h2>Notifications</h2><span>${state.unread ? `${state.unread} unread` : 'You are all caught up'}</span></div><button type="button" class="notification-panel-close" data-action="close-notification-panel" aria-label="Close notifications">×</button></header>
+      ${state.unread ? '<button type="button" class="notification-panel-mark-all" data-action="mark-all-read">Mark all as read</button>' : ''}
+      <div class="notification-panel-list" aria-live="polite">${state.notificationPreview.length ? state.notificationPreview.map((notice) => `<article class="notification-panel-item ${notice.read ? 'read' : 'unread'}">
+        <span class="notification-panel-type ${escapeHtml(notice.type || 'general')}" aria-hidden="true"></span>
+        <button type="button" class="notification-panel-open" data-action="view-admin-notification" data-id="${notice.id}"><strong>${escapeHtml(notice.title)}</strong><span>${escapeHtml(notice.message || '')}</span><time datetime="${escapeHtml(notice.created_at || '')}">${escapeHtml(formatDateTime(notice.created_at))}</time></button>
+        ${!notice.read ? '<button type="button" class="notification-panel-read" data-action="toggle-admin-notification" data-id="' + notice.id + '" data-value="read" aria-label="Mark ' + escapeHtml(notice.title) + ' as read" title="Mark as read">✓</button>' : ''}
+      </article>`).join('') : '<p class="notification-panel-empty">No notifications yet.</p>'}</div>
+      <footer class="notification-panel-footer"><button type="button" data-action="view-all-notifications">View all notifications</button></footer>
+    </section>` : ''}`;
+}
+
 function adminShell(content) {
   const nav = visibleAdminNav();
   const info = state.config.system_info || {};
@@ -328,6 +345,9 @@ function adminShell(content) {
     if (topbarTitle) topbarTitle.textContent = currentTitle;
     const topbarSub = existingShell.querySelector('.admin-topbar .topbar-sub');
     if (topbarSub) topbarSub.textContent = currentLocality;
+
+    const notificationMenu = existingShell.querySelector('.notification-menu');
+    if (notificationMenu) notificationMenu.innerHTML = adminNotificationMenuContent();
 
     // 3. Update topbar status pulse bar
     const pulseBar = existingShell.querySelector('.grid-pulse-bar');
@@ -409,21 +429,7 @@ function adminShell(content) {
             <span id="theme-btn-icon">${document.documentElement.classList.contains('dark-mode') ? '☀️' : '🌙'}</span>
             <span id="theme-btn-text">${document.documentElement.classList.contains('dark-mode') ? 'Light' : 'Night Ops'}</span>
           </button>
-          <div class="notification-menu">
-            <button type="button" class="icon-button notification-bell" data-action="toggle-notification-panel" aria-label="Notifications${state.unread ? `, ${state.unread} unread` : ''}" aria-haspopup="dialog" aria-expanded="${Boolean(state.notificationPanelOpen)}" aria-controls="admin-notification-panel" title="Notifications">
-              ${adminNavIcon('notifications')}${state.unread ? `<span class="notification-badge">${state.unread > 99 ? '99+' : state.unread}</span>` : ''}
-            </button>
-            ${state.notificationPanelOpen ? `<section class="admin-notification-panel" id="admin-notification-panel" role="dialog" aria-label="Recent notifications">
-              <header class="notification-panel-heading"><div><h2>Notifications</h2><span>${state.unread ? `${state.unread} unread` : 'You are all caught up'}</span></div><button type="button" class="notification-panel-close" data-action="close-notification-panel" aria-label="Close notifications">×</button></header>
-              ${state.unread ? '<button type="button" class="notification-panel-mark-all" data-action="mark-all-read">Mark all as read</button>' : ''}
-              <div class="notification-panel-list" aria-live="polite">${state.notificationPreview.length ? state.notificationPreview.map((notice) => `<article class="notification-panel-item ${notice.read ? 'read' : 'unread'}">
-                <span class="notification-panel-type ${escapeHtml(notice.type || 'general')}" aria-hidden="true"></span>
-                <button type="button" class="notification-panel-open" data-action="view-admin-notification" data-id="${notice.id}"><strong>${escapeHtml(notice.title)}</strong><span>${escapeHtml(notice.message || '')}</span><time datetime="${escapeHtml(notice.created_at || '')}">${escapeHtml(formatDateTime(notice.created_at))}</time></button>
-                ${!notice.read ? '<button type="button" class="notification-panel-read" data-action="toggle-admin-notification" data-id="' + notice.id + '" data-value="read" aria-label="Mark ' + escapeHtml(notice.title) + ' as read" title="Mark as read">✓</button>' : ''}
-              </article>`).join('') : '<p class="notification-panel-empty">No notifications yet.</p>'}</div>
-              <footer class="notification-panel-footer"><button type="button" data-action="view-all-notifications">View all notifications</button></footer>
-            </section>` : ''}
-          </div>
+          <div class="notification-menu">${adminNotificationMenuContent()}</div>
         </div>
       </header>
       <section class="admin-content" id="admin-content">${content}</section>
