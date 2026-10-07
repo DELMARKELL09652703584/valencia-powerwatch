@@ -5560,8 +5560,8 @@ body.community-body .home-trends > summary small {
   body.community-body .mobile-home-header {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
-    padding: 10px 14px;
+    gap: 4px;
+    padding: 6px 14px 8px;
   }
 
   body.community-body .mobile-home-identity {
