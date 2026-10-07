@@ -7,12 +7,27 @@ const ROOT = path.resolve(__dirname, '..');
 const DATA_DIR = process.env.POWERWATCH_DATA_DIR
   ? path.resolve(process.env.POWERWATCH_DATA_DIR)
   : path.join(ROOT, 'data');
-const UPLOAD_DIR = path.join(ROOT, 'uploads');
+const UPLOAD_DIR = process.env.POWERWATCH_UPLOAD_DIR
+  ? path.resolve(process.env.POWERWATCH_UPLOAD_DIR)
+  : path.join(ROOT, 'uploads');
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const DB_PATH = path.join(DATA_DIR, 'powerwatch.db');
+const LEGACY_DB_PATH = path.join(ROOT, 'data', 'powerwatch.db');
+if (
+  process.env.POWERWATCH_MIGRATE_LOCAL_DB === 'true'
+  && path.resolve(DB_PATH) !== path.resolve(LEGACY_DB_PATH)
+  && !fs.existsSync(DB_PATH)
+  && fs.existsSync(LEGACY_DB_PATH)
+) {
+  fs.copyFileSync(LEGACY_DB_PATH, DB_PATH);
+  const legacyWalPath = `${LEGACY_DB_PATH}-wal`;
+  if (fs.existsSync(legacyWalPath) && fs.statSync(legacyWalPath).size > 0) {
+    fs.copyFileSync(legacyWalPath, `${DB_PATH}-wal`);
+  }
+}
 const db = new DatabaseSync(DB_PATH);
 
 db.exec('PRAGMA journal_mode = WAL;');
