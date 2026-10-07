@@ -4427,12 +4427,12 @@ body.dark-mode.community-body .mobile-notification-panel-footer {
 }
 
 
-body.community-body .notif-panel-title-row strong {
+body.dark-mode.community-body .notif-panel-title-row strong {
   color: #f1f7ff !important;
 }
 
 
-body.community-body .notif-panel-sub {
+body.dark-mode.community-body .notif-panel-sub {
   color: #bdcce0 !important;
 }
 
@@ -4492,21 +4492,21 @@ body.dark-mode.community-body .mobile-notif-type-icon.announcement {
 }
 
 
-body.community-body .notif-item-title {
+body.dark-mode.community-body .notif-item-title {
   color: #f1f7ff !important;
 }
 
 
-body.community-body .notif-item-time,
-body.community-body .notif-item-msg {
+body.dark-mode.community-body .notif-item-time,
+body.dark-mode.community-body .notif-item-msg {
   color: #c2d0e2 !important;
 }
 
 
-body.community-body .mobile-notification-mark-all,
-body.community-body .notif-view-all-link,
-body.community-body .notif-settings-link,
-body.community-body .mobile-notification-panel-close {
+body.dark-mode.community-body .mobile-notification-mark-all,
+body.dark-mode.community-body .notif-view-all-link,
+body.dark-mode.community-body .notif-settings-link,
+body.dark-mode.community-body .mobile-notification-panel-close {
   border-color: #52708f !important;
   background: #1a2b42 !important;
   color: #eaf4ff !important;
@@ -4530,17 +4530,17 @@ body.dark-mode.community-body .mobile-notification-preview-read {
 }
 
 
-body.community-body .notif-item-read-icon {
+body.dark-mode.community-body .notif-item-read-icon {
   color: #b7c7db !important;
 }
 
 
-body.community-body .mobile-notification-panel-empty strong {
+body.dark-mode.community-body .mobile-notification-panel-empty strong {
   color: #f1f7ff !important;
 }
 
 
-body.community-body .mobile-notification-panel-empty p {
+body.dark-mode.community-body .mobile-notification-panel-empty p {
   color: #c2d0e2 !important;
 }
 
