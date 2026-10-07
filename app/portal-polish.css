@@ -5733,6 +5733,7 @@ body.community-body .mobile-tab {
   padding: 5px 2px;
   border: 1px solid transparent;
   border-radius: 13px;
+  background: transparent;
   color: var(--pw-muted);
   font-size: 0.75rem;
   font-weight: 650;
@@ -5754,15 +5755,15 @@ body.community-body .mobile-tab-label {
 }
 
 body.community-body .mobile-tab.active {
-  border-color: color-mix(in srgb, var(--pw-primary) 20%, transparent);
-  background: var(--pw-primary-soft);
+  border-color: transparent;
+  background: transparent;
   color: var(--pw-primary);
   font-weight: 750;
 }
 
 body.dark-mode.community-body .mobile-tab.active {
-  border-color: rgba(125, 211, 252, .24);
-  background: #173e8a !important;
+  border-color: transparent !important;
+  background: transparent !important;
   color: #fff !important;
 }
 
