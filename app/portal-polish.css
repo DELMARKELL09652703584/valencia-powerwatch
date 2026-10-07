@@ -570,13 +570,13 @@ button:disabled {
 }
 
 .community-body .mobile-theme-toggle {
-  min-width: 40px;
-  min-height: 38px;
+  width: 42px;
+  min-width: 42px;
+  min-height: 42px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 0 9px;
+  padding: 0;
   border: 1px solid #dbe6ef;
   border-radius: 10px;
   background: #f7faff;
@@ -3098,26 +3098,6 @@ body.dark-mode.community-body .mobile-theme-toggle:hover {
 body.dark-mode.community-body .mobile-theme-toggle:focus-visible {
   outline: 3px solid var(--pw-accent);
   outline-offset: 2px;
-}
-
-@media (max-width: 560px) {
-  .community-body .mobile-theme-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  .community-body .mobile-theme-toggle {
-    width: 38px;
-    min-width: 38px;
-    padding: 0;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

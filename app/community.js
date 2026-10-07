@@ -164,7 +164,6 @@ function mobileThemeToggle() {
   const label = isDark ? 'Switch to Light mode' : 'Switch to Night Ops dark mode';
   return `<button type="button" class="mobile-theme-toggle" data-action="toggle-admin-theme" aria-pressed="${isDark}" aria-label="${label}" title="${label}">
     <span id="theme-btn-icon" aria-hidden="true">${isDark ? '☀️' : '🌙'}</span>
-    <span id="theme-btn-text" class="mobile-theme-label">${isDark ? 'Light' : 'Night Ops'}</span>
   </button>`;
 }
 
