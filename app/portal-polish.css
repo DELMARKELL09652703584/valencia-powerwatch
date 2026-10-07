@@ -3394,3 +3394,54 @@ body.community-body :is(button, a, input, select, textarea):focus-visible {
   outline-offset: 3px;
   box-shadow: 0 0 0 2px rgba(6, 13, 26, .9);
 }
+
+body.community-body .mobile-auth-page .auth-options-row button {
+  min-height: 44px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent !important;
+  color: #67e8f9 !important;
+  font: inherit;
+  font-weight: 700;
+}
+
+body.community-body .mobile-auth-page .mobile-password-field button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent !important;
+  color: #a5e9ff !important;
+}
+
+body.community-body .mobile-auth-page .social-google-btn,
+body.community-body .mobile-auth-page .social-google-btn:hover {
+  border: 1px solid #cbd5e1 !important;
+  background: #fff !important;
+  color: #3c4043 !important;
+}
+
+body.community-body .mobile-auth-page .social-google-btn span {
+  color: #3c4043 !important;
+}
+
+body.community-body .mobile-auth-page .social-facebook-btn,
+body.community-body .mobile-auth-page .social-facebook-btn:hover {
+  border: 1px solid #0b5fcc !important;
+  background: #0b5fcc !important;
+  color: #fff !important;
+}
+
+body.community-body .mobile-auth-page .social-facebook-btn span {
+  color: #fff !important;
+}
+
+body.community-body .mobile-auth-page .auth-divider {
+  color: #b8c9df;
+}
+
+body.community-body .mobile-auth-page .auth-divider::before,
+body.community-body .mobile-auth-page .auth-divider::after {
+  background: #405875;
+}
