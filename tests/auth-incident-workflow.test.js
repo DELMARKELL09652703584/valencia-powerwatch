@@ -184,6 +184,54 @@ test('unverified social-login claims cannot create accounts or sessions', { time
   assert.equal(sessionResponse.status, 401);
 });
 
+test('feedback is validated, stored, and included in staff analytics', { timeout: TEST_TIMEOUT_MS }, async () => {
+  const invalidRatingResponse = await fetch(`${baseUrl}/api/feedback`, {
+    method: 'POST',
+    headers: { cookie: residentCookie, 'content-type': 'application/json' },
+    body: JSON.stringify({ rating: 6, comments: 'Outside the allowed range.' }),
+  });
+  assert.equal(invalidRatingResponse.status, 400);
+
+  const feedbackResponse = await fetch(`${baseUrl}/api/feedback`, {
+    method: 'POST',
+    headers: { cookie: residentCookie, 'content-type': 'application/json' },
+    body: JSON.stringify({ rating: 4, feedback_text: 'The report flow was clear.' }),
+  });
+  const feedbackResult = await feedbackResponse.json();
+  assert.equal(feedbackResponse.status, 201, `${JSON.stringify(feedbackResult)}\n${serverOutput}`);
+  assert.equal(feedbackResult.success, true);
+
+  const summaryResponse = await fetch(`${baseUrl}/api/feedback/summary`, { headers: { cookie: adminCookie } });
+  assert.equal(summaryResponse.status, 200);
+  const summary = await summaryResponse.json();
+  assert.ok(summary.total >= 1);
+  assert.ok(summary.recent.some((item) => item.feedback_text === 'The report flow was clear.' && item.rating === 4));
+
+  const report = await submitReport(residentCookie, 'Feedback ownership and restoration workflow test.');
+  const resolveResponse = await fetch(`${baseUrl}/api/reports/${report.id}/status`, {
+    method: 'PUT',
+    headers: { cookie: adminCookie, 'content-type': 'application/json' },
+    body: JSON.stringify({ status: 'Resolved' }),
+  });
+  assert.equal(resolveResponse.status, 200);
+
+  const unauthorizedResponse = await fetch(`${baseUrl}/api/feedback`, {
+    method: 'POST',
+    headers: { cookie: unrelatedResidentCookie, 'content-type': 'application/json' },
+    body: JSON.stringify({ report_id: report.id, rating: 5, restoration_confirmed: 1 }),
+  });
+  assert.equal(unauthorizedResponse.status, 403);
+
+  const restorationFeedbackResponse = await fetch(`${baseUrl}/api/feedback`, {
+    method: 'POST',
+    headers: { cookie: residentCookie, 'content-type': 'application/json' },
+    body: JSON.stringify({ report_id: report.id, rating: 5, restoration_confirmed: '0' }),
+  });
+  assert.equal(restorationFeedbackResponse.status, 201);
+  const updatedSummary = await (await fetch(`${baseUrl}/api/feedback/summary`, { headers: { cookie: adminCookie } })).json();
+  assert.ok(updatedSummary.recent.some((item) => item.report_id === report.id && item.restoration_confirmed === 0));
+});
+
 test('closing an incident updates only its linked reports', { timeout: TEST_TIMEOUT_MS }, async () => {
   const linkedReport = await submitReport(residentCookie, 'Linked incident lifecycle test.');
   const unrelatedReport = await submitReport(unrelatedResidentCookie, 'Unrelated report in the same barangay.');

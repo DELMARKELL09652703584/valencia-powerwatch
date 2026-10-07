@@ -218,15 +218,4 @@ router.put('/profile/password', requireAuth, (req, res) => {
   res.json({ message: 'Password changed successfully.' });
 });
 
-router.post('/feedback', requireAuth, (req, res) => {
-  const rating = Number(req.body?.rating);
-  const comments = String(req.body?.comments || '').trim();
-  if (!Number.isInteger(rating) || rating < 1 || rating > 5) return res.status(400).json({ error: 'Choose a rating from 1 to 5 stars.' });
-  if (comments.length > 1000) return res.status(400).json({ error: 'Feedback comments must be 1000 characters or fewer.' });
-  audit(req.user, 'Community feedback submitted', `${req.user.full_name} rated the app ${rating}/5${comments ? `: ${comments}` : '.'}`);
-  notifyRole('personnel', 'Community feedback received', `${req.user.full_name} submitted a ${rating}/5 rating.`, 'system');
-  notifyRole('administrator', 'Community feedback received', `${req.user.full_name} submitted a ${rating}/5 rating.`, 'system');
-  res.status(201).json({ message: 'Thank you for your feedback.' });
-});
-
 module.exports = router;
