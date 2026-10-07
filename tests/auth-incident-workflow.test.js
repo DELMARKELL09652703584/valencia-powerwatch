@@ -213,6 +213,16 @@ test('closing an incident updates only its linked reports', { timeout: TEST_TIME
   assert.equal((await getReport(adminCookie, linkedReport.id)).status, 'In Progress');
   assert.equal((await getReport(adminCookie, unrelatedReport.id)).status, 'Submitted');
 
+  const [telemetryResponse, analyticsResponse] = await Promise.all([
+    fetch(`${baseUrl}/api/admin/telemetry-heartbeat`, { headers: { cookie: adminCookie } }),
+    fetch(`${baseUrl}/api/analytics/dashboard`, { headers: { cookie: adminCookie } }),
+  ]);
+  assert.equal(telemetryResponse.status, 200);
+  assert.equal(analyticsResponse.status, 200);
+  const { metrics } = await telemetryResponse.json();
+  const { stats } = await analyticsResponse.json();
+  assert.equal(metrics.activeIncidents, stats.ongoing);
+
   const closeResponse = await fetch(`${baseUrl}/api/incidents/${incident.id}/status`, {
     method: 'PUT',
     headers: { cookie: adminCookie, 'content-type': 'application/json' },

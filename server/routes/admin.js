@@ -284,7 +284,7 @@ router.get('/telemetry-heartbeat', requireAuth, requireRole('administrator', 'pe
     : [];
 
   const pendingReportsCount = db.prepare("SELECT COUNT(*) AS c FROM outage_reports WHERE verification_status = 'Pending' OR status = 'Submitted'").get().c;
-  const activeIncidentsCount = db.prepare("SELECT COUNT(*) AS c FROM outage_incidents WHERE status IN ('Reported', 'Investigating', 'In Progress')").get().c;
+  const activeIncidentsCount = db.prepare("SELECT COUNT(*) AS c FROM outage_incidents WHERE status IN ('Ongoing', 'Restoration in Progress')").get().c;
   const ongoingRepairsCount = db.prepare("SELECT COUNT(*) AS c FROM repair_assignments WHERE status IN ('Dispatched', 'En Route', 'Arrived On Site', 'In Progress')").get().c;
   const unreadNotifsCount = db.prepare("SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND read = 0").get(req.user.id).c;
 
