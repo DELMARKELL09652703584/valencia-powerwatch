@@ -4662,10 +4662,12 @@ body.dark-mode.community-body .home-trends {
 
 
 body.dark-mode.community-body .home-trends > summary {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  column-gap: 12px;
+  row-gap: 4px;
   min-height: 52px;
   padding: 12px 14px;
   color: var(--pw-text);
@@ -4675,6 +4677,16 @@ body.dark-mode.community-body .home-trends > summary {
   list-style: none;
 }
 
+body.dark-mode.community-body .home-trends > summary > span {
+  min-width: 0;
+  grid-column: 1;
+  grid-row: 1;
+}
+
+body.dark-mode.community-body .home-trends > summary > small {
+  grid-column: 1;
+  grid-row: 2;
+}
 
 body.community-body .home-trends > summary::-webkit-details-marker {
   display: none;
@@ -4683,6 +4695,10 @@ body.community-body .home-trends > summary::-webkit-details-marker {
 
 body.dark-mode.community-body .home-trends > summary::after {
   content: '+';
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  justify-self: end;
   color: var(--pw-accent);
   font-size: 20px;
   line-height: 1;
@@ -4694,8 +4710,8 @@ body.community-body .home-trends[open] > summary::after {
 }
 
 
-body.dark-mode.community-body .home-trends > summary small {
-  margin-left: auto;
+body.dark-mode.community-body .home-trends > summary > small {
+  margin-left: 0;
   color: var(--pw-muted);
   font-size: 12px;
   font-weight: 500;
