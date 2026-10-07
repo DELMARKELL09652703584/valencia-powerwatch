@@ -5808,8 +5808,18 @@ body.dark-mode.community-body .mobile-tab.active {
   color: #67e8f9 !important;
 }
 
+body.dark-mode.community-body .mobile-tab.active .mobile-tab-icon,
+body.dark-mode.community-body .mobile-tab.active .mobile-tab-label {
+  color: #67e8f9 !important;
+}
+
 body.dark-mode.community-body .mobile-tab.active .mobile-tab-icon {
   filter: drop-shadow(0 0 5px rgba(103, 232, 249, .4));
+}
+
+body.dark-mode.community-body .mobile-tab.active::after {
+  background: #67e8f9;
+  box-shadow: 0 0 7px rgba(103, 232, 249, .7);
 }
 
 @media (prefers-reduced-motion: reduce) {
