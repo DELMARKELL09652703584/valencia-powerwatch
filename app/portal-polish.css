@@ -2040,19 +2040,36 @@ body.community-body :disabled {
 }
 
 :root {
-  --pw-bg: #060d1a;
-  --pw-panel: #0d192c;
-  --pw-raised: #13223a;
-  --pw-input: #081426;
-  --pw-line: #344b68;
-  --pw-text: #f1f5ff;
-  --pw-body: #d2deee;
-  --pw-muted: #a8bbd3;
-  --pw-primary: #3b82f6;
-  --pw-accent: #67e8f9;
+  --pw-bg: #0b1220;
+  --pw-shell: #0f1a2b;
+  --pw-panel: #111d30;
+  --pw-raised: #17263c;
+  --pw-input: #0c1728;
+  --pw-line: #344862;
+  --pw-text: #f1f5f9;
+  --pw-body: #cbd5e1;
+  --pw-muted: #a7b6c9;
+  --pw-primary: #1d4ed8;
+  --pw-primary-hover: #1e40af;
+  --pw-accent: #22d3ee;
+  --pw-link: #67e8f9;
   --pw-ok: #6ee7b7;
   --pw-warn: #fde68a;
   --pw-danger: #fda4af;
+  --primary: #1d4ed8;
+  --primary-dark: #1e40af;
+  --primary-soft: #17263c;
+  --accent: #22d3ee;
+  --ok: #6ee7b7;
+  --warn: #fde68a;
+  --bad: #fda4af;
+  --busy: #c4b5fd;
+  --ink: #f1f5f9;
+  --ink-soft: #cbd5e1;
+  --muted: #a7b6c9;
+  --line: #344862;
+  --bg: #0b1220;
+  --panel: #111d30;
 }
 
 body.admin-body .admin-content :is(.analytics-metric-card, .analytics-chart-panel, .analytics-kpi, .analytics-chart-empty) {
@@ -2240,4 +2257,347 @@ body.community-body .hero-scheduled .bsh-badge {
   border: 1px solid rgba(253, 230, 138, .48) !important;
   background: #3b2d0b !important;
   color: #fff0ad !important;
+}
+
+body.admin-body,
+body.community-body {
+  background-color: var(--pw-bg);
+  color: var(--pw-body);
+}
+
+body.admin-body #app,
+body.community-body #app {
+  background: var(--pw-bg) !important;
+  color: var(--pw-body);
+}
+
+body.admin-body .admin-shell,
+body.community-body .mobile-shell {
+  --primary: var(--pw-primary);
+  --primary-dark: var(--pw-primary-hover);
+  --primary-soft: #172b4b;
+  --accent: var(--pw-accent);
+  --ok: var(--pw-ok);
+  --warn: var(--pw-warn);
+  --bad: var(--pw-danger);
+  --ink: var(--pw-text);
+  --ink-soft: var(--pw-body);
+  --muted: var(--pw-muted);
+  --line: var(--pw-line);
+  --bg: var(--pw-bg);
+  --panel: var(--pw-panel);
+}
+
+body.admin-body .admin-sidebar {
+  background: #091322;
+  border-color: var(--pw-line);
+}
+
+body.admin-body .admin-sidebar .nav-item.active {
+  border-color: rgba(103, 232, 249, .25);
+  background: #1e40af !important;
+  color: #fff !important;
+}
+
+body.admin-body .admin-main,
+body.admin-body .admin-content,
+body.community-body .mobile-content {
+  background-color: var(--pw-bg);
+  color: var(--pw-body);
+}
+
+body.admin-body .admin-topbar,
+body.community-body .mobile-tabs {
+  border-color: var(--pw-line);
+  background: rgba(15, 26, 43, .97);
+  color: var(--pw-text);
+}
+
+body.community-body .mobile-tabs {
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, .32);
+}
+
+body.community-body .mobile-tab {
+  border-radius: 14px;
+  color: var(--pw-muted);
+}
+
+body.community-body .mobile-tab.active {
+  background: #173e8a !important;
+  color: #fff !important;
+}
+
+body.admin-body .admin-content :is(.table-scroll, [class*="-table-wrap"], [class*="-controls"], [class*="-toolbar"], [class*="-search"], [class*="-date-field"], [class*="-date-filter"], [class*="-empty-state"], [class*="-empty"], .verification-empty, .announcement-empty-state, .dispatch-stat-card, .power-map-focus, .power-map-panel, .settings-category-row, .settings-logo-field),
+body.community-body :is(.bi-insights-panel, .bi-insight-grid > article, .bi-metric-row > div, .bi-period, .mobile-hero, .mobile-segments, .mobile-segment, .mobile-form, .mobile-auth-form, .mobile-profile-card, .mobile-settings-row, .mobile-notification-item) {
+  border-color: var(--pw-line) !important;
+  background-color: var(--pw-panel) !important;
+  color: var(--pw-body);
+}
+
+body.admin-body .admin-content :is([class$="-action-menu-items"], [class$="-page-arrow"], [class$="-page-number"], .audit-module-label, .map-boundary-key, .heatmap-badge, .power-map-monitoring-link) {
+  border-color: var(--pw-line);
+  background: var(--pw-raised) !important;
+  color: var(--pw-body);
+}
+
+body.admin-body .admin-content :is([class$="-action-menu-items"], [class$="-page-arrow"], [class$="-page-number"]) :is(button, a) {
+  color: var(--pw-body);
+}
+
+body.admin-body .admin-content :is([class$="-page-arrow"], [class$="-page-number"]):hover,
+body.admin-body .admin-content .power-map-monitoring-link:hover {
+  border-color: #58708e;
+  background: #1c2e47;
+  color: var(--pw-text);
+}
+
+body.admin-body .dispatch-page :is([style*="background:#fff"], [style*="background:#f8fafc"], [style*="background:#f0f9ff"], [style*="background:#fffbeb"], [style*="background:#fff5f5"], [style*="background:#ecfdf5"], [style*="background:#fef3c7"], [style*="background:#e0f2fe"], [style*="background:#f3e8ff"]) {
+  border-color: var(--pw-line) !important;
+  background: var(--pw-panel) !important;
+  color: var(--pw-body) !important;
+}
+
+body.admin-body .dispatch-page :is([style*="background:#fff"], [style*="background:#f8fafc"], [style*="background:#f0f9ff"], [style*="background:#fffbeb"], [style*="background:#fff5f5"], [style*="background:#ecfdf5"], [style*="background:#fef3c7"], [style*="background:#e0f2fe"], [style*="background:#f3e8ff"]) :where(strong, span, p, div) {
+  color: var(--pw-body) !important;
+}
+
+body.admin-body .dispatch-page [style*="background:#e0f2fe"] {
+  background: #0c304a !important;
+  color: #c2f0ff !important;
+}
+
+body.admin-body .dispatch-page [style*="background:#fef3c7"] {
+  background: #3b2d0b !important;
+  color: #fff0ad !important;
+}
+
+body.admin-body .dispatch-page [style*="background:#f3e8ff"] {
+  background: #29234b !important;
+  color: #c6b7ff !important;
+}
+
+body.admin-body .dispatch-page [style*="background:#fffbeb"] {
+  background: #33290f !important;
+  color: #fff0ad !important;
+}
+
+body.admin-body .dispatch-page [style*="background:#ecfdf5"] {
+  background: #10352b !important;
+  color: #adf5d4 !important;
+}
+
+body.admin-body .dispatch-page .dispatch-map-wrap {
+  border-color: var(--pw-line);
+  background: var(--pw-panel);
+  color: var(--pw-body);
+}
+
+body.admin-body .dispatch-page [style*="color:#0f172a"],
+body.admin-body .dispatch-page [style*="color:#1e3a8a"],
+body.admin-body .dispatch-page [style*="color:#64748b"],
+body.admin-body .dispatch-page [style*="color:#475569"],
+body.admin-body .dispatch-page [style*="color:#334155"],
+body.admin-body .dispatch-page [style*="color:#0369a1"],
+body.admin-body .dispatch-page [style*="color:#0284c7"],
+body.admin-body .dispatch-page [style*="color:#92400e"],
+body.admin-body .dispatch-page [style*="color:#b45309"],
+body.admin-body .dispatch-page [style*="color:#059669"] {
+  color: var(--pw-body) !important;
+}
+
+body.admin-body .dispatch-page [style*="border-left:4px solid"] {
+  border-left-color: var(--pw-accent) !important;
+}
+
+body.admin-body .dispatch-page [style*="background:#fff"] :is(.dispatch-btn, .button),
+body.admin-body .dispatch-page :is(.dispatch-btn, .button).status-step {
+  color: var(--pw-body);
+}
+
+body.community-body :is(.mobile-install-button, .mobile-lang-chip, .mobile-bell) {
+  border-color: rgba(167, 182, 201, .42);
+  background: rgba(15, 26, 43, .78) !important;
+  color: var(--pw-text) !important;
+}
+
+body.admin-body .admin-content :is(.segmented, .reports-tabs, .setting-tabs, .announcement-status-tabs, .user-role-tab, .outage-view-tab),
+body.community-body .mobile-segments {
+  border-color: var(--pw-line);
+  background: var(--pw-raised);
+}
+
+body.admin-body .admin-content :is(.segmented button, .reports-tabs button, .setting-tabs button, .announcement-status-tabs button, .user-role-tab, .outage-view-tab),
+body.community-body .mobile-segment {
+  border-color: transparent;
+  background: transparent;
+  color: var(--pw-body);
+}
+
+body.admin-body .admin-content :is(.segmented .active, .reports-tabs .active, .setting-tabs .active, .announcement-status-tabs .active, .user-role-tab.active, .outage-view-tab.active, [aria-pressed="true"]),
+body.admin-body .admin-content .report-tab.active,
+body.community-body .mobile-segments > .mobile-segment.active {
+  border-color: rgba(103, 232, 249, .32);
+  background: var(--pw-primary) !important;
+  color: #fff !important;
+}
+
+body.admin-body .admin-content :is([class*="-table-wrap"], .table-scroll) :is(table, thead, tbody, tr, td, th),
+body.community-body :is(.bi-insight-grid > article, .bi-metric-row > div) :is(span, small, p) {
+  border-color: var(--pw-line);
+}
+
+body.admin-body .admin-content :is([class*="-table-wrap"], .table-scroll) tbody tr:hover {
+  background: var(--pw-raised);
+}
+
+body.admin-body .admin-content :is(.page-arrow, .page-number, .verification-icon-btn, .user-view-action, .barangay-view-action, [class$="-reset-button"]),
+body.community-body :is(.button.ghost, .button.secondary, .mobile-segment, .mobile-form button.secondary) {
+  border-color: var(--pw-line);
+  background: var(--pw-raised) !important;
+  color: var(--pw-body);
+}
+
+body.admin-body .admin-content :is(.page-arrow.active, .page-number.active, .page-arrow[aria-current="page"], .page-number[aria-current="page"]) {
+  background: var(--pw-primary) !important;
+  color: #fff !important;
+}
+
+body.admin-body .admin-content :is([class$="-page-arrow"].active, [class$="-page-number"].active, [class$="-page-arrow"][aria-current="page"], [class$="-page-number"][aria-current="page"]) {
+  background: var(--pw-primary) !important;
+  color: #fff !important;
+}
+
+body.admin-body .admin-content :is(.button.primary, .incident-create-button, .analytics-export-button, .audit-export-button, .reports-filter-btn),
+body.community-body :is(.button.primary, .mobile-form button.primary, .mobile-auth-form button.primary, .powerwatch-chat-form button) {
+  border-color: var(--pw-primary);
+  background: linear-gradient(115deg, var(--pw-primary), #0e7490);
+  color: #fff !important;
+}
+
+body.admin-body .admin-content :is(.button.primary, .incident-create-button, .analytics-export-button, .audit-export-button, .reports-filter-btn):hover,
+body.community-body :is(.button.primary, .mobile-form button.primary, .mobile-auth-form button.primary, .powerwatch-chat-form button):hover {
+  background: linear-gradient(115deg, var(--pw-primary-hover), #155e75);
+}
+
+body.admin-body .admin-content :is(.button.ghost, .button.secondary, .page-arrow, .page-number, .verification-icon-btn, .user-view-action, .barangay-view-action, [class$="-reset-button"]):hover,
+body.community-body :is(.button.ghost, .button.secondary, .mobile-segment):hover {
+  border-color: #58708e;
+  background: #1c2e47 !important;
+  color: var(--pw-text);
+}
+
+body.admin-body .admin-content :is(a:not(.button):not(.btn):not(.primary), .link-button, .text-button, .analytics-link),
+body.community-body :is(.mobile-content a:not(.button):not(.btn), .mobile-link) {
+  color: var(--pw-link);
+}
+
+body.admin-body .admin-content :is(input, select, textarea, .input, [class*="-search"] input, [class*="-date-field"] input),
+body.community-body :is(input, select, textarea, .input) {
+  border-color: var(--pw-line);
+  background-color: var(--pw-input) !important;
+  color: var(--pw-text) !important;
+  color-scheme: dark;
+}
+
+body.admin-body :is(input, select, textarea),
+body.community-body :is(input, select, textarea) {
+  color-scheme: dark;
+}
+
+body.admin-body .admin-content :is(input, select, textarea, .input)::placeholder,
+body.community-body :is(input, select, textarea, .input)::placeholder {
+  color: var(--pw-muted);
+  opacity: 1;
+}
+
+body.admin-body .admin-content :is([class*="-table-wrap"], .table-scroll) :is(th, td, p, span, small, label),
+body.community-body :is(.bi-insights-panel, .mobile-hero, .mobile-segments, .mobile-segment, .bi-period) :is(p, span, small, label, strong, b) {
+  color: var(--pw-body);
+}
+
+body.admin-body .admin-content :is([class*="-table-wrap"], .table-scroll) :is(th, h2, h3, h4, strong, b),
+body.community-body :is(.bi-insights-panel, .mobile-hero, .mobile-segments, .mobile-segment) :is(h1, h2, h3, h4, strong, b) {
+  color: var(--pw-text);
+}
+
+body.community-body .bi-insights-panel {
+  background: linear-gradient(145deg, var(--pw-panel), #0f1a2b) !important;
+}
+
+body.community-body .bi-period {
+  color: var(--pw-body);
+}
+
+body.community-body .bi-insight-grid > article,
+body.community-body .bi-metric-row > div {
+  background: var(--pw-raised) !important;
+}
+
+body.community-body .bi-projection.limited {
+  border-color: rgba(253, 230, 138, .42);
+  background: #33290f;
+  color: #fff0ad;
+}
+
+body.community-body .bi-projection.available {
+  border-color: rgba(110, 231, 183, .42);
+  background: #10352b;
+  color: #adf5d4;
+}
+
+body.community-body .mobile-dashboard-card {
+  border-color: var(--pw-line);
+  background: var(--pw-panel) !important;
+  color: var(--pw-body) !important;
+}
+
+body.admin-body .dispatch-page [style*="color:#059669"] {
+  color: #6ee7b7 !important;
+}
+
+body.admin-body .dispatch-page :is([style*="color:#0369a1"], [style*="color:#0284c7"]) {
+  color: #7dd3fc !important;
+}
+
+body.admin-body .dispatch-page :is([style*="color:#92400e"], [style*="color:#b45309"]) {
+  color: #fde68a !important;
+}
+
+body.community-body .mobile-dashboard-card :is(.dashboard-card-label, strong) {
+  color: var(--pw-text);
+}
+
+body.community-body .mobile-dashboard-card .dashboard-card-icon {
+  border: 1px solid var(--pw-line);
+  background: var(--pw-raised) !important;
+  color: var(--pw-accent) !important;
+}
+
+body.community-body .mobile-hero {
+  border-color: var(--pw-line);
+  background-color: var(--pw-panel) !important;
+}
+
+body.community-body .mobile-segment.active {
+  background: var(--pw-primary) !important;
+  color: #fff !important;
+}
+
+body.community-body .mobile-content :is([aria-label="Map display mode"], [aria-label="Base map layer"]) button[aria-pressed="true"] {
+  border-color: rgba(103, 232, 249, .32);
+  background: var(--pw-primary) !important;
+  color: #fff !important;
+}
+
+body.admin-body :is(.leaflet-control-zoom a, .leaflet-control-attribution),
+body.community-body :is(.leaflet-control-zoom a, .leaflet-control-attribution) {
+  border-color: var(--pw-line);
+  background: var(--pw-panel);
+  color: var(--pw-text);
+}
+
+body.admin-body :is(.button.primary, .button.secondary, .button.ghost, .nav-item, .page-arrow, .page-number):focus-visible,
+body.community-body :is(.button, .mobile-tab, .mobile-segment):focus-visible {
+  outline: 3px solid var(--pw-accent);
+  outline-offset: 2px;
 }
