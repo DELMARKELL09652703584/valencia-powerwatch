@@ -5731,9 +5731,10 @@ body.community-body .mobile-tab {
   justify-items: center;
   gap: 4px;
   padding: 5px 2px;
-  border: 1px solid transparent;
-  border-radius: 13px;
-  background: transparent;
+  border: 1px solid transparent !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
   color: var(--pw-muted);
   font-size: 0.75rem;
   font-weight: 650;
@@ -5755,8 +5756,9 @@ body.community-body .mobile-tab-label {
 }
 
 body.community-body .mobile-tab.active {
-  border-color: transparent;
-  background: transparent;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
   color: var(--pw-primary);
   font-weight: 750;
 }
