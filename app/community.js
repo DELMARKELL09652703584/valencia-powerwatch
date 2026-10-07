@@ -321,8 +321,8 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
     ${statusBarMarkup}
     ${headerMarkup}
     <main class="mobile-content ${subpageHeader ? 'mobile-content-subpage' : ''}" id="mobile-content">${content}</main>
-    ${showTabs ? `<nav class="mobile-tabs">${MOBILE_TABS.map((tab) => `<button class="mobile-tab ${activeTab === tab.key ? 'active' : ''}" data-mobile-tab="${tab.key}">
-      <span class="mobile-tab-icon">${tab.icon}</span><span>${escapeHtml(t(tab.key, tab.label))}</span>
+    ${showTabs ? `<nav class="mobile-tabs" aria-label="Main navigation">${MOBILE_TABS.map((tab) => `<button type="button" class="mobile-tab ${activeTab === tab.key ? 'active' : ''}" data-mobile-tab="${tab.key}" aria-current="${activeTab === tab.key ? 'page' : 'false'}">
+      <span class="mobile-tab-icon" aria-hidden="true">${tab.icon}</span><span class="mobile-tab-label">${escapeHtml(t(tab.key, tab.label))}</span>
     </button>`).join('')}</nav>` : ''}
     ${user.role === 'resident' ? `<section class="powerwatch-chatbot" id="powerwatch-chatbot">
       <section class="powerwatch-chat-panel" id="powerwatch-chat-panel" role="dialog" aria-label="PowerWatch assistant" aria-modal="false" hidden>

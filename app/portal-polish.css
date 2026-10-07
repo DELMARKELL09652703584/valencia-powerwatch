@@ -5715,6 +5715,57 @@ body.dark-mode.community-body .possible-duplicate-clear {
   color: #baf1d3 !important;
 }
 
+body.community-body .mobile-tabs {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 4px;
+  padding: 6px 8px max(6px, env(safe-area-inset-bottom));
+}
+
+body.community-body .mobile-tab {
+  min-width: 0;
+  min-height: 62px;
+  display: grid;
+  grid-template-rows: 24px auto;
+  align-content: center;
+  justify-items: center;
+  gap: 4px;
+  padding: 5px 2px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  color: var(--pw-muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+body.community-body .mobile-tab-icon,
+body.community-body .mobile-tab-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+body.community-body .mobile-tab-label {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.community-body .mobile-tab.active {
+  border-color: color-mix(in srgb, var(--pw-primary) 20%, transparent);
+  background: var(--pw-primary-soft);
+  color: var(--pw-primary);
+  font-weight: 750;
+}
+
+body.dark-mode.community-body .mobile-tab.active {
+  border-color: rgba(125, 211, 252, .24);
+  background: #173e8a !important;
+  color: #fff !important;
+}
+
 body.dark-mode.community-body .mobile-home-greeting > span {
   color: #d3e6f5 !important;
 }
