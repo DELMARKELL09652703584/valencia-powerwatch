@@ -370,15 +370,12 @@ function formatRelativeTime(value) {
 
 async function renderMobileHome() {
   const cachedWeather = readWeatherCache();
-  const [{ stats }, { notifications }, { announcements }, { incidents = [] }, { scheduled = [] }, outageInsights] = await Promise.all([
+  const [{ stats }, { incidents = [] }, { scheduled = [] }, outageInsights] = await Promise.all([
     api('/api/analytics/dashboard'),
-    api('/api/notifications'),
-    api('/api/announcements').catch(() => ({ announcements: [] })),
     api('/api/incidents').catch(() => ({ incidents: [] })),
     api('/api/scheduled/upcoming').catch(() => ({ scheduled: [] })),
     api('/api/analytics/insights'),
   ]);
-  state.mobileNotifications = notifications;
 
   const userBarangay = state.user?.barangay || 'Poblacion';
   const myIncident = incidents.find((inc) => (inc.affected_barangays || [inc.barangay]).some((b) => b && b.toLowerCase() === userBarangay.toLowerCase())
@@ -444,24 +441,6 @@ async function renderMobileHome() {
   const forecastCopy = outageInsights.projection.status === 'available'
     ? `Baseline estimate: about ${outageInsights.projection.next_month_unexpected_incidents} confirmed unexpected incidents next month, using the average of six complete months (${outageInsights.projection.sample_incidents} incidents across ${outageInsights.projection.sample_months} active months). This is not an official outage notice.`
     : `No forecast yet. Six complete months contain ${outageInsights.projection.sample_incidents} confirmed unexpected incidents across ${outageInsights.projection.sample_months} active months; the baseline requires at least 12 incidents across 3 months.`;
-  const updates = [
-    ...notifications.filter((notice) => notice.type !== 'announcement').map((notice) => ({
-      kind: 'notification',
-      id: notice.id,
-      title: notice.title,
-      summary: notice.message || '',
-      timestamp: notice.created_at,
-      type: notice.type,
-    })),
-    ...announcements.map((announcement) => ({
-      kind: 'announcement',
-      id: announcement.id,
-      title: announcement.title,
-      summary: announcement.category,
-      timestamp: announcement.published_at || announcement.created_at,
-      type: 'announcement',
-    })),
-  ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 4);
 
   mobileShell(`
     <section class="home-dashboard" aria-label="Community dashboard">
@@ -499,23 +478,6 @@ async function renderMobileHome() {
       </button>`).join('')}
         </div>
       </section>
-      <section class="recent-updates">
-          <header class="recent-updates-head"><h2>${t('recent_updates', 'Latest updates')}</h2></header>
-        ${updates.length ? updates.map((item) => {
-            const isAnnouncement = item.kind === 'announcement';
-            const restored = /restor|resolved|complete/i.test(`${item.title} ${item.summary}`);
-            const scheduledNotice = item.type === 'scheduled' || /scheduled/i.test(item.title);
-            const tone = isAnnouncement ? 'info' : restored ? 'success' : scheduledNotice ? 'info' : 'danger';
-            const icon = isAnnouncement
-              ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a2 2 0 0 0 2 2h2l3 5h3l-2-6 8 3V7l-8 3H5a2 2 0 0 0-2 1z"/></svg>'
-              : notificationTypeIcon(item.type);
-            return `<button type="button" class="recent-update-row" data-action="${isAnnouncement ? 'view-announcement' : 'view-notification'}" data-id="${escapeHtml(String(item.id))}">
-            <span class="recent-update-icon" data-update-tone="${tone}" aria-hidden="true">${icon}</span>
-            <span class="recent-update-copy"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(isAnnouncement ? `Announcement · ${item.summary}` : item.summary)}</small><time>${escapeHtml(formatRelativeTime(item.timestamp))}</time></span>
-            <span class="recent-update-chevron" aria-hidden="true">›</span>
-          </button>`;
-      }).join('') : `<p class="recent-updates-empty">${t('no_recent_updates', 'No recent updates.')}</p>`}
-    </section>
     <details class="bi-insights-panel home-trends">
       <summary><span>Local outage trends</span><small>Barangay · last 90 days</small></summary>
       <div class="home-trends-content">
