@@ -2969,3 +2969,265 @@ body.admin-body .settings-category-state {
 body.admin-body .settings-category-state.inactive {
   color: var(--pw-muted) !important;
 }
+
+@media (min-width: 781px) and (max-width: 900px) {
+  body.admin-body .admin-shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  body.admin-body .admin-shell > .admin-sidebar {
+    position: sticky;
+    inset: 0 0 auto;
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  body.admin-body .admin-shell > .admin-main {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  body.admin-body .admin-shell .admin-nav {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    min-height: 0;
+    max-width: 100%;
+    height: auto;
+    padding: 6px 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  body.admin-body .admin-shell .nav-item {
+    flex: 0 0 auto;
+    align-self: center;
+    width: auto;
+    min-width: max-content;
+    min-height: 42px;
+    height: auto;
+    margin: 0;
+    white-space: nowrap;
+  }
+}
+
+body.admin-body :where(small, time, .muted, .nav-group, .command-timestamp, .scada-card-tag, .scada-card-sub, .bi-eyebrow, .bi-period, .bi-data-note, .bi-projection, .dashboard-chart-empty, .dashboard-bar-axis, .dashboard-focus-item small, .pill, .report-status, .verification-status-badge, .status-tag, .incident-status-badge, .monitoring-status, .scheduled-status-badge, .dispatch-badge, .dispatch-stat-sub, .verification-eyebrow),
+body.community-body :where(small, time, .muted, .bi-eyebrow, .bi-period, .bi-data-note, .bi-projection, .bsh-badge, .dashboard-card-label, .pill, .report-status, .verification-status-badge, .status-tag, .incident-status-badge, .monitoring-status, .scheduled-status-badge, .mobile-map-help) {
+  font-size: max(12px, .8em) !important;
+  line-height: 1.45;
+}
+
+body.admin-body .admin-content :where(th, td, .focus-item-header > span:not(.focus-icon), .bi-insight-grid article > span, .dashboard-bar-item > span, .dashboard-bar-item > strong),
+body.community-body .mobile-content :where(.bi-month-column > b, .bi-metric-row > div > span, .bi-insight-grid article > span, .mobile-dashboard-card .dashboard-card-label) {
+  font-size: max(12px, .8em) !important;
+  line-height: 1.45;
+}
+
+body.admin-body .admin-content button,
+body.community-body .mobile-content button {
+  font-size: max(14px, .875em) !important;
+}
+
+body.admin-body .admin-content :where(label, .form-hint),
+body.community-body .mobile-content :where(label, .form-hint) {
+  font-size: max(14px, .875em);
+  line-height: 1.45;
+}
+
+body.admin-body .admin-content :where(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select),
+body.community-body .mobile-content :where(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select) {
+  min-height: 44px;
+}
+
+body.admin-body .admin-topbar :where(.topbar-search-trigger, .topbar-sound-btn, .theme-toggle-btn, .notification-trigger) {
+  min-height: 42px;
+}
+
+body.admin-body .admin-content :where(.button, .page-arrow, .page-number, .verification-icon-btn, .monitoring-icon-action, .user-view-action, .barangay-view-action),
+body.community-body .mobile-content :where(.button, .link-button) {
+  min-height: 40px;
+}
+
+body.admin-body .admin-content [style*="background:#ecfdf5"] {
+  border-color: rgba(110, 231, 183, .46) !important;
+  background: #10352b !important;
+  color: #adf5d4 !important;
+}
+
+body.admin-body .admin-content span[style*="background:#ecfdf5"] {
+  font-size: max(12px, .8em) !important;
+}
+
+body.admin-body .dashboard-focus-item .focus-icon {
+  font-size: 16px !important;
+}
+
+body.admin-body .monitoring-table .monitoring-status.ongoing {
+  border-color: rgba(103, 232, 249, .4) !important;
+  background: #0c304a !important;
+  color: #c2f0ff !important;
+}
+
+body.admin-body .verification-section-heading button {
+  color: var(--pw-link);
+}
+
+body.admin-body .verification-section-heading button:hover {
+  background: var(--pw-raised);
+  color: var(--pw-text);
+}
+
+body.admin-body .settings-extra-fields summary {
+  color: var(--pw-link);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+body.admin-body .dispatch-page {
+  color: var(--pw-body) !important;
+}
+
+body.admin-body .dispatch-page :is(.dispatch-stat-card, .dispatch-card) {
+  border-color: var(--pw-line) !important;
+  background: var(--pw-panel) !important;
+  color: var(--pw-body) !important;
+}
+
+body.admin-body .dispatch-page .dispatch-card.active-target {
+  border-color: var(--pw-primary) !important;
+  background: var(--pw-raised) !important;
+}
+
+body.admin-body .dispatch-page :is(.dispatch-stat-card, .dispatch-card) :is(h2, h3, h4, strong, b) {
+  color: var(--pw-text) !important;
+}
+
+body.admin-body .dispatch-page :is(.dispatch-stat-card, .dispatch-card) :is(p, span, small, time, label) {
+  color: var(--pw-body);
+}
+
+body.admin-body .dispatch-page .dispatch-actions-bar {
+  border-color: var(--pw-line);
+}
+
+body.admin-body .dispatch-page .verification-tab.active :is(span, strong, b) {
+  color: #fff !important;
+}
+
+body.admin-body .dispatch-page .dispatch-btn.route :is(span, strong, b) {
+  color: #fff !important;
+}
+
+body.admin-body .dispatch-page .dispatch-badge.en-route,
+body.admin-body .dispatch-page .dispatch-badge.in-progress {
+  border: 1px solid rgba(103, 232, 249, .4);
+  background: #0c304a !important;
+  color: #c2f0ff !important;
+}
+
+body.admin-body .dispatch-page .dispatch-badge.arrived {
+  border: 1px solid rgba(253, 230, 138, .4);
+  background: #3b2d0b !important;
+  color: #fff0ad !important;
+}
+
+body.admin-body .dispatch-page .dispatch-badge.resolved {
+  border: 1px solid rgba(110, 231, 183, .4);
+  background: #10352b !important;
+  color: #adf5d4 !important;
+}
+
+body.admin-body .dispatch-page .dispatch-badge.dispatched {
+  border: 1px solid var(--pw-line);
+  background: #26364a !important;
+  color: #d5dfeb !important;
+}
+
+body.admin-body .dispatch-page [style*="background:#dbeafe"] {
+  border: 1px solid rgba(103, 232, 249, .35);
+  background: #0c304a !important;
+  color: #c2f0ff !important;
+}
+
+body.admin-body .dispatch-page [style*="background:#dcfce7"] {
+  border: 1px solid rgba(110, 231, 183, .4);
+  background: #10352b !important;
+  color: #adf5d4 !important;
+}
+
+body.community-body .recent-update-row {
+  margin-block: 4px;
+  padding: 11px 12px;
+  border: 1px solid var(--pw-line);
+  border-radius: 12px;
+  background: var(--pw-raised) !important;
+  color: var(--pw-body) !important;
+}
+
+body.community-body .recent-update-row:hover {
+  border-color: #58708e;
+  background: #1c2e47 !important;
+}
+
+body.community-body .recent-updates-head .link-button {
+  font-size: 14px !important;
+}
+
+body.community-body .mobile-tab {
+  font-size: max(12px, .8em) !important;
+  line-height: 1.4;
+}
+
+body.community-body .recent-update-row .recent-update-copy :is(strong, p, span, small, time) {
+  color: var(--pw-body) !important;
+}
+
+body.community-body .recent-update-row .recent-update-copy strong {
+  color: var(--pw-text) !important;
+}
+
+body.community-body .recent-update-row .recent-update-icon {
+  border: 1px solid var(--pw-line);
+  background: #1b2a40;
+  color: #dceaff;
+}
+
+body.community-body .recent-update-row .recent-update-icon[data-update-tone="success"] {
+  border-color: rgba(110, 231, 183, .4);
+  background: #10352b;
+  color: #adf5d4;
+}
+
+body.community-body .recent-update-row .recent-update-icon[data-update-tone="info"] {
+  border-color: rgba(103, 232, 249, .35);
+  background: #0c304a;
+  color: #c2f0ff;
+}
+
+body.community-body :is(button, a, input, select, textarea):disabled {
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+body.admin-body button:disabled,
+body.community-body button:disabled {
+  border-color: #405875;
+  background: #1b2a40;
+  color: #b8c9df;
+  box-shadow: none;
+  filter: saturate(.65);
+}
+
+body.admin-body :is(button, a, input, select, textarea):focus-visible,
+body.community-body :is(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid #67e8f9;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px rgba(6, 13, 26, .9);
+}
