@@ -445,6 +445,14 @@ async function renderMobileHome() {
     ? `Baseline estimate: about ${outageInsights.projection.next_month_unexpected_incidents} confirmed unexpected incidents next month, using the average of six complete months (${outageInsights.projection.sample_incidents} incidents across ${outageInsights.projection.sample_months} active months). This is not an official outage notice.`
     : `No forecast yet. Six complete months contain ${outageInsights.projection.sample_incidents} confirmed unexpected incidents across ${outageInsights.projection.sample_months} active months; the baseline requires at least 12 incidents across 3 months.`;
   const updates = [
+    ...notifications.filter((notice) => notice.type !== 'announcement').map((notice) => ({
+      kind: 'notification',
+      id: notice.id,
+      title: notice.title,
+      summary: notice.message || '',
+      timestamp: notice.created_at,
+      type: notice.type,
+    })),
     ...announcements.map((announcement) => ({
       kind: 'announcement',
       id: announcement.id,
@@ -492,15 +500,20 @@ async function renderMobileHome() {
         </div>
       </section>
       <section class="recent-updates">
-        <header class="recent-updates-head"><h2>${t('recent_updates', 'Latest updates')}</h2><div class="home-feed-links"><button type="button" class="link-button" data-mobile-tab="announcements">Announcements</button></div></header>
+          <header class="recent-updates-head"><h2>${t('recent_updates', 'Latest updates')}</h2></header>
         ${updates.length ? updates.map((item) => {
-          const tone = 'info';
-          const icon = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a2 2 0 0 0 2 2h2l3 5h3l-2-6 8 3V7l-8 3H5a2 2 0 0 0-2 1z"/></svg>';
-          return `<button type="button" class="recent-update-row" data-action="view-announcement" data-id="${escapeHtml(String(item.id))}">
-          <span class="recent-update-icon" data-update-tone="${tone}" aria-hidden="true">${icon}</span>
-          <span class="recent-update-copy"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.summary)}</small><time>${escapeHtml(formatRelativeTime(item.timestamp))}</time></span>
-          <span class="recent-update-chevron" aria-hidden="true">›</span>
-        </button>`;
+            const isAnnouncement = item.kind === 'announcement';
+            const restored = /restor|resolved|complete/i.test(`${item.title} ${item.summary}`);
+            const scheduledNotice = item.type === 'scheduled' || /scheduled/i.test(item.title);
+            const tone = isAnnouncement ? 'info' : restored ? 'success' : scheduledNotice ? 'info' : 'danger';
+            const icon = isAnnouncement
+              ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a2 2 0 0 0 2 2h2l3 5h3l-2-6 8 3V7l-8 3H5a2 2 0 0 0-2 1z"/></svg>'
+              : notificationTypeIcon(item.type);
+            return `<button type="button" class="recent-update-row" data-action="${isAnnouncement ? 'view-announcement' : 'view-notification'}" data-id="${escapeHtml(String(item.id))}">
+            <span class="recent-update-icon" data-update-tone="${tone}" aria-hidden="true">${icon}</span>
+            <span class="recent-update-copy"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(isAnnouncement ? `Announcement · ${item.summary}` : item.summary)}</small><time>${escapeHtml(formatRelativeTime(item.timestamp))}</time></span>
+            <span class="recent-update-chevron" aria-hidden="true">›</span>
+          </button>`;
       }).join('') : `<p class="recent-updates-empty">${t('no_recent_updates', 'No recent updates.')}</p>`}
     </section>
     <details class="bi-insights-panel home-trends">
@@ -904,33 +917,6 @@ async function renderMobileOutages() {
         </div>
       </section>`).join('') : `<div class="mobile-card">${emptyState('No active outages', 'There are no ongoing interruptions right now.', '⚡')}</div>`}
   `, { activeTab: 'outages' });
-}
-
-async function renderMobileAnnouncements() {
-  const { announcements } = await api('/api/announcements');
-  const filter = state.filters.announcementFilter || 'all';
-  const visibleAnnouncements = announcements.filter((item) => {
-    if (filter === 'important') return ['Scheduled Outage', 'Emergency Advisory', 'Service Advisory'].includes(item.category);
-    if (filter === 'maintenance') return /maintenance|repair|upgrade/i.test(`${item.category} ${item.title} ${item.content}`);
-    return true;
-  });
-  mobileShell(`
-    ${mobileHero('Announcements', 'Service advisories and interruption notices for Valencia City.')}
-    <div class="mobile-segments" role="group" aria-label="Filter announcements">
-      ${[['all', 'All'], ['important', 'Important'], ['maintenance', 'Maintenance']].map(([key, label]) => `
-        <button class="mobile-segment ${filter === key ? 'active' : ''}" data-action="filter-announcements" data-value="${key}">${label}</button>
-      `).join('')}
-    </div>
-    ${mobileCard('', visibleAnnouncements.length ? visibleAnnouncements.map((a) => `
-      <div class="mobile-announcement">
-        ${a.image_path ? `<img class="mobile-announcement-image" src="${escapeHtml(a.image_path)}" alt="${escapeHtml(a.title)}">` : ''}
-        <span class="tag">${escapeHtml(a.category)}</span>
-        <strong>${escapeHtml(a.title)}</strong>
-        <p>${escapeHtml(a.content)}</p>
-        <span class="muted small">${escapeHtml(formatDateTime(a.published_at || a.created_at))}</span>
-        <button type="button" class="link-button" data-action="view-announcement" data-id="${a.id}">View Details</button>
-      </div>`).join('') : `<p class="muted small">${filter === 'maintenance' ? 'No maintenance announcements.' : 'No announcements match this filter.'}</p>`)}
-  `, { activeTab: 'home' });
 }
 
 async function renderMobileProfile() {
@@ -1576,39 +1562,80 @@ function filterMobileNotifications(notifications) {
   });
 }
 
+function mobileNotificationCategoryMatches(notice, category) {
+  const text = `${notice.title || ''} ${notice.message || ''}`.toLowerCase();
+  if (category === 'notifications') return true;
+  if (category === 'verification') return /verif|verified|rejected|pending review/i.test(text);
+  if (category === 'repairs') return /dispatch|repair|crew|team|arrived|technician/i.test(text);
+  if (category === 'restoration') return /restor|resolved|power restored|service resumed/i.test(text);
+  if (category === 'outages') return ['incident', 'scheduled'].includes(notice.type) || /outage|interruption|blackout/i.test(text);
+  if (category === 'reports') return notice.type === 'report';
+  return false;
+}
+
 async function renderMobileNotifications() {
-  const { notifications } = await api('/api/notifications');
+  const [{ notifications }, { announcements }] = await Promise.all([
+    api('/api/notifications'),
+    api('/api/announcements'),
+  ]);
   const visibleNotifications = filterMobileNotifications(notifications);
+  const listedNotifications = visibleNotifications.filter((notice) => notice.type !== 'announcement');
+  const preferences = readNotificationPreferences();
+  const visibleAnnouncements = preferences.announcements ? announcements : [];
+  const category = state.mobileNotificationCategory || 'all';
+  const categories = [
+    ['all', 'All updates'],
+    ['announcements', 'Announcements'],
+    ['notifications', 'Notifications'],
+    ['reports', 'Reports'],
+    ['outages', 'Outage updates'],
+    ['verification', 'Verification'],
+    ['repairs', 'Dispatch / repair'],
+    ['restoration', 'Restoration'],
+  ];
+  const items = [
+    ...(category === 'all' || category === 'announcements'
+      ? visibleAnnouncements.map((announcement) => ({
+        kind: 'announcement',
+        id: announcement.id,
+        title: announcement.title,
+        message: announcement.content,
+        category: announcement.category,
+        created_at: announcement.published_at || announcement.created_at,
+        image_path: announcement.image_path,
+      }))
+      : []),
+    ...(category === 'announcements' ? [] : listedNotifications
+      .filter((notice) => category === 'all' || mobileNotificationCategoryMatches(notice, category))
+      .map((notice) => ({ ...notice, kind: 'notification' }))),
+  ].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
   state.mobileNotifications = visibleNotifications;
   mobileShell(`
-    ${mobileHero('Notifications', 'Updates about your reports, power advisories, and outages.')}
+    ${mobileHero('Notifications', 'Announcements and personal system updates in one place.')}
+    <div class="mobile-segments notification-category-tabs" role="tablist" aria-label="Notification categories">
+      ${categories.map(([key, label]) => `<button type="button" class="mobile-segment ${category === key ? 'active' : ''}" role="tab" aria-selected="${category === key}" data-action="mobile-notification-category" data-value="${key}">${label}</button>`).join('')}
+    </div>
     <div class="mobile-notification-full-wrap">
-      ${mobileCard('Alerts & Updates', visibleNotifications.length ? visibleNotifications.map((notice) => `
-        <article class="mobile-notification-full-row ${notice.read ? 'read' : 'unread'}">
-          <span class="mobile-notif-type-icon ${escapeHtml(notice.type || 'general')}">
-            ${notificationTypeIcon(notice.type)}
-          </span>
-          <button type="button" class="mobile-notif-full-main" data-action="view-notification" data-id="${notice.id}">
-            <div class="notif-item-top">
-              <strong class="notif-item-title">${escapeHtml(notice.title)}</strong>
-              <time class="notif-item-time">${escapeHtml(formatRelativeTime(notice.created_at))}</time>
-            </div>
-            <p class="notif-full-msg">${escapeHtml(notice.message || '')}</p>
+      ${mobileCard('', items.length ? items.map((item) => {
+        const isAnnouncement = item.kind === 'announcement';
+        const isUnread = !isAnnouncement && !item.read;
+        const kind = isAnnouncement ? 'announcement' : item.type || 'general';
+        const icon = isAnnouncement
+          ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v2a2 2 0 0 0 2 2h2l3 5h3l-2-6 8 3V7l-8 3H5a2 2 0 0 0-2 1z"></path></svg>'
+          : notificationTypeIcon(item.type);
+        return `<article class="mobile-notification-full-row ${isUnread ? 'unread' : 'read'}">
+          <span class="mobile-notif-type-icon ${escapeHtml(kind)}">${icon}</span>
+          <button type="button" class="mobile-notif-full-main" data-action="${isAnnouncement ? 'view-announcement' : 'view-notification'}" data-id="${item.id}">
+            <div class="notif-item-top"><strong class="notif-item-title">${escapeHtml(item.title)}</strong><time class="notif-item-time">${escapeHtml(formatRelativeTime(item.created_at))}</time></div>
+            <span class="tag">${escapeHtml(isAnnouncement ? item.category : notificationCategoryLabel(item))}</span>
+            <p class="notif-full-msg">${escapeHtml(isAnnouncement ? item.message : item.message || '')}</p>
           </button>
-          <div class="notif-item-actions">
-            ${!notice.read ? `
-              <button type="button" class="mobile-notification-preview-read" data-action="mark-mobile-notification-read" data-id="${notice.id}" aria-label="Mark ${escapeHtml(notice.title)} as read" title="Mark as read">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              </button>
-            ` : `
-              <span class="notif-item-read-icon" title="Read" aria-hidden="true">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              </span>
-            `}
-          </div>
-        </article>
-      `).join('') : '<p class="muted small" style="text-align: center; padding: 24px 0;">No notifications found.</p>',
-      visibleNotifications.some((notice) => !notice.read) ? '<button class="link-button" data-action="mark-all-read">Mark all as read</button>' : '')}
+          ${isUnread ? `<div class="notif-item-actions"><button type="button" class="mobile-notification-preview-read" data-action="mark-mobile-notification-read" data-id="${item.id}" aria-label="Mark ${escapeHtml(item.title)} as read" title="Mark as read"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg></button></div>` : ''}
+        </article>`;
+      }).join('') : `<p class="muted small" style="text-align: center; padding: 24px 0;">${category === 'announcements' ? 'No announcements yet.' : 'No updates in this category.'}</p>`,
+      category !== 'announcements' && visibleNotifications.some((notice) => !notice.read)
+        ? '<button class="link-button" data-action="mark-all-read">Mark all as read</button>'
+        : '')}
     </div>
   `, {
     showTabs: false,
@@ -1623,6 +1650,16 @@ async function renderMobileNotifications() {
       </button>`,
     },
   });
+}
+
+function notificationCategoryLabel(notice) {
+  const text = `${notice.title || ''} ${notice.message || ''}`;
+  if (/verif|verified|rejected|pending review/i.test(text)) return 'Verification update';
+  if (/dispatch|repair|crew|team|arrived|technician/i.test(text)) return 'Dispatch / repair';
+  if (/restor|resolved|power restored|service resumed/i.test(text)) return 'Restoration update';
+  if (['incident', 'scheduled'].includes(notice.type) || /outage|interruption|blackout/i.test(text)) return 'Outage update';
+  if (notice.type === 'report') return 'Report update';
+  return 'System notification';
 }
 
 async function renderMobileScheduled() {

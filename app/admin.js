@@ -9,7 +9,6 @@ const ADMIN_NAV = [
   { key: 'outage-monitoring', label: 'Outage Monitoring', roles: STAFF_ROLES },
   { key: 'map', label: 'Map / GIS', roles: STAFF_ROLES },
   { key: 'scheduled', label: 'Scheduled Outages', roles: STAFF_ROLES },
-  { key: 'announcements', label: 'Announcements', roles: STAFF_ROLES },
   { key: 'history', label: 'Outage History' },
   { key: 'users', label: 'Users', roles: ['administrator'] },
   { key: 'barangays', label: 'Barangays', roles: ['administrator'] },
@@ -19,6 +18,16 @@ const ADMIN_NAV = [
 ];
 
 const visibleAdminNav = () => ADMIN_NAV.filter((item) => !item.roles || item.roles.includes(state.user?.role));
+
+function adminNotificationCategory(notice) {
+  const text = `${notice.title || ''} ${notice.message || ''}`;
+  if (/verif|verified|rejected|pending review/i.test(text)) return 'verification';
+  if (/dispatch|repair|crew|team|arrived|technician/i.test(text)) return 'repairs';
+  if (/restor|resolved|power restored|service resumed/i.test(text)) return 'restoration';
+  if (['incident', 'scheduled'].includes(notice.type) || /outage|interruption|blackout/i.test(text)) return 'outages';
+  if (notice.type === 'report') return 'reports';
+  return 'system';
+}
 
 function adminNavIcon(key) {
   const paths = {
@@ -1149,7 +1158,6 @@ async function renderAdminVerification() {
       <div><p class="verification-eyebrow">REPORT REVIEW</p><h2>Report Verification</h2></div>
       <div class="verification-heading-actions">
         <button type="button" class="verification-icon-btn" data-action="verification-refresh" aria-label="Refresh report data" title="Refresh">⟳</button>
-        <button type="button" class="verification-icon-btn" data-page="notifications" aria-label="Open notifications" title="Notifications"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path></svg></button>
       </div>
     </div>
 
@@ -2181,11 +2189,14 @@ async function renderAdminMap() {
 }
 
 async function renderAdminNotifications() {
+  if (state.adminNotificationSection === 'announcements') return renderAdminAnnouncements();
   const { notifications } = await api('/api/notifications');
   state.adminNotifications = notifications;
   const filter = state.adminNotificationFilter || 'All';
+  const category = state.adminNotificationCategory || 'all';
   const search = String(state.filters.adminNotificationSearch || '').trim().toLowerCase();
   const visible = notifications.filter((notice) => (filter === 'All' || (filter === 'Unread' ? !notice.read : Boolean(notice.read)))
+    && (category === 'all' || adminNotificationCategory(notice) === category)
     && (!search || `${notice.title} ${notice.message} ${notice.type}`.toLowerCase().includes(search)));
   const pageSize = 6;
   const totalPages = Math.max(1, Math.ceil(visible.length / pageSize));
@@ -2205,10 +2216,27 @@ async function renderAdminNotifications() {
     return `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[type] || '<circle cx="12" cy="12" r="9"></circle>'}</svg>`;
   };
   const counts = { All: notifications.length, Unread: notifications.filter((notice) => !notice.read).length, Read: notifications.filter((notice) => notice.read).length };
+  const categoryTabs = [
+    ['all', 'All updates'],
+    ['reports', 'Reports'],
+    ['outages', 'Outage updates'],
+    ['verification', 'Verification'],
+    ['repairs', 'Dispatch / repair'],
+    ['restoration', 'Restoration'],
+    ['system', 'System'],
+  ];
   adminShell(`<section class="admin-notifications-page">
     <header class="admin-notifications-heading"><h2>Notifications</h2>${canManage() ? `<button type="button" class="notification-create-button" data-action="new-notification"><span aria-hidden="true">+</span>Create Notification</button>` : ''}</header>
+    <div class="notification-category-tabs" role="tablist" aria-label="Notification categories">
+      <button type="button" class="notification-category-tab active" role="tab" aria-selected="true" data-action="admin-notification-section" data-value="notifications">System / Report Notifications</button>
+      <button type="button" class="notification-category-tab" role="tab" aria-selected="false" data-action="admin-notification-section" data-value="announcements">Announcements</button>
+    </div>
     <div class="notifications-controls">
       <div class="notification-filter-tabs" role="tablist" aria-label="Notification status">${Object.keys(counts).map((item) => `<button type="button" class="notification-filter-tab ${filter === item ? 'active' : ''}" role="tab" aria-selected="${filter === item}" data-action="filter-admin-notifications" data-value="${item}">${item}<span>${counts[item]}</span></button>`).join('')}</div>
+      <div class="notification-detail-category-tabs" role="tablist" aria-label="Notification categories">${categoryTabs.map(([key, label]) => {
+        const count = key === 'all' ? notifications.length : notifications.filter((notice) => adminNotificationCategory(notice) === key).length;
+        return `<button type="button" class="notification-detail-category-tab ${category === key ? 'active' : ''}" role="tab" aria-selected="${category === key}" data-action="filter-admin-notification-category" data-value="${key}">${label}<span>${count}</span></button>`;
+      }).join('')}</div>
       <label class="notification-search" aria-label="Search notifications"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input type="search" data-filter="adminNotificationSearch" value="${escapeHtml(state.filters.adminNotificationSearch || '')}" placeholder="Search notifications..."></label>
       ${counts.Unread ? `<button type="button" class="notification-mark-all" data-action="mark-all-read">Mark all read</button>` : ''}
     </div>
@@ -2390,6 +2418,10 @@ async function renderAdminAnnouncements() {
   ];
 
   adminShell(`<section class="announcement-management">
+    <div class="notification-category-tabs" role="tablist" aria-label="Notification categories">
+      <button type="button" class="notification-category-tab" role="tab" aria-selected="false" data-action="admin-notification-section" data-value="notifications">System / Report Notifications</button>
+      <button type="button" class="notification-category-tab active" role="tab" aria-selected="true" data-action="admin-notification-section" data-value="announcements">Announcements</button>
+    </div>
     <div class="announcement-toolbar">
       <label class="announcement-search">
         <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>

@@ -303,7 +303,11 @@ const ADMIN_PAGES = IS_ADMIN ? {
   'outage-monitoring': renderAdminOutageMonitoring,
   scheduled: renderAdminScheduled,
   map: renderAdminMap,
-  announcements: renderAdminAnnouncements,
+  announcements: () => {
+    state.page = 'notifications';
+    state.adminNotificationSection = 'announcements';
+    return renderAdminNotifications();
+  },
   notifications: renderAdminNotifications,
   history: renderAdminHistory,
   analytics: renderAdminAnalytics,
@@ -318,7 +322,6 @@ const MOBILE_PAGES = IS_COMMUNITY ? {
   home: renderMobileHome,
   report: renderMobileReportForm,
   outages: renderMobileOutages,
-  announcements: renderMobileAnnouncements,
   reports: renderMobileReports,
   map: renderMobileMap,
   notifications: renderMobileNotifications,
@@ -1089,6 +1092,7 @@ async function handleClick(event) {
       case 'view-all-mobile-notifications':
         state.mobileNotificationPanelOpen = false;
         state.mobileTab = 'notifications';
+        state.mobileNotificationCategory = 'all';
         await render();
         return;
       case 'toggle-notification-panel':
@@ -1166,6 +1170,7 @@ async function handleClick(event) {
       case 'view-all-notifications':
         state.notificationPanelOpen = false;
         state.page = 'notifications';
+        state.adminNotificationSection = 'notifications';
         await render();
         return;
       case 'view-notification': {
@@ -1719,6 +1724,10 @@ async function handleClick(event) {
         state.filters.announcementFilter = value;
         await render();
         return;
+      case 'mobile-notification-category':
+        state.mobileNotificationCategory = value;
+        await render();
+        return;
       case 'reset-announcement-filters':
         state.filters = { ...state.filters, announcementFilter: '', announcementCategory: '', announcementSearch: '' };
         await render();
@@ -1984,6 +1993,16 @@ async function handleClick(event) {
       case 'filter-admin-notifications':
         state.adminNotificationFilter = value;
         state.adminNotificationPage = 1;
+        await render();
+        return;
+      case 'filter-admin-notification-category':
+        state.adminNotificationCategory = value;
+        state.adminNotificationPage = 1;
+        await render();
+        return;
+      case 'admin-notification-section':
+        state.adminNotificationSection = value === 'announcements' ? 'announcements' : 'notifications';
+        state.page = 'notifications';
         await render();
         return;
       case 'filter-admin-users':
@@ -2811,7 +2830,7 @@ function openCommandPalette() {
     { label: 'Citizen Reports Table', icon: '📋', type: 'page', key: 'reports' },
     { label: 'Interactive GIS Outage Map', icon: '🗺️', type: 'page', key: 'map' },
     { label: 'Scheduled Maintenance Grid', icon: '🗓️', type: 'page', key: 'scheduled' },
-    { label: 'Announcements & Advisories', icon: '📢', type: 'page', key: 'announcements' },
+    { label: 'Notifications', icon: '🔔', type: 'page', key: 'notifications' },
     { label: 'Analytics & SAIDI/SAIFI Metrics', icon: '📈', type: 'page', key: 'analytics' },
     { label: 'System Audit Trail & Security Logs', icon: '🛡️', type: 'page', key: 'audit' },
     { label: 'User & Staff Access Management', icon: '👥', type: 'page', key: 'users' },
