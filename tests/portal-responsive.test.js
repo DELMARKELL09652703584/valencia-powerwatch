@@ -22,6 +22,15 @@ test('portal layouts remain constrained on narrow mobile screens', () => {
   assert.match(styles, /@media \(max-width: 600px\)\s*\{\s*body\.community-body \.mobile-home-header\s*\{[^}]*gap:\s*4px;[^}]*padding:\s*6px 14px 8px;/s);
   assert.match(styles, /@media \(max-width: 360px\)\s*\{\s*body\.admin-body \.login-page\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
   assert.match(styles, /body\.admin-body \.login-page \.social-row\s*\{\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=55/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=56/);
   assert.match(adminPage, /\/app\/portal-polish\.css\?v=37/);
+});
+
+test('home weather widget stays compact in Light Mode and Night Ops', () => {
+  const styles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+
+  assert.match(styles, /body\.community-body \.home-dashboard \.mobile-weather\s*\{[^}]*min-height:\s*0;[^}]*gap:\s*7px;[^}]*padding:\s*6px 10px;[^}]*border-radius:\s*999px;/s);
+  assert.match(styles, /body\.community-body \.home-dashboard \.mobile-weather-copy\s*\{[^}]*display:\s*flex;[^}]*align-items:\s*baseline;/s);
+  assert.match(styles, /body\.community-body \.home-dashboard \.mobile-weather-copy small\s*\{\s*display:\s*none;/s);
+  assert.match(styles, /body\.dark-mode\.community-body \.home-dashboard \.mobile-weather\s*\{[^}]*background:\s*var\(--pw-panel\)\s*!important;/s);
 });
