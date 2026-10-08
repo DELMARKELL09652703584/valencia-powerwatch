@@ -71,14 +71,32 @@ nagkonektar sa usa ka sentral nga database:
    sa GIS heatmap, ug mag-generate og official incident reports.
 
 
+5. KEY MODULES & FEATURES (MGA PARTE SA SISTEMA)
 ================================================================================
 5. KOMPLETONG MGA MODULES SA SISTEMA (USER SIDE UG ADMIN SIDE)
 ================================================================================
 
 --------------------------------------------------------------------------------
+A. Para sa Residente (Community Mobile App):
+• 1-Tap GPS Pinpoint Reporting: Makapili og Barangay ug maka-tudlo sa eksaktong
+  lokasyon sa balay o poste sa interactive Leaflet map.
+• Offline Report Queue: Kung mapalong ang cellular signal panahon sa bagyo,
+  i-save sa app ang report ug awtomatikong i-upload inig balik sa signal.
+• Real-time Incident Tracker: Makit-an sa user kung ang ilang report kay
+  Pending, Verified, Dispatched, o Resolved.
+• Official Advisories: Diretso sa phone ang mga schedule sa kuryente gikan
+  sa utility office.
 A. MGA MODULES SA USER / COMMUNITY SIDE (MOBILE APPLICATION - PWA)
 --------------------------------------------------------------------------------
 
+B. Para sa Admin & Utility Management:
+• Live Incident Management: Listahan sa tanang bag-ong report nga puwede i-filter
+  base sa Barangay, petsa, o status.
+• GIS Heatmap & Smart Clustering: Makit-an sa mapa kung asa nagtapok ang mga
+  brownout aron mahibal-an dayon kung tibuok feeder o transformer ang naguba.
+• Printable Official Incident Reports: 1-click generation sa opisyal nga incident
+  report para sa dokumentasyon ug meeting sa city hall.
+• Role-Based Security: Ang resident accounts dili makasulod sa Admin portal.
 1. HOME & DASHBOARD MODULE
    • City Grid Power Status: Makita dayon kung pila ka porsyento sa Valencia City
      ang naay kuryente ug pila ka active outages ang kasamtangang gi-ayo.
@@ -96,7 +114,7 @@ A. MGA MODULES SA USER / COMMUNITY SIDE (MOBILE APPLICATION - PWA)
      - Total Blackout (Walay kuryente sa tibuok balay/linya)
      - Partial / Low Voltage (Nagsiga-palong o hinay ang boltahe)
      - Line Down / Sparking Transformer (Delikadong poste nga nagspark o nahagbong)
-   • Photo & Video Evidence Upload: Makakuha ug maka-attach og litrato o video sa guba isip ebidensya (maximum 5-10 minutes ang video duration aron mapabilin ang paspas nga bandwidth ug storage efficiency).
+   • Photo Upload: Makakuha ug maka-attach og litrato sa guba isip ebidensya.
    • Offline Report Queue: Kung mawad-an og cellular data panahon sa bagyo,
      i-save sa app ang report ug awtomatikong i-upload inig balik sa signal.
 
@@ -224,9 +242,11 @@ B. MGA MODULES SA ADMINISTRATOR & UTILITY MANAGEMENT SIDE (WEB PORTAL)
 
 ================================================================================
 6. SYSTEM WORKFLOW (GIUNSA PAGDAGAN SA DATOS)
+--------------------------------------------------------------------------------
 ================================================================================
 Step 1: Paghimo og Report
 Ang residente mag-abli sa app sa ilang phone ug mo-submit og report nga naay
+GPS coordinates, barangay, ug detalye sa blackout.
 GPS coordinates, barangay, litrato, ug detalye sa blackout.
 
 Step 2: Sentral nga Pagtipig
@@ -234,6 +254,8 @@ Ang report moagi sa secure HTTPS connection ug mosulod diretso sa Central
 SQLite Database (data/powerwatch.db).
 
 Step 3: Pagsusi ug Dispatch
+Motungha dayon ang report sa dashboard sa Admin. Makita kini sa GIS Heatmap
+ug i-dispatch ang maintenance crew.
 Motungha dayon ang report sa dashboard sa Admin. Makita kini sa GIS Heatmap,
 i-verify sa Engineer, ug i-dispatch ang maintenance crew.
 
@@ -244,6 +266,7 @@ dayon og status update ang tanang residente sa ilang phone.
 
 ================================================================================
 7. BENEFITS & LIMITATIONS
+--------------------------------------------------------------------------------
 ================================================================================
 Mga Kaayohan (Benefits):
 • Paspas nga Response Time: Dili na magtagna-tagna ang linemen kung asa ang guba
@@ -265,6 +288,7 @@ Mga Limitasyon (Limitations):
 
 ================================================================================
 8. TOP 5 ANTICIPATED PANEL QUESTIONS & BEST ANSWERS (CHEAT SHEET)
+--------------------------------------------------------------------------------
 ================================================================================
 Q1: Ngano nga PWA (Progressive Web App) inyong gigamit ug dili native APK sa
     Google Play Store?

@@ -181,7 +181,7 @@ function renderForgotPassword(message = '') {
         ${message ? `<div class="inline-alert">${escapeHtml(message)}</div>` : ''}
         <form class="form-stack" data-form="forgot-password">
           <label>Email address<input name="email" type="email" autocomplete="email" required></label>
-          <button class="button primary full" type="submit">Send reset link</button>
+          <button class="button primary full" type="submit" ${state.passwordRecoveryEnabled ? '' : 'disabled'}>Send reset link</button>
           <button class="button secondary full" type="button" data-action="back-login">Back to sign in</button>
         </form>
         ${state.passwordRecoveryEnabled ? '' : '<p class="auth-configuration-note">Email recovery is unavailable until SMTP is configured on the server.</p>'}
@@ -198,7 +198,7 @@ function renderForgotPassword(message = '') {
       ${message ? `<div class="inline-alert">${escapeHtml(message)}</div>` : ''}
       <form class="mobile-auth-form" data-form="forgot-password">
         <label>Email address<input name="email" type="email" autocomplete="email" required></label>
-        <button class="button primary mobile-auth-submit" type="submit">Send reset link</button>
+        <button class="button primary mobile-auth-submit" type="submit" ${state.passwordRecoveryEnabled ? '' : 'disabled'}>Send reset link</button>
       </form>
       ${state.passwordRecoveryEnabled ? '' : '<p class="auth-configuration-note">Email recovery is unavailable until SMTP is configured on the server.</p>'}
       <p class="mobile-auth-switch">Remember your password? <button type="button" data-action="back-login">Login</button></p>
