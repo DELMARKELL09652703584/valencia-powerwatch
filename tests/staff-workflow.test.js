@@ -203,8 +203,8 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
     fetch(`${baseUrl}/staff`),
     fetch(`${baseUrl}/staff-manifest.json`),
     fetch(`${baseUrl}/staff-sw.js`),
-    fetch(`${baseUrl}/app/staff.css?v=2`),
-    fetch(`${baseUrl}/app/staff.js?v=1`),
+    fetch(`${baseUrl}/app/staff.css?v=4`),
+    fetch(`${baseUrl}/app/staff.js?v=3`),
     Promise.all([
       'powerwatch-icon-192.png',
       'powerwatch-icon-512.png',
@@ -229,6 +229,8 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
   assert.match(staffStyles, /place-items: center/);
   assert.match(staffStyles, /grid-template-columns: repeat\(2, minmax\(0,1fr\)\)/);
   assert.doesNotMatch(staffStyles, /grid-template-columns: repeat\(4, minmax\(0,1fr\)\)/);
+  assert.match(staffStyles, /staff-stage-progress/);
+  assert.match(staffStyles, /staff-upload-drop/);
   const workerSource = await workerResponse.text();
   const shellAssets = workerSource.match(/const STAFF_SHELL = \[[\s\S]*?\];/)?.[0] || '';
   assert.doesNotMatch(shellAssets, /\/api\/|\/admin/);
@@ -275,6 +277,12 @@ test('verified database roles assign each account its own portal after login', {
 
   const adminBoot = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
   const staffApp = fs.readFileSync(path.join(ROOT, 'app', 'staff.js'), 'utf8');
+  assert.match(staffApp, /Acknowledged: 'Accept assignment'/);
+  assert.match(staffApp, /data-action="advance-stage"/);
+  assert.match(staffApp, /data-action="read-notification"/);
+  assert.match(staffApp, /data-action="read-all-notifications"/);
+  assert.match(staffApp, /data-action="open-history"/);
+  assert.match(staffApp, /renderStageProgress\(assignment\)/);
   assert.doesNotMatch(adminBoot, /window\.location\.replace\(user\.portal_path\)/);
   assert.match(adminBoot, /state\.user = result\.user;\s*await afterLogin\(\);/);
   assert.match(adminBoot, /if \(IS_COMMUNITY && user\.role !== 'resident'\)\s*\{\s*state\.user = null;\s*state\.mobileAuthScreen = 'login';\s*renderLogin\(/);
