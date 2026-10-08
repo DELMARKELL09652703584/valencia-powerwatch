@@ -175,7 +175,7 @@ test('User Portal provides an accessible PWA install button', () => {
   assert.match(mainScript, /case 'install-app':\s*\{[\s\S]*?installPrompt\.prompt\(\)/);
   assert.match(mainScript, /window\.addEventListener\('beforeinstallprompt'/);
   assert.match(communityPage, /\/app\/community\.js\?v=29/);
-  assert.match(communityPage, /\/app\/pwa-update\.js\?v=2/);
+  assert.match(communityPage, /\/app\/pwa-update\.js\?v=3/);
 });
 
 test('User Portal manifest and service worker support root URL installation without caching Admin assets', () => {
@@ -195,5 +195,6 @@ test('User Portal manifest and service worker support root URL installation with
   assert.ok(worker.includes("'/app/community.js'"));
   assert.ok(!worker.includes("'/app/admin.js'"));
   assert.match(pwaUpdate, /new URL\('\/', window\.location\.origin\)/);
+  assert.match(pwaUpdate, /existingRegistration\.scope !== userPortalScope/);
   assert.match(server, /Service-Worker-Allowed', '\/'/);
 });

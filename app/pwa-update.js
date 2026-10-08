@@ -80,7 +80,8 @@
         const worker = existingRegistration.active
           || existingRegistration.waiting
           || existingRegistration.installing;
-        return worker?.scriptURL === workerUrl;
+        return existingRegistration.scope !== userPortalScope
+          && worker?.scriptURL === workerUrl;
       })
       .map((existingRegistration) => existingRegistration.unregister())))
     .then(() => navigator.serviceWorker.register(workerUrl, {
