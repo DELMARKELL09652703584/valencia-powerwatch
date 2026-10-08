@@ -4,7 +4,9 @@ require('dotenv').config();
 const express = require('express');
 const compression = require('compression');
 const { ROOT, UPLOAD_DIR, db } = require('./db');
-const { cleanupExpiredSessions, COOKIE_NAME, getUserByToken } = require('./auth');
+const {
+  cleanupExpiredSessions, COOKIE_NAME, getUserByToken, requireAuth, requireRole,
+} = require('./auth');
 
 const authRoutes = require('./routes/auth');
 const identityRoutes = require('./routes/identity');
@@ -18,6 +20,7 @@ const analyticsRoutes = require('./routes/analytics');
 const adminRoutes = require('./routes/admin');
 const feedbackRoutes = require('./routes/feedback');
 const repairRoutes = require('./routes/repair');
+const staffRoutes = require('./routes/staff');
 const chatbotRoutes = require('./routes/chatbot');
 
 const app = express();
@@ -48,9 +51,12 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'Valencia
 
 app.use('/api', authRoutes);
 app.use('/api', identityRoutes);
+app.use('/api/reports', requireAuth, requireRole('resident', 'administrator', 'utility'));
+app.use('/api/incidents', requireAuth, requireRole('resident', 'administrator', 'utility'));
 app.use('/api', reportRoutes);
 app.use('/api', incidentRoutes);
 app.use('/api', repairRoutes);
+app.use('/api', staffRoutes.router);
 app.use('/api/scheduled', scheduledRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/notifications', notificationRoutes);
@@ -75,15 +81,20 @@ app.get('/uploads/:filename', (req, res, next) => {
   const evidencePath = `/uploads/${filename}`;
   const report = isReportAttachment
     ? db.prepare(`
-      SELECT r.reporter_id FROM report_attachments a
+      SELECT r.id AS report_id, r.reporter_id FROM report_attachments a
       JOIN outage_reports r ON r.id = a.report_id
       WHERE a.file_path = ?
     `).get(evidencePath)
-    : db.prepare('SELECT reporter_id FROM outage_reports WHERE photo_path = ?').get(evidencePath);
+    : db.prepare('SELECT id AS report_id, reporter_id FROM outage_reports WHERE photo_path = ?').get(evidencePath);
 
   if (!report) return res.sendStatus(404);
-  const isStaff = ['administrator', 'personnel', 'utility'].includes(user.role);
-  if (!isStaff && Number(report.reporter_id) !== Number(user.id)) {
+  const isAdministrativeStaff = ['administrator', 'utility'].includes(user.role);
+  const isAssignedPersonnel = user.role === 'personnel' && db.prepare(`
+    SELECT 1 FROM repair_assignments a
+    JOIN staff_team_members m ON m.team_id = a.team_id
+    WHERE a.report_id = ? AND m.user_id = ? LIMIT 1
+  `).get(report.report_id, user.id);
+  if (!isAdministrativeStaff && !isAssignedPersonnel && Number(report.reporter_id) !== Number(user.id)) {
     return res.status(403).json({ error: 'You do not have permission to view this report evidence.' });
   }
 
@@ -104,6 +115,11 @@ app.get('/manifest.json', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, must-revalidate');
   res.sendFile(path.join(ROOT, 'manifest.json'));
 });
+app.get('/staff-manifest.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  res.sendFile(path.join(ROOT, 'staff-manifest.json'));
+});
 app.get('/sw.js', async (req, res, next) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-cache, must-revalidate');
@@ -116,6 +132,19 @@ app.get('/sw.js', async (req, res, next) => {
     next(error);
   }
 });
+app.get('/staff-sw.js', async (req, res, next) => {
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  res.setHeader('Service-Worker-Allowed', '/staff');
+  try {
+    const workerSource = await fs.readFile(path.join(ROOT, 'staff-sw.js'), 'utf8');
+    const buildId = JSON.stringify(process.env.RENDER_GIT_COMMIT || 'development');
+    res.send(workerSource.replace("'__POWERWATCH_STAFF_BUILD_ID__'", buildId));
+  } catch (error) {
+    next(error);
+  }
+});
+app.get(['/staff', '/staff/'], (req, res) => res.sendFile(path.join(ROOT, 'staff.html')));
 app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(ROOT, 'admin.html')));
 app.get(['/user', '/user.html', '/citizen', '/citizen.html', '/community', '/community.html'], (req, res) => res.sendFile(path.join(ROOT, 'community.html')));
 app.get(['/auth/oauth-dialog', '/auth/oauth-popup'], (req, res) => {

@@ -1242,10 +1242,13 @@ async function renderAdminVerification() {
 }
 
 async function renderAdminDispatch() {
-  const [{ teams }, { assignments }, { reports }] = await Promise.all([
+  const [{ teams }, { assignments }, { reports }, staffMemberships] = await Promise.all([
     api('/api/repair-teams'),
     api('/api/repair/assignments'),
-    api('/api/reports')
+    api('/api/reports'),
+    state.user?.role === 'administrator'
+      ? api('/api/admin/staff-memberships')
+      : Promise.resolve({ staff: [], teams: [] })
   ]);
 
   const filter = state.filters.dispatchStatus || '';
@@ -1260,9 +1263,10 @@ async function renderAdminDispatch() {
   const availableTeams = teams.filter((t) => t.status === 'Available');
   const activeAssignments = assignments.filter((a) => ['Dispatched', 'En Route', 'Arrived On Site', 'In Progress'].includes(a.status));
   const resolvedAssignments = assignments.filter((a) => a.status === 'Resolved');
+  const completedAwaitingReview = assignments.filter((a) => a.status === 'Completed');
 
   const selectedAssignment = filteredAssignments.find((a) => String(a.id) === String(state.selectedDispatchId))
-    || activeAssignments[0]
+    || ((filter === 'Active' || !filter) ? activeAssignments[0] : null)
     || filteredAssignments[0];
   state.selectedDispatchId = selectedAssignment?.id || null;
 
@@ -1272,6 +1276,7 @@ async function renderAdminDispatch() {
     if (st === 'En Route') return '<span class="dispatch-badge en-route">🚀 En Route</span>';
     if (st === 'Arrived On Site') return '<span class="dispatch-badge arrived">📍 Arrived On Site</span>';
     if (st === 'In Progress') return '<span class="dispatch-badge in-progress">⚡ In Progress</span>';
+    if (st === 'Completed') return '<span class="dispatch-badge arrived">🛠️ Awaiting Admin Review</span>';
     if (st === 'Resolved') return '<span class="dispatch-badge resolved">✅ Resolved</span>';
     return '<span class="dispatch-badge dispatched">📋 Dispatched</span>';
   };
@@ -1288,6 +1293,7 @@ async function renderAdminDispatch() {
     ['En Route', 'En Route', assignments.filter(a => a.status === 'En Route').length],
     ['On-Site', 'Arrived On Site', assignments.filter(a => a.status === 'Arrived On Site').length],
     ['In Progress', 'In Progress', assignments.filter(a => a.status === 'In Progress').length],
+    ['Awaiting Review', 'Completed', completedAwaitingReview.length],
     ['Resolved', 'Resolved', resolvedAssignments.length],
   ];
 
@@ -1309,6 +1315,7 @@ async function renderAdminDispatch() {
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
             Dispatch Response Crew
           </button>
+          <a class="button ghost" href="/staff" target="_blank" rel="noopener">Open Staff App</a>
           <button type="button" class="verification-icon-btn" data-action="dispatch-refresh" title="Refresh Live State">⟳</button>
         </div>
       </div>
@@ -1335,6 +1342,38 @@ async function renderAdminDispatch() {
           <span class="dispatch-stat-sub">Repaired &amp; closed successfully</span>
         </div>
       </div>
+
+      ${completedAwaitingReview.length ? `<section class="staff-response-review" style="margin:12px 0;padding:14px 16px;background:#fff;border:1px solid #f0d9a6;border-radius:10px;">
+        <h3 style="margin:0 0 10px;color:#75440b;">Field work completed · awaiting Admin review</h3>
+        <div style="display:grid;gap:8px;">
+          ${completedAwaitingReview.map((assignment) => `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:9px 0;border-top:1px solid #f2e6cd;">
+            <div><strong>${escapeHtml(assignment.assignment_code)}</strong><span class="muted small"> · ${escapeHtml(assignment.target_barangay)}${assignment.target_purok ? ` · Purok ${escapeHtml(assignment.target_purok)}` : ''}</span>
+              <span class="muted small" style="display:block;">${escapeHtml(assignment.team_name)} · ${escapeHtml(assignment.crew_report || 'Field response submitted; verify the work before closing the incident.')}</span>
+            </div>
+            <button type="button" class="button primary" data-action="dispatch-update-status" data-id="${assignment.id}" data-status="Resolved">Verify &amp; resolve</button>
+          </div>`).join('')}
+        </div>
+      </section>` : ''}
+
+      ${state.user?.role === 'administrator' ? `<details class="staff-team-management" style="margin:12px 0;background:#fff;border:1px solid #d9e6f1;border-radius:10px;padding:14px 16px;box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+        <summary style="cursor:pointer;font-weight:800;color:#153d5a;">Manage Staff Team Access <span class="muted small">· assign personnel accounts to field crews</span></summary>
+        <p class="muted small" style="margin:8px 0 12px;">Only personnel accounts assigned to a team can open its work orders in the Staff App. Changes take effect immediately.</p>
+        ${staffMemberships.staff.length ? `<div style="display:grid;gap:10px;">
+          ${staffMemberships.staff.map((member) => `<form class="staff-team-membership" data-form="staff-team-membership" data-user-id="${member.id}" style="display:grid;gap:9px;padding:12px;border:1px solid #e0e9f0;border-radius:9px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+              <strong>${escapeHtml(member.full_name)}</strong>
+              <span class="muted small">${escapeHtml(member.email)} · ${escapeHtml(member.status)}</span>
+            </div>
+            ${staffMemberships.teams.length ? `<div style="display:flex;gap:8px 14px;flex-wrap:wrap;">
+              ${staffMemberships.teams.map((team) => `<label style="display:inline-flex;align-items:center;gap:5px;font-size:.82rem;">
+                <input type="checkbox" name="team_ids" value="${team.id}" ${member.team_ids.includes(Number(team.id)) ? 'checked' : ''}>
+                ${escapeHtml(team.name)}
+              </label>`).join('')}
+            </div>` : '<p class="muted small">Create a repair team before assigning staff accounts.</p>'}
+            <button type="submit" class="button secondary" style="justify-self:start;" ${staffMemberships.teams.length ? '' : 'disabled'}>Save team access</button>
+          </form>`).join('')}
+        </div>` : '<p class="muted small" style="margin-top:12px;">No personnel accounts yet. Create a System Personnel account in User Management first.</p>'}
+      </details>` : ''}
 
       <div style="background:#fff;border:1px solid #d9e6f1;border-radius:10px;padding:12px 16px;box-shadow:0 2px 6px rgba(0,0,0,0.02);">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
@@ -2599,6 +2638,25 @@ async function renderAdminAnalytics() {
     </section>
   </section>`);
 }
+
+document.addEventListener('submit', async (event) => {
+  const form = event.target.closest('form[data-form="staff-team-membership"]');
+  if (!form) return;
+  event.preventDefault();
+  const userId = form.dataset.userId;
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (!userId || !submitButton) return;
+  submitButton.disabled = true;
+  try {
+    const team_ids = [...form.querySelectorAll('input[name="team_ids"]:checked')].map((input) => Number(input.value));
+    await send(`/api/admin/staff-memberships/${encodeURIComponent(userId)}`, 'PUT', { team_ids });
+    setToast('Staff team access saved.');
+    await render();
+  } catch (error) {
+    setToast(error.message || 'Could not save staff team access.');
+    submitButton.disabled = false;
+  }
+});
 
 async function renderAdminUsers() {
   const f = state.filters;

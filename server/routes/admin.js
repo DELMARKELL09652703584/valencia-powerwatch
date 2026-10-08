@@ -115,6 +115,7 @@ router.put('/users/:id/role', requireAuth, requireRole('administrator'), (req, r
   const { role } = req.body || {};
   if (!ROLES[role]) return res.status(400).json({ error: 'Invalid role.' });
   db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, user.id);
+  if (role !== 'personnel') db.prepare('DELETE FROM staff_team_members WHERE user_id = ?').run(user.id);
   audit(req.user, 'Role changed', `Role of ${user.email} changed to ${roleLabel(role)}.`);
   notifyUsers([user.id], 'Role updated', `Your role is now ${roleLabel(role)}.`, 'system');
   res.json({ user: userPublic(db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)), message: 'Role updated.' });

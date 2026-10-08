@@ -6,7 +6,7 @@ const { recordReportEvent, recordReportStatusChange } = require('../report-event
 
 const router = express.Router();
 
-const ASSIGNMENT_STATUSES = ['Dispatched', 'En Route', 'Arrived On Site', 'In Progress', 'Resolved', 'Cancelled'];
+const ASSIGNMENT_STATUSES = ['Dispatched', 'En Route', 'Arrived On Site', 'In Progress', 'Completed', 'Resolved', 'Cancelled'];
 
 const validateCoordinates = (latitude, longitude) => {
   const hasLatitude = latitude !== null && latitude !== undefined && latitude !== '';
@@ -76,7 +76,7 @@ const getAssignmentRow = (id) => {
 };
 
 // List all repair teams with their live status and active assignment
-router.get('/repair-teams', requireAuth, (req, res) => {
+router.get('/repair-teams', requireAuth, requireRole('administrator', 'utility'), (req, res) => {
   const teams = db.prepare(`
     SELECT t.*, a.assignment_code, a.status AS assignment_status, a.target_barangay, a.target_purok,
            a.target_latitude, a.target_longitude, a.priority AS assignment_priority
@@ -113,7 +113,7 @@ router.post('/repair-teams', requireAuth, requireRole('administrator'), (req, re
   res.status(201).json({ team, message: `Repair team ${team.name} created successfully.` });
 });
 
-router.put('/repair-teams/:id/location', requireAuth, requireRole('personnel', 'administrator', 'utility'), (req, res) => {
+router.put('/repair-teams/:id/location', requireAuth, requireRole('administrator', 'utility'), (req, res) => {
   const team = db.prepare('SELECT * FROM repair_teams WHERE id = ?').get(Number(req.params.id));
   if (!team) return res.status(404).json({ error: 'Repair team not found.' });
   const { latitude, longitude } = req.body || {};
@@ -133,7 +133,7 @@ router.put('/repair-teams/:id/location', requireAuth, requireRole('personnel', '
 });
 
 // List repair assignments
-router.get('/repair/assignments', requireAuth, (req, res) => {
+router.get('/repair/assignments', requireAuth, requireRole('administrator', 'utility'), (req, res) => {
   const { status, team_id } = req.query;
   const where = [];
   const params = [];
@@ -169,14 +169,14 @@ router.get('/repair/assignments', requireAuth, (req, res) => {
 });
 
 // Get a single assignment with full route and evidence details
-router.get('/repair/assignments/:id', requireAuth, (req, res) => {
+router.get('/repair/assignments/:id', requireAuth, requireRole('administrator', 'utility'), (req, res) => {
   const assignment = getAssignmentRow(Number(req.params.id));
   if (!assignment) return res.status(404).json({ error: 'Repair assignment not found.' });
   res.json({ assignment });
 });
 
 // Assign a repair team to a report or incident
-router.post('/repair/assign', requireAuth, requireRole('personnel', 'administrator', 'utility'), async (req, res) => {
+router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility'), async (req, res) => {
   const { team_id, report_id, incident_id, dispatch_notes, priority = 'High' } = req.body || {};
 
   if (!team_id) return res.status(400).json({ error: 'Please choose a repair team to assign.' });
@@ -344,7 +344,7 @@ router.post('/repair/assign', requireAuth, requireRole('personnel', 'administrat
 });
 
 // Update repair team / assignment status (En Route, Arrived On Site, In Progress, Resolved)
-router.put('/repair/assignments/:id/status', requireAuth, requireRole('personnel', 'administrator', 'utility'), async (req, res) => {
+router.put('/repair/assignments/:id/status', requireAuth, requireRole('administrator', 'utility'), async (req, res) => {
   const assignment = getAssignmentRow(Number(req.params.id));
   if (!assignment) return res.status(404).json({ error: 'Repair assignment not found.' });
 

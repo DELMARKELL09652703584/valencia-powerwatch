@@ -17,6 +17,9 @@ Render is the official, stable online deployment:
 * **📱 User / Community Portal (Mobile / PWA)**
   * Online (Internet): <https://valencia-powerwatch.onrender.com/community>
   * Local: <http://localhost:4000/community>
+* **🦺 Staff Field App (Mobile / installable PWA)**
+  * Online (Internet): <https://valencia-powerwatch.onrender.com/staff>
+  * Local: <http://localhost:4000/staff>
 * **📲 Install / QR Code Page**
   * Online (Internet): <https://valencia-powerwatch.onrender.com/install>
 * **🩺 API Health Check**
@@ -27,6 +30,13 @@ The Cloudflare Tunnel started by `start-public-online.bat` is temporary. Its lin
 
 ### Render free-plan data limits
 This service is configured for Render's Free plan to avoid monthly charges. Free instances do not support persistent disks, and their filesystem is ephemeral. SQLite accounts, outage records, and uploaded evidence can therefore be lost when Render restarts or redeploys the service. The app's startup migration can seed a new data directory from the bundled `data/powerwatch.db`, but that is not a backup of live changes and cannot recover data already lost from an earlier instance. If persistent account and report storage becomes essential, a paid plan with a persistent disk will be required; otherwise, continue with the Free plan knowing this limitation.
+
+### Staff Field App setup
+1. In User Management, create an account with the **System Personnel** role.
+2. In Admin Portal → Repair & Dispatch, create or select a repair team, open **Manage Staff Team Access**, and assign the personnel account to that team.
+3. Verify a resident report and dispatch the response team. Only personnel assigned to that team can view its work orders and evidence in the Staff App.
+4. Open `/staff` on the staff member's phone and sign in with the Admin-created account. On compatible Android browsers, use **Install**; on iOS Safari, use **Share → Add to Home Screen**.
+5. Staff acknowledge, navigate to, inspect, and repair assigned incidents; they can post field notes and JPG/PNG/WebP photos (up to 8 MB). After staff marks work complete, Admin reviews the response under **Awaiting Review** and confirms resolution.
 
 ---
 
@@ -46,6 +56,7 @@ This service is configured for Render's Free plan to avoid monthly charges. Free
 flowchart TD
     subgraph Public_Internet["PUBLIC INTERNET (Any Device / Any Network)"]
         UserPhone["📱 Resident Smartphone / Laptop (Globe, Smart, DITO, Wi-Fi)"]
+        StaffPhone["🦺 Field Staff Smartphone (Staff PWA)"]
     end
 
     subgraph Cloudflare_Edge["CLOUDFLARE SECURE EDGE"]
@@ -57,6 +68,7 @@ flowchart TD
         Express["Node.js Express Backend (Port 4000)"]
         DB[("Central SQLite Database\ndata/powerwatch.db")]
         AdminWeb["🖥️ Administrator Portal (/admin)"]
+        StaffWeb["🦺 Staff Field App (/staff)"]
     end
 
     UserPhone -->|HTTPS POST Report / Login| CF
@@ -65,6 +77,9 @@ flowchart TD
     Express --> DB
     DB --> Express
     Express --> AdminWeb
+    Express --> StaffWeb
+    StaffPhone -->|HTTPS Login / Field Updates| CF
+    StaffWeb -->|Role-scoped API| Express
 ```
 
 ### Key Integration Principles:

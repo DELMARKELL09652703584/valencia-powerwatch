@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Valencia PowerWatch · Field Staff</title>
+    <meta name="description" content="Valencia PowerWatch field response app for authorized staff." />
+    <meta name="theme-color" content="#0b2944" />
+    <meta name="application-name" content="PowerWatch Field" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/staff-manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/assets/powerwatch-logo.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/powerwatch-icon-180.png" />
+    <link rel="stylesheet" href="/app/staff.css?v=1" />
+  </head>
+  <body class="staff-app">
+    <div id="staff-app">
+      <main class="staff-loading" aria-live="polite">
+        <img src="/assets/powerwatch-logo.svg" alt="" width="56" height="56" />
+        <strong>PowerWatch Field</strong>
+        <span>Loading secure staff workspace…</span>
+      </main>
+    </div>
+    <div id="staff-toast" class="staff-toast" role="status" aria-live="polite" hidden></div>
+    <script src="/app/staff.js?v=1"></script>
+  </body>
+</html>

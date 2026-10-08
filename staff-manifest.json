@@ -1,0 +1,33 @@
+{
+  "id": "/staff",
+  "name": "Valencia PowerWatch Field",
+  "short_name": "PowerWatch Field",
+  "description": "Field response and repair assignments for authorized Valencia PowerWatch staff.",
+  "start_url": "/staff",
+  "scope": "/staff",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#0b1727",
+  "theme_color": "#0b2944",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    {
+      "src": "/assets/powerwatch-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/powerwatch-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/powerwatch-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
