@@ -2370,9 +2370,9 @@ async function handleClick(event) {
             <label>Full name<input class="input" name="full_name" required></label>
             <label>Email<input class="input" type="email" name="email" required></label>
             <label>Contact number<input class="input" name="contact_number"></label>
-            <label>Address<input class="input" name="address"></label>
-            <label>Barangay<select class="input" name="barangay"><option value="">None</option>${state.barangays.map((b) => `<option>${escapeHtml(b)}</option>`).join('')}</select></label>
-            <label>Role<select class="input" name="role">${STAFF_ROLES.map((r) => `<option value="${r}">${escapeHtml(roleLabel(r))}</option>`).join('')}<option value="resident">Resident</option></select></label>
+            <label data-account-location-field hidden>Address<input class="input" name="address"></label>
+            <label data-account-location-field hidden>Barangay<select class="input" name="barangay"><option value="">None</option>${state.barangays.map((b) => `<option>${escapeHtml(b)}</option>`).join('')}</select></label>
+            <label>Role<select class="input" name="role">${STAFF_ROLES.map((r) => `<option value="${r}" ${r === 'personnel' ? 'selected' : ''}>${escapeHtml(roleLabel(r))}</option>`).join('')}<option value="resident">Resident</option></select></label>
             <label>Password<input class="input" type="password" name="password" minlength="6" required></label>
           `, 'Create account', { form: 'new-user' });
         return;
@@ -2713,6 +2713,14 @@ document.addEventListener('submit', async (event) => {
 });
 
 document.addEventListener('change', async (event) => {
+  const accountRole = event.target.closest('form[data-form="new-user"] select[name="role"]');
+  if (accountRole) {
+    const personnelSelected = accountRole.value === 'personnel';
+    accountRole.form.querySelectorAll('[data-account-location-field]').forEach((field) => {
+      field.hidden = personnelSelected;
+    });
+    return;
+  }
   const chipSelect = event.target.closest('[data-chip-select]');
   if (chipSelect && chipSelect.value) {
     const picker = chipSelect.closest('.incident-chip-picker');
