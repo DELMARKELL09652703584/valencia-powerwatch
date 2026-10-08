@@ -73,19 +73,18 @@
   });
 
   const workerUrl = new URL('/sw.js', window.location.origin).href;
-  const communityScope = new URL('/community', window.location.origin).href;
+  const userPortalScope = new URL('/', window.location.origin).href;
   navigator.serviceWorker.getRegistrations()
     .then((registrations) => Promise.all(registrations
       .filter((existingRegistration) => {
         const worker = existingRegistration.active
           || existingRegistration.waiting
           || existingRegistration.installing;
-        return existingRegistration.scope === `${window.location.origin}/`
-          && worker?.scriptURL === workerUrl;
+        return worker?.scriptURL === workerUrl;
       })
       .map((existingRegistration) => existingRegistration.unregister())))
     .then(() => navigator.serviceWorker.register(workerUrl, {
-      scope: communityScope,
+      scope: userPortalScope,
       updateViaCache: 'none',
     })).then((serviceWorkerRegistration) => {
       registration = serviceWorkerRegistration;

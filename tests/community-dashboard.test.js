@@ -17,7 +17,7 @@ test('community dashboard keeps personal notifications out of the home feed', ()
   assert.ok(homeRendererEnd > homeRendererStart);
   assert.doesNotMatch(homeRenderer, /\/api\/(?:notifications|announcements)/);
   assert.doesNotMatch(communityScript, /class="recent-updates"/);
-  assert.match(communityPage, /\/app\/community\.js\?v=28/);
+  assert.match(communityPage, /\/app\/community\.js\?v=29/);
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=58/);
   assert.match(portalStyles, /body\.community-body \.home-report-action\s*\{/);
   assert.match(portalStyles, /body\.community-body \.home-track-action svg\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;[^}]*fill:\s*none;/s);
@@ -161,15 +161,39 @@ test('community bottom navigation shows accessible icon and text labels', () => 
   assert.match(portalStyles, /body\.community-body \.mobile-tab\.active::after\s*\{[^}]*transform:\s*translateX\(50%\) scaleX\(1\);/s);
   assert.match(portalStyles, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*body\.community-body \.mobile-tab,/s);
   assert.match(portalStyles, /body\.community-body \.mobile-tab-icon,\s*body\.community-body \.mobile-tab-icon svg\s*\{[^}]*width:\s*22px;[^}]*height:\s*22px;/s);
-  assert.match(communityPage, /\/app\/community\.js\?v=28/);
+  assert.match(communityPage, /\/app\/community\.js\?v=29/);
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=58/);
 });
 
-test('User Portal no longer renders Install buttons', () => {
+test('User Portal provides an accessible PWA install button', () => {
   const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
   const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
 
-  assert.match(communityScript, /function mobileInstallButton\(\)\s*\{\s*return '';\s*\}/);
-  assert.equal((communityScript.match(/\$\{mobileInstallButton\(\)\}/g) || []).length, 3);
-  assert.equal((mainScript.match(/\$\{mobileInstallButton\(\)\}/g) || []).length, 3);
+  assert.match(communityScript, /function mobileInstallButton\(\)\s*\{[^}]*data-action="install-app"[^}]*aria-label="Install Valencia PowerWatch"/s);
+  assert.match(communityScript, /data-action="install-app"[\s\S]*?<span>Install<\/span>/);
+  assert.match(mainScript, /case 'install-app':\s*\{[\s\S]*?installPrompt\.prompt\(\)/);
+  assert.match(mainScript, /window\.addEventListener\('beforeinstallprompt'/);
+  assert.match(communityPage, /\/app\/community\.js\?v=29/);
+  assert.match(communityPage, /\/app\/pwa-update\.js\?v=2/);
+});
+
+test('User Portal manifest and service worker support root URL installation without caching Admin assets', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
+  const worker = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  const pwaUpdate = fs.readFileSync(path.join(ROOT, 'app', 'pwa-update.js'), 'utf8');
+  const server = fs.readFileSync(path.join(ROOT, 'server', 'index.js'), 'utf8');
+
+  assert.equal(manifest.start_url, '/');
+  assert.equal(manifest.scope, '/');
+  assert.equal(manifest.display, 'standalone');
+  assert.equal(manifest.name, 'Valencia PowerWatch');
+  assert.ok(manifest.icons.some((icon) => icon.sizes === '192x192'));
+  assert.ok(manifest.icons.some((icon) => icon.sizes === '512x512'));
+  assert.ok(manifest.icons.some((icon) => icon.purpose === 'maskable'));
+  assert.ok(worker.includes("['/', '/index.html'"));
+  assert.ok(worker.includes("'/app/community.js'"));
+  assert.ok(!worker.includes("'/app/admin.js'"));
+  assert.match(pwaUpdate, /new URL\('\/', window\.location\.origin\)/);
+  assert.match(server, /Service-Worker-Allowed', '\/'/);
 });

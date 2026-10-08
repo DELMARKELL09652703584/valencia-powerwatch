@@ -21,7 +21,14 @@ const STATIC_ASSETS = [
 function isCacheableStaticAsset(pathname) {
   return pathname === '/style.css'
     || pathname === '/manifest.json'
-    || (pathname.startsWith('/app/') && /\.(?:css|js)$/.test(pathname))
+    || [
+      '/app/portal-polish.css',
+      '/app/core.js',
+      '/app/community.js',
+      '/app/main.js',
+      '/app/chatbot.js',
+      '/app/pwa-update.js',
+    ].includes(pathname)
     || (pathname.startsWith('/assets/') && /\.(?:png|svg|webp|woff2?)$/.test(pathname))
     || (pathname.startsWith('/vendor/leaflet/') && /\.(?:css|js|png)$/.test(pathname));
 }
@@ -54,7 +61,7 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET' || requestUrl.origin !== self.location.origin) return;
 
   const isCommunityNavigation = request.mode === 'navigate'
-    && ['/community', '/community.html'].includes(requestUrl.pathname);
+    && ['/', '/index.html', '/user', '/user.html', '/citizen', '/citizen.html', '/community', '/community.html'].includes(requestUrl.pathname);
   if (!isCommunityNavigation && !isCacheableStaticAsset(requestUrl.pathname)) return;
 
   event.respondWith((async () => {
