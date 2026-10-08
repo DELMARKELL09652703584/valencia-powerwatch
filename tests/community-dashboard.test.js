@@ -178,13 +178,13 @@ test('User Portal provides an accessible PWA install button', () => {
   assert.match(communityPage, /\/app\/pwa-update\.js\?v=3/);
 });
 
-test('User Portal manifest and service worker support root URL installation without caching Admin assets', () => {
+test('User Portal manifest and service worker launch the User Portal without caching Admin assets', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
   const worker = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
   const pwaUpdate = fs.readFileSync(path.join(ROOT, 'app', 'pwa-update.js'), 'utf8');
   const server = fs.readFileSync(path.join(ROOT, 'server', 'index.js'), 'utf8');
 
-  assert.equal(manifest.start_url, '/');
+  assert.equal(manifest.start_url, '/community');
   assert.equal(manifest.scope, '/');
   assert.equal(manifest.display, 'standalone');
   assert.equal(manifest.name, 'Valencia PowerWatch');

@@ -2568,6 +2568,12 @@ async function boot() {
 
     const { user } = await api('/api/auth/me');
     state.user = user;
+    if (IS_COMMUNITY && user.role !== 'resident') {
+      state.user = null;
+      state.mobileAuthScreen = 'login';
+      renderLogin('This browser is signed in to a Staff or Admin account. Sign in with a resident account to use the User Portal.');
+      return;
+    }
     if (redirectToRolePortal(state.user)) return;
     if (IS_ADMIN && state.user && !OFFICIAL_ROLES.includes(state.user.role)) {
       renderAdminRestrictedAccess();

@@ -256,6 +256,7 @@ test('verified database roles assign each account its own portal after login', {
   const staffApp = fs.readFileSync(path.join(ROOT, 'app', 'staff.js'), 'utf8');
   assert.match(adminBoot, /function redirectToRolePortal\(user\)/);
   assert.match(adminBoot, /state\.user = result\.user;\s*await afterLogin\(\);/);
+  assert.match(adminBoot, /if \(IS_COMMUNITY && user\.role !== 'resident'\)\s*\{\s*state\.user = null;\s*state\.mobileAuthScreen = 'login';\s*renderLogin\(/);
   assert.match(adminBoot, /if \(redirectToRolePortal\(state\.user\)\) return;/);
   assert.match(staffApp, /const redirectToAccountPortal = \(user\)/);
   assert.match(staffApp, /if \(redirectToAccountPortal\(user\)\) return;/);

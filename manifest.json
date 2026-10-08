@@ -3,7 +3,7 @@
   "short_name": "PowerWatch",
   "id": "/community",
   "description": "Community Power Interruption Reporting, Verification, and Information Management System for Valencia City, Bukidnon",
-  "start_url": "/",
+  "start_url": "/community",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
