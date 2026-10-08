@@ -55,8 +55,8 @@ const createPersonnel = async (name, email) => {
   return (await response.json()).user;
 };
 
-const login = async (email, password) => {
-  const response = await jsonRequest('/api/auth/login', '', 'POST', { email, password });
+const login = async (email, password, portal) => {
+  const response = await jsonRequest('/api/auth/login', '', 'POST', { email, password, portal });
   assert.equal(response.status, 200);
   const result = await response.json();
   return { cookie: cookieFrom(response), user: result.user };
@@ -94,7 +94,7 @@ before(async () => {
   fs.mkdirSync(path.join(runtimeRoot, 'assets'), { recursive: true });
   fs.writeFileSync(path.join(runtimeRoot, 'package.json'), JSON.stringify({ type: 'commonjs' }));
   fs.cpSync(path.join(ROOT, 'server'), path.join(runtimeRoot, 'server'), { recursive: true });
-  for (const file of ['staff.html', 'staff-manifest.json', 'staff-sw.js']) {
+  for (const file of ['community.html', 'admin.html', 'staff.html', 'staff-manifest.json', 'staff-sw.js']) {
     fs.copyFileSync(path.join(ROOT, file), path.join(runtimeRoot, file));
   }
   for (const file of ['staff.css', 'staff.js']) {
@@ -137,6 +137,7 @@ before(async () => {
   const adminLogin = await jsonRequest('/api/auth/login', '', 'POST', {
     email: 'admin@powerwatch.ph',
     password: 'admin123',
+    portal: 'admin',
   });
   const adminLoginResult = await adminLogin.json();
   assert.equal(adminLogin.status, 200, `Could not authenticate test admin: ${JSON.stringify(adminLoginResult)}\n${serverOutput}`);
@@ -180,11 +181,11 @@ before(async () => {
   assert.equal(dispatchResponse.status, 201);
   assignmentId = (await dispatchResponse.json()).assignment.id;
   portalLoginEmails.staff = staff.email;
-  const staffLogin = await login(staff.email, 'field-password-123');
+  const staffLogin = await login(staff.email, 'field-password-123', 'staff');
   staffCookie = staffLogin.cookie;
   staffLoginUser = staffLogin.user;
   unassignedCookie = (await login(unassigned.email, 'field-password-123')).cookie;
-  const residentLogin = await login(portalLoginEmails.resident, 'resident-password-123');
+  const residentLogin = await login(portalLoginEmails.resident, 'resident-password-123', 'community');
   residentCookie = residentLogin.cookie;
   residentLoginUser = residentLogin.user;
 });
@@ -252,14 +253,88 @@ test('verified database roles assign each account its own portal after login', {
   assert.equal((await jsonRequest('/api/admin/users', staffCookie)).status, 403);
   assert.equal((await jsonRequest('/api/admin/users', residentCookie)).status, 403);
 
+  const mismatchedPortalAttempts = await Promise.all([
+    jsonRequest('/api/auth/login', '', 'POST', { email: portalLoginEmails.resident, password: 'resident-password-123', portal: 'admin' }),
+    jsonRequest('/api/auth/login', '', 'POST', { email: portalLoginEmails.resident, password: 'resident-password-123', portal: 'staff' }),
+    jsonRequest('/api/auth/login', '', 'POST', { email: portalLoginEmails.staff, password: 'field-password-123', portal: 'admin' }),
+    jsonRequest('/api/auth/login', '', 'POST', { email: portalLoginEmails.staff, password: 'field-password-123', portal: 'community' }),
+    jsonRequest('/api/auth/login', '', 'POST', { email: 'admin@powerwatch.ph', password: 'admin123', portal: 'staff' }),
+    jsonRequest('/api/auth/login', '', 'POST', { email: 'admin@powerwatch.ph', password: 'admin123', portal: 'community' }),
+  ]);
+  assert.ok(mismatchedPortalAttempts.every((response) => response.status === 403));
+
+  const portalPages = await Promise.all([
+    fetch(`${baseUrl}/community`, { headers: { cookie: adminCookie } }),
+    fetch(`${baseUrl}/staff`, { headers: { cookie: residentCookie } }),
+    fetch(`${baseUrl}/admin`, { headers: { cookie: staffCookie } }),
+  ]);
+  assert.ok(portalPages.every((response) => response.status === 200));
+  assert.match(await portalPages[0].text(), /Community User App/);
+  assert.match(await portalPages[1].text(), /Field Staff/);
+  assert.match(await portalPages[2].text(), /Admin Web Portal/);
+
   const adminBoot = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
   const staffApp = fs.readFileSync(path.join(ROOT, 'app', 'staff.js'), 'utf8');
-  assert.match(adminBoot, /function redirectToRolePortal\(user\)/);
+  assert.doesNotMatch(adminBoot, /window\.location\.replace\(user\.portal_path\)/);
   assert.match(adminBoot, /state\.user = result\.user;\s*await afterLogin\(\);/);
   assert.match(adminBoot, /if \(IS_COMMUNITY && user\.role !== 'resident'\)\s*\{\s*state\.user = null;\s*state\.mobileAuthScreen = 'login';\s*renderLogin\(/);
-  assert.match(adminBoot, /if \(redirectToRolePortal\(state\.user\)\) return;/);
-  assert.match(staffApp, /const redirectToAccountPortal = \(user\)/);
-  assert.match(staffApp, /if \(redirectToAccountPortal\(user\)\) return;/);
+  assert.match(adminBoot, /portal: IS_COMMUNITY \? 'community' : 'admin'/);
+  assert.doesNotMatch(staffApp, /window\.location\.replace\(portalPath\)/);
+  assert.match(staffApp, /portal: 'staff'/);
+  assert.match(staffApp, /user\.role !== 'personnel'/);
+});
+
+test('built-in administrator account remains active and protected from account changes', { timeout: TEST_TIMEOUT_MS }, async () => {
+  const usersResponse = await jsonRequest('/api/admin/users?status=all', adminCookie);
+  assert.equal(usersResponse.status, 200);
+  const users = (await usersResponse.json()).users;
+  const builtInUser = users.find((user) => user.username === 'DELMARKEL2003');
+  assert.ok(builtInUser);
+  const staffUser = users.find((user) => user.email === portalLoginEmails.staff);
+  assert.ok(staffUser);
+  const userId = builtInUser.id;
+
+  const protectedAccountChanges = await Promise.all([
+    jsonRequest(`/api/admin/users/${userId}`, adminCookie, 'PUT', { email: 'replaced@example.test', contact_number: '09170000000' }),
+    jsonRequest(`/api/admin/users/${userId}/status`, adminCookie, 'PUT', { status: 'Inactive' }),
+    jsonRequest(`/api/admin/users/${userId}/role`, adminCookie, 'PUT', { role: 'resident' }),
+    jsonRequest(`/api/admin/users/${userId}/reset`, adminCookie, 'PUT', { new_password: 'replacement-password' }),
+    jsonRequest(`/api/admin/users/${userId}`, adminCookie, 'DELETE'),
+  ]);
+  assert.ok(protectedAccountChanges.every((response) => response.status === 403));
+
+  assert.equal(builtInUser.role, 'administrator');
+  assert.equal(builtInUser.status, 'Active');
+
+  const reservedAccounts = await Promise.all([
+    jsonRequest('/api/auth/register', '', 'POST', {
+      full_name: 'Reserved Username Attempt',
+      email: `reserved-username-${Date.now()}@example.test`,
+      username: 'DELMARKEL2003',
+      password: 'resident-password-123',
+    }),
+    jsonRequest('/api/auth/register', '', 'POST', {
+      full_name: 'Reserved Phone Attempt',
+      email: `reserved-phone-${Date.now()}@example.test`,
+      contact_number: '09652703584',
+      password: 'resident-password-123',
+    }),
+    jsonRequest('/api/admin/users', adminCookie, 'POST', {
+      full_name: 'Reserved Admin Identifier Attempt',
+      email: `new-${Date.now()}@example.test`,
+      contact_number: '+639652703584',
+      password: 'field-password-123',
+      role: 'personnel',
+    }),
+    jsonRequest('/api/profile', residentCookie, 'PUT', {
+      full_name: 'Resident Contact Collision',
+      contact_number: '09652703584',
+    }),
+    jsonRequest(`/api/admin/users/${staffUser.id}`, adminCookie, 'PUT', {
+      contact_number: '+639652703584',
+    }),
+  ]);
+  assert.ok(reservedAccounts.every((response) => response.status === 409));
 });
 
 test('Staff API scopes assignments and report evidence to assigned personnel teams', { timeout: TEST_TIMEOUT_MS }, async () => {

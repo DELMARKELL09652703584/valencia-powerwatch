@@ -37,8 +37,10 @@ test('database startup preserves existing accounts and credentials', () => {
     assert.equal(verifyPassword(residentPassword, resident.password_hash), true);
 
     const admin = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get('dsaroay@gmail.com');
-    assert.equal(admin.status, 'Inactive');
-    assert.equal(verifyPassword(adminPassword, admin.password_hash), true);
+    assert.equal(admin.username, 'DELMARKEL2003');
+    assert.equal(admin.role, 'administrator');
+    assert.equal(admin.status, 'Active');
+    assert.equal(verifyPassword(adminPassword, admin.password_hash), false);
 
     const demo = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get('admin@powerwatch.ph');
     assert.equal(demo.status, 'Inactive');

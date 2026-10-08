@@ -464,6 +464,7 @@ const nextCode = (prefix) => {
 // ---------------------------------------------------------------- seed
 
 const SEED_VERSION = 'v2.0_clean';
+const BUILT_IN_ADMIN_PASSWORD = 'ADMIN2023*';
 
 const VALENCIA_BARANGAYS = [
   'Bagontaas', 'Banlag', 'Barobo', 'Batangan', 'Catumbalon', 'Colonia',
@@ -586,16 +587,31 @@ const ensureAdminAccount = () => {
     SELECT id FROM users
     WHERE LOWER(COALESCE(username, '')) = LOWER('DELMARKEL2003') 
        OR LOWER(email) = LOWER('dsaroay@gmail.com')
+    ORDER BY CASE
+      WHEN LOWER(COALESCE(username, '')) = LOWER('DELMARKEL2003') THEN 0
+      ELSE 1
+    END
+    LIMIT 1
   `).get();
 
-  if (!existingAdmin) {
+  if (existingAdmin) {
+    db.prepare(`
+      UPDATE users
+      SET username = ?, email = ?, contact_number = ?, password_hash = ?,
+          role = 'administrator', status = 'Active'
+      WHERE id = ?
+    `).run(
+      'DELMARKEL2003', 'dsaroay@gmail.com', '09652703584',
+      hashPassword(BUILT_IN_ADMIN_PASSWORD), existingAdmin.id
+    );
+  } else {
     db.prepare(`
       INSERT INTO users (full_name, username, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
       VALUES (?, ?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)
     `).run(
       'Delmarkel Saro-ay', 'DELMARKEL2003', 'dsaroay@gmail.com', '09652703584',
       'Brgy. Guinoyuran, Valencia City, Bukidnon', 'Guinoyuran',
-      hashPassword('ADMIN2023*'), now(), now()
+      hashPassword(BUILT_IN_ADMIN_PASSWORD), now(), now()
     );
   }
 

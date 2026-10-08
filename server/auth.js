@@ -3,6 +3,28 @@ const { db, now } = require('./db');
 
 const SESSION_DAYS = 7;
 const COOKIE_NAME = 'pw_session';
+const BUILT_IN_ADMIN_USERNAME = 'DELMARKEL2003';
+const BUILT_IN_ADMIN_EMAIL = 'dsaroay@gmail.com';
+const BUILT_IN_ADMIN_PHONE = '09652703584';
+const PORTAL_ROLES = {
+  community: ['resident'],
+  staff: ['personnel'],
+  admin: ['administrator', 'utility'],
+};
+
+const normalizePhone = (value) => String(value || '')
+  .replace(/[\s\-\(\)\.]/g, '')
+  .replace(/^\+63/, '0');
+
+const isBuiltInAdmin = (user) => String(user?.username || '').toLowerCase() === BUILT_IN_ADMIN_USERNAME.toLowerCase()
+  || String(user?.email || '').toLowerCase() === BUILT_IN_ADMIN_EMAIL.toLowerCase()
+  || normalizePhone(user?.contact_number) === BUILT_IN_ADMIN_PHONE;
+
+const hasBuiltInAdminIdentifier = ({ username, email, contact_number } = {}) => (
+  String(username || '').trim().toLowerCase() === BUILT_IN_ADMIN_USERNAME.toLowerCase()
+  || String(email || '').trim().toLowerCase() === BUILT_IN_ADMIN_EMAIL.toLowerCase()
+  || normalizePhone(contact_number) === BUILT_IN_ADMIN_PHONE
+);
 
 const verifyPassword = (password, stored) => {
   const [salt, hash] = String(stored).split(':');
@@ -154,6 +176,9 @@ const clearDBTables = () => {
 
 module.exports = {
   COOKIE_NAME,
+  PORTAL_ROLES,
+  isBuiltInAdmin,
+  hasBuiltInAdminIdentifier,
   hashPassword,
   verifyPassword,
   createSession,

@@ -94,7 +94,7 @@ function renderLogin(message = '', loginIdentifier = null, rememberIdentifier = 
   app.innerHTML = `<main class="login-page">
     <aside class="login-art admin-login-art">
       <div class="admin-art-brand"><img src="/assets/powerwatch-logo.svg" alt=""><div><strong>Valencia</strong><b>PowerWatch</b></div></div>
-      <p class="portal-name">Admin / Staff Portal</p>
+      <p class="portal-name">Admin Web Portal</p>
       <p class="art-slogan">Together for a Brighter and<br>Safer Valencia</p>
     </aside>
     <section class="login-panel">
@@ -144,21 +144,21 @@ function renderAdminRestrictedAccess() {
   app.innerHTML = `<main class="login-page">
     <aside class="login-art admin-login-art">
       <div class="admin-art-brand"><img src="/assets/powerwatch-logo.svg" alt=""><div><strong>Valencia</strong><b>PowerWatch</b></div></div>
-      <p class="portal-name">Admin / Staff Portal</p>
+      <p class="portal-name">Admin Web Portal</p>
       <p class="art-slogan">Access Restricted</p>
     </aside>
     <section class="login-panel">
       <div class="login-content" style="text-align:center;max-width:440px;">
         <div style="font-size:2.8rem;margin-bottom:8px;">🛡️</div>
-        <h1 style="font-size:1.4rem;margin-bottom:8px;">Staff Access Required</h1>
-        <p class="login-intro" style="margin-bottom:12px;">You are currently signed in as <strong>${escapeHtml(state.user?.full_name || 'Resident')}</strong> (${escapeHtml(roleLabel(state.user?.role || 'resident'))}).</p>
+        <h1 style="font-size:1.4rem;margin-bottom:8px;">Admin Access Required</h1>
+        <p class="login-intro" style="margin-bottom:12px;">You are currently signed in as <strong>${escapeHtml(state.user?.full_name || 'another account')}</strong> (${escapeHtml(roleLabel(state.user?.role || 'resident'))}).</p>
         <div style="padding:14px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;color:#991b1b;font-size:0.85rem;line-height:1.5;margin-bottom:20px;text-align:left;">
-          ⚠️ <strong>Notice:</strong> The Admin Console is exclusively for Valencia City System Personnel and Administrators. Residents can report outages and track restoration on the User Portal.
+          ⚠️ <strong>Notice:</strong> This Admin Portal is restricted to administrator accounts. Staff and residents must use their own separate portals.
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">
-          <button class="button primary full" type="button" data-action="logout">Sign out &amp; Use Staff Account</button>
-          <a href="/user" class="button ghost full" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
-            <span>Open User Portal (Citizen App)</span> &rarr;
+          <button class="button primary full" type="button" data-action="logout">Sign out and use an Admin account</button>
+          <a href="${state.user?.role === 'personnel' ? '/staff' : '/community'}" class="button ghost full" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+            <span>Open your role's portal</span> &rarr;
           </a>
         </div>
       </div>
@@ -167,20 +167,12 @@ function renderAdminRestrictedAccess() {
   </main>`;
 }
 
-function redirectToRolePortal(user) {
-  if (!user?.portal_path) return false;
-  const currentPortal = IS_ADMIN ? '/admin' : '/community';
-  if (user.portal_path === currentPortal) return false;
-  window.location.replace(user.portal_path);
-  return true;
-}
-
 function renderForgotPassword(message = '') {
   if (IS_ADMIN) {
     app.innerHTML = `<main class="login-page">
       <aside class="login-art admin-login-art">
         <div class="admin-art-brand"><img src="/assets/powerwatch-logo.svg" alt=""><div><strong>Valencia</strong><b>PowerWatch</b></div></div>
-        <p class="portal-name">Admin / Staff Portal</p>
+        <p class="portal-name">Admin Web Portal</p>
         <p class="art-slogan">Together for a Brighter and<br>Safer Valencia</p>
       </aside>
       <section class="login-panel"><div class="login-content">
@@ -450,6 +442,7 @@ async function submitForm(form) {
     saveCommunityLoginIdentifier(values.email, values.remember === 'on');
     const result = await send('/api/auth/login', 'POST', {
       email: values.email, password: values.password, remember: values.remember === 'on',
+      portal: IS_COMMUNITY ? 'community' : 'admin',
     });
     state.user = result.user;
     await afterLogin();
@@ -2518,7 +2511,12 @@ function startOAuthFlow(provider) {
 }
 
 async function afterLogin() {
-  if (redirectToRolePortal(state.user)) return;
+  if (IS_COMMUNITY && state.user?.role !== 'resident') {
+    state.user = null;
+    state.mobileAuthScreen = 'login';
+    renderLogin('This account is not authorized for the User Portal. Sign in with a resident account.');
+    return;
+  }
   if (IS_ADMIN && state.user && !OFFICIAL_ROLES.includes(state.user.role)) {
     renderAdminRestrictedAccess();
     return;
@@ -2574,7 +2572,6 @@ async function boot() {
       renderLogin('This browser is signed in to a Staff or Admin account. Sign in with a resident account to use the User Portal.');
       return;
     }
-    if (redirectToRolePortal(state.user)) return;
     if (IS_ADMIN && state.user && !OFFICIAL_ROLES.includes(state.user.role)) {
       renderAdminRestrictedAccess();
       return;

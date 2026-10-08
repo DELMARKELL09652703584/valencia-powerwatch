@@ -4,7 +4,7 @@ const path = require('node:path');
 const { db, now, DB_PATH, seedIfFresh, VALENCIA_BARANGAYS } = require('../db');
 const {
   requireAuth, requireRole, audit, hashPassword, roleLabel,
-  notifyUsers, notifyRole, clearDBTables,
+  notifyUsers, notifyRole, clearDBTables, isBuiltInAdmin, hasBuiltInAdminIdentifier,
 } = require('../auth');
 
 const router = express.Router();
@@ -41,6 +41,13 @@ router.post('/users', requireAuth, requireRole('administrator'), (req, res) => {
   const { full_name, email, contact_number, address, barangay, role, password } = req.body || {};
   if (!full_name || !email || !password) return res.status(400).json({ error: 'Name, email, and password are required.' });
   if (!ROLES[role]) return res.status(400).json({ error: 'Invalid role.' });
+  if (hasBuiltInAdminIdentifier({
+    username: String(email).trim().split('@')[0],
+    email,
+    contact_number,
+  })) {
+    return res.status(409).json({ error: 'That account identifier is reserved.' });
+  }
   const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(email);
   if (existing) return res.status(409).json({ error: 'An account with this email already exists.' });
 
@@ -60,7 +67,11 @@ router.post('/users', requireAuth, requireRole('administrator'), (req, res) => {
 router.put('/users/:id', requireAuth, requireRole('administrator'), (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(req.params.id));
   if (!user) return res.status(404).json({ error: 'User not found.' });
+  if (isBuiltInAdmin(user)) return res.status(403).json({ error: 'The built-in administrator account cannot be changed.' });
   const { full_name, contact_number, address, barangay, email } = req.body || {};
+  if (contact_number && hasBuiltInAdminIdentifier({ contact_number })) {
+    return res.status(409).json({ error: 'That contact number is reserved.' });
+  }
   if (email && email !== user.email) {
     const dup = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?) AND id != ?').get(email, user.id);
     if (dup) return res.status(409).json({ error: 'Another account uses this email.' });
@@ -78,10 +89,8 @@ router.put('/users/:id', requireAuth, requireRole('administrator'), (req, res) =
 router.put('/users/:id/status', requireAuth, requireRole('administrator'), (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(req.params.id));
   if (!user) return res.status(404).json({ error: 'User not found.' });
+  if (isBuiltInAdmin(user)) return res.status(403).json({ error: 'The built-in administrator account cannot be deactivated.' });
   if (user.id === req.user.id) return res.status(400).json({ error: 'You cannot deactivate your own account.' });
-  if (user.username === 'DELMARKEL2003' || user.email === 'DELMARKEL2003') {
-    return res.status(400).json({ error: 'The primary system administrator account cannot be deactivated.' });
-  }
   const { status } = req.body || {};
   if (!['Active', 'Inactive'].includes(status)) return res.status(400).json({ error: 'Invalid status.' });
   db.prepare('UPDATE users SET status = ? WHERE id = ?').run(status, user.id);
@@ -93,10 +102,8 @@ router.put('/users/:id/status', requireAuth, requireRole('administrator'), (req,
 router.delete('/users/:id', requireAuth, requireRole('administrator'), (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(req.params.id));
   if (!user) return res.status(404).json({ error: 'User not found.' });
+  if (isBuiltInAdmin(user)) return res.status(403).json({ error: 'The built-in administrator account cannot be deleted.' });
   if (user.id === req.user.id) return res.status(400).json({ error: 'You cannot delete your own administrator account.' });
-  if (user.username === 'DELMARKEL2003' || user.email === 'DELMARKEL2003') {
-    return res.status(400).json({ error: 'The primary system administrator account cannot be deleted.' });
-  }
 
   db.prepare("UPDATE users SET status = 'Deleted' WHERE id = ?").run(user.id);
   db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
@@ -108,10 +115,8 @@ router.delete('/users/:id', requireAuth, requireRole('administrator'), (req, res
 router.put('/users/:id/role', requireAuth, requireRole('administrator'), (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(req.params.id));
   if (!user) return res.status(404).json({ error: 'User not found.' });
+  if (isBuiltInAdmin(user)) return res.status(403).json({ error: 'The built-in administrator role cannot be altered.' });
   if (user.id === req.user.id) return res.status(400).json({ error: 'You cannot change your own role.' });
-  if (user.username === 'DELMARKEL2003' || user.email === 'DELMARKEL2003') {
-    return res.status(400).json({ error: 'The primary system administrator role cannot be altered.' });
-  }
   const { role } = req.body || {};
   if (!ROLES[role]) return res.status(400).json({ error: 'Invalid role.' });
   db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, user.id);
@@ -125,6 +130,7 @@ router.put('/users/:id/role', requireAuth, requireRole('administrator'), (req, r
 router.put('/users/:id/reset', requireAuth, requireRole('administrator'), (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(req.params.id));
   if (!user) return res.status(404).json({ error: 'User not found.' });
+  if (isBuiltInAdmin(user)) return res.status(403).json({ error: 'The built-in administrator password cannot be reset here.' });
   const { new_password } = req.body || {};
   if (!new_password || String(new_password).length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters.' });
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(new_password), user.id);

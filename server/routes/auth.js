@@ -6,6 +6,7 @@ const { UPLOAD_DIR } = require('../db');
 const {
   COOKIE_NAME, hashPassword, verifyPassword, createSession, destroySession,
   requireAuth, publicUser, roleLabel, audit, notifyRole,
+  PORTAL_ROLES, isBuiltInAdmin, hasBuiltInAdminIdentifier,
 } = require('../auth');
 
 const router = express.Router();
@@ -59,11 +60,15 @@ router.post('/auth/register', (req, res) => {
     return res.status(400).json({ error: 'Please provide a valid email address.' });
   }
 
+  const rawUsername = (req.body?.username ? String(req.body.username).trim().toLowerCase() : cleanEmail.split('@')[0]) || null;
+  const cleanContact = contact_number ? String(contact_number).trim() : null;
+  if (hasBuiltInAdminIdentifier({ username: rawUsername, email: cleanEmail, contact_number: cleanContact })) {
+    return res.status(409).json({ error: 'That account identifier is reserved.' });
+  }
+
   const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = ?').get(cleanEmail);
   if (existing) return res.status(409).json({ error: 'An account with this email already exists.' });
 
-  const rawUsername = (req.body?.username ? String(req.body.username).trim().toLowerCase() : cleanEmail.split('@')[0]) || null;
-  const cleanContact = contact_number ? String(contact_number).trim() : null;
   const cleanAddress = address ? String(address).trim() : null;
   const cleanBarangay = barangay ? String(barangay).trim() : null;
 
@@ -101,8 +106,11 @@ router.post('/auth/register', (req, res) => {
 });
 
 router.post('/auth/login', (req, res) => {
-  const { email, password, remember } = req.body || {};
+  const { email, password, remember, portal } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'Email, mobile number, or username and password are required.' });
+  if (portal && !Object.hasOwn(PORTAL_ROLES, portal)) {
+    return res.status(400).json({ error: 'Invalid portal.' });
+  }
 
   const raw = String(email).trim();
   const cleanPhone = raw.replace(/[\s\-\(\)\.]/g, '').replace(/^\+63/, '0');
@@ -128,6 +136,9 @@ router.post('/auth/login', (req, res) => {
   }
   if (user.status !== 'Active') {
     return res.status(403).json({ error: 'This account is deactivated. Contact the administrator.' });
+  }
+  if (portal && !PORTAL_ROLES[portal].includes(user.role)) {
+    return res.status(403).json({ error: 'This account is not authorized for the selected portal.' });
   }
 
   const rememberMe = remember === true;
@@ -180,8 +191,14 @@ router.get('/settings', requireAuth, (req, res) => {
 
 // Profile
 router.put('/profile', requireAuth, async (req, res, next) => {
+  if (isBuiltInAdmin(req.user)) {
+    return res.status(403).json({ error: 'The built-in administrator account cannot be changed through profile settings.' });
+  }
   const { full_name, contact_number, address, barangay, photoData, removePhoto } = req.body || {};
   if (!full_name) return res.status(400).json({ error: 'Full name cannot be empty.' });
+  if (hasBuiltInAdminIdentifier({ contact_number })) {
+    return res.status(409).json({ error: 'That contact number is reserved.' });
+  }
 
   let photoPath = req.user.profile_photo_path || null;
   if (photoData) {
@@ -205,6 +222,9 @@ router.put('/profile', requireAuth, async (req, res, next) => {
 });
 
 router.put('/profile/password', requireAuth, (req, res) => {
+  if (isBuiltInAdmin(req.user)) {
+    return res.status(403).json({ error: 'The built-in administrator password is managed by system configuration.' });
+  }
   const { current_password, new_password } = req.body || {};
   if (!current_password || !new_password) return res.status(400).json({ error: 'Both passwords are required.' });
   if (String(new_password).length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters.' });

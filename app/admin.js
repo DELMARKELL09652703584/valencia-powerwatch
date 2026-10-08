@@ -404,7 +404,7 @@ function adminShell(content) {
     <aside class="admin-sidebar">
       <div class="admin-brand">
         ${info.logoData ? `<img class="admin-logo" src="${escapeHtml(info.logoData)}" alt="System logo">` : '<img class="admin-logo" src="/assets/powerwatch-logo.svg" alt="Valencia PowerWatch">'}
-        <div><strong>Valencia</strong><b>PowerWatch</b><small>Admin / Staff Portal</small></div>
+        <div><strong>Valencia</strong><b>PowerWatch</b><small>Admin Web Portal</small></div>
       </div>
       <nav class="admin-nav" id="admin-nav-menu">${groups}</nav>
       <div class="admin-sidebar-foot">

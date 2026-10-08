@@ -52,17 +52,6 @@ const send = (url, method, body) => api(url, {
   body: body === undefined ? undefined : JSON.stringify(body),
 });
 
-const redirectToAccountPortal = (user) => {
-  if (!user || user.role === 'personnel') return false;
-  const portalPath = user.portal_path || ({
-    resident: '/community',
-    administrator: '/admin',
-    utility: '/admin',
-  })[user.role] || '/community';
-  window.location.replace(portalPath);
-  return true;
-};
-
 const showToast = (message) => {
   toast.textContent = message;
   toast.hidden = false;
@@ -420,7 +409,11 @@ const refreshNotifications = async () => {
 const ensureAuthenticated = async () => {
   try {
     const { user } = await api('/api/auth/me');
-    if (redirectToAccountPortal(user)) return;
+    if (user.role !== 'personnel') {
+      state.user = null;
+      renderLogin('This account is not authorized for the Staff App. Sign in with a personnel account.');
+      return;
+    }
     state.user = user;
     await Promise.all([refreshAssignments(), refreshNotifications()]);
     renderShell();
@@ -619,7 +612,7 @@ document.addEventListener('submit', async (event) => {
   try {
     if (formType === 'login') {
       const values = Object.fromEntries(new FormData(form).entries());
-      await send('/api/auth/login', 'POST', { ...values, remember: true });
+      await send('/api/auth/login', 'POST', { ...values, remember: true, portal: 'staff' });
       await ensureAuthenticated();
     } else if (formType === 'update') {
       const assignment = state.assignments.find((item) => String(item.id) === String(form.dataset.id));
@@ -631,7 +624,7 @@ document.addEventListener('submit', async (event) => {
       await uploadEvidence(form);
     }
   } catch (error) {
-    if (error.status === 401) renderLogin(error.message || 'Sign-in failed. Check your email and password.');
+    if (formType === 'login') renderLogin(error.message || 'Sign-in failed. Check your email and password.');
     else showToast(error.message || 'The form could not be submitted.');
     if (submitButton) submitButton.disabled = false;
   }

@@ -2,7 +2,7 @@ const crypto = require('node:crypto');
 const express = require('express');
 const nodemailer = require('nodemailer');
 const { db, now } = require('../db');
-const { hashPassword, createSession, publicUser, audit, COOKIE_NAME } = require('../auth');
+const { hashPassword, createSession, publicUser, audit, COOKIE_NAME, isBuiltInAdmin } = require('../auth');
 
 const router = express.Router();
 const RESET_LIFETIME_MS = 30 * 60 * 1000;
@@ -205,6 +205,7 @@ router.post('/auth/forgot-password', async (req, res) => {
   const user = db.prepare('SELECT id, email, full_name FROM users WHERE LOWER(email) = LOWER(?) AND status = ?').get(email, 'Active');
   const message = 'If an active account uses that email, password reset instructions have been sent.';
   if (!user) return res.json({ message });
+  if (isBuiltInAdmin(user)) return res.json({ message });
 
   const recent = db.prepare('SELECT created_at FROM password_reset_tokens WHERE user_id = ? ORDER BY created_at DESC LIMIT 1').get(user.id);
   if (recent && Date.now() - new Date(recent.created_at).getTime() < 60_000) return res.json({ message });
@@ -250,6 +251,7 @@ router.post('/auth/reset-password', (req, res) => {
 
   const user = db.prepare('SELECT * FROM users WHERE id = ? AND status = ?').get(reset.user_id, 'Active');
   if (!user) return res.status(400).json({ error: 'This account cannot be reset. Contact an administrator.' });
+  if (isBuiltInAdmin(user)) return res.status(403).json({ error: 'The built-in administrator password is managed by system configuration.' });
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(password), user.id);
   db.prepare('DELETE FROM password_reset_tokens WHERE user_id = ?').run(user.id);
   db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
