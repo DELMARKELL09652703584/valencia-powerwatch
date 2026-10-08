@@ -192,20 +192,29 @@ const renderStageProgress = (assignment) => {
 const renderEvidence = (assignment, { readOnly = false } = {}) => {
   const reportEvidence = (assignment.attachments || []).map((item) => {
     const url = String(item.file_path || '');
-    const isImage = String(item.mime_type || '').startsWith('image/');
+    const mimeType = String(item.mime_type || '');
+    const isImage = mimeType.startsWith('image/');
+    const isVideo = mimeType.startsWith('video/');
     return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${isImage
       ? `<img src="${escapeHtml(url)}" alt="${escapeHtml(item.original_name || 'Resident evidence')}" loading="lazy">`
-      : `View ${escapeHtml(item.original_name || 'resident video evidence')}`}</a>`;
+      : isVideo
+        ? `<video src="${escapeHtml(url)}" controls preload="metadata" aria-label="${escapeHtml(item.original_name || 'Resident video evidence')}"></video>`
+        : `View ${escapeHtml(item.original_name || 'resident evidence')}`}</a>`;
   }).join('');
-  const staffEvidence = (assignment.evidence || []).map((item) => `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">
-    <img src="${escapeHtml(item.url)}" alt="Field photo uploaded ${escapeHtml(new Date(item.created_at).toLocaleString())}" loading="lazy">
-  </a>`).join('');
+  const staffEvidence = (assignment.evidence || []).map((item) => {
+    const url = escapeHtml(item.url);
+    const description = `Field evidence uploaded ${escapeHtml(new Date(item.created_at).toLocaleString())}`;
+    const media = String(item.mime_type || '').startsWith('video/')
+      ? `<video src="${url}" controls preload="metadata" aria-label="${description}"></video>`
+      : `<img src="${url}" alt="${description}" loading="lazy">`;
+    return `<a href="${url}" target="_blank" rel="noopener">${media}</a>`;
+  }).join('');
   return `<section class="staff-card staff-evidence-card">
     <div class="staff-section-heading"><div>${icon('camera')}<h3>Evidence</h3></div><span>${(assignment.attachments || []).length + (assignment.evidence || []).length} files</span></div>
-    ${(reportEvidence || staffEvidence) ? `<div class="staff-evidence-list">${reportEvidence}${staffEvidence}</div>` : '<p class="staff-muted">No evidence photos are attached yet.</p>'}
+    ${(reportEvidence || staffEvidence) ? `<div class="staff-evidence-list">${reportEvidence}${staffEvidence}</div>` : '<p class="staff-muted">No evidence photos or videos are attached yet.</p>'}
     ${readOnly ? '' : `<form class="staff-note-form" data-form="evidence" data-id="${assignment.id}">
-      <label class="staff-upload-drop"><input type="file" name="evidence" accept="image/jpeg,image/png,image/webp" capture="environment" required>
-        <span class="staff-upload-icon">${icon('camera')}</span><strong>Take or choose a field photo</strong><small>JPG, PNG or WebP · uploaded to this incident</small>
+      <label class="staff-upload-drop"><input type="file" name="evidence" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime" capture="environment" required>
+        <span class="staff-upload-icon">${icon('camera')}</span><strong>Take or choose field evidence</strong><small>JPG, PNG, WebP, MP4 or MOV · max 8 MB</small>
       </label>
       <button class="staff-btn staff-btn-primary" type="submit">Upload evidence</button>
     </form>`}
@@ -511,7 +520,7 @@ const submitUpdate = async (form, stage) => {
 
 const uploadEvidence = async (form) => {
   const file = form.querySelector('[name="evidence"]')?.files?.[0];
-  if (!file) throw new Error('Choose a photo before uploading.');
+  if (!file) throw new Error('Choose a photo or video before uploading.');
   const data = new FormData();
   data.append('evidence', file);
   await api(`/api/staff/assignments/${encodeURIComponent(form.dataset.id)}/evidence`, { method: 'POST', body: data });

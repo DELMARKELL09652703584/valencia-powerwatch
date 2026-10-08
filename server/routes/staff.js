@@ -56,8 +56,8 @@ const uploadEvidence = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024, files: 1 },
   fileFilter: (req, file, callback) => {
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
-      callback(new Error('Evidence must be a JPG, PNG, or WebP image.'));
+    if (!['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime'].includes(file.mimetype)) {
+      callback(new Error('Evidence must be a JPG, PNG, WebP, MP4, or MOV file.'));
       return;
     }
     callback(null, true);
@@ -147,12 +147,15 @@ const requireOpenAssignment = (req, res, next) => {
   next();
 };
 
-const imageMatchesMime = (buffer, mimeType) => {
+const evidenceMatchesMime = (buffer, mimeType) => {
   if (mimeType === 'image/jpeg') return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
   if (mimeType === 'image/png') return buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
   if (mimeType === 'image/webp') return buffer.length >= 12
     && buffer.toString('ascii', 0, 4) === 'RIFF'
     && buffer.toString('ascii', 8, 12) === 'WEBP';
+  if (mimeType === 'video/mp4' || mimeType === 'video/quicktime') {
+    return buffer.length >= 12 && buffer.toString('ascii', 4, 8) === 'ftyp';
+  }
   return false;
 };
 
@@ -251,16 +254,23 @@ router.post('/staff/assignments/:id/evidence', requireAuth, requireRole('personn
   uploadEvidence(req, res, (error) => {
     if (error) {
       if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
-        return res.status(413).json({ error: 'Evidence photo must be 8 MB or smaller.' });
+        return res.status(413).json({ error: 'Evidence file must be 8 MB or smaller.' });
       }
       return res.status(400).json({ error: error.message || 'The evidence upload could not be processed.' });
     }
-    if (!req.file) return res.status(400).json({ error: 'Choose a repair or inspection photo to upload.' });
-    if (!imageMatchesMime(req.file.buffer, req.file.mimetype)) {
-      return res.status(400).json({ error: 'The uploaded file does not match its image type.' });
+    if (!req.file) return res.status(400).json({ error: 'Choose a repair or inspection photo or video to upload.' });
+    if (!evidenceMatchesMime(req.file.buffer, req.file.mimetype)) {
+      return res.status(400).json({ error: 'The uploaded file does not match its image or video type.' });
     }
 
-    const filename = `${crypto.randomUUID()}.${req.file.mimetype === 'image/jpeg' ? 'jpg' : req.file.mimetype === 'image/png' ? 'png' : 'webp'}`;
+    const extension = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'video/mp4': 'mp4',
+      'video/quicktime': 'mov',
+    }[req.file.mimetype];
+    const filename = `${crypto.randomUUID()}.${extension}`;
     const filePath = path.join(evidenceDirectory, filename);
     try {
       fs.writeFileSync(filePath, req.file.buffer, { flag: 'wx' });
@@ -271,7 +281,7 @@ router.post('/staff/assignments/:id/evidence', requireAuth, requireRole('personn
       audit(req.user, 'Field evidence uploaded', `${req.user.full_name} uploaded field evidence for ${req.staffAssignment.assignment_code}.`);
       res.status(201).json({
         evidence: { id: Number(result.lastInsertRowid), mime_type: req.file.mimetype, url: `/api/staff/evidence/${result.lastInsertRowid}` },
-        message: 'Field photo uploaded.',
+        message: 'Field evidence uploaded.',
       });
     } catch (writeError) {
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);

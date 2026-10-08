@@ -204,7 +204,7 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
     fetch(`${baseUrl}/staff-manifest.json`),
     fetch(`${baseUrl}/staff-sw.js`),
     fetch(`${baseUrl}/app/staff.css?v=4`),
-    fetch(`${baseUrl}/app/staff.js?v=3`),
+    fetch(`${baseUrl}/app/staff.js?v=4`),
     Promise.all([
       'powerwatch-icon-192.png',
       'powerwatch-icon-512.png',
@@ -281,6 +281,8 @@ test('verified database roles assign each account its own portal after login', {
   assert.match(staffApp, /data-action="advance-stage"/);
   assert.match(staffApp, /data-action="read-notification"/);
   assert.match(staffApp, /data-action="read-all-notifications"/);
+  assert.match(staffApp, /video\/mp4,video\/quicktime/);
+  assert.match(staffApp, /controls preload="metadata"/);
   assert.match(staffApp, /data-action="open-history"/);
   assert.match(staffApp, /renderStageProgress\(assignment\)/);
   assert.doesNotMatch(adminBoot, /window\.location\.replace\(user\.portal_path\)/);
@@ -411,6 +413,30 @@ test('Staff response stages are ordered, documented, and notify the reporting re
   assert.equal(ownEvidence.status, 200);
   const otherEvidence = await fetch(`${baseUrl}/api/staff/evidence/${evidenceId}`, { headers: { cookie: unassignedCookie } });
   assert.equal(otherEvidence.status, 404);
+
+  const videoForm = new FormData();
+  const mp4Header = Uint8Array.from([0, 0, 0, 16, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d]);
+  videoForm.append('evidence', new Blob([mp4Header], { type: 'video/mp4' }), 'inspection.mp4');
+  const videoUpload = await fetch(`${baseUrl}/api/staff/assignments/${assignmentId}/evidence`, {
+    method: 'POST',
+    headers: { cookie: staffCookie },
+    body: videoForm,
+  });
+  assert.equal(videoUpload.status, 201);
+  const videoEvidence = (await videoUpload.json()).evidence;
+  const videoResponse = await fetch(`${baseUrl}${videoEvidence.url}`, { headers: { cookie: staffCookie } });
+  assert.equal(videoResponse.status, 200);
+  assert.equal(videoResponse.headers.get('content-type'), 'video/mp4');
+  assert.deepEqual(new Uint8Array(await videoResponse.arrayBuffer()), mp4Header);
+
+  const invalidVideoForm = new FormData();
+  invalidVideoForm.append('evidence', new Blob(['not a video'], { type: 'video/mp4' }), 'invalid.mp4');
+  const invalidVideoUpload = await fetch(`${baseUrl}/api/staff/assignments/${assignmentId}/evidence`, {
+    method: 'POST',
+    headers: { cookie: staffCookie },
+    body: invalidVideoForm,
+  });
+  assert.equal(invalidVideoUpload.status, 400);
 
   for (const stage of ['Arrived', 'Inspecting', 'Repairing', 'Completed']) {
     const response = await jsonRequest(`/api/staff/assignments/${assignmentId}/updates`, staffCookie, 'POST', {
