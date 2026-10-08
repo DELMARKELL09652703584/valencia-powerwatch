@@ -57,6 +57,12 @@ const publicUser = (u) => ({
   status: u.status,
   created_at: u.created_at,
   last_login: u.last_login,
+  portal_path: ({
+    resident: '/community',
+    personnel: '/staff',
+    administrator: '/admin',
+    utility: '/admin',
+  })[u.role] || '/community',
 });
 
 const ROLES = {

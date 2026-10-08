@@ -52,6 +52,17 @@ const send = (url, method, body) => api(url, {
   body: body === undefined ? undefined : JSON.stringify(body),
 });
 
+const redirectToAccountPortal = (user) => {
+  if (!user || user.role === 'personnel') return false;
+  const portalPath = user.portal_path || ({
+    resident: '/community',
+    administrator: '/admin',
+    utility: '/admin',
+  })[user.role] || '/community';
+  window.location.replace(portalPath);
+  return true;
+};
+
 const showToast = (message) => {
   toast.textContent = message;
   toast.hidden = false;
@@ -409,10 +420,7 @@ const refreshNotifications = async () => {
 const ensureAuthenticated = async () => {
   try {
     const { user } = await api('/api/auth/me');
-    if (user.role !== 'personnel') {
-      renderLogin('The Staff App is limited to System Personnel accounts. Use the correct portal for your account.');
-      return;
-    }
+    if (redirectToAccountPortal(user)) return;
     state.user = user;
     await Promise.all([refreshAssignments(), refreshNotifications()]);
     renderShell();

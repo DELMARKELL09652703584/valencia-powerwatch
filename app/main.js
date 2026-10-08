@@ -167,6 +167,14 @@ function renderAdminRestrictedAccess() {
   </main>`;
 }
 
+function redirectToRolePortal(user) {
+  if (!user?.portal_path) return false;
+  const currentPortal = IS_ADMIN ? '/admin' : '/community';
+  if (user.portal_path === currentPortal) return false;
+  window.location.replace(user.portal_path);
+  return true;
+}
+
 function renderForgotPassword(message = '') {
   if (IS_ADMIN) {
     app.innerHTML = `<main class="login-page">
@@ -443,10 +451,6 @@ async function submitForm(form) {
     const result = await send('/api/auth/login', 'POST', {
       email: values.email, password: values.password, remember: values.remember === 'on',
     });
-    if (IS_ADMIN && !STAFF_ROLES.includes(result.user?.role)) {
-      await send('/api/auth/logout', 'POST').catch(() => {});
-      throw new Error('Access denied. Resident accounts cannot access the Admin Portal. Please sign in with an Administrator or Personnel account.');
-    }
     state.user = result.user;
     await afterLogin();
     return;
@@ -2514,10 +2518,7 @@ function startOAuthFlow(provider) {
 }
 
 async function afterLogin() {
-  if (IS_ADMIN && state.user?.role === 'personnel') {
-    window.location.replace('/staff');
-    return;
-  }
+  if (redirectToRolePortal(state.user)) return;
   if (IS_ADMIN && state.user && !OFFICIAL_ROLES.includes(state.user.role)) {
     renderAdminRestrictedAccess();
     return;
@@ -2567,10 +2568,7 @@ async function boot() {
 
     const { user } = await api('/api/auth/me');
     state.user = user;
-    if (IS_ADMIN && state.user?.role === 'personnel') {
-      window.location.replace('/staff');
-      return;
-    }
+    if (redirectToRolePortal(state.user)) return;
     if (IS_ADMIN && state.user && !OFFICIAL_ROLES.includes(state.user.role)) {
       renderAdminRestrictedAccess();
       return;

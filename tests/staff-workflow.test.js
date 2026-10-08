@@ -12,9 +12,13 @@ let serverProcess;
 let baseUrl;
 let testDirectory;
 let adminCookie;
+let adminLoginUser;
 let staffCookie;
+let staffLoginUser;
 let unassignedCookie;
 let residentCookie;
+let residentLoginUser;
+let portalLoginEmails = {};
 let assignmentId;
 let evidenceId;
 let teamId;
@@ -54,7 +58,8 @@ const createPersonnel = async (name, email) => {
 const login = async (email, password) => {
   const response = await jsonRequest('/api/auth/login', '', 'POST', { email, password });
   assert.equal(response.status, 200);
-  return cookieFrom(response);
+  const result = await response.json();
+  return { cookie: cookieFrom(response), user: result.user };
 };
 
 const submitReport = async () => {
@@ -133,7 +138,9 @@ before(async () => {
     email: 'admin@powerwatch.ph',
     password: 'admin123',
   });
-  assert.equal(adminLogin.status, 200, `Could not authenticate test admin: ${await adminLogin.text()}\n${serverOutput}`);
+  const adminLoginResult = await adminLogin.json();
+  assert.equal(adminLogin.status, 200, `Could not authenticate test admin: ${JSON.stringify(adminLoginResult)}\n${serverOutput}`);
+  adminLoginUser = adminLoginResult.user;
   adminCookie = cookieFrom(adminLogin);
   const resident = await jsonRequest('/api/auth/register', '', 'POST', {
     full_name: 'Assigned Incident Resident',
@@ -142,7 +149,9 @@ before(async () => {
     barangay: 'Poblacion',
   });
   assert.equal(resident.status, 200);
+  const residentUser = (await resident.json()).user;
   residentCookie = cookieFrom(resident);
+  portalLoginEmails.resident = residentUser.email;
 
   const teamResponse = await jsonRequest('/api/repair-teams', adminCookie, 'POST', {
     name: 'Test Field Crew',
@@ -170,8 +179,14 @@ before(async () => {
   });
   assert.equal(dispatchResponse.status, 201);
   assignmentId = (await dispatchResponse.json()).assignment.id;
-  staffCookie = await login(staff.email, 'field-password-123');
-  unassignedCookie = await login(unassigned.email, 'field-password-123');
+  portalLoginEmails.staff = staff.email;
+  const staffLogin = await login(staff.email, 'field-password-123');
+  staffCookie = staffLogin.cookie;
+  staffLoginUser = staffLogin.user;
+  unassignedCookie = (await login(unassigned.email, 'field-password-123')).cookie;
+  const residentLogin = await login(portalLoginEmails.resident, 'resident-password-123');
+  residentCookie = residentLogin.cookie;
+  residentLoginUser = residentLogin.user;
 });
 
 after(async () => {
@@ -216,6 +231,34 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
   const workerSource = await workerResponse.text();
   const shellAssets = workerSource.match(/const STAFF_SHELL = \[[\s\S]*?\];/)?.[0] || '';
   assert.doesNotMatch(shellAssets, /\/api\/|\/admin/);
+});
+
+test('verified database roles assign each account its own portal after login', { timeout: TEST_TIMEOUT_MS }, async () => {
+  assert.equal(adminLoginUser.role, 'administrator');
+  assert.equal(adminLoginUser.portal_path, '/admin');
+  assert.equal(staffLoginUser.role, 'personnel');
+  assert.equal(staffLoginUser.portal_path, '/staff');
+  assert.equal(residentLoginUser.role, 'resident');
+  assert.equal(residentLoginUser.portal_path, '/community');
+  const [adminSession, staffSession, residentSession] = await Promise.all([
+    jsonRequest('/api/auth/me', adminCookie),
+    jsonRequest('/api/auth/me', staffCookie),
+    jsonRequest('/api/auth/me', residentCookie),
+  ]);
+  assert.equal((await adminSession.json()).user.portal_path, '/admin');
+  assert.equal((await staffSession.json()).user.portal_path, '/staff');
+  assert.equal((await residentSession.json()).user.portal_path, '/community');
+  assert.equal((await jsonRequest('/api/admin/users', adminCookie)).status, 200);
+  assert.equal((await jsonRequest('/api/admin/users', staffCookie)).status, 403);
+  assert.equal((await jsonRequest('/api/admin/users', residentCookie)).status, 403);
+
+  const adminBoot = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+  const staffApp = fs.readFileSync(path.join(ROOT, 'app', 'staff.js'), 'utf8');
+  assert.match(adminBoot, /function redirectToRolePortal\(user\)/);
+  assert.match(adminBoot, /state\.user = result\.user;\s*await afterLogin\(\);/);
+  assert.match(adminBoot, /if \(redirectToRolePortal\(state\.user\)\) return;/);
+  assert.match(staffApp, /const redirectToAccountPortal = \(user\)/);
+  assert.match(staffApp, /if \(redirectToAccountPortal\(user\)\) return;/);
 });
 
 test('Staff API scopes assignments and report evidence to assigned personnel teams', { timeout: TEST_TIMEOUT_MS }, async () => {
