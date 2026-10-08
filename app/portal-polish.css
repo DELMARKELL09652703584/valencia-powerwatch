@@ -2557,6 +2557,61 @@ body.community-body .mobile-auth-form button:not(.button.ghost):not(.button.seco
   color: #fff !important;
 }
 
+body.dark-mode.admin-body .map-route-hud {
+  border-color: #405875;
+  background: rgba(13, 25, 44, .98);
+  color: #d2deee;
+  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, .55), 0 4px 10px -2px rgba(0, 0, 0, .3);
+}
+
+body.dark-mode.admin-body .map-route-hud .map-route-hud-title :where(span) {
+  color: #f1f5ff;
+}
+
+body.dark-mode.admin-body .map-route-hud-endpoints {
+  border-color: #344b68;
+  background: #101e33;
+  color: #d2deee;
+}
+
+body.dark-mode.admin-body .map-route-hud-endpoints :where(span, strong) {
+  color: #d2deee !important;
+}
+
+body.dark-mode.admin-body .map-route-hud-details {
+  border-color: #35577e;
+  background: #132b48;
+  color: #bfdbfe;
+}
+
+body.dark-mode.admin-body .map-route-hud-details :where(span, strong) {
+  color: #bfdbfe !important;
+}
+
+body.dark-mode.admin-body .map-route-hud-close {
+  background: #1b2a40;
+  color: #d2deee;
+}
+
+body.dark-mode.admin-body .map-route-hud-close:hover {
+  background: #3b1824;
+  color: #ffc1ca;
+}
+
+body.dark-mode.admin-body .map-route-hud .map-route-hud-btn:not(.secondary) :where(span) {
+  color: #fff !important;
+}
+
+body.dark-mode.admin-body .map-route-hud .map-route-hud-btn.secondary {
+  border-color: #405875;
+  background: #1b2a40;
+  color: #e5f0ff;
+}
+
+body.dark-mode.admin-body .map-route-hud .map-route-hud-btn.secondary :where(span) {
+  color: #e5f0ff !important;
+}
+
 
 body.dark-mode.community-body :is(.pill-busy, .report-status.ongoing, .incident-status-badge.ongoing, .monitoring-status.ongoing, .status-tag.ongoing, .status-ongoing, .scheduled-status-badge.implementing, .report-status.review, .verification-status-badge.review, .incident-status-badge.review, .monitoring-status.monitoring-review, .scheduled-status-badge.scheduled, .scheduled-status-badge.preparing) {
   border-color: rgba(125, 211, 252, .48) !important;

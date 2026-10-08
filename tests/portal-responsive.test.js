@@ -23,7 +23,7 @@ test('portal layouts remain constrained on narrow mobile screens', () => {
   assert.match(styles, /@media \(max-width: 360px\)\s*\{\s*body\.admin-body \.login-page\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
   assert.match(styles, /body\.admin-body \.login-page \.social-row\s*\{\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s);
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=58/);
-  assert.match(adminPage, /\/app\/portal-polish\.css\?v=37/);
+  assert.match(adminPage, /\/app\/portal-polish\.css\?v=38/);
 });
 
 test('home weather widget stays compact in Light Mode and Night Ops', () => {
@@ -40,4 +40,17 @@ test('Night Ops outage trends toggle stays on the right when its text wraps', ()
 
   assert.match(styles, /body\.dark-mode\.community-body \.home-trends > summary\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto;[^}]*grid-template-rows:\s*auto auto;/s);
   assert.match(styles, /body\.dark-mode\.community-body \.home-trends > summary::after\s*\{[^}]*grid-column:\s*2;[^}]*grid-row:\s*1 \/ span 2;[^}]*justify-self:\s*end;/s);
+});
+
+test('Admin route guide text remains readable in dark mode', () => {
+  const styles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+  const coreScript = fs.readFileSync(path.join(ROOT, 'app', 'core.js'), 'utf8');
+
+  assert.match(coreScript, /Navigation Route Guide/);
+  assert.match(styles, /body\.dark-mode\.admin-body \.map-route-hud\s*\{[^}]*background:\s*rgba\(13,\s*25,\s*44,\s*\.98\);/s);
+  assert.match(styles, /body\.dark-mode\.admin-body \.map-route-hud-endpoints :where\(span, strong\)\s*\{[^}]*color:\s*#d2deee\s*!important;/s);
+  assert.match(styles, /body\.dark-mode\.admin-body \.map-route-hud-details :where\(span, strong\)\s*\{[^}]*color:\s*#bfdbfe\s*!important;/s);
+  assert.match(styles, /body\.dark-mode\.admin-body \.map-route-hud \.map-route-hud-btn:not\(\.secondary\) :where\(span\)\s*\{\s*color:\s*#fff\s*!important;/s);
+  assert.match(adminPage, /\/app\/portal-polish\.css\?v=38/);
 });
