@@ -1863,22 +1863,21 @@ async function handleClick(event) {
       }
       case 'open-assign-repair-modal': {
         const reportId = id;
-        const [{ report }, { teams }, staffAccess] = await Promise.all([
+        const [{ report }, eligibility] = await Promise.all([
           api(`/api/reports/${reportId}`),
-          api('/api/repair-teams'),
-          api('/api/admin/staff-memberships'),
+          api(`/api/repair/dispatch-eligibility?report_id=${encodeURIComponent(reportId)}`),
         ]);
-        const eligibleTeams = teams.map((team) => {
-          const eligibleStaff = staffAccess.staff.filter((member) => member.status === 'Active'
-            && member.team_ids.includes(Number(team.id))
-            && member.barangay_names.includes(report.barangay));
-          return { team, eligibleStaff };
-        }).filter(({ team, eligibleStaff }) => team.status === 'Available' && !team.active_assignment_id && eligibleStaff.length);
-        const teamOptions = eligibleTeams.map(({ team, eligibleStaff }) => `
+        const eligibleTeams = eligibility.teams.filter((team) => team.eligible);
+        const teamOptions = eligibleTeams.map((team) => `
           <option value="${team.id}" ${Number(team.id) === Number(report.assigned_team_id) ? 'selected' : ''}>
-            ${escapeHtml(team.name)} · Available · ${eligibleStaff.length} eligible staff
+            ${escapeHtml(team.name)} · Available · ${team.eligible_staff_count} eligible staff
           </option>`).join('');
         const verified = ['Verified', 'Officially Confirmed'].includes(report.verification_status);
+        const eligibilityMessage = {
+          no_available_team: 'All response teams are currently assigned or unavailable. Try again when a team becomes available.',
+          no_staff_coverage: `No active Staff account has ${escapeHtml(report.barangay)} in its assigned coverage areas. In Manage Staff Team Access, assign an active staff member to this barangay.`,
+          staff_not_assigned_to_team: `There are ${eligibility.active_staff_in_barangay} active Staff account(s) covering ${escapeHtml(report.barangay)}, but none is linked to an available response team. In Manage Staff Team Access, assign the staff member to both the response team and this barangay.`,
+        }[eligibility.reason];
 
         openDialog(`🚒 Dispatch Repair Crew — ${escapeHtml(report.report_code)}`, `
           <div class="form-stack">
@@ -1900,7 +1899,8 @@ async function handleClick(event) {
                 <option value="">-- Choose Emergency Crew --</option>
                 ${teamOptions}
               </select>
-              ${!eligibleTeams.length ? '<span class="muted small">No available team has an active staff member assigned to this barangay. Update team access or workload before dispatch.</span>' : ''}
+              ${eligibilityMessage ? `<span class="muted small">${eligibilityMessage}</span>` : ''}
+              ${!verified ? '<span class="muted small">Verify this report before dispatch.</span>' : ''}
             </label>
 
             <label class="wide-field">

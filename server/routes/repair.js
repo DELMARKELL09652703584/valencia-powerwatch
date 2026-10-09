@@ -24,6 +24,23 @@ const hasCoordinates = (record) => record
   && record.latitude !== null && record.latitude !== undefined && record.latitude !== ''
   && record.longitude !== null && record.longitude !== undefined && record.longitude !== '';
 
+const eligibleStaffCount = (teamId, barangay) => Number(db.prepare(`
+  SELECT COUNT(DISTINCT u.id) AS count
+  FROM users u
+  JOIN staff_team_members m ON m.user_id = u.id AND m.team_id = ?
+  JOIN staff_barangay_assignments b ON b.user_id = u.id
+    AND LOWER(TRIM(b.barangay)) = LOWER(TRIM(?))
+  WHERE u.role = 'personnel' AND u.status = 'Active'
+`).get(teamId, barangay).count);
+
+const activeStaffForBarangayCount = (barangay) => Number(db.prepare(`
+  SELECT COUNT(DISTINCT u.id) AS count
+  FROM users u
+  JOIN staff_barangay_assignments b ON b.user_id = u.id
+    AND LOWER(TRIM(b.barangay)) = LOWER(TRIM(?))
+  WHERE u.role = 'personnel' AND u.status = 'Active'
+`).get(barangay).count);
+
 // Helper to get full assignment details
 const getAssignmentRow = (id) => {
   const assignment = db.prepare(`
@@ -175,6 +192,57 @@ router.get('/repair/assignments/:id', requireAuth, requireRole('administrator', 
   res.json({ assignment });
 });
 
+router.get('/repair/dispatch-eligibility', requireAuth, requireRole('administrator', 'utility'), (req, res) => {
+  const reportId = Number(req.query.report_id);
+  const incidentId = Number(req.query.incident_id);
+  if ((!Number.isSafeInteger(reportId) || reportId < 1) && (!Number.isSafeInteger(incidentId) || incidentId < 1)) {
+    return res.status(400).json({ error: 'A valid report or incident ID is required.' });
+  }
+
+  const report = Number.isSafeInteger(reportId) && reportId > 0
+    ? db.prepare('SELECT id, barangay, verification_status FROM outage_reports WHERE id = ?').get(reportId)
+    : null;
+  const incident = Number.isSafeInteger(incidentId) && incidentId > 0
+    ? db.prepare('SELECT id, barangay FROM outage_incidents WHERE id = ?').get(incidentId)
+    : null;
+  if ((reportId && !report) || (incidentId && !incident)) {
+    return res.status(404).json({ error: 'The selected report or incident was not found.' });
+  }
+
+  const barangay = incident?.barangay || report?.barangay;
+  const areaStaffCount = activeStaffForBarangayCount(barangay);
+  const allTeams = db.prepare(`
+    SELECT id, name, status, active_assignment_id
+    FROM repair_teams ORDER BY name COLLATE NOCASE
+  `).all();
+  const teams = allTeams.map((team) => {
+    const staffCount = eligibleStaffCount(team.id, barangay);
+    const available = team.status === 'Available' && !team.active_assignment_id;
+    return {
+      ...team,
+      eligible_staff_count: staffCount,
+      eligible: available && staffCount > 0,
+    };
+  });
+  const availableTeams = teams.filter((team) => team.status === 'Available' && !team.active_assignment_id);
+  const eligibleTeams = teams.filter((team) => team.eligible);
+  const reason = eligibleTeams.length
+    ? null
+    : !availableTeams.length
+      ? 'no_available_team'
+      : !areaStaffCount
+        ? 'no_staff_coverage'
+        : 'staff_not_assigned_to_team';
+
+  res.json({
+    barangay,
+    verified: !report || ['Verified', 'Officially Confirmed'].includes(report.verification_status),
+    active_staff_in_barangay: areaStaffCount,
+    teams,
+    reason,
+  });
+});
+
 // Assign a repair team to a report or incident
 router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility'), async (req, res) => {
   const { team_id, report_id, incident_id, dispatch_notes, priority = 'High' } = req.body || {};
@@ -229,14 +297,7 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
     return res.status(409).json({ error: 'This response team is not available for another assignment.' });
   }
   if (report) {
-    const eligibleStaff = db.prepare(`
-      SELECT COUNT(DISTINCT u.id) AS count
-      FROM users u
-      JOIN staff_team_members m ON m.user_id = u.id AND m.team_id = ?
-      JOIN staff_barangay_assignments b ON b.user_id = u.id AND b.barangay = ?
-      WHERE u.role = 'personnel' AND u.status = 'Active'
-    `).get(team.id, report.barangay);
-    if (!Number(eligibleStaff.count)) {
+    if (!eligibleStaffCount(team.id, report.barangay)) {
       return res.status(409).json({ error: 'Assign an active Staff member from this response team to the report barangay before dispatch.' });
     }
     if (!['Verified', 'Officially Confirmed'].includes(report.verification_status)) {
@@ -250,14 +311,7 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
     if (activeAssignment) return res.status(409).json({ error: 'This report already has an active response assignment.' });
   }
   if (incident && !report) {
-    const eligibleStaff = db.prepare(`
-      SELECT COUNT(DISTINCT u.id) AS count
-      FROM users u
-      JOIN staff_team_members m ON m.user_id = u.id AND m.team_id = ?
-      JOIN staff_barangay_assignments b ON b.user_id = u.id AND b.barangay = ?
-      WHERE u.role = 'personnel' AND u.status = 'Active'
-    `).get(team.id, incident.barangay);
-    if (!Number(eligibleStaff.count)) {
+    if (!eligibleStaffCount(team.id, incident.barangay)) {
       return res.status(409).json({ error: 'Assign an active Staff member from this response team to the incident barangay before dispatch.' });
     }
   }

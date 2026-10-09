@@ -169,7 +169,7 @@ before(async () => {
     barangay: 'Poblacion',
     role: 'personnel',
   });
-  assert.equal(resident.status, 200);
+  assert.equal(resident.status, 200, `Resident registration failed: ${JSON.stringify(await resident.clone().json())}`);
   const residentUser = (await resident.json()).user;
   assert.equal(residentUser.role, 'resident', 'self-registration must ignore any requested privileged role');
   residentCookie = cookieFrom(resident);
@@ -227,6 +227,30 @@ before(async () => {
     remarks: 'Report checked for workflow test.',
   });
   assert.equal(verification.status, 200);
+  const eligibilityResponse = await jsonRequest(`/api/repair/dispatch-eligibility?report_id=${report.id}`, adminCookie);
+  assert.equal(eligibilityResponse.status, 200);
+  const eligibility = await eligibilityResponse.json();
+  assert.equal(eligibility.verified, true);
+  assert.equal(eligibility.active_staff_in_barangay, 1);
+  assert.equal(eligibility.reason, null);
+  assert.equal(eligibility.teams.find((responseTeam) => responseTeam.id === team.id).eligible_staff_count, 1);
+
+  const membershipDb = new DatabaseSync(testDatabasePath);
+  try {
+    membershipDb.prepare('DELETE FROM staff_team_members WHERE user_id = ?').run(staff.id);
+  } finally {
+    membershipDb.close();
+  }
+  const ineligibleResponse = await jsonRequest(`/api/repair/dispatch-eligibility?report_id=${report.id}`, adminCookie);
+  assert.equal((await ineligibleResponse.json()).reason, 'staff_not_assigned_to_team');
+  assert.equal(ineligibleResponse.status, 200);
+  assert.equal((await jsonRequest(`/api/repair/dispatch-eligibility?report_id=${report.id}`, residentCookie)).status, 403);
+
+  const restoredMembership = await jsonRequest(`/api/admin/staff-memberships/${staff.id}`, adminCookie, 'PUT', {
+    team_ids: [team.id],
+    barangay_names: ['Poblacion'],
+  });
+  assert.equal(restoredMembership.status, 200);
   const dispatchResponse = await jsonRequest('/api/repair/assign', adminCookie, 'POST', {
     team_id: team.id,
     report_id: report.id,
