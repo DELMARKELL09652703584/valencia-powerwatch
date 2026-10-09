@@ -34,7 +34,7 @@ test('Report verification converts into a linked verified incident and refreshes
   assert.match(mainSource, /report_id: report\.id/);
   assert.match(mainSource, /initial_status: 'Verified'/);
   assert.match(adminSource, /Verify &amp; Create Incident/);
-  assert.match(adminHtml, /app\/admin\.js\?v=24/);
-  assert.match(adminHtml, /app\/main\.js\?v=27/);
+  assert.match(adminHtml, /app\/admin\.js\?v=25/);
+  assert.match(adminHtml, /app\/main\.js\?v=28/);
   assert.match(adminHtml, /admin-theme\.css\?v=3/);
 });

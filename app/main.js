@@ -621,6 +621,18 @@ async function submitForm(form) {
     await render();
     return;
   }
+  if (type === 'staff-account-limit') {
+    const rawLimit = String(values.staff_account_limit || '').trim();
+    const limit = rawLimit === '' ? null : Number(rawLimit);
+    if (limit !== null && (!Number.isSafeInteger(limit) || limit < 0)) {
+      throw new Error('Enter a non-negative whole number, or leave the limit blank for unlimited accounts.');
+    }
+    await send('/api/admin/settings', 'PUT', { key: 'staff_account_limit', value: limit });
+    await refreshConfig();
+    setToast(limit === null ? 'Staff account limit removed.' : `Staff account limit set to ${limit}.`);
+    await render();
+    return;
+  }
   if (type === 'admin-notification') {
     await send('/api/notifications', 'POST', {
       title: values.title, message: values.message, type: values.type, audience: values.audience,

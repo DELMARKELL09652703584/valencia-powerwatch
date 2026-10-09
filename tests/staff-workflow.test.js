@@ -347,6 +347,14 @@ test('verified database roles assign each account its own portal after login', {
   const configuredStaff = assignments.staff.find((member) => Number(member.id) === Number(staffLoginUser.id));
   assert.deepEqual(configuredStaff.barangay_names, ['Poblacion']);
   assert.ok(assignments.barangays.includes('Bagontaas'));
+  assert.equal((await jsonRequest(`/api/admin/staff-memberships/${staffLoginUser.id}`, adminCookie, 'PUT', {
+    team_ids: [],
+    barangay_names: ['Poblacion'],
+  })).status, 400);
+  assert.equal((await jsonRequest(`/api/admin/staff-memberships/${staffLoginUser.id}`, adminCookie, 'PUT', {
+    team_ids: [teamId],
+    barangay_names: [],
+  })).status, 400);
 
   const mismatchedPortalAttempts = await Promise.all([
     jsonRequest('/api/auth/login', '', 'POST', { email: portalLoginEmails.resident, password: 'resident-password-123', portal: 'admin' }),
@@ -656,4 +664,49 @@ test('Staff response stages are ordered, documented, and notify the reporting re
     longitude: 125.095,
   });
   assert.equal(deniedLocationUpdate.status, 404);
+});
+
+test('Staff account limit is administrator-configurable and enforced by the server', { timeout: TEST_TIMEOUT_MS }, async () => {
+  const summaryResponse = await jsonRequest('/api/admin/users?status=all', adminCookie);
+  assert.equal(summaryResponse.status, 200);
+  const { staff_summary: summary } = await summaryResponse.json();
+  assert.ok(summary.total > 0);
+
+  const invalidLimits = await Promise.all([
+    jsonRequest('/api/admin/settings', adminCookie, 'PUT', { key: 'staff_account_limit', value: -1 }),
+    jsonRequest('/api/admin/settings', adminCookie, 'PUT', { key: 'staff_account_limit', value: 2.5 }),
+    jsonRequest('/api/admin/settings', adminCookie, 'PUT', { key: 'staff_account_limit', value: '5' }),
+    jsonRequest('/api/admin/settings', staffCookie, 'PUT', { key: 'staff_account_limit', value: 10 }),
+  ]);
+  assert.deepEqual(invalidLimits.map((response) => response.status), [400, 400, 400, 403]);
+
+  const belowCurrentCount = await jsonRequest('/api/admin/settings', adminCookie, 'PUT', {
+    key: 'staff_account_limit',
+    value: summary.total - 1,
+  });
+  assert.equal(belowCurrentCount.status, 409);
+  const configuredLimit = await jsonRequest('/api/admin/settings', adminCookie, 'PUT', {
+    key: 'staff_account_limit',
+    value: summary.total,
+  });
+  assert.equal(configuredLimit.status, 200);
+
+  const blockedCreation = await jsonRequest('/api/admin/users', adminCookie, 'POST', {
+    full_name: 'Over Limit Staff',
+    email: `over-limit-${Date.now()}@example.test`,
+    password: 'field-password-123',
+    role: 'personnel',
+    team_ids: [teamId],
+    barangay_names: ['Poblacion'],
+  });
+  assert.equal(blockedCreation.status, 409);
+
+  const unlimited = await jsonRequest('/api/admin/settings', adminCookie, 'PUT', {
+    key: 'staff_account_limit',
+    value: null,
+  });
+  assert.equal(unlimited.status, 200);
+  const settings = await jsonRequest('/api/admin/settings', adminCookie);
+  assert.equal((await settings.json()).settings.staff_account_limit, null);
+  await createPersonnel('Unlimited Test Staff', `unlimited-${Date.now()}@example.test`);
 });

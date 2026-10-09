@@ -491,6 +491,9 @@ router.put('/admin/staff-memberships/:userId', requireAuth, requireRole('adminis
   const user = db.prepare("SELECT id, full_name, role FROM users WHERE id = ? AND status != 'Deleted'").get(userId);
   if (!user || user.role !== 'personnel') return res.status(404).json({ error: 'Active personnel account not found.' });
   const { team_ids: teamIds, barangay_names: barangayNames } = req.body || {};
+  if (!Array.isArray(teamIds) || teamIds.length < 1 || !Array.isArray(barangayNames) || barangayNames.length < 1) {
+    return res.status(400).json({ error: 'Assign at least one team and one active barangay or operational area.' });
+  }
   const isValidTeamId = (id) => typeof id === 'number'
     ? Number.isSafeInteger(id) && id > 0
     : typeof id === 'string' && /^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id));

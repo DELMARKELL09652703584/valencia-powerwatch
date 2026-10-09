@@ -306,7 +306,7 @@ router.delete('/barangays/:id', requireAuth, requireRole('administrator'), (req,
 
 // ---------------- System settings ----------------
 
-const SETTING_KEYS = ['outage_types', 'inactive_outage_types', 'incident_categories', 'announcement_categories', 'system_info', 'notification_settings', 'map_settings'];
+const SETTING_KEYS = ['outage_types', 'inactive_outage_types', 'incident_categories', 'announcement_categories', 'system_info', 'notification_settings', 'map_settings', 'staff_account_limit'];
 
 router.get('/settings', requireAuth, requireRole('administrator'), (req, res) => {
   const settings = {};
@@ -320,7 +320,21 @@ router.get('/settings', requireAuth, requireRole('administrator'), (req, res) =>
 router.put('/settings', requireAuth, requireRole('administrator'), (req, res) => {
   const { key, value } = req.body || {};
   if (!SETTING_KEYS.includes(key)) return res.status(400).json({ error: 'Unknown setting key.' });
-  db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, JSON.stringify(value));
+  if (key === 'staff_account_limit') {
+    if (value !== null && (!Number.isSafeInteger(value) || value < 0)) {
+      return res.status(400).json({ error: 'Staff account limit must be a non-negative whole number or null for unlimited.' });
+    }
+    if (value !== null) {
+      const currentStaffCount = Number(db.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'personnel' AND status != 'Deleted'").get().count);
+      if (value < currentStaffCount) {
+        return res.status(409).json({ error: `The limit cannot be lower than the ${currentStaffCount} existing staff accounts.` });
+      }
+    }
+    if (value === null) db.prepare("DELETE FROM settings WHERE key = 'staff_account_limit'").run();
+    else db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, JSON.stringify(value));
+  } else {
+    db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, JSON.stringify(value));
+  }
   audit(req.user, 'Settings updated', `${key} setting updated by ${req.user.full_name}.`);
   res.json({ message: 'Setting saved.' });
 });

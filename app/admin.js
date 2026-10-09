@@ -2993,7 +2993,7 @@ async function renderAdminSettings() {
   const outageTypes = settings.outage_types || [];
   const inactiveOutageTypes = new Set(settings.inactive_outage_types || []);
   const selectedTab = state.adminSettingsTab || 'general';
-  const tabs = [['general', 'General'], ['categories', 'Categories'], ['status', 'Status'], ['notifications', 'Notifications'], ['map', 'Map'], ['security', 'Security']];
+  const tabs = [['general', 'General'], ['categories', 'Categories'], ['status', 'Status'], ['notifications', 'Notifications'], ['map', 'Map'], ['accounts', 'Accounts'], ['security', 'Security']];
   const listEditor = (name, key, values) => `<div class="setting-block">
     <div class="setting-head"><h3>${escapeHtml(name)}</h3></div>
     <div class="list-editor" data-list-key="${key}">
@@ -3091,6 +3091,14 @@ async function renderAdminSettings() {
       <label class="checkbox-field"><input type="checkbox" name="satellite" ${map.satellite ? 'checked' : ''}> Satellite view</label>
       <button class="button primary" type="submit">Save Changes</button>
     </form>
+  </div>` : ''}
+  ${selectedTab === 'accounts' ? `<div class="panel settings-account-panel"><div class="panel-head"><h2>Staff Account Capacity</h2></div>
+    <p class="muted">Set an optional maximum number of Staff accounts. Inactive accounts count toward the limit. Leave the field empty to allow any number of staff accounts.</p>
+    <form class="form-stack" data-form="staff-account-limit">
+      <label>Maximum Staff Accounts<input class="input" type="number" min="0" step="1" name="staff_account_limit" value="${settings.staff_account_limit === null || settings.staff_account_limit === undefined ? '' : escapeHtml(String(settings.staff_account_limit))}" placeholder="Unlimited"></label>
+      <button class="button primary" type="submit">Save Account Limit</button>
+    </form>
+    <p class="muted small">Current Staff totals, active status, teams, and authorized barangays are shown in User Management.</p>
   </div>` : ''}
   ${selectedTab === 'security' ? `<div class="panel settings-security-panel"><div class="panel-head"><h2>Security</h2></div>
     <div class="detail-grid"><div><span>Account role</span><strong>${escapeHtml(roleLabel(state.user.role))}</strong></div><div><span>Password recovery</span><strong>${state.passwordRecoveryEnabled ? 'Email recovery configured' : 'SMTP not configured'}</strong></div><div><span>Access control</span><strong>Role-based permissions enabled</strong></div><div><span>Password policy</span><strong>Minimum 6 characters</strong></div></div>
