@@ -7,6 +7,7 @@ const { ROOT, UPLOAD_DIR, db } = require('./db');
 const {
   cleanupExpiredSessions, COOKIE_NAME, getUserByToken, requireAuth, requireRole,
 } = require('./auth');
+const { staffCanAccessBarangay } = require('./staff-access');
 
 const authRoutes = require('./routes/auth');
 const identityRoutes = require('./routes/identity');
@@ -51,8 +52,8 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'Valencia
 
 app.use('/api', authRoutes);
 app.use('/api', identityRoutes);
-app.use('/api/reports', requireAuth, requireRole('resident', 'administrator', 'utility'));
-app.use('/api/incidents', requireAuth, requireRole('resident', 'administrator', 'utility'));
+app.use('/api/reports', requireAuth, requireRole('resident', 'personnel', 'administrator', 'utility'));
+app.use('/api/incidents', requireAuth, requireRole('resident', 'personnel', 'administrator', 'utility'));
 app.use('/api', reportRoutes);
 app.use('/api', incidentRoutes);
 app.use('/api', repairRoutes);
@@ -81,19 +82,19 @@ app.get('/uploads/:filename', (req, res, next) => {
   const evidencePath = `/uploads/${filename}`;
   const report = isReportAttachment
     ? db.prepare(`
-      SELECT r.id AS report_id, r.reporter_id FROM report_attachments a
+      SELECT r.id AS report_id, r.reporter_id, r.barangay FROM report_attachments a
       JOIN outage_reports r ON r.id = a.report_id
       WHERE a.file_path = ?
     `).get(evidencePath)
-    : db.prepare('SELECT id AS report_id, reporter_id FROM outage_reports WHERE photo_path = ?').get(evidencePath);
+    : db.prepare('SELECT id AS report_id, reporter_id, barangay FROM outage_reports WHERE photo_path = ?').get(evidencePath);
 
   if (!report) return res.sendStatus(404);
   const isAdministrativeStaff = ['administrator', 'utility'].includes(user.role);
-  const isAssignedPersonnel = user.role === 'personnel' && db.prepare(`
+  const isAssignedPersonnel = user.role === 'personnel' && (staffCanAccessBarangay(user, report.barangay) || db.prepare(`
     SELECT 1 FROM repair_assignments a
     JOIN staff_team_members m ON m.team_id = a.team_id
     WHERE a.report_id = ? AND m.user_id = ? LIMIT 1
-  `).get(report.report_id, user.id);
+  `).get(report.report_id, user.id));
   if (!isAdministrativeStaff && !isAssignedPersonnel && Number(report.reporter_id) !== Number(user.id)) {
     return res.status(403).json({ error: 'You do not have permission to view this report evidence.' });
   }

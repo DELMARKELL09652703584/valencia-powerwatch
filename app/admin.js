@@ -1519,13 +1519,21 @@ async function renderAdminDispatch() {
               <strong>${escapeHtml(member.full_name)}</strong>
               <span class="muted small">${escapeHtml(member.email)} · ${escapeHtml(member.status)}</span>
             </div>
+            <div><strong class="small">Authorized barangays</strong>
+              ${(staffMemberships.barangays || []).length ? `<div style="display:flex;gap:8px 14px;flex-wrap:wrap;margin:6px 0 10px;">
+                ${staffMemberships.barangays.map((barangay) => `<label style="display:inline-flex;align-items:center;gap:5px;font-size:.82rem;">
+                  <input type="checkbox" name="barangay_names" value="${escapeHtml(barangay)}" ${(member.barangay_names || []).includes(barangay) ? 'checked' : ''}>
+                  ${escapeHtml(barangay)}
+                </label>`).join('')}
+              </div>` : '<p class="muted small">No active barangays are available.</p>'}
+            </div>
             ${staffMemberships.teams.length ? `<div style="display:flex;gap:8px 14px;flex-wrap:wrap;">
               ${staffMemberships.teams.map((team) => `<label style="display:inline-flex;align-items:center;gap:5px;font-size:.82rem;">
                 <input type="checkbox" name="team_ids" value="${team.id}" ${member.team_ids.includes(Number(team.id)) ? 'checked' : ''}>
                 ${escapeHtml(team.name)}
               </label>`).join('')}
             </div>` : '<p class="muted small">Create a repair team before assigning staff accounts.</p>'}
-            <button type="submit" class="button secondary" style="justify-self:start;" ${staffMemberships.teams.length ? '' : 'disabled'}>Save team access</button>
+            <button type="submit" class="button secondary" style="justify-self:start;">Save staff access</button>
           </form>`).join('')}
         </div>` : '<p class="muted small" style="margin-top:12px;">No personnel accounts yet. Create a System Personnel account in User Management first.</p>'}
       </details>` : ''}
@@ -2805,8 +2813,9 @@ document.addEventListener('submit', async (event) => {
   submitButton.disabled = true;
   try {
     const team_ids = [...form.querySelectorAll('input[name="team_ids"]:checked')].map((input) => Number(input.value));
-    await send(`/api/admin/staff-memberships/${encodeURIComponent(userId)}`, 'PUT', { team_ids });
-    setToast('Staff team access saved.');
+    const barangay_names = [...form.querySelectorAll('input[name="barangay_names"]:checked')].map((input) => input.value);
+    await send(`/api/admin/staff-memberships/${encodeURIComponent(userId)}`, 'PUT', { team_ids, barangay_names });
+    setToast('Staff team and barangay access saved.');
     await render();
   } catch (error) {
     setToast(error.message || 'Could not save staff team access.');
@@ -2858,7 +2867,7 @@ async function renderAdminUsers() {
   adminShell(`<section class="user-management-page">
     <header class="user-management-heading">
       <label class="user-management-search" aria-label="Search users"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input type="search" data-filter="userSearch" value="${escapeHtml(f.userSearch || '')}" placeholder="Search name, email, contact..."></label>
-      <button type="button" class="user-add-button" data-action="new-user"><span aria-hidden="true">+</span>Add User</button>
+      <button type="button" class="user-add-button" data-action="new-user"><span aria-hidden="true">+</span>Add Staff</button>
     </header>
     <div class="user-management-tabs" role="tablist" aria-label="Filter users by role">${groupTabs}</div>
     <div class="user-table-tools"><label class="user-status-filter" aria-label="Filter users by account status"><span>Status</span><select data-filter="userStatus"><option value="all" ${!f.userStatus || f.userStatus === 'all' ? 'selected' : ''}>All Statuses</option><option value="Active" ${f.userStatus === 'Active' ? 'selected' : ''}>Active</option><option value="Inactive" ${f.userStatus === 'Inactive' ? 'selected' : ''}>Inactive</option></select></label><span class="user-result-count">${visibleUsers.length} user${visibleUsers.length === 1 ? '' : 's'}</span></div>

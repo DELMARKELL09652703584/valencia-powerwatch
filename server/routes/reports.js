@@ -6,6 +6,7 @@ const multer = require('multer');
 const { db, now, UPLOAD_DIR, nextCode } = require('../db');
 const { requireAuth, requireRole, audit, notifyRole, notifyUsers } = require('../auth');
 const { recordReportEvent, recordReportStatusChange } = require('../report-events');
+const { staffBarangaysFor, staffCanAccessBarangay } = require('../staff-access');
 
 const router = express.Router();
 
@@ -170,6 +171,11 @@ router.post('/reports', requireAuth, requireRole('resident'), parseReportAttachm
 
 // Active community outage reports for Map display (all authenticated roles)
 router.get('/reports/map', requireAuth, (req, res) => {
+  const assignedBarangays = req.user.role === 'personnel' ? staffBarangaysFor(req.user.id) : null;
+  if (assignedBarangays && !assignedBarangays.length) return res.json({ reports: [] });
+  const areaFilter = assignedBarangays
+    ? `AND r.barangay IN (${assignedBarangays.map(() => '?').join(', ')})`
+    : '';
   const rows = db.prepare(`
     SELECT r.id, r.report_code, r.incident_id, r.barangay, r.purok, r.location, r.location_source, r.location_accuracy_m, r.affected_area,
            r.latitude, r.longitude, r.possible_outage_type, r.description,
@@ -178,8 +184,9 @@ router.get('/reports/map', requireAuth, (req, res) => {
            (SELECT COUNT(*) FROM report_attachments a WHERE a.report_id = r.id) AS attachments_count
     FROM outage_reports r
     WHERE r.status NOT IN ('Rejected', 'Duplicate', 'Resolved')
+    ${areaFilter}
     ORDER BY r.reported_at DESC
-  `).all();
+  `).all(...(assignedBarangays || []));
   res.json({ reports: rows });
 });
 
@@ -189,6 +196,12 @@ router.get('/reports', requireAuth, requireRole('personnel', 'administrator', 'u
 
   const where = [];
   const params = [];
+  if (req.user.role === 'personnel') {
+    const assignedBarangays = staffBarangaysFor(req.user.id);
+    if (!assignedBarangays.length) return res.json({ reports: [], statuses: STATUS_FLOW });
+    where.push(`r.barangay IN (${assignedBarangays.map(() => '?').join(', ')})`);
+    params.push(...assignedBarangays);
+  }
   if (status) { where.push('r.status = ?'); params.push(status); }
   if (verification) { where.push('r.verification_status = ?'); params.push(verification); }
   if (barangay) { where.push('r.barangay = ?'); params.push(barangay); }
@@ -206,7 +219,22 @@ router.get('/reports', requireAuth, requireRole('personnel', 'administrator', 'u
     ORDER BY r.reported_at DESC
   `).all(...params);
 
-  res.json({ reports: rows, statuses: STATUS_FLOW });
+  const reports = rows.map((report) => {
+    const attachments = db.prepare(`
+      SELECT id, file_path, mime_type, original_name, file_size
+      FROM report_attachments WHERE report_id = ? ORDER BY id
+    `).all(report.id);
+    if (report.photo_path && !attachments.some((attachment) => attachment.file_path === report.photo_path)) {
+      attachments.unshift({
+        file_path: report.photo_path,
+        mime_type: 'image/jpeg',
+        original_name: 'Report photo',
+        file_size: 0,
+      });
+    }
+    return { ...report, attachments };
+  });
+  res.json({ reports, statuses: STATUS_FLOW });
 });
 
 router.get('/reports/mine', requireAuth, (req, res) => {
@@ -266,6 +294,9 @@ router.get('/reports/:id', requireAuth, (req, res) => {
   if (req.user.role === 'resident' && report.reporter_id !== req.user.id) {
     return res.status(403).json({ error: 'You can only view your own reports.' });
   }
+  if (req.user.role === 'personnel' && !staffCanAccessBarangay(req.user, report.barangay)) {
+    return res.status(404).json({ error: 'Report not found.' });
+  }
   res.json({ report });
 });
 
@@ -273,6 +304,7 @@ router.get('/reports/:id', requireAuth, (req, res) => {
 router.put('/reports/:id/status', requireAuth, requireRole('personnel', 'administrator', 'utility'), (req, res) => {
   const report = db.prepare('SELECT * FROM outage_reports WHERE id = ?').get(Number(req.params.id));
   if (!report) return res.status(404).json({ error: 'Report not found.' });
+  if (!staffCanAccessBarangay(req.user, report.barangay)) return res.status(404).json({ error: 'Report not found.' });
 
   const { status, remarks, verify } = req.body || {};
   if (status !== undefined && !STATUS_FLOW.includes(status)) {
@@ -353,6 +385,7 @@ router.put('/reports/:id/status', requireAuth, requireRole('personnel', 'adminis
 router.put('/reports/:id/duplicate', requireAuth, requireRole('personnel', 'administrator'), (req, res) => {
   const report = db.prepare('SELECT * FROM outage_reports WHERE id = ?').get(Number(req.params.id));
   if (!report) return res.status(404).json({ error: 'Report not found.' });
+  if (!staffCanAccessBarangay(req.user, report.barangay)) return res.status(404).json({ error: 'Report not found.' });
 
   const { related_code, remarks } = req.body || {};
   const duplicateNote = `Duplicate of ${related_code || 'another report'}. ${remarks || ''}`.trim();

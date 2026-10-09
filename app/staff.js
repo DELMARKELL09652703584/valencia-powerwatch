@@ -13,6 +13,7 @@ const pages = [
 const state = {
   user: null,
   assignments: [],
+  reports: [],
   teams: [],
   notifications: [],
   notificationIds: [],
@@ -260,6 +261,33 @@ const renderStats = () => {
   </button>`;
 };
 
+const renderAreaReports = () => {
+  const reports = state.reports.filter((report) => !['Resolved', 'Rejected', 'Duplicate'].includes(report.status));
+  const cards = reports.slice(0, 8).map((report) => {
+    const nextStatus = report.status === 'Submitted' ? 'Under Review'
+      : report.status === 'Under Review' ? 'Verified' : null;
+    const evidence = (report.attachments || []).map((attachment) => {
+      const url = escapeHtml(attachment.file_path);
+      const media = String(attachment.mime_type || '').startsWith('video/')
+        ? `<video src="${url}" controls preload="metadata" aria-label="${escapeHtml(attachment.original_name || 'Report video evidence')}"></video>`
+        : `<img src="${url}" alt="${escapeHtml(attachment.original_name || 'Report photo evidence')}" loading="lazy">`;
+      return `<a href="${url}" target="_blank" rel="noopener">${media}</a>`;
+    }).join('');
+    return `<article class="staff-card">
+      <div class="staff-assignment-top"><div><div class="staff-assignment-code">${escapeHtml(report.report_code || 'RESIDENT REPORT')}</div>
+        <h2>${escapeHtml(report.possible_outage_type || 'Power interruption')}</h2></div>
+        <span class="staff-status ${statusClass(report.status)}">${escapeHtml(report.status)}</span></div>
+      <p class="staff-location">${icon('pin')} ${escapeHtml([report.purok && `Purok ${report.purok}`, report.barangay].filter(Boolean).join(' · '))}</p>
+      <p>${escapeHtml(report.location || report.affected_area || 'Location details not supplied')}</p>
+      <p class="staff-muted">${escapeHtml(report.description || 'No report description supplied.')}</p>
+      ${evidence ? `<div class="staff-evidence-list">${evidence}</div>` : '<p class="staff-muted">No photo or video evidence attached.</p>'}
+      ${nextStatus ? `<button class="staff-btn staff-btn-primary" type="button" data-action="update-report-status" data-id="${report.id}" data-status="${nextStatus}">${nextStatus === 'Verified' ? 'Verify report' : 'Start review'}</button>` : ''}
+    </article>`;
+  }).join('');
+  return `<div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Assigned barangays</span><h2>Resident reports</h2></div></div>
+    ${cards ? `<div class="staff-assignment-list">${cards}</div>` : '<div class="staff-card staff-empty"><strong>No open area reports</strong>Reports submitted from your authorized barangays will appear here.</div>'}`;
+};
+
 const getCurrentAssignments = () => state.assignments.find((assignment) => String(assignment.id) === String(state.selectedId));
 
 const renderHome = () => {
@@ -278,6 +306,7 @@ const renderHome = () => {
   </div>
   ${prioritySorted.length ? `<div class="staff-assignment-list">${prioritySorted.slice(0, 4).map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div>`
     : '<div class="staff-card staff-empty"><strong>No active response tasks</strong>New incidents assigned to your team will appear here.</div>'}
+  ${renderAreaReports()}
   <div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Dispatch</span><h2>Assigned crews</h2></div></div>
   ${state.teams.length ? `<div class="staff-assignment-list">${state.teams.map((team) => `<article class="staff-card">
     <div class="staff-assignment-top"><div><div class="staff-assignment-code">${escapeHtml(team.name)}</div><h2>${escapeHtml(team.lead_technician || 'Field team')}</h2></div>
@@ -425,6 +454,11 @@ const refreshAssignments = async () => {
   state.assignmentsLoaded = true;
 };
 
+const refreshReports = async () => {
+  const result = await api('/api/reports');
+  state.reports = result.reports || [];
+};
+
 const refreshNotifications = async () => {
   const result = await api('/api/notifications');
   const notifications = result.notifications || [];
@@ -458,13 +492,13 @@ const ensureAuthenticated = async () => {
       return;
     }
     state.user = user;
-    await Promise.all([refreshAssignments(), refreshNotifications()]);
+    await Promise.all([refreshAssignments(), refreshReports(), refreshNotifications()]);
     renderShell();
     window.clearInterval(refreshTimer);
     refreshTimer = window.setInterval(async () => {
       if (!state.user || document.visibilityState !== 'visible') return;
       try {
-        await Promise.all([refreshAssignments(), refreshNotifications()]);
+        await Promise.all([refreshAssignments(), refreshReports(), refreshNotifications()]);
         if (state.page !== 'detail') renderShell();
       } catch (error) {
         if (error.status === 401) {
@@ -603,6 +637,14 @@ document.addEventListener('click', async (event) => {
       await refreshAssignments();
       renderShell();
       showToast(result.message || 'Report verified and linked to an incident.');
+    } else if (action === 'update-report-status') {
+      button.disabled = true;
+      const result = await send(`/api/reports/${encodeURIComponent(button.dataset.id)}/status`, 'PUT', {
+        status: button.dataset.status,
+      });
+      await refreshReports();
+      renderShell();
+      showToast(result.message || 'Report status updated.');
     } else if (action === 'share-location') {
       button.disabled = true;
       const position = await captureLocation();
@@ -640,6 +682,7 @@ document.addEventListener('click', async (event) => {
       await send('/api/auth/logout', 'POST');
       state.user = null;
       state.assignments = [];
+      state.reports = [];
       state.teams = [];
       renderLogin();
     } else if (action === 'reload') {

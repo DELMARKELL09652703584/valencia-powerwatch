@@ -3,8 +3,8 @@ const STAFF_CACHE = `powerwatch-field-${STAFF_BUILD_ID}`;
 const STAFF_SHELL = [
   '/staff',
   '/staff-manifest.json',
-  '/app/staff.css?v=5',
-  '/app/staff.js?v=6',
+  '/app/staff.css?v=6',
+  '/app/staff.js?v=7',
   '/assets/powerwatch-logo.svg',
 ];
 

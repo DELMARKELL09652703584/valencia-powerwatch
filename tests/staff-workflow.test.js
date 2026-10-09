@@ -22,6 +22,8 @@ let residentCookie;
 let residentLoginUser;
 let portalLoginEmails = {};
 let assignmentId;
+let primaryReportId;
+let areaReviewReportId;
 let evidenceId;
 let teamId;
 let linkedIncidentId;
@@ -65,15 +67,15 @@ const login = async (email, password, portal) => {
   return { cookie: cookieFrom(response), user: result.user };
 };
 
-const submitReport = async () => {
+const submitReport = async ({ barangay = 'Poblacion', purok = 'Field Workflow Test Site' } = {}) => {
   const form = new FormData();
   for (const [key, value] of Object.entries({
-    location: 'Brgy. Poblacion, Valencia City',
+    location: `Brgy. ${barangay}, Valencia City`,
     latitude: '7.906',
     longitude: '125.094',
     location_source: 'map_pin',
-    barangay: 'Poblacion',
-    purok: 'Field Workflow Test Site',
+    barangay,
+    purok,
     date_time_noticed: new Date().toISOString(),
     description: 'A fallen line caused a power interruption near the test site.',
     possible_outage_type: 'Line Fault',
@@ -152,9 +154,11 @@ before(async () => {
     email: `staff-test-${Date.now()}@example.test`,
     password: 'resident-password-123',
     barangay: 'Poblacion',
+    role: 'personnel',
   });
   assert.equal(resident.status, 200);
   const residentUser = (await resident.json()).user;
+  assert.equal(residentUser.role, 'resident', 'self-registration must ignore any requested privileged role');
   residentCookie = cookieFrom(resident);
   portalLoginEmails.resident = residentUser.email;
 
@@ -172,10 +176,15 @@ before(async () => {
   const unassigned = await createPersonnel('Unassigned Field Staff', `unassigned-field-${Date.now()}@example.test`);
   const membershipResponse = await jsonRequest(`/api/admin/staff-memberships/${staff.id}`, adminCookie, 'PUT', {
     team_ids: [team.id],
+    barangay_names: ['Poblacion'],
   });
   assert.equal(membershipResponse.status, 200);
 
   const report = await submitReport();
+  primaryReportId = report.id;
+  const outsideAreaReport = await submitReport({ barangay: 'Bagontaas', purok: 'Out-of-area Test Site' });
+  portalLoginEmails.outsideAreaReportId = String(outsideAreaReport.id);
+  areaReviewReportId = (await submitReport({ purok: 'Assigned Area Review Site' })).id;
   const dispatchResponse = await jsonRequest('/api/repair/assign', adminCookie, 'POST', {
     team_id: team.id,
     report_id: report.id,
@@ -261,6 +270,35 @@ test('verified database roles assign each account its own portal after login', {
   assert.equal((await jsonRequest('/api/admin/users', adminCookie)).status, 200);
   assert.equal((await jsonRequest('/api/admin/users', staffCookie)).status, 403);
   assert.equal((await jsonRequest('/api/admin/users', residentCookie)).status, 403);
+  const unauthorizedStaffCreation = await Promise.all([
+    jsonRequest('/api/admin/users', staffCookie, 'POST', {
+      full_name: 'Staff-Created Account',
+      email: `staff-created-${Date.now()}@example.test`,
+      password: 'field-password-123',
+      role: 'personnel',
+    }),
+    jsonRequest('/api/admin/users', residentCookie, 'POST', {
+      full_name: 'Resident-Created Account',
+      email: `resident-created-${Date.now()}@example.test`,
+      password: 'field-password-123',
+      role: 'personnel',
+    }),
+  ]);
+  assert.ok(unauthorizedStaffCreation.every((response) => response.status === 403));
+  const attemptedResidentProvisioning = await jsonRequest('/api/admin/users', adminCookie, 'POST', {
+    full_name: 'Admin-Provisioned Resident',
+    email: `admin-resident-${Date.now()}@example.test`,
+    password: 'resident-password-123',
+    role: 'resident',
+  });
+  assert.equal(attemptedResidentProvisioning.status, 403);
+
+  const staffAssignments = await jsonRequest('/api/admin/staff-memberships', adminCookie);
+  assert.equal(staffAssignments.status, 200);
+  const assignments = await staffAssignments.json();
+  const configuredStaff = assignments.staff.find((member) => Number(member.id) === Number(staffLoginUser.id));
+  assert.deepEqual(configuredStaff.barangay_names, ['Poblacion']);
+  assert.ok(assignments.barangays.includes('Bagontaas'));
 
   const mismatchedPortalAttempts = await Promise.all([
     jsonRequest('/api/auth/login', '', 'POST', { email: portalLoginEmails.resident, password: 'resident-password-123', portal: 'admin' }),
@@ -291,6 +329,8 @@ test('verified database roles assign each account its own portal after login', {
   assert.match(staffApp, /video\/mp4,video\/quicktime/);
   assert.match(staffApp, /controls preload="metadata"/);
   assert.match(staffApp, /data-action="open-history"/);
+  assert.match(staffApp, /Resident reports/);
+  assert.match(staffApp, /data-action="update-report-status"/);
   assert.match(staffApp, /renderStageProgress\(assignment\)/);
   assert.doesNotMatch(adminBoot, /window\.location\.replace\(user\.portal_path\)/);
   assert.match(adminBoot, /state\.user = result\.user;\s*await afterLogin\(\);/);
@@ -354,7 +394,7 @@ test('built-in administrator account remains active and protected from account c
   assert.ok(reservedAccounts.every((response) => response.status === 409));
 });
 
-test('Staff API scopes assignments and report evidence to assigned personnel teams', { timeout: TEST_TIMEOUT_MS }, async () => {
+test('Staff API scopes assignments, reports, evidence, and incidents to authorized teams and barangays', { timeout: TEST_TIMEOUT_MS }, async () => {
   const residentRequest = await jsonRequest('/api/staff/assignments', residentCookie);
   assert.equal(residentRequest.status, 403);
   assert.equal((await jsonRequest('/api/staff/assignments', adminCookie)).status, 403);
@@ -386,9 +426,41 @@ test('Staff API scopes assignments and report evidence to assigned personnel tea
   const unassignedResponse = await jsonRequest('/api/staff/assignments', unassignedCookie);
   assert.equal(unassignedResponse.status, 200);
   assert.deepEqual((await unassignedResponse.json()).assignments, []);
+  assert.deepEqual((await (await jsonRequest('/api/reports', unassignedCookie)).json()).reports, []);
+  assert.deepEqual((await (await jsonRequest('/api/incidents?include_closed=true', unassignedCookie)).json()).incidents, []);
   const deniedDetail = await jsonRequest(`/api/staff/assignments/${assignmentId}`, unassignedCookie);
   assert.equal(deniedDetail.status, 404);
-  assert.equal((await jsonRequest('/api/reports', staffCookie)).status, 403);
+  const areaReportsResponse = await jsonRequest('/api/reports', staffCookie);
+  assert.equal(areaReportsResponse.status, 200);
+  const areaReports = (await areaReportsResponse.json()).reports;
+  assert.ok(areaReports.every((report) => report.barangay === 'Poblacion'));
+  assert.ok(areaReports.some((report) => Number(report.id) !== Number(portalLoginEmails.outsideAreaReportId)));
+  const areaMapResponse = await jsonRequest('/api/reports/map', staffCookie);
+  assert.equal(areaMapResponse.status, 200);
+  assert.ok((await areaMapResponse.json()).reports.every((report) => report.barangay === 'Poblacion'));
+  const staffReview = await jsonRequest(`/api/reports/${areaReviewReportId}/status`, staffCookie, 'PUT', { status: 'Under Review' });
+  assert.equal(staffReview.status, 200);
+  const residentReportTracking = await jsonRequest('/api/reports/mine', residentCookie);
+  assert.equal((await residentReportTracking.json()).reports.find((report) => Number(report.id) === Number(areaReviewReportId)).status, 'Under Review');
+  assert.equal((await jsonRequest(`/api/reports/${portalLoginEmails.outsideAreaReportId}`, staffCookie)).status, 404);
+  assert.equal((await jsonRequest(`/api/reports/${portalLoginEmails.outsideAreaReportId}/status`, staffCookie, 'PUT', { status: 'Verified' })).status, 404);
+  const staffIncidentList = await jsonRequest('/api/incidents?include_closed=true', staffCookie);
+  assert.equal(staffIncidentList.status, 200);
+  assert.ok((await staffIncidentList.json()).incidents.every((incident) => incident.barangay === 'Poblacion'
+    || incident.affected_barangays?.includes('Poblacion')));
+  const outsideIncidentResponse = await jsonRequest('/api/incidents', adminCookie, 'POST', {
+    title: 'Out-of-area access test',
+    barangay: 'Bagontaas',
+    start_time: new Date().toISOString(),
+    outage_type: 'Line Fault',
+    description: 'Used to verify staff area authorization.',
+    latitude: 7.91,
+    longitude: 125.10,
+  });
+  assert.equal(outsideIncidentResponse.status, 201);
+  const outsideIncident = (await outsideIncidentResponse.json()).incident;
+  assert.equal((await jsonRequest(`/api/incidents/${outsideIncident.id}`, staffCookie)).status, 404);
+  assert.equal((await jsonRequest(`/api/incidents/${outsideIncident.id}/status`, staffCookie, 'PUT', { status: 'Ongoing' })).status, 404);
   assert.equal((await jsonRequest(`/api/repair/assignments/${assignmentId}`, staffCookie)).status, 403);
   assert.equal((await jsonRequest('/api/admin/staff-memberships', staffCookie)).status, 403);
 
@@ -442,7 +514,7 @@ test('Staff response stages are ordered, documented, and notify the reporting re
   const current = await jsonRequest(`/api/staff/assignments/${assignmentId}`, staffCookie);
   assert.equal((await current.json()).assignment.latest_stage, 'On the Way');
   const residentReports = await jsonRequest('/api/reports/mine', residentCookie);
-  const residentReport = (await residentReports.json()).reports[0];
+  const residentReport = (await residentReports.json()).reports.find((item) => Number(item.id) === Number(primaryReportId));
   assert.equal(residentReport.status, 'In Progress');
   assert.equal(residentReport.repair_status, 'En Route');
   assert.equal(residentReport.incident_status, 'Restoration in Progress');

@@ -2,6 +2,7 @@ const express = require('express');
 const { db, now, nextCode } = require('../db');
 const { requireAuth, requireRole, audit, notifyUsers } = require('../auth');
 const { recordReportEvent, recordReportStatusChange } = require('../report-events');
+const { staffBarangaysFor, staffCanAccessBarangay, staffCanAccessIncident } = require('../staff-access');
 const { sendSMS } = require('../sms');
 const { calculateETR } = require('../etr');
 
@@ -75,6 +76,13 @@ router.get('/incidents', requireAuth, (req, res) => {
   const { barangay, type, status, include_closed } = req.query;
   const where = include_closed === 'true' ? [] : ["i.status != 'Closed'"];
   const params = [];
+  if (req.user.role === 'personnel') {
+    const assignedBarangays = staffBarangaysFor(req.user.id);
+    if (!assignedBarangays.length) return res.json({ incidents: [], statuses: INCIDENT_STATUSES });
+    const placeholders = assignedBarangays.map(() => '?').join(', ');
+    where.push(`(i.barangay IN (${placeholders}) OR i.id IN (SELECT incident_id FROM incident_areas WHERE barangay IN (${placeholders})))`);
+    params.push(...assignedBarangays, ...assignedBarangays);
+  }
   if (barangay) { where.push('i.barangay = ?'); params.push(barangay); }
   if (type) { where.push('i.incident_type = ?'); params.push(type); }
   if (status) { where.push('i.status = ?'); params.push(status); }
@@ -107,6 +115,7 @@ router.get('/incidents', requireAuth, (req, res) => {
 router.get('/incidents/:id', requireAuth, (req, res) => {
   const incident = incidentRow(Number(req.params.id));
   if (!incident) return res.status(404).json({ error: 'Incident not found.' });
+  if (!staffCanAccessIncident(req.user, incident)) return res.status(404).json({ error: 'Incident not found.' });
   incident.duration_display = duration(incident.start_time, incident.end_time || incident.closed_at);
   if (req.user.role === 'resident') {
     delete incident.linked_reports;
@@ -142,6 +151,10 @@ router.post('/incidents', requireAuth, requireRole('personnel', 'administrator')
     const activeBarangay = db.prepare("SELECT name FROM barangays WHERE name = ? AND status = 'Active'").get(barangay);
     if (!activeBarangay) return res.status(400).json({ error: 'Choose an active Valencia City barangay.' });
     const requestedAreas = [...new Set((Array.isArray(affected_barangays) ? affected_barangays : []).map((name) => String(name).trim()).filter(Boolean))];
+    if (!staffCanAccessBarangay(req.user, barangay)
+      || requestedAreas.some((area) => !staffCanAccessBarangay(req.user, area))) {
+      return res.status(403).json({ error: 'You can only manage incidents in your assigned barangay areas.' });
+    }
     const inactiveArea = requestedAreas.find((name) => !db.prepare("SELECT 1 FROM barangays WHERE name = ? AND status = 'Active'").get(name));
     if (inactiveArea) return res.status(400).json({ error: `Affected barangay "${inactiveArea}" is not active.` });
 
@@ -151,6 +164,7 @@ router.post('/incidents', requireAuth, requireRole('personnel', 'administrator')
     for (const id of requestedReportIds) {
       const report = db.prepare('SELECT * FROM outage_reports WHERE id = ?').get(id);
       if (!report) return res.status(404).json({ error: `Linked report ${id} not found.` });
+      if (!staffCanAccessBarangay(req.user, report.barangay)) return res.status(403).json({ error: 'You can only link reports from your assigned barangay areas.' });
       if (['Rejected', 'Duplicate'].includes(report.status)) return res.status(400).json({ error: `Report ${report.report_code} cannot be linked because it is ${report.status.toLowerCase()}.` });
       if (report.incident_id) return res.status(409).json({ error: `Report ${report.report_code} is already linked to an incident.` });
       linkedReports.push(report);
@@ -234,6 +248,7 @@ router.post('/incidents', requireAuth, requireRole('personnel', 'administrator')
 router.put('/incidents/:id/status', requireAuth, requireRole('personnel', 'administrator', 'utility'), (req, res) => {
   const incident = db.prepare('SELECT * FROM outage_incidents WHERE id = ?').get(Number(req.params.id));
   if (!incident) return res.status(404).json({ error: 'Incident not found.' });
+  if (!staffCanAccessIncident(req.user, incident)) return res.status(404).json({ error: 'Incident not found.' });
 
   const { status, remarks, restoration_time, customers_affected, restoration_progress } = req.body || {};
   if (!INCIDENT_STATUSES.includes(status)) {
@@ -304,6 +319,7 @@ router.put('/incidents/:id/status', requireAuth, requireRole('personnel', 'admin
 router.put('/incidents/:id', requireAuth, requireRole('personnel', 'administrator', 'utility'), (req, res) => {
   const incident = db.prepare('SELECT * FROM outage_incidents WHERE id = ?').get(Number(req.params.id));
   if (!incident) return res.status(404).json({ error: 'Incident not found.' });
+  if (!staffCanAccessIncident(req.user, incident)) return res.status(404).json({ error: 'Incident not found.' });
 
   const { title, location, latitude, longitude, affected_area, remarks, incident_type, outage_type, priority, description, cause_category, estimated_restoration, affected_barangays } = req.body || {};
 
@@ -316,6 +332,10 @@ router.put('/incidents/:id', requireAuth, requireRole('personnel', 'administrato
   if ((cause_category !== undefined && cause_category !== incident.cause_category && !canSetCause(req))
     || (estimated_restoration !== undefined && estimated_restoration !== incident.estimated_restoration && !canSetCause(req))) {
     return res.status(403).json({ error: 'Only authorized utility personnel or administrators can provide official cause or restoration estimates.' });
+  }
+  if (req.user.role === 'personnel' && Array.isArray(affected_barangays)
+    && affected_barangays.some((area) => !staffCanAccessBarangay(req.user, String(area).trim()))) {
+    return res.status(403).json({ error: 'You can only add affected barangays that are assigned to you.' });
   }
 
   db.prepare(`
@@ -348,10 +368,12 @@ router.put('/incidents/:id', requireAuth, requireRole('personnel', 'administrato
 router.post('/incidents/:id/reports', requireAuth, requireRole('personnel', 'administrator'), (req, res) => {
   const incident = db.prepare('SELECT * FROM outage_incidents WHERE id = ?').get(Number(req.params.id));
   if (!incident) return res.status(404).json({ error: 'Incident not found.' });
+  if (!staffCanAccessIncident(req.user, incident)) return res.status(404).json({ error: 'Incident not found.' });
   const { report_id, remarks } = req.body || {};
   if (!Number.isInteger(Number(report_id)) || Number(report_id) < 1) return res.status(400).json({ error: 'Choose a valid report.' });
   const report = db.prepare('SELECT * FROM outage_reports WHERE id = ?').get(Number(report_id));
   if (!report) return res.status(404).json({ error: 'Report not found.' });
+  if (!staffCanAccessBarangay(req.user, report.barangay)) return res.status(404).json({ error: 'Report not found.' });
   if (['Rejected', 'Duplicate'].includes(report.status)) return res.status(400).json({ error: 'Rejected or duplicate reports cannot be linked as verified incidents.' });
 
   const ts = now();
@@ -377,10 +399,12 @@ router.post('/incidents/:id/reports', requireAuth, requireRole('personnel', 'adm
 router.post('/incidents/:id/related', requireAuth, requireRole('personnel', 'administrator'), (req, res) => {
   const incident = db.prepare('SELECT * FROM outage_incidents WHERE id = ?').get(Number(req.params.id));
   if (!incident) return res.status(404).json({ error: 'Incident not found.' });
+  if (!staffCanAccessIncident(req.user, incident)) return res.status(404).json({ error: 'Incident not found.' });
 
   const { report_id, remarks } = req.body || {};
   const report = db.prepare('SELECT * FROM outage_reports WHERE id = ?').get(Number(report_id));
   if (!report) return res.status(404).json({ error: 'Report not found.' });
+  if (!staffCanAccessBarangay(req.user, report.barangay)) return res.status(404).json({ error: 'Report not found.' });
 
   const ts = now();
   db.prepare('INSERT OR IGNORE INTO incident_links (incident_id, report_id, link_time) VALUES (?, ?, ?)').run(incident.id, report.id, ts);

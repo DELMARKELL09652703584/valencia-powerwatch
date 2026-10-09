@@ -36,11 +36,11 @@ router.get('/users', requireAuth, requireRole('administrator'), (req, res) => {
   res.json({ users: rows.map(userPublic), roles: ROLES });
 });
 
-// Add authorized personnel / utility / admin account
+// Residents register through the User Portal; this endpoint only provisions staff.
 router.post('/users', requireAuth, requireRole('administrator'), (req, res) => {
   const { full_name, email, contact_number, address, barangay, role, password } = req.body || {};
   if (!full_name || !email || !password) return res.status(400).json({ error: 'Name, email, and password are required.' });
-  if (!ROLES[role]) return res.status(400).json({ error: 'Invalid role.' });
+  if (role !== 'personnel') return res.status(403).json({ error: 'Only staff accounts can be created here. Residents must register through the User Portal.' });
   if (hasBuiltInAdminIdentifier({
     username: String(email).trim().split('@')[0],
     email,
@@ -54,7 +54,7 @@ router.post('/users', requireAuth, requireRole('administrator'), (req, res) => {
   const info = db.prepare(`
     INSERT INTO users (full_name, email, contact_number, address, barangay, password_hash, role, status, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'Active', ?)
-  `).run(full_name.trim(), email.trim(), contact_number || null, address || null, barangay || null, hashPassword(password), role, now());
+  `).run(full_name.trim(), email.trim(), contact_number || null, address || null, barangay || null, hashPassword(password), 'personnel', now());
 
   const id = Number(info.lastInsertRowid);
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
@@ -120,7 +120,10 @@ router.put('/users/:id/role', requireAuth, requireRole('administrator'), (req, r
   const { role } = req.body || {};
   if (!ROLES[role]) return res.status(400).json({ error: 'Invalid role.' });
   db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, user.id);
-  if (role !== 'personnel') db.prepare('DELETE FROM staff_team_members WHERE user_id = ?').run(user.id);
+  if (role !== 'personnel') {
+    db.prepare('DELETE FROM staff_team_members WHERE user_id = ?').run(user.id);
+    db.prepare('DELETE FROM staff_barangay_assignments WHERE user_id = ?').run(user.id);
+  }
   audit(req.user, 'Role changed', `Role of ${user.email} changed to ${roleLabel(role)}.`);
   notifyUsers([user.id], 'Role updated', `Your role is now ${roleLabel(role)}.`, 'system');
   res.json({ user: userPublic(db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)), message: 'Role updated.' });

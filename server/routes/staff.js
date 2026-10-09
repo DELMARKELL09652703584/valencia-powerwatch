@@ -449,13 +449,20 @@ router.get('/admin/staff-memberships', requireAuth, requireRole('administrator')
   const memberships = db.prepare(`
     SELECT user_id, team_id FROM staff_team_members ORDER BY user_id, team_id
   `).all();
+  const barangayMemberships = db.prepare(`
+    SELECT user_id, barangay FROM staff_barangay_assignments ORDER BY user_id, barangay
+  `).all();
+  const barangays = db.prepare("SELECT name FROM barangays WHERE status = 'Active' ORDER BY name COLLATE NOCASE").all();
   res.json({
     staff: users.map((user) => ({
       ...user,
       team_ids: memberships.filter((membership) => Number(membership.user_id) === Number(user.id))
         .map((membership) => Number(membership.team_id)),
+      barangay_names: barangayMemberships.filter((membership) => Number(membership.user_id) === Number(user.id))
+        .map((membership) => membership.barangay),
     })),
     teams,
+    barangays: barangays.map((barangay) => barangay.name),
   });
 });
 
@@ -464,35 +471,57 @@ router.put('/admin/staff-memberships/:userId', requireAuth, requireRole('adminis
   if (!Number.isSafeInteger(userId) || userId < 1) return res.status(400).json({ error: 'Invalid staff account.' });
   const user = db.prepare("SELECT id, full_name, role FROM users WHERE id = ? AND status != 'Deleted'").get(userId);
   if (!user || user.role !== 'personnel') return res.status(404).json({ error: 'Active personnel account not found.' });
-  const { team_ids: teamIds } = req.body || {};
-  if (!Array.isArray(teamIds) || teamIds.length > 50
-    || teamIds.some((id) => !Number.isSafeInteger(id) && !(typeof id === 'string' && /^[1-9]\d*$/.test(id)))) {
+  const { team_ids: teamIds, barangay_names: barangayNames } = req.body || {};
+  const isValidTeamId = (id) => typeof id === 'number'
+    ? Number.isSafeInteger(id) && id > 0
+    : typeof id === 'string' && /^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id));
+  if (teamIds !== undefined && (!Array.isArray(teamIds) || teamIds.length > 50
+    || teamIds.some((id) => !isValidTeamId(id)))) {
     return res.status(400).json({ error: 'Team assignments must contain valid team IDs.' });
   }
-  const uniqueIds = [...new Set(teamIds.map(Number))];
+  const uniqueIds = [...new Set((teamIds || []).map(Number))];
   if (uniqueIds.some((id) => !Number.isSafeInteger(id) || id < 1)) {
     return res.status(400).json({ error: 'Choose one or more valid teams.' });
   }
+  if (barangayNames !== undefined && (!Array.isArray(barangayNames) || barangayNames.length > 100
+    || barangayNames.some((name) => typeof name !== 'string' || !name.trim()))) {
+    return res.status(400).json({ error: 'Barangay assignments must contain valid barangay names.' });
+  }
+  const uniqueBarangays = [...new Set((barangayNames || []).map((name) => name.trim()))];
   const validIds = uniqueIds.length
     ? db.prepare(`SELECT id FROM repair_teams WHERE id IN (${uniqueIds.map(() => '?').join(', ')})`).all(...uniqueIds)
       .map((team) => Number(team.id))
     : [];
   if (validIds.length !== uniqueIds.length) return res.status(400).json({ error: 'One or more selected teams no longer exist.' });
+  const validBarangays = uniqueBarangays.length
+    ? db.prepare(`SELECT name FROM barangays WHERE status = 'Active' AND name IN (${uniqueBarangays.map(() => '?').join(', ')})`)
+      .all(...uniqueBarangays).map((barangay) => barangay.name)
+    : [];
+  if (validBarangays.length !== uniqueBarangays.length) return res.status(400).json({ error: 'One or more selected barangays are not active.' });
 
   db.exec('BEGIN IMMEDIATE');
   try {
-    db.prepare('DELETE FROM staff_team_members WHERE user_id = ?').run(userId);
-    const add = db.prepare(`
-      INSERT INTO staff_team_members (user_id, team_id, assigned_by, assigned_at) VALUES (?, ?, ?, ?)
-    `);
-    for (const teamId of uniqueIds) add.run(userId, teamId, req.user.id, now());
+    if (teamIds !== undefined) {
+      db.prepare('DELETE FROM staff_team_members WHERE user_id = ?').run(userId);
+      const addTeam = db.prepare(`
+        INSERT INTO staff_team_members (user_id, team_id, assigned_by, assigned_at) VALUES (?, ?, ?, ?)
+      `);
+      for (const teamId of uniqueIds) addTeam.run(userId, teamId, req.user.id, now());
+    }
+    if (barangayNames !== undefined) {
+      db.prepare('DELETE FROM staff_barangay_assignments WHERE user_id = ?').run(userId);
+      const addBarangay = db.prepare(`
+        INSERT INTO staff_barangay_assignments (user_id, barangay, assigned_by, assigned_at) VALUES (?, ?, ?, ?)
+      `);
+      for (const barangay of validBarangays) addBarangay.run(userId, barangay, req.user.id, now());
+    }
     db.exec('COMMIT');
   } catch (error) {
     db.exec('ROLLBACK');
     throw error;
   }
-  audit(req.user, 'Staff team membership updated', `${user.full_name} is assigned to ${uniqueIds.length} repair team(s).`);
-  res.json({ message: 'Staff team assignments saved.', user_id: userId, team_ids: uniqueIds });
+  audit(req.user, 'Staff access updated', `${user.full_name} is assigned to ${uniqueIds.length} repair team(s) and ${validBarangays.length} barangay area(s).`);
+  res.json({ message: 'Staff access assignments saved.', user_id: userId, team_ids: uniqueIds, barangay_names: validBarangays });
 });
 
 module.exports = { router, teamIdsFor };
