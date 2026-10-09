@@ -34,7 +34,7 @@ test('Report verification updates the authoritative report without creating a du
   assert.doesNotMatch(mainSource, /type === 'verify-create-incident'/);
   assert.match(adminSource, /Verify Report/);
   assert.match(adminHtml, /app\/admin\.js\?v=27/);
-  assert.match(adminHtml, /app\/main\.js\?v=31/);
+  assert.match(adminHtml, /app\/main\.js\?v=32/);
   assert.match(adminHtml, /admin-theme\.css\?v=3/);
 });
 
@@ -43,4 +43,12 @@ test('Staff account form requires matching initial and confirmation passwords', 
   assert.match(mainSource, /name="confirm_password" minlength="6" autocomplete="new-password" required/);
   assert.match(mainSource, /values\.password !== values\.confirm_password/);
   assert.match(mainSource, /confirm_password: values\.confirm_password/);
+});
+
+test('Admin login does not expose seeded credentials and hides unconfigured OAuth providers', () => {
+  assert.doesNotMatch(mainSource, /autofill-admin-login|data-pass="(?:ADMIN2023\*|admin123)"/);
+  assert.match(mainSource, /function syncOAuthProviderControls\(\)/);
+  assert.match(mainSource, /button\.hidden = !state\.oauthProviders\?\.\[`\\?\$\{button\.dataset\.provider\}Live`\\?\]/);
+  assert.match(mainSource, /row\.hidden = !hasAvailableProvider/);
+  assert.match(mainSource, /app\.innerHTML = `<main class="login-page">[\s\S]*?syncOAuthProviderControls\(\);\s*\}/);
 });

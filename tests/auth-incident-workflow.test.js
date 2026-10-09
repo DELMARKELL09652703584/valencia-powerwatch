@@ -166,6 +166,19 @@ test('resident credentials still work after logout terminates the session', { ti
 });
 
 test('unverified social-login claims cannot create accounts or sessions', { timeout: TEST_TIMEOUT_MS }, async () => {
+  const authConfigResponse = await fetch(`${baseUrl}/api/auth/demo`);
+  assert.equal(authConfigResponse.status, 200);
+  const authConfig = await authConfigResponse.json();
+  assert.equal(authConfig.oauthProviders.googleLive, false);
+  assert.equal(authConfig.oauthProviders.facebookLive, false);
+  assert.equal(authConfig.passwordRecoveryEnabled, false);
+
+  const unavailableProviderResponses = await Promise.all([
+    fetch(`${baseUrl}/api/auth/oauth/google`),
+    fetch(`${baseUrl}/api/auth/oauth/facebook`),
+  ]);
+  assert.deepEqual(unavailableProviderResponses.map((response) => response.status), [503, 503]);
+
   const response = await fetch(`${baseUrl}/api/auth/oauth/social-login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

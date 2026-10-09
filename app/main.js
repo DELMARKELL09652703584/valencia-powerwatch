@@ -35,6 +35,19 @@ window.addEventListener('appinstalled', () => {
   document.querySelectorAll('.mobile-install-button, .mobile-install-cta').forEach((button) => button.remove());
 });
 
+function syncOAuthProviderControls() {
+  document.querySelectorAll('.social-row').forEach((row) => {
+    const buttons = [...row.querySelectorAll('[data-action="start-oauth"]')];
+    buttons.forEach((button) => {
+      button.hidden = !state.oauthProviders?.[`${button.dataset.provider}Live`];
+    });
+    const hasAvailableProvider = buttons.some((button) => !button.hidden);
+    row.hidden = !hasAvailableProvider;
+    const divider = row.previousElementSibling;
+    if (divider?.classList.contains('auth-divider')) divider.hidden = !hasAvailableProvider;
+  });
+}
+
 function renderWelcomeScreen() {
   app.innerHTML = `<main class="mobile-welcome">
     <div class="mobile-theme-toolbar mobile-theme-toolbar-welcome">${mobileThemeToggle()}</div>
@@ -88,6 +101,7 @@ function renderLogin(message = '', loginIdentifier = null, rememberIdentifier = 
       <footer class="login-footer">Valencia City, Bukidnon</footer>
       <div class="toast" role="status" hidden></div>
     </main>`;
+    syncOAuthProviderControls();
     return;
   }
 
@@ -108,13 +122,6 @@ function renderLogin(message = '', loginIdentifier = null, rememberIdentifier = 
           <div class="admin-login-options"><label><input type="checkbox" name="remember" checked> Remember me</label><button type="button" data-action="forgot-password">Forgot password?</button></div>
           <button class="button primary full" type="submit">Login</button>
         </form>
-        <div style="margin-top:14px;padding:10px 12px;background:#f0f9ff;border:1px dashed #0284c7;border-radius:8px;font-size:0.8rem;color:#0369a1;">
-          <div style="font-weight:700;margin-bottom:4px;">🔑 Quick Admin Sign-In:</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
-            <button type="button" class="button ghost small" data-action="autofill-admin-login" data-user="DELMARKEL2003" data-pass="ADMIN2023*" style="font-size:0.75rem;padding:4px 8px;cursor:pointer;">👑 Sign in as Delmarkel</button>
-            <button type="button" class="button ghost small" data-action="autofill-admin-login" data-user="admin@powerwatch.ph" data-pass="admin123" style="font-size:0.75rem;padding:4px 8px;cursor:pointer;">⚡ Sign in as Demo Admin</button>
-          </div>
-        </div>
         <div class="auth-divider" style="margin: 16px 0;"><span>or continue with</span></div>
         <div class="social-row">
           <button type="button" class="social-btn social-google-btn" data-action="start-oauth" data-provider="google" title="Continue with Google">
@@ -138,6 +145,7 @@ function renderLogin(message = '', loginIdentifier = null, rememberIdentifier = 
       <div class="toast" role="status" hidden></div>
     </section>
   </main>`;
+  syncOAuthProviderControls();
 }
 
 function renderAdminRestrictedAccess() {
@@ -265,6 +273,7 @@ function renderRegister(message = '') {
       </section>
       <div class="toast" role="status" hidden></div>
     </main>`;
+    syncOAuthProviderControls();
     return;
   }
 
@@ -1753,19 +1762,6 @@ async function handleClick(event) {
         link.download = `powerwatch-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
         link.click();
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-        return;
-      }
-      case 'autofill-admin-login': {
-        const form = document.querySelector('form[data-form="login"]');
-        if (form) {
-          const emailInput = form.querySelector('input[name="email"]');
-          const passInput = form.querySelector('input[name="password"]');
-          if (emailInput && passInput) {
-            emailInput.value = actionButton.dataset.user || '';
-            passInput.value = actionButton.dataset.pass || '';
-            form.requestSubmit();
-          }
-        }
         return;
       }
       case 'filter-announcements':
