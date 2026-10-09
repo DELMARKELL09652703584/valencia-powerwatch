@@ -162,17 +162,20 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
         <div><dt>Reported problem</dt><dd>${escapeHtml(assignment.possible_outage_type || 'Power interruption')}</dd></div>
         <div><dt>Barangay</dt><dd>${escapeHtml(assignment.target_barangay || 'Not specified')}</dd></div>
         <div><dt>Purok</dt><dd>${escapeHtml(assignment.target_purok || 'Not specified')}</dd></div>
+        ${assignment.target_latitude !== null && assignment.target_latitude !== undefined && assignment.target_longitude !== null && assignment.target_longitude !== undefined
+          ? `<div><dt>GPS coordinates</dt><dd>${Number(assignment.target_latitude).toFixed(5)}, ${Number(assignment.target_longitude).toFixed(5)}</dd></div>` : ''}
       </div>
       <div class="staff-detail-copy">
         <div><dt>Report details</dt><dd>${escapeHtml(assignment.report_description || assignment.incident_description || 'No description supplied.')}</dd></div>
         ${assignment.reporter_name ? `<div><dt>Reported by</dt><dd>${escapeHtml(assignment.reporter_name)}</dd></div>` : ''}
+        ${assignment.reporter_contact ? `<div><dt>Authorized contact</dt><dd><a href="tel:${escapeHtml(assignment.reporter_contact)}">${escapeHtml(assignment.reporter_contact)}</a></dd></div>` : ''}
         <div><dt>Dispatch instructions</dt><dd>${escapeHtml(assignment.dispatch_notes || 'No additional instructions.')}</dd></div>
         ${assignment.reported_at ? `<div><dt>Reported</dt><dd>${escapeHtml(new Date(assignment.reported_at).toLocaleString())}</dd></div>` : ''}
       </div>
-      ${!compact && assignment.report_id && !assignment.report_incident_id && !assignment.incident_id
+      ${!compact && assignment.report_id && !['Verified', 'Officially Confirmed'].includes(assignment.verification_status) && !assignment.incident_id
         && !isTerminal
         && !['Resolved', 'Rejected', 'Duplicate'].includes(assignment.report_status)
-        ? `<div class="staff-case-verification"><div><strong>Report verification</strong><span>This assigned report is not yet linked to a verified incident.</span></div><button class="staff-btn staff-btn-primary" type="button" data-action="verify-assigned-report" data-id="${assignment.id}">Verify &amp; create incident</button></div>`
+        ? `<div class="staff-case-verification"><div><strong>Report verification</strong><span>Verify this report in place; no separate incident record will be created.</span></div><button class="staff-btn staff-btn-primary" type="button" data-action="verify-assigned-report" data-id="${assignment.id}">Verify report</button></div>`
         : assignment.incident_code ? `<div class="staff-case-linked"><strong>Verified incident</strong><span>${escapeHtml(assignment.incident_code)} · ${escapeHtml(assignment.incident_title || '')}</span></div>` : ''}
       ${renderStageProgress(assignment)}
       ${assignment.updates?.[0] ? `<div class="staff-latest-update"><span>Latest update · ${escapeHtml(assignment.updates[0].stage)}</span><p>${escapeHtml(assignment.updates[0].notes || 'No field note attached.')}</p></div>` : ''}
@@ -636,7 +639,7 @@ document.addEventListener('click', async (event) => {
       const result = await send(`/api/staff/assignments/${encodeURIComponent(button.dataset.id)}/verify`, 'POST', {});
       await refreshAssignments();
       renderShell();
-      showToast(result.message || 'Report verified and linked to an incident.');
+      showToast(result.message || 'Report verified.');
     } else if (action === 'update-report-status') {
       button.disabled = true;
       const result = await send(`/api/reports/${encodeURIComponent(button.dataset.id)}/status`, 'PUT', {

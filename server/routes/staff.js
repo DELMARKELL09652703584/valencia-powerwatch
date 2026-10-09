@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const multer = require('multer');
 const express = require('express');
-const { db, DB_PATH, now, nextCode } = require('../db');
+const { db, DB_PATH, now } = require('../db');
 const { requireAuth, requireRole, audit, notifyUsers } = require('../auth');
 const { recordReportEvent, recordReportStatusChange } = require('../report-events');
 
@@ -192,88 +192,25 @@ router.post('/staff/assignments/:id/verify', requireAuth, requireRole('personnel
   if (['Completed', 'Resolved', 'Cancelled'].includes(assignment.status)) {
     return res.status(409).json({ error: 'A closed field assignment cannot verify a report.' });
   }
-  if (assignment.report_incident_id || assignment.incident_id) {
-    return res.status(409).json({ error: 'This assigned report is already linked to an incident.' });
-  }
-  if (['Resolved', 'Rejected', 'Duplicate'].includes(assignment.report_status)) {
-    return res.status(409).json({ error: `A ${String(assignment.report_status).toLowerCase()} report cannot be converted into an incident.` });
-  }
-  if (assignment.report_latitude === null || assignment.report_latitude === undefined
-    || assignment.report_longitude === null || assignment.report_longitude === undefined) {
-    return res.status(409).json({ error: 'The report must have confirmed coordinates before incident verification.' });
-  }
-
-  let report = db.prepare('SELECT * FROM outage_reports WHERE id = ?').get(assignment.report_id);
+  const report = db.prepare('SELECT * FROM outage_reports WHERE id = ?').get(assignment.report_id);
   if (!report) return res.status(404).json({ error: 'Assigned resident report not found.' });
-  if (report.incident_id) return res.status(409).json({ error: 'This report has already been linked to an incident.' });
-
-  const timestamp = now();
-  const priority = ['Low', 'Medium', 'High', 'Critical'].includes(assignment.priority)
-    ? assignment.priority : 'Medium';
-  db.exec('BEGIN IMMEDIATE');
-  let incidentId;
-  let code;
-  let incidentStatus;
-  try {
-    report = db.prepare('SELECT * FROM outage_reports WHERE id = ?').get(assignment.report_id);
-    if (!report) {
-      db.exec('ROLLBACK');
-      return res.status(404).json({ error: 'Assigned resident report not found.' });
-    }
-    if (report.incident_id) {
-      db.exec('ROLLBACK');
-      return res.status(409).json({ error: 'This report has already been linked to an incident.' });
-    }
-    if (['Resolved', 'Rejected', 'Duplicate'].includes(report.status)
-      || report.latitude === null || report.latitude === undefined
-      || report.longitude === null || report.longitude === undefined) {
-      db.exec('ROLLBACK');
-      return res.status(409).json({ error: 'This report is no longer eligible for incident verification.' });
-    }
-    const alreadyDispatched = report.status === 'In Progress'
-      || ['Dispatched', 'En Route', 'Arrived On Site', 'In Progress'].includes(assignment.status);
-    incidentStatus = alreadyDispatched ? 'Restoration in Progress' : 'Verified';
-    const title = `${report.possible_outage_type || 'Power outage'} — ${report.purok || report.affected_area || report.barangay}`;
-    const startTime = report.date_time_noticed || report.reported_at || timestamp;
-    code = nextCode('OUT');
-    const result = db.prepare(`
-      INSERT INTO outage_incidents (
-        incident_code, title, barangay, location, latitude, longitude, incident_type,
-        outage_type, priority, description, status, start_time, affected_area, purok,
-        remarks, assigned_team_id, assigned_team_name, repair_status, created_by, created_at, updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, 'Unexpected', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Team Dispatched', ?, ?, ?)
-    `).run(
-      code, title, report.barangay, report.location || assignment.target_location,
-      report.latitude, report.longitude, report.possible_outage_type || 'Power Outage',
-      priority, report.description, incidentStatus, startTime,
-      report.purok || report.affected_area || assignment.target_purok || null,
-      report.purok || null, 'Incident verified by assigned field personnel.',
-      assignment.team_id, assignment.team_name,
-      req.user.id, timestamp, timestamp,
-    );
-    incidentId = Number(result.lastInsertRowid);
-    db.prepare('INSERT INTO incident_areas (incident_id, barangay) VALUES (?, ?)').run(incidentId, report.barangay);
-    db.prepare('INSERT INTO incident_links (incident_id, report_id, link_time) VALUES (?, ?, ?)').run(incidentId, report.id, timestamp);
-    const nextStatus = alreadyDispatched ? 'In Progress' : 'Verified';
-    db.prepare(`
-      UPDATE outage_reports
-      SET incident_id = ?, verification_status = 'Verified', status = ?,
-          repair_status = CASE WHEN ? THEN 'Team Dispatched' ELSE repair_status END, updated_at = ?
-      WHERE id = ? AND incident_id IS NULL
-    `).run(incidentId, nextStatus, alreadyDispatched ? 1 : 0, timestamp, report.id);
-    db.prepare('UPDATE repair_assignments SET incident_id = ?, updated_at = ? WHERE id = ? AND incident_id IS NULL')
-      .run(incidentId, timestamp, assignment.id);
-    recordReportStatusChange(report, nextStatus, req.user, timestamp, `Verified by assigned field personnel and linked to incident ${code}.`);
-    db.exec('COMMIT');
-  } catch (error) {
-    db.exec('ROLLBACK');
-    throw error;
+  if (['Verified', 'Officially Confirmed'].includes(report.verification_status)) {
+    return res.status(409).json({ error: 'This report has already been verified.' });
   }
-
-  audit(req.user, 'Assigned report verified', `${req.user.full_name} verified ${report.report_code} and created incident ${code}.`);
-  notifyUsers([report.reporter_id], 'Report verified', `Your report ${report.report_code} has been verified and linked to incident ${code}.`, 'incident');
-  res.status(201).json({ incident: { id: incidentId, incident_code: code, status: incidentStatus }, message: `Report verified and linked to incident ${code}.` });
+  if (['Resolved', 'Rejected', 'Duplicate', 'Closed'].includes(report.status)) {
+    return res.status(409).json({ error: `A ${String(report.status).toLowerCase()} report cannot be verified.` });
+  }
+  const timestamp = now();
+  db.prepare(`
+    UPDATE outage_reports SET verification_status = 'Verified',
+      status = CASE WHEN status IN ('Submitted', 'Under Review') THEN 'Verified' ELSE status END,
+      updated_at = ? WHERE id = ?
+  `).run(timestamp, report.id);
+  recordReportStatusChange(report, report.status === 'Submitted' || report.status === 'Under Review' ? 'Verified' : report.status,
+    req.user, timestamp, 'Report verified without creating a separate incident record.');
+  audit(req.user, 'Assigned report verified', `${req.user.full_name} verified ${report.report_code}.`);
+  notifyUsers([report.reporter_id], 'Report verified', `Your report ${report.report_code} has been verified.`, 'report');
+  res.json({ message: `Report ${report.report_code} verified.` });
 });
 
 router.post('/staff/assignments/:id/updates', requireAuth, requireRole('personnel'), requireAssignment, requireOpenAssignment, (req, res) => {
@@ -281,6 +218,9 @@ router.post('/staff/assignments/:id/updates', requireAuth, requireRole('personne
   const cleanNotes = String(notes).trim();
   if (!STAGES.includes(stage)) return res.status(400).json({ error: 'Choose a valid response stage.' });
   if (cleanNotes.length > 2000) return res.status(400).json({ error: 'Field notes must be 2,000 characters or fewer.' });
+  if (stage === 'Completed' && cleanNotes.length < 5) {
+    return res.status(400).json({ error: 'Add at least five characters describing the completed field response.' });
+  }
   const hasLatitude = latitude !== null && latitude !== undefined && latitude !== '';
   const hasLongitude = longitude !== null && longitude !== undefined && longitude !== '';
   if (hasLatitude !== hasLongitude) return res.status(400).json({ error: 'Both GPS coordinates must be sent together.' });
@@ -317,16 +257,21 @@ router.post('/staff/assignments/:id/updates', requireAuth, requireRole('personne
       WHERE id = ?
     `).run(dbStatus, cleanNotes, cleanNotes, cleanNotes, stage, timestamp, stage, timestamp, timestamp, req.staffAssignment.id);
     if (req.staffAssignment.report_id) {
+      const nextReportStatus = stage === 'Acknowledged'
+        ? 'Acknowledged'
+        : stage === 'Assigned' ? 'Assigned' : 'In Progress';
       db.prepare(`
         UPDATE outage_reports
         SET status = ?, repair_status = ?, updated_at = ?
         WHERE id = ?
-      `).run('In Progress', stage === 'Completed' ? 'Completed' : dbStatus, timestamp, req.staffAssignment.report_id);
+      `).run(nextReportStatus, stage === 'Completed' ? 'Completed' : dbStatus, timestamp, req.staffAssignment.report_id);
       recordReportEvent({
         reportId: req.staffAssignment.report_id,
         eventType: 'repair',
         title: `Field response ${stage.toLowerCase()}`,
         details: cleanNotes || `${req.staffAssignment.team_name} updated the response to ${stage}.`,
+        fromStatus: req.staffAssignment.report?.status || null,
+        toStatus: nextReportStatus,
         actor: req.user,
         createdAt: timestamp,
       });

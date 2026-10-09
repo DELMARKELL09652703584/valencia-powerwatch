@@ -12,8 +12,8 @@ const recordReportEvent = ({
 }) => {
   db.prepare(`
     INSERT INTO report_status_history
-      (report_id, event_type, title, details, from_status, to_status, actor_name, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      (report_id, event_type, title, details, from_status, to_status, actor_name, actor_user_id, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     reportId,
     eventType,
@@ -22,6 +22,7 @@ const recordReportEvent = ({
     fromStatus,
     toStatus,
     actor?.full_name || null,
+    actor?.id || null,
     createdAt,
   );
 };

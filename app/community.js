@@ -557,11 +557,13 @@ async function renderMobileReportForm() {
             </li>`).join('')}</ul>
           <p>If one describes the same interruption, you can go back instead. If your report is separate, continue submitting.</p>
         </aside>`
-      : '<p class="possible-duplicate-clear" role="status">No similar active reports were found nearby in the last 72 hours.</p>';
+      : draft.latitude && draft.longitude
+        ? '<p class="possible-duplicate-clear" role="status">No similar active reports were found nearby in the last 72 hours.</p>'
+        : '<p class="possible-duplicate-clear" role="status">Nearby matching is unavailable without confirmed GPS or a map pin. Staff will review your report.</p>';
 
   if (step === 1) {
     formBody = `<h2>Location</h2>
-      <p class="report-step-hint">Use GPS or tap the exact spot on the map before continuing. The barangay is estimated from the nearest barangay center; confirm it and enter the specific purok or landmark.</p>
+      <p class="report-step-hint">A specific written location is required. GPS or a map pin is optional, but helps responders navigate. Barangay estimates are not used as exact report coordinates.</p>
       <div class="mobile-segments report-location-modes" role="group" aria-label="Location method">
         <button type="button" class="mobile-segment ${locationMode === 'map' ? 'active' : ''}" data-action="set-report-location-mode" data-value="map">Map</button>
         <button type="button" class="mobile-segment ${locationMode === 'address' ? 'active' : ''}" data-action="set-report-location-mode" data-value="address">Address</button>
@@ -574,23 +576,23 @@ async function renderMobileReportForm() {
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:1.25rem;">🏛️</span>
           <div>
-            <div style="font-size:0.75rem;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.5px;">Barangay estimate:</div>
+            <div style="font-size:0.75rem;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.5px;">Selected barangay:</div>
             <strong id="assigned-barangay-name" style="font-size:0.95rem;color:#14532d;">Brgy. ${escapeHtml(draft.barangay || state.user?.barangay || 'Poblacion')}</strong>
           </div>
         </div>
-        <span class="pill pill-ok" style="font-size:0.75rem;font-weight:750;">Nearest center</span>
+        <span class="pill pill-ok" style="font-size:0.75rem;font-weight:750;">Report area</span>
       </div>
 
       <label>📍 Specific Purok / Sitio / Landmark (Precise Location)<input name="purok" value="${escapeHtml(draft.purok || draft.affected_area || '')}" placeholder="e.g. Purok 4, Crossing, Near San Agustin Chapel" required></label>
 
-      <label>${locationMode === 'map' ? '📍 Pinned location' : 'Street address / full location'}<input name="location" value="${escapeHtml(draft.location || '')}" placeholder="${locationMode === 'map' ? 'Tap the map or use GPS to confirm a location' : 'Purok, street, or nearby landmark'}" ${locationMode === 'map' ? 'readonly' : ''} required></label>
+      <label>${locationMode === 'map' ? '📍 Pinned location' : 'Street address / full location'}<input name="location" value="${escapeHtml(draft.location || '')}" placeholder="${locationMode === 'map' ? 'Tap the map or switch to Address to describe the location' : 'Purok, street, or nearby landmark'}" ${locationMode === 'map' ? 'readonly' : ''} required></label>
       <div class="mobile-gps">
         <button type="button" class="button ghost block" data-action="capture-gps">📍 Use current location (GPS)</button>
         <input type="hidden" name="latitude" data-gps="latitude" value="${escapeHtml(draft.latitude || '')}">
         <input type="hidden" name="longitude" data-gps="longitude" value="${escapeHtml(draft.longitude || '')}">
         <input type="hidden" name="location_source" value="${escapeHtml(draft.location_source || '')}">
         <input type="hidden" name="location_accuracy_m" value="${escapeHtml(draft.location_accuracy_m || '')}">
-        <span class="muted small" data-gps="status">${draft.location_source && draft.latitude ? `📍 ${draft.location_source === 'gps' ? 'GPS fix' : 'Map pin'}: ${Number(draft.latitude).toFixed(5)}, ${Number(draft.longitude).toFixed(5)} · Barangay estimate: ${escapeHtml(draft.barangay || 'Valencia')}` : 'Location not confirmed. Tap the map or use GPS; barangay-center previews are not report locations.'}</span>
+        <span class="muted small" data-gps="status">${draft.location_source && draft.latitude ? `📍 ${draft.location_source === 'gps' ? 'GPS fix' : 'Map pin'}: ${Number(draft.latitude).toFixed(5)}, ${Number(draft.longitude).toFixed(5)} · Barangay estimate: ${escapeHtml(draft.barangay || 'Valencia')}` : 'Exact coordinates are optional. If unavailable, describe the location in Address mode.'}</span>
       </div>
       <button type="button" class="button primary block" data-action="next-report-step">Next</button>`;
   } else if (step === 2) {
@@ -626,7 +628,7 @@ async function renderMobileReportForm() {
         <div class="review-item"><span class="review-label">Interruption Type</span><span class="review-value">${escapeHtml(draft.possible_outage_type || 'Power interruption')}</span></div>
         <div class="review-item"><span class="review-label">Barangay</span><span class="review-value">${escapeHtml(draft.barangay || '')}</span></div>
         <div class="review-item"><span class="review-label">Purok / Area</span><span class="review-value">${escapeHtml(draft.purok || draft.affected_area || 'Not specified')}</span></div>
-        <div class="review-item"><span class="review-label">Confirmed Location</span><span class="review-value">${draft.latitude && draft.longitude ? `${draft.location_source === 'gps' ? 'GPS' : 'Map pin'} · (${Number(draft.latitude).toFixed(5)}, ${Number(draft.longitude).toFixed(5)})${draft.location_accuracy_m ? ` · ±${Math.round(Number(draft.location_accuracy_m))} m` : ''}` : escapeHtml(draft.location || '')}</span></div>
+        <div class="review-item"><span class="review-label">${draft.latitude && draft.longitude ? 'Confirmed Coordinates' : 'Location description'}</span><span class="review-value">${draft.latitude && draft.longitude ? `${draft.location_source === 'gps' ? 'GPS' : 'Map pin'} · (${Number(draft.latitude).toFixed(5)}, ${Number(draft.longitude).toFixed(5)})${draft.location_accuracy_m ? ` · ±${Math.round(Number(draft.location_accuracy_m))} m` : ''}` : `${escapeHtml(draft.location || '')} · Exact coordinates not provided`}</span></div>
         <div class="review-item"><span class="review-label">Date &amp; Time</span><span class="review-value">${escapeHtml(draft.date_time_noticed || '')}</span></div>
         <div class="review-item"><span class="review-label">Description</span><span class="review-value">${escapeHtml(draft.description || '')}</span></div>
         ${attachments.length ? `<div class="report-attachment-previews">${attachments.map((attachment) => attachment.type.startsWith('video/')
@@ -795,9 +797,10 @@ async function moveMobileReportStep(direction) {
     const values = new FormData(form);
     const latitudes = values.getAll('latitude');
     const longitudes = values.getAll('longitude');
-    if (!['gps', 'map_pin'].includes(values.get('location_source'))
-      || !latitudes.at(-1) || !longitudes.at(-1)) {
-      throw new Error('Confirm the outage location with GPS or a map pin before continuing.');
+    if (state.mobileLocationMode !== 'address'
+      && (!['gps', 'map_pin'].includes(values.get('location_source'))
+        || !latitudes.at(-1) || !longitudes.at(-1))) {
+      throw new Error('Tap an exact map location, or switch to Address and describe the location if GPS is unavailable.');
     }
   }
   const values = Object.fromEntries([...new FormData(form).entries()].filter(([name, value]) => name !== 'attachments' && !(value instanceof File)));
@@ -835,16 +838,18 @@ async function moveMobileReportStep(direction) {
     state.mobilePossibleDuplicates = [];
     state.mobileDuplicateCheckError = '';
     const draft = state.mobileReportDraft;
-    const params = new URLSearchParams({
-      barangay: String(draft.barangay || ''),
-      latitude: String(draft.latitude || ''),
-      longitude: String(draft.longitude || ''),
-    });
-    try {
-      const { possible_duplicates: matches } = await api(`/api/reports/possible-duplicates?${params}`);
-      state.mobilePossibleDuplicates = matches;
-    } catch (error) {
-      state.mobileDuplicateCheckError = error.message || 'Please try again later.';
+    if (draft.latitude && draft.longitude) {
+      const params = new URLSearchParams({
+        barangay: String(draft.barangay || ''),
+        latitude: String(draft.latitude),
+        longitude: String(draft.longitude),
+      });
+      try {
+        const { possible_duplicates: matches } = await api(`/api/reports/possible-duplicates?${params}`);
+        state.mobilePossibleDuplicates = matches;
+      } catch (error) {
+        state.mobileDuplicateCheckError = error.message || 'Please try again later.';
+      }
     }
   }
   state.mobileReportStep = Math.max(1, Math.min(4, (state.mobileReportStep || 1) + direction));

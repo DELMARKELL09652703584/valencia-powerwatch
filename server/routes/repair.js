@@ -181,6 +181,7 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
 
   if (!team_id) return res.status(400).json({ error: 'Please choose a repair team to assign.' });
   if (!report_id && !incident_id) return res.status(400).json({ error: 'Assignment must link to a report or an incident.' });
+  if (!['Low', 'Medium', 'High', 'Critical'].includes(priority)) return res.status(400).json({ error: 'Choose a valid response priority.' });
 
   const team = db.prepare('SELECT * FROM repair_teams WHERE id = ?').get(Number(team_id));
   if (!team) return res.status(404).json({ error: 'Repair team not found.' });
@@ -221,8 +222,44 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
     targetLongitude = destination?.longitude ?? null;
   }
   const locationError = validateCoordinates(targetLatitude, targetLongitude);
-  if (locationError) {
+  if ((!report || incident) && locationError) {
     return res.status(400).json({ error: 'This report or incident has no confirmed exact coordinates and cannot be routed. Verify its location before dispatch.' });
+  }
+  if (team.status !== 'Available' || team.active_assignment_id) {
+    return res.status(409).json({ error: 'This response team is not available for another assignment.' });
+  }
+  if (report) {
+    const eligibleStaff = db.prepare(`
+      SELECT COUNT(DISTINCT u.id) AS count
+      FROM users u
+      JOIN staff_team_members m ON m.user_id = u.id AND m.team_id = ?
+      JOIN staff_barangay_assignments b ON b.user_id = u.id AND b.barangay = ?
+      WHERE u.role = 'personnel' AND u.status = 'Active'
+    `).get(team.id, report.barangay);
+    if (!Number(eligibleStaff.count)) {
+      return res.status(409).json({ error: 'Assign an active Staff member from this response team to the report barangay before dispatch.' });
+    }
+    if (!['Verified', 'Officially Confirmed'].includes(report.verification_status)) {
+      return res.status(409).json({ error: 'Verify the report before assigning a response team.' });
+    }
+    const activeAssignment = db.prepare(`
+      SELECT id FROM repair_assignments
+      WHERE report_id = ? AND status IN ('Dispatched', 'En Route', 'Arrived On Site', 'In Progress', 'Completed')
+      LIMIT 1
+    `).get(report.id);
+    if (activeAssignment) return res.status(409).json({ error: 'This report already has an active response assignment.' });
+  }
+  if (incident && !report) {
+    const eligibleStaff = db.prepare(`
+      SELECT COUNT(DISTINCT u.id) AS count
+      FROM users u
+      JOIN staff_team_members m ON m.user_id = u.id AND m.team_id = ?
+      JOIN staff_barangay_assignments b ON b.user_id = u.id AND b.barangay = ?
+      WHERE u.role = 'personnel' AND u.status = 'Active'
+    `).get(team.id, incident.barangay);
+    if (!Number(eligibleStaff.count)) {
+      return res.status(409).json({ error: 'Assign an active Staff member from this response team to the incident barangay before dispatch.' });
+    }
   }
 
   const ts = now();
@@ -232,33 +269,6 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
   let code;
   try {
     code = nextCode('DISP');
-    if (report && !incident) {
-      const incidentCode = nextCode('OUT');
-      const incidentPriority = ['Low', 'Medium', 'High', 'Critical'].includes(priority) ? priority : 'Medium';
-      const incidentTitle = `${report.possible_outage_type || 'Power outage'} — ${report.purok || report.affected_area || report.barangay}`;
-      const incidentInfo = db.prepare(`
-        INSERT INTO outage_incidents (
-          incident_code, title, barangay, location, latitude, longitude, incident_type,
-          outage_type, priority, description, status, start_time, affected_area, purok,
-          remarks, assigned_team_id, assigned_team_name, repair_status, created_by, created_at, updated_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, 'Unexpected', ?, ?, ?, 'Restoration in Progress', ?, ?, ?, ?, ?, ?, 'Team Dispatched', ?, ?, ?)
-      `).run(
-        incidentCode, incidentTitle, report.barangay, report.location, report.latitude, report.longitude,
-        report.possible_outage_type || 'Power Outage', incidentPriority, report.description,
-        report.date_time_noticed || report.reported_at || ts, report.purok || report.affected_area || null,
-        report.purok || null, 'Verified and linked when the repair team was dispatched.',
-        team.id, team.name,
-        req.user.id, ts, ts,
-      );
-      incident = {
-        id: Number(incidentInfo.lastInsertRowid),
-        incident_code: incidentCode,
-        status: 'Restoration in Progress',
-      };
-      db.prepare('INSERT OR IGNORE INTO incident_areas (incident_id, barangay) VALUES (?, ?)').run(incident.id, report.barangay);
-      db.prepare('INSERT OR IGNORE INTO incident_links (incident_id, report_id, link_time) VALUES (?, ?, ?)').run(incident.id, report.id, ts);
-    }
     if (report && incident && Number(report.incident_id) !== Number(incident.id)) {
       db.prepare('INSERT OR IGNORE INTO incident_links (incident_id, report_id, link_time) VALUES (?, ?, ?)').run(incident.id, report.id, ts);
     }
@@ -289,27 +299,17 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
     if (report) {
       db.prepare(`
         UPDATE outage_reports
-        SET incident_id = ?, assigned_team_id = ?, assigned_team_name = ?, repair_status = 'Team Dispatched',
-            status = 'In Progress', verification_status = CASE WHEN verification_status = 'Officially Confirmed' THEN verification_status ELSE 'Verified' END,
+        SET assigned_team_id = ?, assigned_team_name = ?, priority = ?, repair_status = 'Assigned',
+            status = 'Assigned', verification_status = CASE WHEN verification_status = 'Officially Confirmed' THEN verification_status ELSE 'Verified' END,
             updated_at = ?
         WHERE id = ?
-      `).run(incident?.id || null, team.id, team.name, ts, report.id);
-      if (!report.incident_id && incident) {
-        recordReportEvent({
-          reportId: report.id,
-          eventType: 'verification',
-          title: `Verified and linked to incident ${incident.incident_code}`,
-          details: 'The incident record was created or linked when the repair team was dispatched.',
-          actor: req.user,
-          createdAt: ts,
-        });
-      }
-      recordReportStatusChange(report, 'In Progress', req.user, ts, `Repair team ${team.name} was dispatched.`);
+      `).run(team.id, team.name, priority, ts, report.id);
+      recordReportStatusChange(report, 'Assigned', req.user, ts, `${team.name} was assigned for coordinated field response.`);
       recordReportEvent({
         reportId: report.id,
-        eventType: 'repair',
-        title: 'Repair team dispatched',
-        details: `${team.name} was assigned to this report.`,
+        eventType: 'assignment',
+        title: 'Field response team assigned',
+        details: `${team.name} was assigned for coordination. This does not confirm an external utility crew dispatch.`,
         actor: req.user,
         createdAt: ts,
       });
@@ -317,7 +317,6 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
 
     // Update incident
     if (incident) {
-      const linkedReports = db.prepare('SELECT * FROM outage_reports WHERE incident_id = ? AND id <> ?').all(incident.id, report?.id || 0);
       db.prepare(`
         UPDATE outage_incidents
         SET assigned_team_id = ?, assigned_team_name = ?, repair_status = 'Team Dispatched',
@@ -325,24 +324,6 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
         WHERE id = ?
       `).run(team.id, team.name, ts, incident.id);
 
-      // Also update linked reports
-      db.prepare(`
-        UPDATE outage_reports
-        SET assigned_team_id = ?, assigned_team_name = ?, repair_status = 'Team Dispatched',
-            status = 'In Progress', updated_at = ?
-        WHERE incident_id = ?
-      `).run(team.id, team.name, ts, incident.id);
-      for (const linkedReport of linkedReports) {
-        recordReportStatusChange(linkedReport, 'In Progress', req.user, ts, `Repair team ${team.name} was dispatched.`);
-        recordReportEvent({
-          reportId: linkedReport.id,
-          eventType: 'repair',
-          title: 'Repair team dispatched',
-          details: `${team.name} was assigned to the linked incident.`,
-          actor: req.user,
-          createdAt: ts,
-        });
-      }
     }
 
     db.exec('COMMIT');
@@ -354,12 +335,12 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
 
   // User notifications & SMS
   if (report) {
-    const notifyMsg = `Repair Team "${team.name}" has been assigned and dispatched to your outage in Brgy. ${targetBarangay}${targetPurok ? ' (' + targetPurok + ')' : ''}. Restoration is in progress.`;
-    notifyUsers([report.reporter_id], 'Repair Team Dispatched', notifyMsg, 'report');
+    const notifyMsg = `A field response team has been assigned to report ${report.report_code} in Brgy. ${targetBarangay}${targetPurok ? ' (' + targetPurok + ')' : ''}. This is a coordination update; it does not confirm an external utility crew dispatch.`;
+    notifyUsers([report.reporter_id], 'Field response team assigned', notifyMsg, 'report');
 
     const reporter = db.prepare('SELECT contact_number FROM users WHERE id = ?').get(report.reporter_id);
     if (reporter?.contact_number) {
-      sendSMS(reporter.contact_number, `Valencia PowerWatch: Team ${team.name} has been dispatched to Brgy. ${targetBarangay}${targetPurok ? ' - ' + targetPurok : ''}. Field assessment underway.`, 'crew_dispatched').catch(() => {});
+      sendSMS(reporter.contact_number, `Valencia PowerWatch: A field response team was assigned to report ${report.report_code} in Brgy. ${targetBarangay}. This is a coordination update.`, 'crew_assigned').catch(() => {});
     }
   }
 
@@ -374,10 +355,10 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
 
     const userIds = reporters.map((r) => r.id);
     if (userIds.length) {
-      notifyUsers(userIds, 'Repair Team Dispatched', `Repair Team "${team.name}" has been dispatched to incident ${incident.incident_code} in Brgy. ${targetBarangay}.`, 'incident');
+      notifyUsers(userIds, 'Field response team assigned', `PowerWatch field response team "${team.name}" was assigned to coordinate incident ${incident.incident_code} in Brgy. ${targetBarangay}. This does not confirm an external utility crew dispatch.`, 'incident');
       for (const r of reporters) {
         if (r.contact_number) {
-          sendSMS(r.contact_number, `Valencia PowerWatch: Emergency crew ${team.name} dispatched to Brgy. ${targetBarangay}. Restoration ongoing.`, 'crew_dispatched').catch(() => {});
+          sendSMS(r.contact_number, `Valencia PowerWatch: Field response team ${team.name} assigned for incident coordination in Brgy. ${targetBarangay}. This does not confirm an external utility dispatch.`, 'crew_assigned').catch(() => {});
         }
       }
     }
@@ -397,9 +378,17 @@ router.put('/repair/assignments/:id/status', requireAuth, requireRole('administr
   const assignment = getAssignmentRow(Number(req.params.id));
   if (!assignment) return res.status(404).json({ error: 'Repair assignment not found.' });
 
-  const { status, crew_report, current_latitude, current_longitude } = req.body || {};
+  const { status, crew_report, resolution_remarks, current_latitude, current_longitude } = req.body || {};
   if (!status || !ASSIGNMENT_STATUSES.includes(status)) {
     return res.status(400).json({ error: `Invalid status. Choose from: ${ASSIGNMENT_STATUSES.join(', ')}` });
+  }
+  if (status === 'Resolved') {
+    if (assignment.status !== 'Completed') {
+      return res.status(409).json({ error: 'The assigned Staff member must complete the field response before Admin can approve resolution.' });
+    }
+    if (String(resolution_remarks || '').trim().length < 5) {
+      return res.status(400).json({ error: 'Add Admin resolution review notes of at least five characters before approving resolution.' });
+    }
   }
   const hasCurrentLatitude = ![null, undefined, ''].includes(current_latitude);
   const hasCurrentLongitude = ![null, undefined, ''].includes(current_longitude);
@@ -423,9 +412,11 @@ router.put('/repair/assignments/:id/status', requireAuth, requireRole('administr
     // 1. Update assignment record
     db.prepare(`
       UPDATE repair_assignments
-      SET status = ?, crew_report = COALESCE(?, crew_report), arrived_at = ?, completed_at = ?, updated_at = ?
+      SET status = ?, crew_report = CASE WHEN ? = 'Resolved' THEN crew_report ELSE COALESCE(?, crew_report) END,
+          resolution_remarks = CASE WHEN ? = 'Resolved' THEN ? ELSE resolution_remarks END,
+          arrived_at = ?, completed_at = ?, updated_at = ?
       WHERE id = ?
-    `).run(status, crew_report || null, arrivedAt, completedAt, ts, assignment.id);
+    `).run(status, status, crew_report || null, status, String(resolution_remarks || '').trim() || null, arrivedAt, completedAt, ts, assignment.id);
 
     // 2. Update repair team position & status
     const isFinished = ['Resolved', 'Cancelled'].includes(status);
@@ -455,12 +446,15 @@ router.put('/repair/assignments/:id/status', requireAuth, requireRole('administr
         SET repair_status = ?, status = ?, updated_at = ?
         WHERE id = ?
       `).run(nextRepairStatus, nextReportStatus, ts, assignment.report_id);
-      recordReportStatusChange(assignment.report, nextReportStatus, req.user, ts, `Repair team ${assignment.team_name} updated its status to ${status}.`);
+      const reportDetails = status === 'Resolved'
+        ? `Admin reviewed the completed field response. ${String(resolution_remarks).trim()}`
+        : `Repair team ${assignment.team_name} updated its status to ${status}.`;
+      recordReportStatusChange(assignment.report, nextReportStatus, req.user, ts, reportDetails);
       recordReportEvent({
         reportId: assignment.report_id,
         eventType: 'repair',
-        title: `Repair team ${status.toLowerCase()}`,
-        details: `${assignment.team_name}: ${status}`,
+        title: status === 'Resolved' ? 'Admin approved resolution' : `Repair team ${status.toLowerCase()}`,
+        details: status === 'Resolved' ? String(resolution_remarks).trim() : `${assignment.team_name}: ${status}`,
         actor: req.user,
         createdAt: ts,
       });
@@ -485,13 +479,16 @@ router.put('/repair/assignments/:id/status', requireAuth, requireRole('administr
       }
       for (const linkedReport of linkedReports) {
         if (status === 'Resolved') {
-          recordReportStatusChange(linkedReport, 'Resolved', req.user, ts, `Repair team ${assignment.team_name} completed the incident response.`);
+          recordReportStatusChange(linkedReport, 'Resolved', req.user, ts,
+            `Admin reviewed the completed field response. ${String(resolution_remarks).trim()}`);
         }
         recordReportEvent({
           reportId: linkedReport.id,
           eventType: 'repair',
-          title: `Repair team ${status.toLowerCase()}`,
-          details: `${assignment.team_name}: ${status}`,
+          title: status === 'Resolved' ? 'Admin approved resolution' : `Repair team ${status.toLowerCase()}`,
+          details: status === 'Resolved' ? String(resolution_remarks).trim() : `${assignment.team_name}: ${status}`,
+          fromStatus: linkedReport.status,
+          toStatus: status === 'Resolved' ? 'Resolved' : linkedReport.status,
           actor: req.user,
           createdAt: ts,
         });
@@ -508,18 +505,37 @@ router.put('/repair/assignments/:id/status', requireAuth, requireRole('administr
   // Notify resident based on milestone
   const targetDesc = `Brgy. ${assignment.target_barangay}${assignment.target_purok ? ', ' + assignment.target_purok : ''}`;
   const statusMessages = {
-    'En Route': `Repair crew "${assignment.team_name}" is currently en route to your location in ${targetDesc}.`,
-    'Arrived On Site': `Repair crew "${assignment.team_name}" has arrived at the reported outage site in ${targetDesc} and is conducting line repairs.`,
-    'In Progress': `Restoration work is actively in progress by "${assignment.team_name}" in ${targetDesc}.`,
-    Resolved: `Power restored! Repairs by "${assignment.team_name}" in ${targetDesc} have been completed successfully.`,
+    'En Route': `PowerWatch field response team "${assignment.team_name}" is traveling to the reported location in ${targetDesc}.`,
+    'Arrived On Site': `PowerWatch field response team "${assignment.team_name}" has arrived at the reported site in ${targetDesc} for assessment.`,
+    'In Progress': `Field response work is in progress in ${targetDesc}.`,
+    Resolved: `The completed field response for your report in ${targetDesc} was reviewed by an administrator and marked resolved.`,
   };
 
-  if (assignment.report?.reporter_id && statusMessages[status]) {
-    notifyUsers([assignment.report.reporter_id], `Repair Update: ${status}`, statusMessages[status], 'report');
-
-    if (assignment.report.reporter_contact) {
-      const smsPrefix = `Valencia PowerWatch: `;
-      sendSMS(assignment.report.reporter_contact, `${smsPrefix}${statusMessages[status]}`, 'repair_status_update').catch(() => {});
+  if (statusMessages[status]) {
+    const recipients = new Map();
+    if (assignment.incident_id) {
+      const linkedReporters = db.prepare(`
+        SELECT DISTINCT u.id, u.contact_number
+        FROM incident_links l
+        JOIN outage_reports r ON r.id = l.report_id
+        JOIN users u ON u.id = r.reporter_id
+        WHERE l.incident_id = ? AND u.status = 'Active'
+      `).all(assignment.incident_id);
+      for (const reporter of linkedReporters) recipients.set(Number(reporter.id), reporter);
+    }
+    if (assignment.report?.reporter_id) {
+      const reporterId = Number(assignment.report.reporter_id);
+      if (!recipients.has(reporterId)) recipients.set(reporterId, {
+        id: reporterId,
+        contact_number: assignment.report.reporter_contact,
+      });
+    }
+    const rows = [...recipients.values()];
+    if (rows.length) notifyUsers(rows.map((reporter) => reporter.id), `Field response update: ${status}`, statusMessages[status], 'report');
+    for (const reporter of rows) {
+      if (reporter.contact_number) {
+        sendSMS(reporter.contact_number, `Valencia PowerWatch: ${statusMessages[status]}`, 'repair_status_update').catch(() => {});
+      }
     }
   }
 

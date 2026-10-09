@@ -213,7 +213,7 @@ test('feedback is validated, stored, and included in staff analytics', { timeout
     headers: { cookie: adminCookie, 'content-type': 'application/json' },
     body: JSON.stringify({ status: 'Resolved' }),
   });
-  assert.equal(resolveResponse.status, 200);
+  assert.equal(resolveResponse.status, 409, 'resolution requires a completed assignment and Admin review notes');
 
   const unauthorizedResponse = await fetch(`${baseUrl}/api/feedback`, {
     method: 'POST',
@@ -227,13 +227,14 @@ test('feedback is validated, stored, and included in staff analytics', { timeout
     headers: { cookie: residentCookie, 'content-type': 'application/json' },
     body: JSON.stringify({ report_id: report.id, rating: 5, restoration_confirmed: '0' }),
   });
-  assert.equal(restorationFeedbackResponse.status, 201);
+  assert.equal(restorationFeedbackResponse.status, 400, 'residents cannot submit restoration feedback before resolution');
   const updatedSummary = await (await fetch(`${baseUrl}/api/feedback/summary`, { headers: { cookie: adminCookie } })).json();
-  assert.ok(updatedSummary.recent.some((item) => item.report_id === report.id && item.restoration_confirmed === 0));
+  assert.ok(!updatedSummary.recent.some((item) => item.report_id === report.id));
 });
 
-test('closing an incident updates only its linked reports', { timeout: TEST_TIMEOUT_MS }, async () => {
+test('grouped incidents do not bypass report-level resolution review', { timeout: TEST_TIMEOUT_MS }, async () => {
   const linkedReport = await submitReport(residentCookie, 'Linked incident lifecycle test.');
+  const secondLinkedReport = await submitReport(unrelatedResidentCookie, 'Second report grouped into the same incident.');
   const unrelatedReport = await submitReport(unrelatedResidentCookie, 'Unrelated report in the same barangay.');
 
   const createResponse = await fetch(`${baseUrl}/api/incidents`, {
@@ -245,8 +246,8 @@ test('closing an incident updates only its linked reports', { timeout: TEST_TIME
       start_time: new Date().toISOString(),
       outage_type: 'Line Fault',
       incident_type: 'Unexpected',
-      description: 'Isolated test incident linked to one report.',
-      report_id: linkedReport.id,
+      description: 'Isolated test incident grouping multiple resident reports.',
+      related_report_ids: [linkedReport.id, secondLinkedReport.id],
       initial_status: 'Verified',
       priority: 'Critical',
     }),
@@ -260,6 +261,7 @@ test('closing an incident updates only its linked reports', { timeout: TEST_TIME
   assert.equal(convertedReport.verification_status, 'Verified');
   assert.equal(Number(convertedReport.incident_id), Number(incident.id));
   assert.equal(convertedReport.incident.incident_code, incident.incident_code);
+  assert.equal((await getReport(adminCookie, secondLinkedReport.id)).status, 'Verified');
 
   const ongoingResponse = await fetch(`${baseUrl}/api/incidents/${incident.id}/status`, {
     method: 'PUT',
@@ -267,7 +269,8 @@ test('closing an incident updates only its linked reports', { timeout: TEST_TIME
     body: JSON.stringify({ status: 'Ongoing' }),
   });
   assert.equal(ongoingResponse.status, 200);
-  assert.equal((await getReport(adminCookie, linkedReport.id)).status, 'In Progress');
+  assert.equal((await getReport(adminCookie, linkedReport.id)).status, 'Verified');
+  assert.equal((await getReport(adminCookie, secondLinkedReport.id)).status, 'Verified');
   assert.equal((await getReport(adminCookie, unrelatedReport.id)).status, 'Submitted');
 
   const [telemetryResponse, analyticsResponse] = await Promise.all([
@@ -280,12 +283,19 @@ test('closing an incident updates only its linked reports', { timeout: TEST_TIME
   const { stats } = await analyticsResponse.json();
   assert.equal(metrics.activeIncidents, stats.ongoing);
 
+  const restoreResponse = await fetch(`${baseUrl}/api/incidents/${incident.id}/status`, {
+    method: 'PUT',
+    headers: { cookie: adminCookie, 'content-type': 'application/json' },
+    body: JSON.stringify({ status: 'Restored', remarks: 'Admin review attempted before individual report resolution.' }),
+  });
+  assert.equal(restoreResponse.status, 409);
   const closeResponse = await fetch(`${baseUrl}/api/incidents/${incident.id}/status`, {
     method: 'PUT',
     headers: { cookie: adminCookie, 'content-type': 'application/json' },
     body: JSON.stringify({ status: 'Closed' }),
   });
-  assert.equal(closeResponse.status, 200);
-  assert.equal((await getReport(adminCookie, linkedReport.id)).status, 'Resolved');
+  assert.equal(closeResponse.status, 409);
+  assert.equal((await getReport(adminCookie, linkedReport.id)).status, 'Verified');
+  assert.equal((await getReport(adminCookie, secondLinkedReport.id)).status, 'Verified');
   assert.equal((await getReport(adminCookie, unrelatedReport.id)).status, 'Submitted');
 });

@@ -28,13 +28,12 @@ test('Unified case list groups linked reports beneath incidents without hiding s
   assert.match(adminSource, /Resolved/);
 });
 
-test('Report verification converts into a linked verified incident and refreshes the portal scripts', () => {
-  assert.match(mainSource, /type === 'verify-create-incident'/);
-  assert.match(mainSource, /await send\('\/api\/incidents', 'POST', \{/);
-  assert.match(mainSource, /report_id: report\.id/);
-  assert.match(mainSource, /initial_status: 'Verified'/);
-  assert.match(adminSource, /Verify &amp; Create Incident/);
-  assert.match(adminHtml, /app\/admin\.js\?v=25/);
-  assert.match(adminHtml, /app\/main\.js\?v=28/);
+test('Report verification updates the authoritative report without creating a duplicate incident', () => {
+  assert.match(mainSource, /type === 'verify-report'/);
+  assert.match(mainSource, /status: 'Verified'/);
+  assert.doesNotMatch(mainSource, /type === 'verify-create-incident'/);
+  assert.match(adminSource, /Verify Report/);
+  assert.match(adminHtml, /app\/admin\.js\?v=27/);
+  assert.match(adminHtml, /app\/main\.js\?v=30/);
   assert.match(adminHtml, /admin-theme\.css\?v=3/);
 });

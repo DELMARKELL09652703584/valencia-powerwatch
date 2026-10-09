@@ -158,8 +158,12 @@ router.post('/incidents', requireAuth, requireRole('personnel', 'administrator')
     const inactiveArea = requestedAreas.find((name) => !db.prepare("SELECT 1 FROM barangays WHERE name = ? AND status = 'Active'").get(name));
     if (inactiveArea) return res.status(400).json({ error: `Affected barangay "${inactiveArea}" is not active.` });
 
-    const requestedReportIds = [...new Set([...(report_id ? [report_id] : []), ...(Array.isArray(related_report_ids) ? related_report_ids : [])].map(Number).filter(Boolean))];
-    if (requestedReportIds.some((id) => !Number.isInteger(id) || id < 1)) return res.status(400).json({ error: 'Choose valid related reports.' });
+    const rawReportIds = [...(report_id ? [report_id] : []), ...(Array.isArray(related_report_ids) ? related_report_ids : [])];
+    if (rawReportIds.some((id) => !Number.isSafeInteger(Number(id)) || Number(id) < 1)) return res.status(400).json({ error: 'Choose valid related reports.' });
+    const requestedReportIds = [...new Set(rawReportIds.map(Number))];
+    if (requestedReportIds.length === 1) {
+      return res.status(409).json({ error: 'A single resident report is already the authoritative case record. Verify and manage it directly; incident records may group multiple reports or record standalone events.' });
+    }
     const linkedReports = [];
     for (const id of requestedReportIds) {
       const report = db.prepare('SELECT * FROM outage_reports WHERE id = ?').get(id);
@@ -266,6 +270,23 @@ router.put('/incidents/:id/status', requireAuth, requireRole('personnel', 'admin
   const customersValue = customers_affected === undefined ? incident.customers_affected : customers_affected === '' || customers_affected === null ? null : Number(customers_affected);
   let progressValue = restoration_progress === undefined ? incident.restoration_progress : restoration_progress === '' || restoration_progress === null ? null : Number(restoration_progress);
   if (['Restored', 'Closed'].includes(status)) progressValue = 100;
+  const linkedReports = ['Restored', 'Closed'].includes(status)
+    ? db.prepare(`
+      SELECT r.* FROM outage_reports r
+      JOIN incident_links l ON l.report_id = r.id
+      WHERE l.incident_id = ?
+    `).all(incident.id)
+    : [];
+  if (status === 'Restored' && linkedReports.some((report) => report.status !== 'Resolved' && report.status !== 'Closed')) {
+    return res.status(409).json({ error: 'Review and resolve each linked resident report through its response assignment before marking this grouped incident restored.' });
+  }
+  if (status === 'Restored' && linkedReports.length && String(remarks || '').trim().length < 5) {
+    return res.status(400).json({ error: 'Add Admin restoration review notes before marking this grouped incident restored.' });
+  }
+  if (status === 'Closed' && linkedReports.length
+    && (incident.status !== 'Restored' || linkedReports.some((report) => !['Resolved', 'Closed'].includes(report.status)))) {
+    return res.status(409).json({ error: 'A grouped incident can be closed only after restoration and review of all linked resident reports.' });
+  }
 
   let endTime = incident.end_time;
   let closedAt = incident.closed_at;
@@ -287,30 +308,6 @@ router.put('/incidents/:id/status', requireAuth, requireRole('personnel', 'admin
 
   audit(req.user, `Incident ${status}`, `Incident ${incident.incident_code} marked ${status}.`);
   notifyIncidentReporters(incident, 'Outage status update', `Incident ${incident.incident_code} is now "${status}". ${remarks || ''}`, 'incident');
-
-  if (status === 'Restored' || status === 'Closed') {
-    const reportUpdatedAt = now();
-    const linkedReports = db.prepare(`
-      SELECT r.* FROM outage_reports r
-      JOIN incident_links l ON l.report_id = r.id
-      WHERE l.incident_id = ?
-    `).all(incident.id);
-    for (const report of linkedReports) {
-      db.prepare("UPDATE outage_reports SET status = 'Resolved', updated_at = ? WHERE id = ?").run(reportUpdatedAt, report.id);
-      recordReportStatusChange(report, 'Resolved', req.user, reportUpdatedAt, `Incident ${incident.incident_code} was marked ${status.toLowerCase()}.`);
-    }
-  } else if (['Ongoing', 'Restoration in Progress', 'In Progress'].includes(status)) {
-    const reportUpdatedAt = now();
-    const linkedReports = db.prepare(`
-      SELECT r.* FROM outage_reports r
-      JOIN incident_links l ON l.report_id = r.id
-      WHERE l.incident_id = ?
-    `).all(incident.id);
-    for (const report of linkedReports) {
-      db.prepare("UPDATE outage_reports SET status = 'In Progress', updated_at = ? WHERE id = ?").run(reportUpdatedAt, report.id);
-      recordReportStatusChange(report, 'In Progress', req.user, reportUpdatedAt, `Incident ${incident.incident_code} is being handled.`);
-    }
-  }
 
   res.json({ incident: fresh, message: `Incident is now "${status}".` });
 });

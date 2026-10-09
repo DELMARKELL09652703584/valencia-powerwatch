@@ -4,7 +4,7 @@ const STAFF_SHELL = [
   '/staff',
   '/staff-manifest.json',
   '/app/staff.css?v=6',
-  '/app/staff.js?v=7',
+  '/app/staff.js?v=9',
   '/assets/powerwatch-logo.svg',
 ];
 

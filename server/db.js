@@ -136,6 +136,7 @@ db.exec(`
     from_status TEXT,
     to_status TEXT,
     actor_name TEXT,
+    actor_user_id INTEGER REFERENCES users(id),
     created_at TEXT NOT NULL
   );
 
@@ -356,6 +357,9 @@ ensureColumn('outage_reports', 'assigned_team_id', 'INTEGER');
 ensureColumn('outage_reports', 'assigned_team_name', 'TEXT');
 ensureColumn('outage_reports', 'repair_status', "TEXT DEFAULT 'Pending Assignment'");
 ensureColumn('outage_reports', 'estimated_restoration', 'TEXT');
+ensureColumn('outage_reports', 'priority', 'TEXT');
+ensureColumn('report_status_history', 'actor_user_id', 'INTEGER REFERENCES users(id)');
+ensureColumn('repair_assignments', 'resolution_remarks', 'TEXT');
 ensureColumn('outage_incidents', 'latitude', 'REAL');
 ensureColumn('outage_incidents', 'longitude', 'REAL');
 ensureColumn('outage_incidents', 'purok', 'TEXT');

@@ -727,32 +727,14 @@ async function submitForm(form) {
     await render();
     return;
   }
-  if (type === 'verify-create-incident') {
-    const { report } = await api(`/api/reports/${target.dataset.id}`);
-    if (report.incident_id) throw new Error('This report has already been linked to an incident.');
-    if (['Resolved', 'Rejected', 'Duplicate'].includes(report.status)) {
-      throw new Error('Resolved, rejected, and duplicate reports cannot be converted into incidents.');
-    }
-    const result = await send('/api/incidents', 'POST', {
-      report_id: report.id,
-      title: String(values.title || '').trim(),
-      barangay: report.barangay,
-      location: report.location || report.purok || report.barangay,
-      latitude: report.latitude ?? null,
-      longitude: report.longitude ?? null,
-      incident_type: 'Unexpected',
-      outage_type: String(values.outage_type || report.possible_outage_type || 'Power Outage').trim(),
-      priority: values.priority || 'Medium',
-      description: report.description,
-      start_time: values.start_time ? new Date(values.start_time).toISOString() : new Date(report.date_time_noticed || report.reported_at).toISOString(),
-      affected_area: report.purok || report.affected_area || report.barangay,
-      affected_barangays: [report.barangay],
-      remarks: String(values.remarks || '').trim() || null,
-      initial_status: 'Verified',
+  if (type === 'verify-report') {
+    const result = await send(`/api/reports/${target.dataset.id}/status`, 'PUT', {
+      status: 'Verified',
+      priority: values.priority,
+      remarks: values.remarks,
     });
-    setToast(result.message || 'Report verified and linked to an incident.');
+    setToast(result.message || 'Report verified.');
     closeDialog();
-    state.page = 'incidents';
     await render();
     return;
   }
@@ -766,6 +748,9 @@ async function submitForm(form) {
       rawReportIds.push(reportSelect.value);
     }
     const relatedReportIds = [...new Set(rawReportIds.map(Number).filter(Boolean))];
+    if (relatedReportIds.length === 1) {
+      throw new Error('A single resident report remains the case record. Link multiple reports only when they describe one shared incident.');
+    }
 
     // 2. Auto-harvest barangay if selected in dropdown but user didn't click "+ Add Barangay"
     const bgyPicker = form.querySelector('[data-chip-label="barangay"]');
@@ -1836,27 +1821,17 @@ async function handleClick(event) {
         return;
       case 'verify-report': {
         const { report } = await api(`/api/reports/${id}`);
-        if (report.incident_id) {
-          setToast('This report is already linked to a verified incident.');
-          state.page = 'incidents';
-          await render();
-          return;
+        if (['Resolved', 'Closed', 'Rejected', 'Duplicate'].includes(report.status)) {
+          throw new Error('Resolved, closed, rejected, and duplicate reports cannot be verified again.');
         }
-        if (['Resolved', 'Rejected', 'Duplicate'].includes(report.status)) {
-          throw new Error('Resolved, rejected, and duplicate reports cannot be converted into incidents.');
-        }
-        const noticedAt = new Date(report.date_time_noticed || report.reported_at || Date.now());
-        const localStart = new Date(noticedAt.getTime() - noticedAt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-        const suggestedTitle = `${report.possible_outage_type || 'Power outage'} — ${report.purok || report.affected_area || report.barangay}`;
-        openDialog(`Verify & create incident · ${report.report_code}`, `
+        openDialog(`Verify report · ${report.report_code}`, `
           <div class="form-stack">
-            <p>This will verify the submitted report and create one linked incident record. Report history and evidence will be preserved.</p>
-            <label class="wide-field">Incident title<input class="input" name="title" maxlength="180" value="${escapeHtml(suggestedTitle)}" required></label>
-            <label>Priority<select class="input" name="priority"><option>Low</option><option selected>Medium</option><option>High</option><option>Critical</option></select></label>
-            <label>Outage type<input class="input" name="outage_type" value="${escapeHtml(report.possible_outage_type || 'Power Outage')}" required></label>
-            <label>Incident start time<input class="input" type="datetime-local" name="start_time" value="${escapeHtml(localStart)}" required></label>
-            <label class="wide-field">Incident remarks<textarea class="input" name="remarks" rows="3"></textarea></label>
-          </div>`, 'Verify & create incident', { form: 'verify-create-incident', id });
+            <p>Verification updates the resident report in place; it will not create a duplicate incident record.</p>
+            <label>Assessed priority<select class="input" name="priority">
+              ${['Low', 'Medium', 'High', 'Critical'].map((priority) => `<option ${report.priority === priority || (!report.priority && priority === 'Medium') ? 'selected' : ''}>${priority}</option>`).join('')}
+            </select></label>
+            <label class="wide-field">Verification notes<textarea class="input" name="remarks" rows="3" placeholder="Record what was checked and the verification result.">${escapeHtml(report.staff_remarks || '')}</textarea></label>
+          </div>`, 'Verify report', { form: 'verify-report', id });
         return;
       }
       case 'verification-duplicate': {
@@ -1889,46 +1864,50 @@ async function handleClick(event) {
       }
       case 'open-assign-repair-modal': {
         const reportId = id;
-        const [{ report }, { teams }] = await Promise.all([
+        const [{ report }, { teams }, staffAccess] = await Promise.all([
           api(`/api/reports/${reportId}`),
-          api('/api/repair-teams')
+          api('/api/repair-teams'),
+          api('/api/admin/staff-memberships'),
         ]);
-        
-        const teamOptions = teams.map((team) => {
-          const isAvail = team.status === 'Available';
-          const statusBadge = isAvail ? '🟢 [Ready]' : `🟠 [${team.status}]`;
-          return `<option value="${team.id}" ${team.id === report.assigned_team_id ? 'selected' : ''}>
-            ${escapeHtml(team.name)} · ${escapeHtml(team.vehicle_type)} ${statusBadge} (Lead: ${escapeHtml(team.lead_technician)})
-          </option>`;
-        }).join('');
+        const eligibleTeams = teams.map((team) => {
+          const eligibleStaff = staffAccess.staff.filter((member) => member.status === 'Active'
+            && member.team_ids.includes(Number(team.id))
+            && member.barangay_names.includes(report.barangay));
+          return { team, eligibleStaff };
+        }).filter(({ team, eligibleStaff }) => team.status === 'Available' && !team.active_assignment_id && eligibleStaff.length);
+        const teamOptions = eligibleTeams.map(({ team, eligibleStaff }) => `
+          <option value="${team.id}" ${Number(team.id) === Number(report.assigned_team_id) ? 'selected' : ''}>
+            ${escapeHtml(team.name)} · Available · ${eligibleStaff.length} eligible staff
+          </option>`).join('');
+        const verified = ['Verified', 'Officially Confirmed'].includes(report.verification_status);
 
         openDialog(`🚒 Dispatch Repair Crew — ${escapeHtml(report.report_code)}`, `
           <div class="form-stack">
             <input type="hidden" name="report_id" value="${report.id}">
+            <p class="muted small">${verified ? 'Verified report' : 'Verify this report before dispatch.'} · Response assignment is for Valencia PowerWatch coordination and does not confirm an external utility crew dispatch.</p>
             <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px;margin-bottom:8px;">
               <p style="margin:0 0 6px 0;font-size:0.86rem;font-weight:700;color:#0369a1;">📍 Incident Location &amp; Details</p>
               <div style="font-size:0.83rem;color:#1e293b;line-height:1.5;">
                 <div><strong>Barangay:</strong> Brgy. ${escapeHtml(report.barangay || 'Valencia City')}</div>
                 <div><strong>Purok / Specific Area:</strong> <span style="color:#0284c7;font-weight:700;">📍 ${escapeHtml(report.purok || report.affected_area || 'Not specified')}</span></div>
-                <div><strong>Exact Coordinates:</strong> ${report.latitude && report.longitude ? `${Number(report.latitude).toFixed(5)}, ${Number(report.longitude).toFixed(5)}` : 'Approximate'}</div>
+                <div><strong>Exact Coordinates:</strong> ${hasCoordinates(report) ? `${Number(report.latitude).toFixed(5)}, ${Number(report.longitude).toFixed(5)}` : 'Not available; navigation will require location confirmation.'}</div>
                 <div><strong>Problem Type:</strong> ${escapeHtml(report.possible_outage_type || 'Power Outage')}</div>
               </div>
             </div>
 
             <label class="wide-field">
               <span>Select Emergency Response Crew <strong style="color:#ef4444;">*</strong></span>
-              <select class="input" name="team_id" required>
+              <select class="input" name="team_id" required ${!verified || !eligibleTeams.length ? 'disabled' : ''}>
                 <option value="">-- Choose Emergency Crew --</option>
                 ${teamOptions}
               </select>
+              ${!eligibleTeams.length ? '<span class="muted small">No available team has an active staff member assigned to this barangay. Update team access or workload before dispatch.</span>' : ''}
             </label>
 
             <label class="wide-field">
               <span>Dispatch Priority</span>
               <select class="input" name="priority">
-                <option value="High" selected>⚡ High Priority (Standard Emergency Outage)</option>
-                <option value="Critical">🚨 Critical Priority (Hospital / Water / Substation / Live Wire)</option>
-                <option value="Normal">Normal Priority (Minor Feeder / Service Line)</option>
+                ${['Low', 'Medium', 'High', 'Critical'].map((priority) => `<option ${report.priority === priority || (!report.priority && priority === 'Medium') ? 'selected' : ''}>${priority}</option>`).join('')}
               </select>
             </label>
 
@@ -1941,36 +1920,45 @@ async function handleClick(event) {
         return;
       }
       case 'open-quick-dispatch-modal': {
-        const [{ teams }, { reports }] = await Promise.all([
+        const [{ teams }, { reports }, staffAccess] = await Promise.all([
           api('/api/repair-teams'),
-          api('/api/reports')
+          api('/api/reports'),
+          api('/api/admin/staff-memberships'),
         ]);
-        const teamOptions = teams.map((t) => `<option value="${t.id}">${escapeHtml(t.name)} · ${escapeHtml(t.vehicle_type)} (${escapeHtml(t.status)})</option>`).join('');
-        const openReports = reports.filter((r) => ['Submitted', 'Under Review', 'Verified', 'In Progress'].includes(r.status) && hasCoordinates(r));
-        const reportOptions = openReports.map((r) => `<option value="${r.id}">${escapeHtml(r.report_code)} — Brgy. ${escapeHtml(r.barangay)} (${escapeHtml(r.purok || r.affected_area || 'Site')})</option>`).join('');
+        const teamOptions = teams.filter((team) => team.status === 'Available' && !team.active_assignment_id).map((team) => {
+          const assignedStaff = staffAccess.staff.filter((member) => member.status === 'Active'
+            && member.team_ids.includes(Number(team.id)));
+          const coveredAreas = [...new Set(assignedStaff.flatMap((member) => member.barangay_names))];
+          return `<option value="${team.id}" data-covered-areas="${escapeHtml(JSON.stringify(coveredAreas))}" disabled>${escapeHtml(team.name)} · Available · ${assignedStaff.length} active staff</option>`;
+        }).join('');
+        const openReports = reports.filter((report) => ['Verified', 'Officially Confirmed'].includes(report.verification_status)
+          && !['Resolved', 'Closed', 'Rejected', 'Duplicate'].includes(report.status));
+        const reportOptions = openReports.map((r) => `<option value="${r.id}" data-barangay="${escapeHtml(r.barangay)}">${escapeHtml(r.report_code)} — Brgy. ${escapeHtml(r.barangay)} (${escapeHtml(r.purok || r.affected_area || 'Site')})</option>`).join('');
 
         openDialog('🚀 Dispatch Response Unit', `
           <div class="form-stack">
             <label class="wide-field">
               <span>Target Incident / Outage Report <strong style="color:#ef4444;">*</strong></span>
-              <select class="input" name="report_id" required>
+              <select class="input" name="report_id" data-quick-dispatch-report required>
                 <option value="">-- Select Outage Report --</option>
                 ${reportOptions}
               </select>
             </label>
             <label class="wide-field">
-              <span>Response Crew <strong style="color:#ef4444;">*</strong></span>
-              <select class="input" name="team_id" required>
+              <span>Available response team <strong style="color:#ef4444;">*</strong></span>
+              <select class="input" name="team_id" data-quick-dispatch-team required disabled>
                 <option value="">-- Select Response Crew --</option>
                 ${teamOptions}
               </select>
             </label>
+            <p class="muted small" data-quick-dispatch-availability>Select a verified report to show available teams with active Staff coverage in its barangay.</p>
+            <p class="muted small">Before confirmation, the server checks the team’s availability, active Staff membership, and Staff coverage for the selected report barangay. Assignment records coordination only and does not confirm an external utility dispatch.</p>
             <label class="wide-field">
               <span>Priority</span>
               <select class="input" name="priority">
                 <option value="High" selected>⚡ High Priority</option>
                 <option value="Critical">🚨 Critical Priority</option>
-                <option value="Normal">Normal Priority</option>
+                <option value="Medium">Medium Priority</option>
               </select>
             </label>
             <label class="wide-field">
@@ -1987,21 +1975,22 @@ async function handleClick(event) {
         if (!assignmentId || !newStatus) return;
 
         let crewReport = '';
+        let resolutionRemarks;
         if (newStatus === 'Resolved') {
-          const defaultCrewReport = 'Power successfully restored to affected area.';
-          try {
-            crewReport = window.prompt('Restoration summary / crew notes (optional):') || defaultCrewReport;
-          } catch (error) {
-            crewReport = defaultCrewReport;
-            setToast('The restoration notes prompt is unavailable here; the standard restoration summary will be saved.');
+          resolutionRemarks = window.prompt('Admin review notes for approving this completed field response (required):');
+          if (!resolutionRemarks || resolutionRemarks.trim().length < 5) {
+            setToast('Resolution was not approved. Enter at least five characters of review notes.');
+            return;
           }
         }
 
         await send(`/api/repair/assignments/${assignmentId}/status`, 'PUT', {
           status: newStatus,
-          crew_report: crewReport
+          ...(resolutionRemarks ? { resolution_remarks: resolutionRemarks.trim() } : {}),
         });
-        setToast(`⚡ Repair status updated to: ${newStatus}. User notification & SMS sent.`);
+        setToast(newStatus === 'Resolved'
+          ? 'Resolution reviewed and approved. The resident has been notified.'
+          : `Repair status updated to: ${newStatus}. User notification & SMS sent.`);
         await render();
         return;
       }
@@ -2245,13 +2234,16 @@ async function handleClick(event) {
         const { report } = await api(`/api/reports/${id}`);
         const { statuses } = await api('/api/reports');
         const canOfficial = isOfficial();
+        const canApproveClosure = state.user?.role === 'administrator';
         openDialog(`Update ${report.report_code}`, `
           <div class="form-stack">
             <label>Status<select class="input" name="status">
-              ${statuses.filter((s) => canOfficial || s !== 'Officially Confirmed').map((s) => `<option ${report.status === s ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}
+              ${statuses.filter((s) => !['Assigned', 'Acknowledged', 'In Progress'].includes(s)
+                && (canOfficial || s !== 'Officially Confirmed')
+                && (canApproveClosure || !['Resolved', 'Closed'].includes(s))).map((s) => `<option ${report.status === s ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}
             </select></label>
             ${canOfficial ? `<label>Official verification<select class="input" name="verify"><option value="">Use status above</option><option value="officially-confirmed">Mark officially confirmed</option></select></label>` : ''}
-            <label class="wide-field">Staff remarks<textarea class="input" name="remarks" rows="3">${escapeHtml(report.staff_remarks || '')}</textarea></label>
+            <label class="wide-field">Review / closure remarks<textarea class="input" name="remarks" rows="3" required minlength="5">${escapeHtml(report.staff_remarks || '')}</textarea></label>
           </div>`, 'Update status', { form: 'update-report-status', id });
         return;
       }
@@ -2814,6 +2806,37 @@ document.addEventListener('change', async (event) => {
       const values = incidentChipValues(picker);
       if (!values.includes(chipSelect.value)) values.push(chipSelect.value);
       updateIncidentChipPicker(picker, values);
+    }
+    return;
+  }
+  const quickDispatchReport = event.target.closest('[data-quick-dispatch-report]');
+  if (quickDispatchReport) {
+    const form = quickDispatchReport.closest('form');
+    const teamSelect = form?.querySelector('[data-quick-dispatch-team]');
+    const availability = form?.querySelector('[data-quick-dispatch-availability]');
+    if (teamSelect) {
+      const barangay = quickDispatchReport.selectedOptions[0]?.dataset.barangay;
+      let eligibleCount = 0;
+      for (const option of teamSelect.options) {
+        if (!option.value) continue;
+        let coveredAreas = [];
+        try {
+          coveredAreas = JSON.parse(option.dataset.coveredAreas || '[]');
+        } catch (error) {
+          console.error('Could not read response team coverage.', error);
+        }
+        option.disabled = !barangay || !coveredAreas.includes(barangay);
+        if (!option.disabled) eligibleCount += 1;
+      }
+      teamSelect.value = '';
+      teamSelect.disabled = !barangay;
+      if (availability) {
+        availability.textContent = !barangay
+          ? 'Select a verified report to show available teams with active Staff coverage in its barangay.'
+          : eligibleCount
+            ? `${eligibleCount} available team${eligibleCount === 1 ? '' : 's'} have active Staff coverage in ${barangay}.`
+            : `No available team has active Staff coverage in ${barangay}. Update team availability or Staff assignments before dispatch.`;
+      }
     }
     return;
   }

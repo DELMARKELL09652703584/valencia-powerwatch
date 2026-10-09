@@ -1039,7 +1039,7 @@ async function renderAdminUnifiedCases() {
       ? (item.status === 'Submitted' || item.status === 'Pending' ? 'Pending Verification' : item.status)
       : item.status;
     const action = item.kind === 'report'
-      ? `<button type="button" class="case-row-action primary" data-action="open-case-verification" data-id="${item.id}">${['Resolved', 'Rejected', 'Duplicate'].includes(item.status) ? 'View report' : ['Verified', 'Officially Confirmed'].includes(item.status) ? 'Create incident' : 'Review'}</button>`
+      ? `<button type="button" class="case-row-action primary" data-action="open-case-verification" data-id="${item.id}">${['Resolved', 'Closed', 'Rejected', 'Duplicate'].includes(item.status) ? 'View report' : 'Review report'}</button>`
       : `<button type="button" class="case-row-action primary" data-action="view-incident" data-id="${item.id}">View case</button>
         ${canManageIncidents ? `<button type="button" class="case-row-action" data-action="update-incident-status" data-id="${item.id}">Update status</button>` : ''}
         ${canManageIncidents && dispatchReport ? `<button type="button" class="case-row-action" data-action="open-assign-repair-modal" data-id="${dispatchReport.id}">Dispatch</button>` : '<button type="button" class="case-row-action" data-page="dispatch">Repair &amp; dispatch</button>'}`;
@@ -1183,7 +1183,7 @@ async function renderAdminReports() {
                 <td>${escapeHtml(row.location || row.affected_area || '—')}</td>
                 <td>${escapeHtml(row.barangay || '—')}</td>
                 <td>${escapeHtml(row.possible_outage_type || '—')}</td>
-                <td><span class="${badgeClass(row.status)}">${escapeHtml(row.status || 'Pending')}</span></td>
+                <td><span class="${badgeClass(row.status)}">${escapeHtml(row.status === 'Submitted' ? 'Pending Verification' : row.status || 'Pending')}</span></td>
                 <td class="report-actions-cell">
                   <button class="report-action-btn" type="button" data-action="view-report" data-id="${row.id}" aria-label="View report ${escapeHtml(row.report_code)}">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>
@@ -1222,7 +1222,7 @@ async function renderAdminVerification() {
   const reportFilter = state.filters.verificationStatus || '';
   const search = String(state.filters.verificationSearch || '').trim().toLowerCase();
   const filters = [
-    ['All reports', ''], ['Pending', 'Submitted'], ['Under review', 'Under Review'],
+    ['All reports', ''], ['Pending verification', 'Submitted'], ['Under review', 'Under Review'],
     ['Verified', 'Verified'], ['Rejected', 'Rejected'], ['Duplicate', 'Duplicate'],
   ];
   const statusGroups = {
@@ -1249,7 +1249,7 @@ async function renderAdminVerification() {
     report = result.report;
   }
 
-  const statusLabels = { Submitted: 'Pending', 'Under Review': 'Under Review', Verified: 'Verified', 'Officially Confirmed': 'Verified', Rejected: 'Rejected', Duplicate: 'Duplicate', Resolved: 'Verified' };
+  const statusLabels = { Submitted: 'Pending Verification', 'Under Review': 'Under Review', Verified: 'Verified', 'Officially Confirmed': 'Verified', Rejected: 'Rejected', Duplicate: 'Duplicate', Resolved: 'Resolved', Closed: 'Closed' };
   const statusClass = (status) => {
     if (status === 'Submitted' || status === 'Pending') return 'pending';
     if (status === 'Under Review') return 'review';
@@ -1338,12 +1338,14 @@ async function renderAdminVerification() {
         <section class="verification-left-column">
           <div class="verification-report-facts">
             <div><span>Reporter:</span><strong>${escapeHtml(report.reporter_name || 'Unknown reporter')}</strong></div>
+            <div><span>Contact:</span><strong>${escapeHtml([report.reporter_email, report.reporter_contact].filter(Boolean).join(' · ') || 'Not provided')}</strong></div>
             <div><span>Barangay:</span><strong>Brgy. ${escapeHtml(report.barangay || 'Not provided')}</strong></div>
             <div><span>Purok / Area:</span><strong style="color:#0284c7;">📍 ${escapeHtml(report.purok || report.affected_area || 'Specific Purok Not Specified')}</strong></div>
             <div><span>Location source:</span><strong>${report.location_source === 'gps' ? `GPS${report.location_accuracy_m ? ` (±${Math.round(Number(report.location_accuracy_m))} m)` : ''}` : report.location_source === 'map_pin' ? 'User-placed map pin' : 'Not recorded'}</strong></div>
             <div><span>Coordinates:</span><strong>${hasCoordinates(report) ? `${Number(report.latitude).toFixed(5)}, ${Number(report.longitude).toFixed(5)}` : 'Exact pin unavailable'}</strong></div>
             <div><span>Assigned Crew:</span><strong>${report.assigned_team_name ? `<span style="color:#059669;font-weight:700;">🚛 ${escapeHtml(report.assigned_team_name)}</span> <span style="background:#e0f2fe;color:#0284c7;font-size:0.75rem;padding:2px 7px;border-radius:4px;font-weight:700;margin-left:4px;">${escapeHtml(report.repair_status || 'Dispatched')}</span>` : '<span style="color:#64748b;font-weight:500;">None (Unassigned)</span>'}</strong></div>
             <div><span>Type:</span><strong>${escapeHtml(report.possible_outage_type || 'Power Outage')}</strong></div>
+            <div><span>Priority:</span><strong>${escapeHtml(report.priority || 'For assessment')}</strong></div>
             <div class="description-row"><span>Description:</span><strong>${escapeHtml(report.description || 'No description provided.')}</strong></div>
           </div>
 
@@ -1364,12 +1366,25 @@ async function renderAdminVerification() {
         </aside>
       </div>
 
+      ${report.timeline?.length ? `<section class="verification-history" aria-labelledby="verification-history-heading">
+        <details open>
+          <summary id="verification-history-heading">Report activity and audit trail (${report.timeline.length})</summary>
+          <ol style="margin:12px 0 0;padding-left:24px;">
+            ${report.timeline.map((event) => `<li style="margin:0 0 12px;padding-left:4px;">
+              <strong>${escapeHtml(event.title || event.to_status || 'Report event')}</strong>
+              ${event.details ? `<p style="margin:4px 0;">${escapeHtml(event.details)}</p>` : ''}
+              <small>${escapeHtml(formatDateTime(event.created_at))}${event.actor_name ? ` · ${escapeHtml(event.actor_name)}` : ''}</small>
+            </li>`).join('')}
+          </ol>
+        </details>
+      </section>` : ''}
+
       <footer class="verification-actions" style="flex-wrap:wrap;gap:8px;">
-        ${canVerify ? `<button type="button" class="verification-action verify" data-action="verify-report" data-id="${report.id}">${icon('check')}${['Verified', 'Officially Confirmed', 'Resolved'].includes(reportStatus) ? 'Create Linked Incident' : 'Verify &amp; Create Incident'}</button>` : ''}
-        <button type="button" class="verification-action" style="background:#0284c7;color:#fff;" data-action="open-assign-repair-modal" data-id="${report.id}" ${hasCoordinates(report) ? '' : 'disabled title="Exact report coordinates are required before dispatch."'} >
+        ${canVerify && !['Resolved', 'Closed', 'Rejected', 'Duplicate'].includes(reportStatus) ? `<button type="button" class="verification-action verify" data-action="verify-report" data-id="${report.id}">${icon('check')}${reportStatus === 'Verified' || reportStatus === 'Officially Confirmed' ? 'Update Verification' : 'Verify Report'}</button>` : ''}
+        ${['Verified', 'Officially Confirmed'].includes(report.verification_status) && !['Resolved', 'Closed', 'Rejected', 'Duplicate'].includes(report.status) && !report.assigned_team_id ? `<button type="button" class="verification-action" style="background:#0284c7;color:#fff;" data-action="open-assign-repair-modal" data-id="${report.id}">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
           ${report.assigned_team_name ? 'Reassign Crew' : 'Assign Repair Team'}
-        </button>
+        </button>` : ''}
         ${report.assigned_team_name ? `<button type="button" class="verification-action" style="background:#4f46e5;color:#fff;" data-action="view-crew-route" data-id="${report.id}">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
           Track Crew Route

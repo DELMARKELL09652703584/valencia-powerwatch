@@ -694,7 +694,8 @@ function statusTone(status = '') {
 
 function statusPill(status) {
   if (!status) return '<span class="pill pill-neutral">Unknown</span>';
-  return `<span class="pill pill-${statusTone(status)}">${escapeHtml(status)}</span>`;
+  const label = status === 'Submitted' ? 'Pending Verification' : status;
+  return `<span class="pill pill-${statusTone(label)}">${escapeHtml(label)}</span>`;
 }
 
 function priorityTone(priority = '') {

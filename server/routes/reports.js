@@ -10,7 +10,7 @@ const { staffBarangaysFor, staffCanAccessBarangay } = require('../staff-access')
 
 const router = express.Router();
 
-const STATUS_FLOW = ['Submitted', 'Under Review', 'Verified', 'Officially Confirmed', 'In Progress', 'Resolved', 'Unverified', 'Duplicate', 'Rejected'];
+const STATUS_FLOW = ['Submitted', 'Under Review', 'Verified', 'Officially Confirmed', 'Assigned', 'Acknowledged', 'In Progress', 'Resolved', 'Closed', 'Unverified', 'Duplicate', 'Rejected'];
 const ATTACHMENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime']);
 const reportUpload = multer({
   storage: multer.memoryStorage(),
@@ -61,18 +61,10 @@ const reportDetailRow = (id) => {
   report.incident = report.incident_id
     ? db.prepare('SELECT id, incident_code, title, status, incident_type, cause_category, estimated_restoration FROM outage_incidents WHERE id = ?').get(report.incident_id)
     : null;
-  if (!report.incident && report.barangay) {
-    report.incident = db.prepare(`
-      SELECT id, incident_code, title, status, incident_type, cause_category, estimated_restoration 
-      FROM outage_incidents 
-      WHERE (barangay = ? OR id IN (SELECT incident_id FROM incident_areas WHERE barangay = ?))
-      ORDER BY id DESC LIMIT 1
-    `).get(report.barangay, report.barangay) || null;
-  }
   report.linked_incident = report.incident;
   report.attachments = db.prepare('SELECT id, file_path, mime_type, original_name, file_size FROM report_attachments WHERE report_id = ? ORDER BY id').all(id);
   report.timeline = db.prepare(`
-    SELECT event_type, title, details, from_status, to_status, actor_name, created_at
+    SELECT event_type, title, details, from_status, to_status, actor_name, actor_user_id, created_at
     FROM report_status_history
     WHERE report_id = ?
     ORDER BY created_at, id
@@ -104,11 +96,10 @@ router.post('/reports', requireAuth, requireRole('resident'), parseReportAttachm
   if (!String(location || '').trim()) return res.status(400).json({ error: 'A specific location description is required.' });
   if (!description || !String(description).trim()) return res.status(400).json({ error: 'Please describe the interruption.' });
   if (!date_time_noticed) return res.status(400).json({ error: 'Please indicate when the interruption was noticed.' });
-  if (!['gps', 'map_pin'].includes(location_source)) return res.status(400).json({ error: 'Confirm the location using GPS or a manually placed map pin.' });
   const hasLatitude = latitude !== null && latitude !== undefined && latitude !== '';
   const hasLongitude = longitude !== null && longitude !== undefined && longitude !== '';
   if (hasLatitude !== hasLongitude) return res.status(400).json({ error: 'Both GPS coordinates are required together.' });
-  if (!hasLatitude) return res.status(400).json({ error: 'GPS coordinates or a manually placed map pin are required.' });
+  if (hasLatitude && !['gps', 'map_pin'].includes(location_source)) return res.status(400).json({ error: 'Choose GPS or a manually placed map pin as the location source.' });
   if (hasLatitude && (!Number.isFinite(Number(latitude)) || Number(latitude) < -90 || Number(latitude) > 90 || !Number.isFinite(Number(longitude)) || Number(longitude) < -180 || Number(longitude) > 180)) {
     return res.status(400).json({ error: 'Please provide valid GPS coordinates.' });
   }
@@ -135,7 +126,7 @@ router.post('/reports', requireAuth, requireRole('resident'), parseReportAttachm
       possible_outage_type, photo_path, remarks, status, verification_status, repair_status, reported_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Submitted', 'Pending', 'Pending Assignment', ?, ?)
   `).run(
-    code, req.user.id, String(location).trim(), Number(latitude), Number(longitude), location_source,
+    code, req.user.id, String(location).trim(), hasLatitude ? Number(latitude) : null, hasLongitude ? Number(longitude) : null, hasLatitude ? location_source : null,
     location_accuracy_m === '' || location_accuracy_m === undefined ? null : Number(location_accuracy_m),
     String(barangay).trim(), finalPurok, date_time_noticed, String(description).trim(),
     affected_area || finalPurok, possible_outage_type || null, photoPath, remarks || null, reportedAt, reportedAt
@@ -146,8 +137,8 @@ router.post('/reports', requireAuth, requireRole('resident'), parseReportAttachm
     reportId,
     eventType: 'submitted',
     title: 'Report submitted',
-    details: 'Your report was received and is pending review.',
-    toStatus: 'Submitted',
+    details: 'Your report was received and is pending verification.',
+    toStatus: 'Pending Verification',
     createdAt: reportedAt,
   });
   const savedAttachmentPaths = [];
@@ -213,7 +204,7 @@ router.get('/reports', requireAuth, requireRole('personnel', 'administrator', 'u
 
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const rows = db.prepare(`
-    SELECT r.*, u.full_name AS reporter_name, u.email AS reporter_email
+    SELECT r.*, u.full_name AS reporter_name, u.email AS reporter_email, u.contact_number AS reporter_contact
     FROM outage_reports r JOIN users u ON u.id = r.reporter_id
     ${whereSql}
     ORDER BY r.reported_at DESC
@@ -243,7 +234,14 @@ router.get('/reports/mine', requireAuth, (req, res) => {
     FROM outage_reports r LEFT JOIN outage_incidents i ON i.id = r.incident_id
     WHERE r.reporter_id = ?
     ORDER BY r.reported_at DESC
-  `).all(req.user.id);
+  `).all(req.user.id).map((report) => {
+    const { staff_remarks: _staffRemarks, ...residentReport } = report;
+    const timeline = db.prepare(`
+      SELECT event_type, title, details, from_status, to_status, actor_name, actor_user_id, created_at
+      FROM report_status_history WHERE report_id = ? ORDER BY created_at, id
+    `).all(report.id).map(({ details: _privateDetails, actor_user_id: _actorUserId, ...event }) => event);
+    return { ...residentReport, timeline };
+  });
   res.json({ reports: rows });
 });
 
@@ -294,6 +292,10 @@ router.get('/reports/:id', requireAuth, (req, res) => {
   if (req.user.role === 'resident' && report.reporter_id !== req.user.id) {
     return res.status(403).json({ error: 'You can only view your own reports.' });
   }
+  if (req.user.role === 'resident') {
+    delete report.staff_remarks;
+    report.timeline = report.timeline.map(({ details: _privateDetails, actor_user_id: _actorUserId, ...event }) => event);
+  }
   if (req.user.role === 'personnel' && !staffCanAccessBarangay(req.user, report.barangay)) {
     return res.status(404).json({ error: 'Report not found.' });
   }
@@ -315,8 +317,10 @@ router.put('/reports/:id/status', requireAuth, requireRole('personnel', 'adminis
   }
   let nextStatus = status || report.status;
   let verificationStatus = report.verification_status;
+  const cleanRemarks = String(remarks || '').trim();
 
   const canOfficiallyConfirm = ['administrator', 'utility'].includes(req.user.role);
+  let completedAssignment = null;
 
   if (verify === 'officially-confirmed') {
     if (!canOfficiallyConfirm) {
@@ -325,6 +329,26 @@ router.put('/reports/:id/status', requireAuth, requireRole('personnel', 'adminis
     nextStatus = 'Officially Confirmed';
     verificationStatus = 'Officially Confirmed';
   } else if (status) {
+    if (['Assigned', 'Acknowledged', 'In Progress'].includes(status)) {
+      return res.status(409).json({ error: 'Assignment and field-response statuses must be updated through the linked response assignment.' });
+    }
+    if (status === 'Closed') {
+      if (req.user.role !== 'administrator') return res.status(403).json({ error: 'Only an administrator can close a resolved report.' });
+      if (report.status !== 'Resolved') return res.status(409).json({ error: 'A report must be resolved and reviewed before it can be closed.' });
+      if (cleanRemarks.length < 5) return res.status(400).json({ error: 'Add Admin closure remarks before closing this report.' });
+    }
+    if (status === 'Resolved') {
+      if (!['administrator', 'utility'].includes(req.user.role)) return res.status(403).json({ error: 'Only an administrator or authorized utility user can approve resolution.' });
+      completedAssignment = db.prepare(`
+        SELECT id FROM repair_assignments
+        WHERE report_id = ? AND status = 'Completed' AND LENGTH(TRIM(COALESCE(crew_report, ''))) >= 5
+        ORDER BY completed_at DESC, id DESC
+        LIMIT 1
+      `).get(report.id);
+      if (!completedAssignment || cleanRemarks.length < 5) {
+        return res.status(409).json({ error: 'A completed field assignment with a resolution report and Admin review remarks are required before resolving.' });
+      }
+    }
     if (status === 'Officially Confirmed' && !canOfficiallyConfirm) {
       return res.status(403).json({ error: 'Only authorized utility personnel or administrators can mark a report as officially confirmed.' });
     }
@@ -350,6 +374,9 @@ router.put('/reports/:id/status', requireAuth, requireRole('personnel', 'adminis
       case 'Resolved':
         verificationStatus = 'Verified';
         break;
+      case 'Closed':
+        verificationStatus = 'Verified';
+        break;
       default:
         break;
     }
@@ -357,22 +384,47 @@ router.put('/reports/:id/status', requireAuth, requireRole('personnel', 'adminis
   }
 
   const updatedAt = now();
-  db.prepare('UPDATE outage_reports SET status = ?, verification_status = ?, staff_remarks = ?, updated_at = ? WHERE id = ?')
-    .run(nextStatus, verificationStatus, remarks || report.staff_remarks || null, updatedAt, report.id);
-  recordReportStatusChange(report, nextStatus, req.user, updatedAt);
-
+  const priority = req.body?.priority;
+  if (priority !== undefined && !['Low', 'Medium', 'High', 'Critical'].includes(priority)) {
+    return res.status(400).json({ error: 'Choose a valid report priority.' });
+  }
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    db.prepare(`UPDATE outage_reports
+      SET status = ?, verification_status = ?, staff_remarks = ?,
+          priority = COALESCE(?, priority),
+          repair_status = CASE WHEN ? = 'Resolved' THEN 'Resolved' ELSE repair_status END,
+          updated_at = ?
+      WHERE id = ?`)
+      .run(nextStatus, verificationStatus, cleanRemarks || report.staff_remarks || null, priority || null, nextStatus, updatedAt, report.id);
+    if (nextStatus === 'Resolved' && completedAssignment) {
+      db.prepare(`UPDATE repair_assignments
+        SET status = 'Resolved', resolution_remarks = ?, updated_at = ?
+        WHERE id = ?`)
+        .run(cleanRemarks, updatedAt, completedAssignment.id);
+    }
+    recordReportStatusChange(report, nextStatus, req.user, updatedAt, cleanRemarks || null);
+    db.exec('COMMIT');
+  } catch (error) {
+    db.exec('ROLLBACK');
+    console.error('Failed to update resident report status:', error);
+    return res.status(500).json({ error: 'Failed to update report status.' });
+  }
   const updated = db.prepare('SELECT * FROM outage_reports WHERE id = ?').get(report.id);
   audit(req.user, `Report ${nextStatus}`, `Report ${report.report_code} marked ${nextStatus}.`);
 
   const actions = {
     'Officially Confirmed': `Your report ${report.report_code} has been officially confirmed by authorized personnel.`,
     Verified: `Your report ${report.report_code} has been verified.`,
-    'In Progress': `Field response crew dispatched. Interruption restoration is in progress for ${report.report_code}.`,
+    'Assigned': `A field response team was assigned to report ${report.report_code}. This is a coordination update, not confirmation of an external utility dispatch.`,
+    'Acknowledged': `The assigned response team acknowledged report ${report.report_code}.`,
+    'In Progress': `Field response work is in progress for report ${report.report_code}.`,
     Rejected: `Your report ${report.report_code} was rejected. Remarks: ${remarks || 'none provided'}.`,
     Duplicate: `Your report ${report.report_code} was identified as a duplicate.`,
     Unverified: `Your report ${report.report_code} could not be verified.`,
     'Under Review': `Your report ${report.report_code} is now under review.`,
-    Resolved: `Your report ${report.report_code} has been resolved. Power restored.`,
+    Resolved: `Resolution for report ${report.report_code} was reviewed and approved.`,
+    Closed: `Report ${report.report_code} has been closed after Admin review.`,
   };
   if (actions[nextStatus]) {
     notifyUsers([report.reporter_id], 'Report updated', actions[nextStatus], 'report');

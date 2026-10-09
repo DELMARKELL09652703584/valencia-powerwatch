@@ -27,7 +27,6 @@ let areaReviewReportId;
 let evidenceId;
 let teamId;
 let alternateTeamId;
-let linkedIncidentId;
 let serverOutput = '';
 
 const getAvailablePort = () => new Promise((resolve, reject) => {
@@ -70,19 +69,22 @@ const login = async (email, password, portal) => {
   return { cookie: cookieFrom(response), user: result.user };
 };
 
-const submitReport = async ({ barangay = 'Poblacion', purok = 'Field Workflow Test Site' } = {}) => {
+const submitReport = async ({ barangay = 'Poblacion', purok = 'Field Workflow Test Site', withCoordinates = true } = {}) => {
   const form = new FormData();
-  for (const [key, value] of Object.entries({
+  const fields = {
     location: `Brgy. ${barangay}, Valencia City`,
-    latitude: '7.906',
-    longitude: '125.094',
-    location_source: 'map_pin',
     barangay,
     purok,
     date_time_noticed: new Date().toISOString(),
     description: 'A fallen line caused a power interruption near the test site.',
     possible_outage_type: 'Line Fault',
-  })) form.append(key, value);
+  };
+  if (withCoordinates) Object.assign(fields, {
+    latitude: '7.906',
+    longitude: '125.094',
+    location_source: 'map_pin',
+  });
+  for (const [key, value] of Object.entries(fields)) form.append(key, value);
   form.append('photoData', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/5QAAAABJRU5ErkJggg==');
   const response = await fetch(`${baseUrl}/api/reports`, {
     method: 'POST',
@@ -196,9 +198,27 @@ before(async () => {
 
   const report = await submitReport();
   primaryReportId = report.id;
+  assert.equal(report.status, 'Submitted');
+  assert.equal(report.verification_status, 'Pending');
+  const noCoordinateReport = await submitReport({ purok: 'Text-only location test', withCoordinates: false });
+  assert.equal(noCoordinateReport.latitude, null);
+  assert.equal(noCoordinateReport.longitude, null);
+  assert.equal(noCoordinateReport.status, 'Submitted');
   const outsideAreaReport = await submitReport({ barangay: 'Bagontaas', purok: 'Out-of-area Test Site' });
   portalLoginEmails.outsideAreaReportId = String(outsideAreaReport.id);
   areaReviewReportId = (await submitReport({ purok: 'Assigned Area Review Site' })).id;
+  const unverifiedDispatch = await jsonRequest('/api/repair/assign', adminCookie, 'POST', {
+    team_id: team.id,
+    report_id: report.id,
+    dispatch_notes: 'Dispatch must wait for report verification.',
+  });
+  assert.equal(unverifiedDispatch.status, 409);
+  const verification = await jsonRequest(`/api/reports/${report.id}/status`, adminCookie, 'PUT', {
+    status: 'Verified',
+    priority: 'High',
+    remarks: 'Report checked for workflow test.',
+  });
+  assert.equal(verification.status, 200);
   const dispatchResponse = await jsonRequest('/api/repair/assign', adminCookie, 'POST', {
     team_id: team.id,
     report_id: report.id,
@@ -461,9 +481,25 @@ test('Staff API scopes assignments, reports, evidence, and incidents to authoriz
   assert.equal(allAssignments.length, 1);
   assert.equal(Number(allAssignments[0].id), Number(assignmentId));
   assert.equal(allAssignments[0].latest_stage, 'Assigned');
-  assert.ok(allAssignments[0].incident_id, 'dispatching a standalone report should create and link its incident');
-  linkedIncidentId = allAssignments[0].incident_id;
-  assert.equal(Number(allAssignments[0].report_incident_id), Number(allAssignments[0].incident_id));
+  assert.equal(allAssignments[0].incident_id, null, 'dispatching a single report must not create a duplicate incident');
+  assert.equal(allAssignments[0].report_incident_id, null);
+  const reportDetail = await jsonRequest(`/api/reports/${primaryReportId}`, adminCookie);
+  assert.equal((await reportDetail.json()).report.incident, null);
+  const singleReportIncident = await jsonRequest('/api/incidents', adminCookie, 'POST', {
+    title: 'Duplicate single-report incident attempt',
+    barangay: 'Poblacion',
+    start_time: new Date().toISOString(),
+    outage_type: 'Line Fault',
+    description: 'A single report must remain the authoritative case record.',
+    report_id: primaryReportId,
+  });
+  assert.equal(singleReportIncident.status, 409);
+  const fixtureDb = new DatabaseSync(testDatabasePath);
+  try {
+    assert.equal(fixtureDb.prepare('SELECT COUNT(*) AS count FROM incident_links WHERE report_id = ?').get(primaryReportId).count, 0);
+  } finally {
+    fixtureDb.close();
+  }
   assert.match(allAssignments[0].dispatch_notes, /protective equipment/);
   assert.equal(Object.hasOwn(allAssignments[0], 'reporter_email'), false);
   const reportPhoto = allAssignments[0].attachments.find((attachment) => attachment.original_name === 'Report photo')
@@ -471,13 +507,9 @@ test('Staff API scopes assignments, reports, evidence, and incidents to authoriz
   assert.ok(reportPhoto?.file_path);
   assert.equal((await fetch(`${baseUrl}${reportPhoto.file_path}`, { headers: { cookie: staffCookie } })).status, 200);
   assert.equal((await fetch(`${baseUrl}${reportPhoto.file_path}`, { headers: { cookie: unassignedCookie } })).status, 403);
-  const linkedIncidentResponse = await jsonRequest(`/api/incidents/${allAssignments[0].incident_id}`, adminCookie);
-  assert.equal(linkedIncidentResponse.status, 200);
-  const linkedIncident = (await linkedIncidentResponse.json()).incident;
-  assert.equal(linkedIncident.status, 'Restoration in Progress');
-  assert.equal(linkedIncident.linked_reports[0].report_code, allAssignments[0].report_code);
   assert.equal((await jsonRequest(`/api/staff/assignments/${assignmentId}/verify`, unassignedCookie, 'POST', {})).status, 404);
-  assert.equal((await jsonRequest(`/api/staff/assignments/${assignmentId}/verify`, staffCookie, 'POST', {})).status, 409);
+  const alreadyVerified = await jsonRequest(`/api/staff/assignments/${assignmentId}/verify`, staffCookie, 'POST', {});
+  assert.equal(alreadyVerified.status, 409);
 
   const unassignedResponse = await jsonRequest('/api/staff/assignments', unassignedCookie);
   assert.equal(unassignedResponse.status, 200);
@@ -535,30 +567,6 @@ test('Staff API scopes assignments, reports, evidence, and incidents to authoriz
   assert.equal((await jsonRequest(`/api/repair/assignments/${assignmentId}`, staffCookie)).status, 403);
   assert.equal((await jsonRequest('/api/admin/staff-memberships', staffCookie)).status, 403);
 
-  const legacyFixture = new DatabaseSync(testDatabasePath);
-  try {
-    legacyFixture.exec('PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; BEGIN IMMEDIATE');
-    legacyFixture.prepare('UPDATE repair_assignments SET incident_id = NULL WHERE id = ?').run(assignmentId);
-    legacyFixture.prepare('UPDATE outage_reports SET incident_id = NULL WHERE id = ?').run(allAssignments[0].report_id);
-    legacyFixture.prepare('DELETE FROM incident_links WHERE report_id = ?').run(allAssignments[0].report_id);
-    legacyFixture.prepare('DELETE FROM incident_areas WHERE incident_id = ?').run(linkedIncidentId);
-    legacyFixture.prepare('DELETE FROM outage_incidents WHERE id = ?').run(linkedIncidentId);
-    legacyFixture.exec('COMMIT');
-  } catch (error) {
-    legacyFixture.exec('ROLLBACK');
-    throw error;
-  } finally {
-    legacyFixture.close();
-  }
-
-  const staffVerified = await jsonRequest(`/api/staff/assignments/${assignmentId}/verify`, staffCookie, 'POST', {});
-  const staffVerifiedBody = await staffVerified.json();
-  assert.equal(staffVerified.status, 201, JSON.stringify(staffVerifiedBody));
-  const linkedAssignmentResponse = await jsonRequest(`/api/staff/assignments/${assignmentId}`, staffCookie);
-  const linkedAssignment = (await linkedAssignmentResponse.json()).assignment;
-  assert.ok(linkedAssignment.incident_id);
-  assert.equal(Number(linkedAssignment.report_incident_id), Number(linkedAssignment.incident_id));
-  linkedIncidentId = linkedAssignment.incident_id;
 });
 
 test('Staff response stages are ordered, documented, and notify the reporting resident', { timeout: TEST_TIMEOUT_MS }, async () => {
@@ -588,11 +596,22 @@ test('Staff response stages are ordered, documented, and notify the reporting re
   const residentReport = (await residentReports.json()).reports.find((item) => Number(item.id) === Number(primaryReportId));
   assert.equal(residentReport.status, 'In Progress');
   assert.equal(residentReport.repair_status, 'En Route');
-  assert.equal(residentReport.incident_status, 'Restoration in Progress');
-  const adminIncidentResponse = await jsonRequest(`/api/incidents/${linkedIncidentId}`, adminCookie);
-  assert.equal((await adminIncidentResponse.json()).incident.repair_status, 'En Route');
+  assert.equal(residentReport.incident_id, null);
+  assert.ok(residentReport.timeline.some((event) => event.to_status === 'In Progress' && event.actor_name === 'Assigned Field Staff'));
+  assert.equal(Object.hasOwn(residentReport, 'staff_remarks'), false);
+  assert.ok(residentReport.timeline.every((event) => !Object.hasOwn(event, 'details') && !Object.hasOwn(event, 'actor_user_id')));
+  const timelineDb = new DatabaseSync(testDatabasePath);
+  try {
+    assert.equal(timelineDb.prepare(`
+      SELECT actor_user_id FROM report_status_history
+      WHERE report_id = ? AND to_status = 'In Progress' AND actor_user_id = ?
+      ORDER BY id DESC LIMIT 1
+    `).get(primaryReportId, staffLoginUser.id).actor_user_id, staffLoginUser.id);
+  } finally {
+    timelineDb.close();
+  }
   const notices = await jsonRequest('/api/notifications', residentCookie);
-  assert.match(JSON.stringify(await notices.json()), /field crew/i);
+  assert.match(JSON.stringify(await notices.json()), /field response/i);
 
   const evidenceForm = new FormData();
   evidenceForm.append('evidence', new Blob([Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10])], { type: 'image/png' }), 'inspection.png');
@@ -643,11 +662,31 @@ test('Staff response stages are ordered, documented, and notify the reporting re
   const completed = (await completedResponse.json()).assignment;
   assert.equal(completed.status, 'Completed');
   assert.equal(completed.latest_stage, 'Completed');
-  const verified = await jsonRequest(`/api/repair/assignments/${assignmentId}/status`, adminCookie, 'PUT', {
+  const missingReviewNotes = await jsonRequest(`/api/repair/assignments/${assignmentId}/status`, adminCookie, 'PUT', {
     status: 'Resolved',
-    crew_report: 'Field evidence reviewed and restoration confirmed.',
+  });
+  assert.equal(missingReviewNotes.status, 400);
+  const verified = await jsonRequest(`/api/reports/${primaryReportId}/status`, adminCookie, 'PUT', {
+    status: 'Resolved',
+    remarks: 'Admin reviewed field evidence and approved this response.',
   });
   assert.equal(verified.status, 200);
+  assert.equal((await jsonRequest(`/api/reports/${primaryReportId}`, adminCookie).then((response) => response.json())).report.status, 'Resolved');
+  const resolvedAssignment = await jsonRequest(`/api/repair/assignments/${assignmentId}`, adminCookie);
+  assert.equal((await resolvedAssignment.json()).assignment.status, 'Resolved');
+  const closure = await jsonRequest(`/api/reports/${primaryReportId}/status`, adminCookie, 'PUT', {
+    status: 'Closed',
+    remarks: 'Admin completed final review and closed this report.',
+  });
+  assert.equal(closure.status, 200);
+  const residentTracking = await jsonRequest('/api/reports/mine', residentCookie);
+  const closedResidentReport = (await residentTracking.json()).reports.find((report) => Number(report.id) === Number(primaryReportId));
+  assert.equal(closedResidentReport.status, 'Closed');
+  assert.ok(closedResidentReport.timeline.some((event) => event.to_status === 'Closed' && event.actor_name === adminLoginUser.full_name));
+  assert.equal(Object.hasOwn(closedResidentReport, 'staff_remarks'), false);
+  const adminReportDetail = await jsonRequest(`/api/reports/${primaryReportId}`, adminCookie);
+  assert.ok((await adminReportDetail.json()).report.timeline.some((event) => /Admin reviewed field evidence/.test(event.details || '')
+    && event.actor_user_id === adminLoginUser.id));
   const closedUpdate = await jsonRequest(`/api/staff/assignments/${assignmentId}/updates`, staffCookie, 'POST', {
     stage: 'Completed',
     notes: 'A late update should not change a closed assignment.',
