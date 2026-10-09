@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const net = require('node:net');
@@ -8,6 +9,8 @@ const { after, before, test } = require('node:test');
 
 const ROOT = path.resolve(__dirname, '..');
 const TEST_TIMEOUT_MS = 30000;
+const testAdminEmail = 'dsaroay@gmail.com';
+const testAdminPassword = `${crypto.randomUUID()}Aa1!`;
 
 let serverProcess;
 let baseUrl;
@@ -71,8 +74,12 @@ before(async () => {
     cwd: runtimeRoot,
     env: {
       ...process.env,
+      NODE_ENV: 'test',
       PORT: String(port),
       POWERWATCH_DATA_DIR: path.join(runtimeRoot, 'data'),
+      POWERWATCH_ADMIN_EMAIL: testAdminEmail,
+      POWERWATCH_ADMIN_PASSWORD: testAdminPassword,
+      POWERWATCH_ADMIN_NAME: 'Isolated Test Administrator',
       GOOGLE_CLIENT_ID: '',
       GOOGLE_CLIENT_SECRET: '',
       FACEBOOK_CLIENT_ID: '',
@@ -112,7 +119,7 @@ before(async () => {
   const loginResponse = await fetch(`${baseUrl}/api/auth/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email: 'admin@powerwatch.ph', password: 'admin123' }),
+    body: JSON.stringify({ email: testAdminEmail, password: testAdminPassword, portal: 'admin' }),
   });
   assert.equal(loginResponse.status, 200);
   adminCookie = cookieFrom(loginResponse);
@@ -185,7 +192,7 @@ test('unverified social-login claims cannot create accounts or sessions', { time
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       provider: 'google',
-      email: 'admin@powerwatch.ph',
+      email: testAdminEmail,
       name: 'Spoofed Administrator',
       provider_user_id: 'attacker-controlled-id',
     }),
