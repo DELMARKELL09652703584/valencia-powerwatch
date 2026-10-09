@@ -5,12 +5,14 @@ const net = require('node:net');
 const os = require('node:os');
 const path = require('node:path');
 const { after, before, test } = require('node:test');
+const { DatabaseSync } = require('node:sqlite');
 
 const ROOT = path.resolve(__dirname, '..');
 const TEST_TIMEOUT_MS = 30000;
 let serverProcess;
 let baseUrl;
 let testDirectory;
+let testDatabasePath;
 let adminCookie;
 let adminLoginUser;
 let staffCookie;
@@ -90,6 +92,7 @@ before(async () => {
   testDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'valencia-powerwatch-staff-test-'));
   const runtimeRoot = path.join(testDirectory, 'runtime');
   fs.mkdirSync(path.join(runtimeRoot, 'data'), { recursive: true });
+  testDatabasePath = path.join(runtimeRoot, 'data', 'powerwatch.db');
   fs.mkdirSync(path.join(runtimeRoot, 'uploads'), { recursive: true });
   fs.mkdirSync(path.join(runtimeRoot, 'app'), { recursive: true });
   fs.mkdirSync(path.join(runtimeRoot, 'assets'), { recursive: true });
@@ -385,6 +388,31 @@ test('Staff API scopes assignments and report evidence to assigned personnel tea
   assert.equal((await jsonRequest('/api/reports', staffCookie)).status, 403);
   assert.equal((await jsonRequest(`/api/repair/assignments/${assignmentId}`, staffCookie)).status, 403);
   assert.equal((await jsonRequest('/api/admin/staff-memberships', staffCookie)).status, 403);
+
+  const legacyFixture = new DatabaseSync(testDatabasePath);
+  try {
+    legacyFixture.exec('PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; BEGIN IMMEDIATE');
+    legacyFixture.prepare('UPDATE repair_assignments SET incident_id = NULL WHERE id = ?').run(assignmentId);
+    legacyFixture.prepare('UPDATE outage_reports SET incident_id = NULL WHERE id = ?').run(allAssignments[0].report_id);
+    legacyFixture.prepare('DELETE FROM incident_links WHERE report_id = ?').run(allAssignments[0].report_id);
+    legacyFixture.prepare('DELETE FROM incident_areas WHERE incident_id = ?').run(linkedIncidentId);
+    legacyFixture.prepare('DELETE FROM outage_incidents WHERE id = ?').run(linkedIncidentId);
+    legacyFixture.exec('COMMIT');
+  } catch (error) {
+    legacyFixture.exec('ROLLBACK');
+    throw error;
+  } finally {
+    legacyFixture.close();
+  }
+
+  const staffVerified = await jsonRequest(`/api/staff/assignments/${assignmentId}/verify`, staffCookie, 'POST', {});
+  const staffVerifiedBody = await staffVerified.json();
+  assert.equal(staffVerified.status, 201, JSON.stringify(staffVerifiedBody));
+  const linkedAssignmentResponse = await jsonRequest(`/api/staff/assignments/${assignmentId}`, staffCookie);
+  const linkedAssignment = (await linkedAssignmentResponse.json()).assignment;
+  assert.ok(linkedAssignment.incident_id);
+  assert.equal(Number(linkedAssignment.report_incident_id), Number(linkedAssignment.incident_id));
+  linkedIncidentId = linkedAssignment.incident_id;
 });
 
 test('Staff response stages are ordered, documented, and notify the reporting resident', { timeout: TEST_TIMEOUT_MS }, async () => {
