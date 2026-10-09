@@ -1,6 +1,15 @@
 const { db } = require('./db');
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS staff_team_members (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    team_id INTEGER NOT NULL REFERENCES repair_teams(id) ON DELETE CASCADE,
+    assigned_by INTEGER NOT NULL REFERENCES users(id),
+    assigned_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, team_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_staff_team_members_team ON staff_team_members(team_id, user_id);
+
   CREATE TABLE IF NOT EXISTS staff_barangay_assignments (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     barangay TEXT NOT NULL,

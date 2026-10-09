@@ -1403,8 +1403,9 @@ async function renderAdminDispatch() {
     api('/api/reports'),
     state.user?.role === 'administrator'
       ? api('/api/admin/staff-memberships')
-      : Promise.resolve({ staff: [], teams: [] })
+      : Promise.resolve({ staff: [], teams: [], barangays: [], summary: null })
   ]);
+  const staffAccountsExist = state.user?.role === 'administrator' && staffMemberships.staff.length > 0;
 
   const filter = state.filters.dispatchStatus || '';
   const search = String(state.filters.dispatchSearch || '').trim().toLowerCase();
@@ -1510,10 +1511,16 @@ async function renderAdminDispatch() {
         </div>
       </section>` : ''}
 
-      ${state.user?.role === 'administrator' ? `<details class="staff-team-management" style="margin:12px 0;background:#fff;border:1px solid #d9e6f1;border-radius:10px;padding:14px 16px;box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+      ${staffAccountsExist ? `<details class="staff-team-management" style="margin:12px 0;background:#fff;border:1px solid #d9e6f1;border-radius:10px;padding:14px 16px;box-shadow:0 2px 6px rgba(0,0,0,0.02);">
         <summary style="cursor:pointer;font-weight:800;color:#153d5a;">Manage Staff Team Access <span class="muted small">· assign personnel accounts to field crews</span></summary>
-        <p class="muted small" style="margin:8px 0 12px;">Only personnel accounts assigned to a team can open its work orders in the Staff App. Changes take effect immediately.</p>
-        ${staffMemberships.staff.length ? `<div style="display:grid;gap:10px;">
+        <p class="muted small" style="margin:8px 0 12px;">Manage actual staff accounts and their operational access. Changes take effect immediately.</p>
+        <div class="dispatch-metrics" style="margin:10px 0 14px;">
+          <div class="dispatch-stat-card"><span class="dispatch-stat-label">Staff Accounts</span><strong class="dispatch-stat-value">${staffMemberships.summary.total}</strong><span class="dispatch-stat-sub">${staffMemberships.summary.active} active · ${staffMemberships.summary.inactive} inactive</span></div>
+          <div class="dispatch-stat-card"><span class="dispatch-stat-label">Assigned Teams</span><strong class="dispatch-stat-value">${staffMemberships.summary.assigned_teams}</strong></div>
+          <div class="dispatch-stat-card"><span class="dispatch-stat-label">Authorized Barangays</span><strong class="dispatch-stat-value">${staffMemberships.summary.assigned_barangays}</strong></div>
+          <div class="dispatch-stat-card"><span class="dispatch-stat-label">Account Limit</span><strong class="dispatch-stat-value">${staffMemberships.summary.account_limit === null ? 'No limit' : `${staffMemberships.summary.total} / ${staffMemberships.summary.account_limit}`}</strong><span class="dispatch-stat-sub">${staffMemberships.summary.account_limit === null ? 'No limit configured' : 'Total includes active and inactive accounts'}</span></div>
+        </div>
+        <div style="display:grid;gap:10px;">
           ${staffMemberships.staff.map((member) => `<form class="staff-team-membership" data-form="staff-team-membership" data-user-id="${member.id}" style="display:grid;gap:9px;padding:12px;border:1px solid #e0e9f0;border-radius:9px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
               <strong>${escapeHtml(member.full_name)}</strong>
@@ -1535,7 +1542,7 @@ async function renderAdminDispatch() {
             </div>` : '<p class="muted small">Create a repair team before assigning staff accounts.</p>'}
             <button type="submit" class="button secondary" style="justify-self:start;">Save staff access</button>
           </form>`).join('')}
-        </div>` : '<p class="muted small" style="margin-top:12px;">No personnel accounts yet. Create a System Personnel account in User Management first.</p>'}
+        </div>
       </details>` : ''}
 
       <div style="background:#fff;border:1px solid #d9e6f1;border-radius:10px;padding:12px 16px;box-shadow:0 2px 6px rgba(0,0,0,0.02);">
@@ -2825,7 +2832,7 @@ document.addEventListener('submit', async (event) => {
 
 async function renderAdminUsers() {
   const f = state.filters;
-  const { users, roles } = await api(`/api/admin/users${query({ status: f.userStatus || 'all', q: f.userSearch })}`);
+  const { users, roles, staff_summary: staffSummary } = await api(`/api/admin/users${query({ status: f.userStatus || 'all', q: f.userSearch })}`);
   const groups = [
     ['All Users', null], ['Residents', ['resident']], ['Staff', ['personnel', 'administrator']],
     ['Verifiers', ['personnel']], ['Authorized', ['utility', 'administrator']],
@@ -2845,6 +2852,7 @@ async function renderAdminUsers() {
     const count = users.filter((user) => !allowedRoles || allowedRoles.includes(user.role)).length;
     return `<button type="button" class="user-role-tab ${activeGroup === label ? 'active' : ''}" role="tab" aria-selected="${activeGroup === label}" data-action="filter-admin-users" data-value="${label}">${label}<span>${count}</span></button>`;
   }).join('');
+  const atStaffLimit = staffSummary.account_limit !== null && staffSummary.total >= staffSummary.account_limit;
   const rows = pageRows.map((user) => `<tr>
     <td class="user-name-cell"><strong>${escapeHtml(user.full_name)}</strong>${user.contact_number ? `<span>${escapeHtml(user.contact_number)}</span>` : ''}</td>
     <td class="user-email-cell">${escapeHtml(user.email)}</td>
@@ -2867,8 +2875,9 @@ async function renderAdminUsers() {
   adminShell(`<section class="user-management-page">
     <header class="user-management-heading">
       <label class="user-management-search" aria-label="Search users"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input type="search" data-filter="userSearch" value="${escapeHtml(f.userSearch || '')}" placeholder="Search name, email, contact..."></label>
-      <button type="button" class="user-add-button" data-action="new-user"><span aria-hidden="true">+</span>Add Staff</button>
+      <button type="button" class="user-add-button" data-action="new-user" ${atStaffLimit ? 'disabled title="Configured staff account limit reached"' : ''}><span aria-hidden="true">+</span>Add Staff</button>
     </header>
+    <div class="user-table-tools" aria-label="Staff account summary"><span class="user-result-count">Staff: ${staffSummary.total} total · ${staffSummary.active} active · ${staffSummary.inactive} inactive</span><span class="muted small">${staffSummary.assigned_teams} teams · ${staffSummary.assigned_barangays} authorized barangays · ${staffSummary.account_limit === null ? 'No account limit configured' : `Limit: ${staffSummary.account_limit}`}</span></div>
     <div class="user-management-tabs" role="tablist" aria-label="Filter users by role">${groupTabs}</div>
     <div class="user-table-tools"><label class="user-status-filter" aria-label="Filter users by account status"><span>Status</span><select data-filter="userStatus"><option value="all" ${!f.userStatus || f.userStatus === 'all' ? 'selected' : ''}>All Statuses</option><option value="Active" ${f.userStatus === 'Active' ? 'selected' : ''}>Active</option><option value="Inactive" ${f.userStatus === 'Inactive' ? 'selected' : ''}>Inactive</option></select></label><span class="user-result-count">${visibleUsers.length} user${visibleUsers.length === 1 ? '' : 's'}</span></div>
     <div class="user-table-wrap"><div class="table-scroll"><table class="user-management-table">

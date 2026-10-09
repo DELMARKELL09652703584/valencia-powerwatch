@@ -26,6 +26,7 @@ let primaryReportId;
 let areaReviewReportId;
 let evidenceId;
 let teamId;
+let alternateTeamId;
 let linkedIncidentId;
 let serverOutput = '';
 
@@ -49,12 +50,14 @@ const jsonRequest = (url, cookie, method = 'GET', body) => fetch(`${baseUrl}${ur
   ...(body ? { body: JSON.stringify(body) } : {}),
 });
 
-const createPersonnel = async (name, email) => {
+const createPersonnel = async (name, email, { teamId: assignedTeamId = teamId, barangays = ['Poblacion'] } = {}) => {
   const response = await jsonRequest('/api/admin/users', adminCookie, 'POST', {
     full_name: name,
     email,
     password: 'field-password-123',
     role: 'personnel',
+    team_ids: [assignedTeamId],
+    barangay_names: barangays,
   });
   assert.equal(response.status, 201);
   return (await response.json()).user;
@@ -171,9 +174,20 @@ before(async () => {
   assert.equal(teamResponse.status, 201);
   const team = (await teamResponse.json()).team;
   teamId = team.id;
+  const alternateTeamResponse = await jsonRequest('/api/repair-teams', adminCookie, 'POST', {
+    name: 'Test Out-of-Area Crew',
+    lead_technician: 'Alternate Crew Lead',
+    vehicle_type: 'Service Vehicle',
+    base_station: 'Bagontaas',
+  });
+  assert.equal(alternateTeamResponse.status, 201);
+  alternateTeamId = (await alternateTeamResponse.json()).team.id;
 
   const staff = await createPersonnel('Assigned Field Staff', `assigned-field-${Date.now()}@example.test`);
-  const unassigned = await createPersonnel('Unassigned Field Staff', `unassigned-field-${Date.now()}@example.test`);
+  const unassigned = await createPersonnel('Out-of-Area Field Staff', `unassigned-field-${Date.now()}@example.test`, {
+    teamId: alternateTeamId,
+    barangays: ['Bagontaas'],
+  });
   const membershipResponse = await jsonRequest(`/api/admin/staff-memberships/${staff.id}`, adminCookie, 'PUT', {
     team_ids: [team.id],
     barangay_names: ['Poblacion'],
@@ -270,6 +284,20 @@ test('verified database roles assign each account its own portal after login', {
   assert.equal((await jsonRequest('/api/admin/users', adminCookie)).status, 200);
   assert.equal((await jsonRequest('/api/admin/users', staffCookie)).status, 403);
   assert.equal((await jsonRequest('/api/admin/users', residentCookie)).status, 403);
+  const staffSummary = (await (await jsonRequest('/api/admin/users?status=all', adminCookie)).json()).staff_summary;
+  assert.equal(staffSummary.total, 2);
+  assert.equal(staffSummary.active, 2);
+  assert.equal(staffSummary.inactive, 0);
+  assert.equal(staffSummary.assigned_teams, 2);
+  assert.equal(staffSummary.assigned_barangays, 2);
+  assert.equal(staffSummary.account_limit, null);
+  const staffLogout = await jsonRequest('/api/auth/logout', staffCookie, 'POST');
+  assert.equal(staffLogout.status, 200);
+  const repeatStaffLogin = await login(portalLoginEmails.staff, 'field-password-123', 'staff');
+  staffCookie = repeatStaffLogin.cookie;
+  assert.equal(repeatStaffLogin.user.role, 'personnel');
+  assert.equal(repeatStaffLogin.user.portal_path, '/staff');
+  assert.equal((await jsonRequest('/api/auth/me', staffCookie)).status, 200);
   const unauthorizedStaffCreation = await Promise.all([
     jsonRequest('/api/admin/users', staffCookie, 'POST', {
       full_name: 'Staff-Created Account',
@@ -285,6 +313,26 @@ test('verified database roles assign each account its own portal after login', {
     }),
   ]);
   assert.ok(unauthorizedStaffCreation.every((response) => response.status === 403));
+  const rejectedStaffCreation = await Promise.all([
+    jsonRequest('/api/admin/users', adminCookie, 'POST', {
+      full_name: 'Missing Area Assignment',
+      email: `missing-area-${Date.now()}@example.test`,
+      password: 'field-password-123',
+      role: 'personnel',
+      team_ids: [teamId],
+      barangay_names: [],
+    }),
+    jsonRequest('/api/admin/users', adminCookie, 'POST', {
+      full_name: 'Invalid Email Staff',
+      email: 'not-an-email',
+      password: 'field-password-123',
+      role: 'personnel',
+      team_ids: [teamId],
+      barangay_names: ['Poblacion'],
+    }),
+  ]);
+  assert.ok(rejectedStaffCreation.every((response) => response.status === 400));
+  assert.equal((await jsonRequest(`/api/admin/users/${residentLoginUser.id}/role`, adminCookie, 'PUT', { role: 'personnel' })).status, 409);
   const attemptedResidentProvisioning = await jsonRequest('/api/admin/users', adminCookie, 'POST', {
     full_name: 'Admin-Provisioned Resident',
     email: `admin-resident-${Date.now()}@example.test`,
@@ -426,7 +474,10 @@ test('Staff API scopes assignments, reports, evidence, and incidents to authoriz
   const unassignedResponse = await jsonRequest('/api/staff/assignments', unassignedCookie);
   assert.equal(unassignedResponse.status, 200);
   assert.deepEqual((await unassignedResponse.json()).assignments, []);
-  assert.deepEqual((await (await jsonRequest('/api/reports', unassignedCookie)).json()).reports, []);
+  const otherAreaReports = await (await jsonRequest('/api/reports', unassignedCookie)).json();
+  assert.ok(otherAreaReports.reports.length > 0);
+  assert.ok(otherAreaReports.reports.every((report) => report.barangay === 'Bagontaas'));
+  assert.equal((await jsonRequest(`/api/reports/${primaryReportId}`, unassignedCookie)).status, 404);
   assert.deepEqual((await (await jsonRequest('/api/incidents?include_closed=true', unassignedCookie)).json()).incidents, []);
   const deniedDetail = await jsonRequest(`/api/staff/assignments/${assignmentId}`, unassignedCookie);
   assert.equal(deniedDetail.status, 404);
@@ -461,6 +512,18 @@ test('Staff API scopes assignments, reports, evidence, and incidents to authoriz
   const outsideIncident = (await outsideIncidentResponse.json()).incident;
   assert.equal((await jsonRequest(`/api/incidents/${outsideIncident.id}`, staffCookie)).status, 404);
   assert.equal((await jsonRequest(`/api/incidents/${outsideIncident.id}/status`, staffCookie, 'PUT', { status: 'Ongoing' })).status, 404);
+  const switchedAreaResponse = await jsonRequest(`/api/admin/staff-memberships/${staffLoginUser.id}`, adminCookie, 'PUT', {
+    team_ids: [teamId],
+    barangay_names: ['Bagontaas'],
+  });
+  assert.equal(switchedAreaResponse.status, 200);
+  const switchedReports = await jsonRequest('/api/reports', staffCookie);
+  assert.ok((await switchedReports.json()).reports.every((report) => report.barangay === 'Bagontaas'));
+  const restoredAreaResponse = await jsonRequest(`/api/admin/staff-memberships/${staffLoginUser.id}`, adminCookie, 'PUT', {
+    team_ids: [teamId],
+    barangay_names: ['Poblacion'],
+  });
+  assert.equal(restoredAreaResponse.status, 200);
   assert.equal((await jsonRequest(`/api/repair/assignments/${assignmentId}`, staffCookie)).status, 403);
   assert.equal((await jsonRequest('/api/admin/staff-memberships', staffCookie)).status, 403);
 

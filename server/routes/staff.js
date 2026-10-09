@@ -453,6 +453,17 @@ router.get('/admin/staff-memberships', requireAuth, requireRole('administrator')
     SELECT user_id, barangay FROM staff_barangay_assignments ORDER BY user_id, barangay
   `).all();
   const barangays = db.prepare("SELECT name FROM barangays WHERE status = 'Active' ORDER BY name COLLATE NOCASE").all();
+  const activeStaffCount = users.filter((user) => user.status === 'Active').length;
+  const assignedTeamCount = new Set(memberships.map((membership) => Number(membership.team_id))).size;
+  const assignedBarangayCount = new Set(barangayMemberships.map((membership) => membership.barangay)).size;
+  const limitSetting = db.prepare("SELECT value FROM settings WHERE key = 'staff_account_limit'").get();
+  let accountLimit = null;
+  if (limitSetting) {
+    accountLimit = JSON.parse(limitSetting.value);
+    if (!Number.isSafeInteger(accountLimit) || accountLimit < 0) {
+      return res.status(500).json({ error: 'The configured staff account limit is invalid.' });
+    }
+  }
   res.json({
     staff: users.map((user) => ({
       ...user,
@@ -463,6 +474,14 @@ router.get('/admin/staff-memberships', requireAuth, requireRole('administrator')
     })),
     teams,
     barangays: barangays.map((barangay) => barangay.name),
+    summary: {
+      total: users.length,
+      active: activeStaffCount,
+      inactive: users.length - activeStaffCount,
+      assigned_teams: assignedTeamCount,
+      assigned_barangays: assignedBarangayCount,
+      account_limit: accountLimit,
+    },
   });
 });
 

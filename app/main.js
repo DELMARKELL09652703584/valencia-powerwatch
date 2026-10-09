@@ -656,11 +656,16 @@ async function submitForm(form) {
     return;
   }
   if (type === 'new-user') {
+    const formData = new FormData(target);
+    const team_ids = formData.getAll('team_ids').map(Number);
+    const barangay_names = formData.getAll('barangay_names').map(String);
+    if (!team_ids.length) throw new Error('Select at least one assigned field team.');
+    if (!barangay_names.length) throw new Error('Select at least one authorized barangay or operational area.');
     await send('/api/admin/users', 'POST', {
       full_name: values.full_name, email: values.email, contact_number: values.contact_number,
-      address: values.address, barangay: values.barangay, role: values.role, password: values.password,
+      address: values.address, role: values.role, password: values.password, team_ids, barangay_names,
     });
-    setToast('Account created.');
+    setToast('Staff account created with assigned teams and barangays.');
     closeDialog();
     await render();
     return;
@@ -2421,19 +2426,33 @@ async function handleClick(event) {
         setToast('Announcement deleted.');
         await render();
         return;
-      case 'new-user':
+      case 'new-user': {
+        const [{ teams }, { barangays }] = await Promise.all([
+          api('/api/repair-teams'),
+          api('/api/barangays'),
+        ]);
+        const activeTeams = teams.filter((team) => team.status !== 'Inactive');
+        if (!activeTeams.length || !barangays.length) {
+          throw new Error('Create an active repair team and ensure at least one active barangay exists before adding staff.');
+        }
         openDialog('Add staff account', `
           <div class="form-stack">
-            <label>Full name<input class="input" name="full_name" required></label>
-            <label>Email<input class="input" type="email" name="email" required></label>
-            <label>Contact number<input class="input" name="contact_number"></label>
-            <label data-account-location-field hidden>Address<input class="input" name="address"></label>
-            <label data-account-location-field hidden>Barangay<select class="input" name="barangay"><option value="">None</option>${state.barangays.map((b) => `<option>${escapeHtml(b)}</option>`).join('')}</select></label>
+            <label class="wide-field">Full name<input class="input" name="full_name" autocomplete="name" required></label>
+            <label class="wide-field">Staff email<input class="input" type="email" name="email" autocomplete="email" required></label>
+            <label class="wide-field">Contact number<input class="input" name="contact_number" autocomplete="tel" placeholder="For field coordination"></label>
+            <label class="wide-field">Address<input class="input" name="address" autocomplete="street-address"></label>
             <input type="hidden" name="role" value="personnel">
-            <p class="muted small">Staff accounts are created by administrators. Residents must register themselves through the User Portal.</p>
-            <label>Password<input class="input" type="password" name="password" minlength="6" required></label>
+            <fieldset class="wide-field staff-account-assignment"><legend>Assigned field teams <span aria-hidden="true">*</span></legend>
+              ${activeTeams.map((team) => `<label><input type="checkbox" name="team_ids" value="${Number(team.id)}"> <span>${escapeHtml(team.name)}</span></label>`).join('')}
+            </fieldset>
+            <fieldset class="wide-field staff-account-assignment"><legend>Authorized barangays / areas <span aria-hidden="true">*</span></legend>
+              ${barangays.map((barangay) => `<label><input type="checkbox" name="barangay_names" value="${escapeHtml(barangay)}"> <span>${escapeHtml(barangay)}</span></label>`).join('')}
+            </fieldset>
+            <label class="wide-field">Initial password<input class="input" type="password" name="password" minlength="6" autocomplete="new-password" required><span>Give these exact sign-in credentials to the staff member. Passwords are securely hashed.</span></label>
+            <p class="wide-field muted small">Only administrators create Staff accounts. Residents register themselves through the User Portal.</p>
           `, 'Create account', { form: 'new-user' });
         return;
+      }
       case 'view-user': {
         const { users } = await api('/api/admin/users?status=all');
         const user = users.find((row) => String(row.id) === String(id));
@@ -2469,9 +2488,10 @@ async function handleClick(event) {
         const { users, roles } = await api('/api/admin/users?status=all');
         const user = users.find((u) => String(u.id) === String(id));
         if (!user) throw new Error('User not found.');
+        const availableRoles = Object.entries(roles).filter(([key]) => key !== 'personnel' || user.role === 'personnel');
         openDialog(`Role for ${user.full_name}`, `
           <div class="form-stack">
-            <label>Role<select class="input" name="role">${Object.entries(roles).map(([k, v]) => `<option value="${k}" ${user.role === k ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('')}</select></label>
+            <label>Role<select class="input" name="role">${availableRoles.map(([k, v]) => `<option value="${k}" ${user.role === k ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('')}</select></label>
           `, 'Update role', { form: 'change-role', id });
         return;
       }
@@ -2775,14 +2795,6 @@ document.addEventListener('submit', async (event) => {
 });
 
 document.addEventListener('change', async (event) => {
-  const accountRole = event.target.closest('form[data-form="new-user"] select[name="role"]');
-  if (accountRole) {
-    const personnelSelected = accountRole.value === 'personnel';
-    accountRole.form.querySelectorAll('[data-account-location-field]').forEach((field) => {
-      field.hidden = personnelSelected;
-    });
-    return;
-  }
   const chipSelect = event.target.closest('[data-chip-select]');
   if (chipSelect && chipSelect.value) {
     const picker = chipSelect.closest('.incident-chip-picker');

@@ -126,3 +126,34 @@ body.dark-mode.admin-body .case-row-action.primary:hover { background: #1984cf; 
     transition-duration: .01ms !important;
   }
 }
+
+.staff-account-assignment {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px 14px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #d9e6f1;
+  border-radius: 9px;
+}
+.staff-account-assignment legend {
+  padding: 0 6px;
+  color: #153d5a;
+  font-size: .86rem;
+  font-weight: 750;
+}
+.staff-account-assignment label {
+  display: flex !important;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.staff-account-assignment input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  accent-color: #1478bd;
+}
+.staff-account-assignment label span { font-size: .84rem; font-weight: 550; }
+body.dark-mode .staff-account-assignment { border-color: #34475d; }
+body.dark-mode .staff-account-assignment legend { color: #d6e8fa; }
