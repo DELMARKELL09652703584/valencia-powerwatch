@@ -2,10 +2,8 @@
 
 const ADMIN_NAV = [
   { key: 'dashboard', label: 'Dashboard' },
-  { key: 'reports', label: 'Reports', roles: STAFF_ROLES },
-  { key: 'verification', label: 'Verification', roles: STAFF_ROLES },
+  { key: 'reports', label: 'Incidents & Reports', roles: STAFF_ROLES },
   { key: 'dispatch', label: 'Repair & Dispatch', roles: STAFF_ROLES },
-  { key: 'incidents', label: 'Incidents' },
   { key: 'outage-monitoring', label: 'Outage Monitoring', roles: STAFF_ROLES },
   { key: 'map', label: 'Map / GIS', roles: STAFF_ROLES },
   { key: 'scheduled', label: 'Scheduled Outages', roles: STAFF_ROLES },
@@ -18,6 +16,18 @@ const ADMIN_NAV = [
 ];
 
 const visibleAdminNav = () => ADMIN_NAV.filter((item) => !item.roles || item.roles.includes(state.user?.role));
+const CASE_MANAGEMENT_PAGES = new Set(['reports', 'verification', 'incidents']);
+
+function renderCaseManagementTabs(activePage) {
+  const tabs = [
+    ['reports', 'All Cases'],
+    ['verification', 'Verify Reports'],
+    ['incidents', 'Incident Operations'],
+  ];
+  return `<nav class="case-management-tabs" aria-label="Incident and report sections">${tabs.map(([page, label]) => `
+    <button type="button" class="case-management-tab ${activePage === page ? 'active' : ''}" data-page="${page}" aria-current="${activePage === page ? 'page' : 'false'}">${label}</button>
+  `).join('')}</nav>`;
+}
 
 function adminNotificationCategory(notice) {
   const text = `${notice.title || ''} ${notice.message || ''}`;
@@ -334,7 +344,7 @@ function adminNotificationMenuContent() {
 function adminShell(content) {
   const nav = visibleAdminNav();
   const info = state.config.system_info || {};
-  const currentNav = nav.find((n) => n.key === state.page);
+  const currentNav = nav.find((n) => n.key === (CASE_MANAGEMENT_PAGES.has(state.page) ? 'reports' : state.page));
   const currentTitle = currentNav?.label || (state.page === 'notifications' ? 'Notifications' : state.page === 'profile' ? 'My Profile' : 'Dashboard');
   const currentLocality = info.locality || 'Valencia City, Bukidnon';
 
@@ -344,7 +354,9 @@ function adminShell(content) {
     const navItems = existingShell.querySelectorAll('.admin-nav .nav-item');
     navItems.forEach((btn) => {
       const pageKey = btn.dataset.page;
-      const isActive = state.page === pageKey;
+      const isActive = pageKey === 'reports'
+        ? CASE_MANAGEMENT_PAGES.has(state.page)
+        : state.page === pageKey;
       btn.classList.toggle('active', isActive);
       btn.setAttribute('aria-current', isActive ? 'page' : 'false');
     });
@@ -695,7 +707,7 @@ async function renderAdminDashboard() {
             <h3>🏛️ Reports by Barangay</h3>
             <span style="font-size:0.75rem;color:var(--admin-muted);">${stats.reports_total || 0} total reported interruptions</span>
           </div>
-          <button type="button" class="link-button" data-page="reports" style="font-size:0.78rem;">View in Reports &rarr;</button>
+          <button type="button" class="link-button" data-page="reports" style="font-size:0.78rem;">View in Incidents &amp; Reports &rarr;</button>
         </header>
         ${barangayRows.length
           ? `<div class="dashboard-bar-chart"><div class="dashboard-bar-axis">${barTicks.map((tick) => `<span>${tick}</span>`).join('')}</div><div class="dashboard-bar-plot">${barangayBars}</div></div>`
@@ -923,6 +935,148 @@ async function renderAdminDashboard() {
   }
 }
 
+async function renderAdminUnifiedCases() {
+  const [{ reports }, { incidents }] = await Promise.all([
+    api('/api/reports'),
+    api('/api/incidents?include_closed=true'),
+  ]);
+  const reportsByIncident = new Map();
+  for (const report of reports) {
+    const incidentId = Number(report.incident_id);
+    if (!incidentId) continue;
+    const linked = reportsByIncident.get(incidentId) || [];
+    linked.push(report);
+    reportsByIncident.set(incidentId, linked);
+  }
+  const linkedReportIds = new Set();
+  const cases = incidents.map((incident) => {
+    const linkedReports = reportsByIncident.get(Number(incident.id)) || [];
+    linkedReports.forEach((report) => linkedReportIds.add(Number(report.id)));
+    return {
+      kind: 'incident',
+      id: Number(incident.id),
+      code: incident.incident_code,
+      date: incident.start_time,
+      location: incident.location || incident.affected_area || incident.title,
+      barangay: incident.barangay,
+      type: incident.outage_type || incident.incident_type || 'Power outage',
+      status: incident.status || 'Reported',
+      priority: incident.priority || 'Medium',
+      description: incident.description,
+      linkedReports,
+      source: incident,
+    };
+  });
+  for (const report of reports) {
+    if (linkedReportIds.has(Number(report.id))) continue;
+    cases.push({
+      kind: 'report',
+      id: Number(report.id),
+      code: report.report_code,
+      date: report.reported_at,
+      location: report.location || report.affected_area,
+      barangay: report.barangay,
+      type: report.possible_outage_type || 'Power outage',
+      status: report.status || 'Submitted',
+      priority: '—',
+      description: report.description,
+      linkedReports: [],
+      source: report,
+    });
+  }
+  cases.sort((first, second) => new Date(second.date || 0).getTime() - new Date(first.date || 0).getTime());
+
+  const categoryFor = (item) => {
+    const status = String(item.status || '').toLowerCase();
+    if (item.kind === 'report') {
+      if (['submitted', 'pending', 'under review', 'under verification'].includes(status)) return 'review';
+      if (['rejected', 'duplicate'].includes(status)) return 'closed-out';
+      if (['resolved'].includes(status)) return 'resolved';
+      return 'needs-incident';
+    }
+    if (['restored', 'closed', 'resolved'].includes(status)) return 'resolved';
+    if (['reported', 'under verification'].includes(status)) return 'review';
+    if (status === 'verified') return 'verified';
+    return 'active';
+  };
+  const tabs = [
+    ['all', 'All cases'],
+    ['review', 'Verification queue'],
+    ['verified', 'Verified / ready for dispatch'],
+    ['active', 'Active incidents'],
+    ['resolved', 'Resolved'],
+    ['closed-out', 'Rejected / duplicate'],
+    ['needs-incident', 'Verified · needs incident'],
+  ];
+  const selectedFilter = state.filters.caseStatus || 'all';
+  const search = String(state.filters.caseSearch || '').trim().toLowerCase();
+  const matchingCases = cases.filter((item) => {
+    const matchesCategory = selectedFilter === 'all' || categoryFor(item) === selectedFilter;
+    const linkedCodes = item.linkedReports.map((report) => report.report_code).join(' ');
+    const searchable = [item.code, linkedCodes, item.location, item.barangay, item.type,
+      item.status, item.priority, item.description].filter(Boolean).join(' ').toLowerCase();
+    return matchesCategory && (!search || searchable.includes(search));
+  });
+  const tabMarkup = tabs.map(([value, label]) => {
+    const count = value === 'all' ? cases.length : cases.filter((item) => categoryFor(item) === value).length;
+    return `<button type="button" class="case-status-tab ${selectedFilter === value ? 'active' : ''}" data-action="filter-unified-case" data-value="${value}" aria-pressed="${selectedFilter === value}">${label}<span>${count}</span></button>`;
+  }).join('');
+  const statusClass = (item) => {
+    const category = categoryFor(item);
+    return category === 'review' || category === 'needs-incident' ? 'review'
+      : category === 'verified' ? 'verified'
+      : category === 'active' ? 'ongoing'
+        : category === 'resolved' ? 'resolved' : 'rejected';
+  };
+  const canManageIncidents = ['administrator', 'personnel'].includes(state.user?.role);
+  const rows = matchingCases.map((item) => {
+    const dispatchReport = item.linkedReports.find((report) => report.latitude !== null && report.latitude !== undefined
+      && report.longitude !== null && report.longitude !== undefined);
+    const linkedLabel = item.linkedReports.length
+      ? item.linkedReports.map((report) => escapeHtml(report.report_code)).join(', ')
+      : item.kind === 'report' ? 'Not linked to an incident' : 'Manually recorded';
+    const statusLabel = item.kind === 'report'
+      ? (item.status === 'Submitted' || item.status === 'Pending' ? 'Pending Verification' : item.status)
+      : item.status;
+    const action = item.kind === 'report'
+      ? `<button type="button" class="case-row-action primary" data-action="open-case-verification" data-id="${item.id}">${['Resolved', 'Rejected', 'Duplicate'].includes(item.status) ? 'View report' : ['Verified', 'Officially Confirmed'].includes(item.status) ? 'Create incident' : 'Review'}</button>`
+      : `<button type="button" class="case-row-action primary" data-action="view-incident" data-id="${item.id}">View case</button>
+        ${canManageIncidents ? `<button type="button" class="case-row-action" data-action="update-incident-status" data-id="${item.id}">Update status</button>` : ''}
+        ${canManageIncidents && dispatchReport ? `<button type="button" class="case-row-action" data-action="open-assign-repair-modal" data-id="${dispatchReport.id}">Dispatch</button>` : '<button type="button" class="case-row-action" data-page="dispatch">Repair &amp; dispatch</button>'}`;
+    return `<tr>
+      <td class="case-id-cell"><strong>${escapeHtml(item.code)}</strong><small>${item.kind === 'incident' ? 'Incident' : 'Citizen report'}</small></td>
+      <td>${escapeHtml(formatDateTime(item.date))}</td>
+      <td><strong>${escapeHtml(item.location || '—')}</strong><small>${escapeHtml(linkedLabel)}</small></td>
+      <td>${escapeHtml(item.barangay || '—')}</td>
+      <td>${escapeHtml(item.type)}</td>
+      <td>${escapeHtml(item.priority)}</td>
+      <td><span class="case-status-badge ${statusClass(item)}">${escapeHtml(statusLabel || 'Pending Verification')}</span></td>
+      <td><div class="case-row-actions">${action}</div></td>
+    </tr>`;
+  }).join('');
+
+  adminShell(`<section class="case-management-page">
+    ${renderCaseManagementTabs('reports')}
+    <header class="case-management-heading">
+      <div><p class="case-management-eyebrow">CENTRAL OPERATIONS QUEUE</p><h2>Incidents &amp; Reports</h2>
+        <p>One case view for resident reports, verification, and linked outage incidents. Linked report records are grouped under their incident.</p></div>
+      ${canManageIncidents ? `<button type="button" class="incident-create-button" data-action="new-incident"><span aria-hidden="true">+</span>Create Incident</button>` : ''}
+    </header>
+    <div class="case-status-tabs" role="group" aria-label="Filter cases by workflow status">${tabMarkup}</div>
+    <div class="case-management-controls">
+      <label class="case-search" aria-label="Search cases">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+        <input type="search" data-filter="caseSearch" value="${escapeHtml(state.filters.caseSearch || '')}" placeholder="Search report or incident ID, location, barangay...">
+      </label>
+      <span class="case-result-count">${matchingCases.length} case${matchingCases.length === 1 ? '' : 's'}</span>
+    </div>
+    <div class="case-table-wrap"><div class="table-scroll"><table class="case-management-table">
+      <thead><tr><th>Case ID</th><th>Date &amp; Time</th><th>Location / Linked Reports</th><th>Barangay</th><th>Type</th><th>Priority</th><th>Workflow status</th><th>Actions</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="8" class="case-empty">${emptyState('No cases match', search || selectedFilter !== 'all' ? 'Change the status filter or search terms.' : 'New reports and incidents will appear here.', '⚡')}</td></tr>`}</tbody>
+    </table></div></div>
+  </section>`);
+}
+
 async function renderAdminReports() {
   const f = state.filters;
   const params = query({ status: f.reportStatus, verification: f.reportVerification, barangay: f.reportBarangay, q: f.reportSearch });
@@ -972,7 +1126,7 @@ async function renderAdminReports() {
   adminShell(`
     <div class="reports-management-shell">
       <div class="reports-page-header">
-        <h1>Reports Management</h1>
+        <h1>Incidents &amp; Reports</h1>
         <button class="reports-close" type="button" data-action="close-dialog" aria-label="Close reports management">×</button>
       </div>
 
@@ -1129,7 +1283,7 @@ async function renderAdminVerification() {
       if (second.distance === null) return -1;
       return first.distance - second.distance;
     }).slice(0, 3) : [];
-  const canVerify = report && !['Verified', 'Officially Confirmed', 'Resolved', 'Duplicate', 'Rejected'].includes(reportStatus);
+  const canVerify = report && !report.incident_id && !['Resolved', 'Duplicate', 'Rejected'].includes(reportStatus);
   const canReject = report && !['Rejected', 'Duplicate'].includes(reportStatus);
   const canLinkIncident = canReject && ['administrator', 'personnel'].includes(state.user?.role);
   const canMarkDuplicate = report && !['Rejected', 'Duplicate'].includes(reportStatus)
@@ -1155,8 +1309,9 @@ async function renderAdminVerification() {
     </button>`).join('') : '<p class="verification-no-evidence">No evidence attachments were submitted with this report.</p>';
 
   adminShell(`<section class="verification-page">
+    ${renderCaseManagementTabs('verification')}
     <div class="verification-heading-row">
-      <div><p class="verification-eyebrow">REPORT REVIEW</p><h2>Report Verification</h2></div>
+      <div><p class="verification-eyebrow">INCIDENTS &amp; REPORTS</p><h2>Verify Reports</h2></div>
       <div class="verification-heading-actions">
         <button type="button" class="verification-icon-btn" data-action="verification-refresh" aria-label="Refresh report data" title="Refresh">⟳</button>
       </div>
@@ -1210,7 +1365,7 @@ async function renderAdminVerification() {
       </div>
 
       <footer class="verification-actions" style="flex-wrap:wrap;gap:8px;">
-        ${canVerify ? `<button type="button" class="verification-action verify" data-action="verify-report" data-id="${report.id}">${icon('check')}Verify</button>` : ''}
+        ${canVerify ? `<button type="button" class="verification-action verify" data-action="verify-report" data-id="${report.id}">${icon('check')}${['Verified', 'Officially Confirmed', 'Resolved'].includes(reportStatus) ? 'Create Linked Incident' : 'Verify &amp; Create Incident'}</button>` : ''}
         <button type="button" class="verification-action" style="background:#0284c7;color:#fff;" data-action="open-assign-repair-modal" data-id="${report.id}" ${hasCoordinates(report) ? '' : 'disabled title="Exact report coordinates are required before dispatch."'} >
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
           ${report.assigned_team_name ? 'Reassign Crew' : 'Assign Repair Team'}
@@ -2321,8 +2476,9 @@ async function renderAdminIncidents() {
   };
 
   adminShell(`<section class="incident-management-page">
+    ${renderCaseManagementTabs('incidents')}
     <header class="incident-page-heading">
-      <h2>Incident Management</h2>
+      <div><p class="case-management-eyebrow">INCIDENTS &amp; REPORTS</p><h2>Incident Operations</h2></div>
       ${canCreateIncident ? `<button type="button" class="incident-create-button" data-action="new-incident"><span aria-hidden="true">+</span>Create Incident</button>` : ''}
     </header>
 

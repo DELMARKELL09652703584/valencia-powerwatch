@@ -196,6 +196,10 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
   if (report_id) {
     report = db.prepare('SELECT * FROM outage_reports WHERE id = ?').get(Number(report_id));
     if (!report) return res.status(404).json({ error: 'Outage report not found.' });
+    if (report.incident_id) {
+      incident = db.prepare('SELECT * FROM outage_incidents WHERE id = ?').get(report.incident_id);
+      if (!incident) return res.status(409).json({ error: 'The report references an incident that no longer exists.' });
+    }
     targetBarangay = report.barangay;
     targetPurok = report.purok || report.affected_area || null;
     targetLocation = report.location || `Brgy. ${report.barangay}${targetPurok ? ', ' + targetPurok : ''}`;
@@ -204,6 +208,9 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
   }
 
   if (incident_id) {
+    if (incident && Number(incident.id) !== Number(incident_id)) {
+      return res.status(409).json({ error: 'The selected report is already linked to a different incident.' });
+    }
     incident = db.prepare('SELECT * FROM outage_incidents WHERE id = ?').get(Number(incident_id));
     if (!incident) return res.status(404).json({ error: 'Outage incident not found.' });
     targetBarangay = incident.barangay;
@@ -218,12 +225,44 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
     return res.status(400).json({ error: 'This report or incident has no confirmed exact coordinates and cannot be routed. Verify its location before dispatch.' });
   }
 
-  const code = nextCode('DISP');
   const ts = now();
 
   db.exec('BEGIN');
   let assignmentId;
+  let code;
   try {
+    code = nextCode('DISP');
+    if (report && !incident) {
+      const incidentCode = nextCode('OUT');
+      const incidentPriority = ['Low', 'Medium', 'High', 'Critical'].includes(priority) ? priority : 'Medium';
+      const incidentTitle = `${report.possible_outage_type || 'Power outage'} — ${report.purok || report.affected_area || report.barangay}`;
+      const incidentInfo = db.prepare(`
+        INSERT INTO outage_incidents (
+          incident_code, title, barangay, location, latitude, longitude, incident_type,
+          outage_type, priority, description, status, start_time, affected_area, purok,
+          remarks, assigned_team_id, assigned_team_name, repair_status, created_by, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, 'Unexpected', ?, ?, ?, 'Restoration in Progress', ?, ?, ?, ?, ?, ?, 'Team Dispatched', ?, ?, ?)
+      `).run(
+        incidentCode, incidentTitle, report.barangay, report.location, report.latitude, report.longitude,
+        report.possible_outage_type || 'Power Outage', incidentPriority, report.description,
+        report.date_time_noticed || report.reported_at || ts, report.purok || report.affected_area || null,
+        report.purok || null, 'Verified and linked when the repair team was dispatched.',
+        team.id, team.name,
+        req.user.id, ts, ts,
+      );
+      incident = {
+        id: Number(incidentInfo.lastInsertRowid),
+        incident_code: incidentCode,
+        status: 'Restoration in Progress',
+      };
+      db.prepare('INSERT OR IGNORE INTO incident_areas (incident_id, barangay) VALUES (?, ?)').run(incident.id, report.barangay);
+      db.prepare('INSERT OR IGNORE INTO incident_links (incident_id, report_id, link_time) VALUES (?, ?, ?)').run(incident.id, report.id, ts);
+    }
+    if (report && incident && Number(report.incident_id) !== Number(incident.id)) {
+      db.prepare('INSERT OR IGNORE INTO incident_links (incident_id, report_id, link_time) VALUES (?, ?, ?)').run(incident.id, report.id, ts);
+    }
+
     const insertResult = db.prepare(`
       INSERT INTO repair_assignments (
         assignment_code, team_id, report_id, incident_id, assigned_by, status,
@@ -232,7 +271,7 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
       )
       VALUES (?, ?, ?, ?, ?, 'Dispatched', ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      code, team.id, report_id ? Number(report_id) : null, incident_id ? Number(incident_id) : null,
+      code, team.id, report_id ? Number(report_id) : null, incident?.id || null,
       req.user.id, priority, targetBarangay, targetPurok, targetLocation,
       targetLatitude, targetLongitude, dispatch_notes || null, ts, ts
     );
@@ -250,11 +289,21 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
     if (report) {
       db.prepare(`
         UPDATE outage_reports
-        SET assigned_team_id = ?, assigned_team_name = ?, repair_status = 'Team Dispatched',
+        SET incident_id = ?, assigned_team_id = ?, assigned_team_name = ?, repair_status = 'Team Dispatched',
             status = 'In Progress', verification_status = CASE WHEN verification_status = 'Officially Confirmed' THEN verification_status ELSE 'Verified' END,
             updated_at = ?
         WHERE id = ?
-      `).run(team.id, team.name, ts, report.id);
+      `).run(incident?.id || null, team.id, team.name, ts, report.id);
+      if (!report.incident_id && incident) {
+        recordReportEvent({
+          reportId: report.id,
+          eventType: 'verification',
+          title: `Verified and linked to incident ${incident.incident_code}`,
+          details: 'The incident record was created or linked when the repair team was dispatched.',
+          actor: req.user,
+          createdAt: ts,
+        });
+      }
       recordReportStatusChange(report, 'In Progress', req.user, ts, `Repair team ${team.name} was dispatched.`);
       recordReportEvent({
         reportId: report.id,
@@ -268,7 +317,7 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
 
     // Update incident
     if (incident) {
-      const linkedReports = db.prepare('SELECT * FROM outage_reports WHERE incident_id = ?').all(incident.id);
+      const linkedReports = db.prepare('SELECT * FROM outage_reports WHERE incident_id = ? AND id <> ?').all(incident.id, report?.id || 0);
       db.prepare(`
         UPDATE outage_incidents
         SET assigned_team_id = ?, assigned_team_name = ?, repair_status = 'Team Dispatched',
@@ -320,8 +369,8 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
       FROM incident_links l
       JOIN outage_reports r ON r.id = l.report_id
       JOIN users u ON u.id = r.reporter_id
-      WHERE l.incident_id = ?
-    `).all(incident.id);
+      WHERE l.incident_id = ? AND r.id <> ?
+    `).all(incident.id, report?.id || 0);
 
     const userIds = reporters.map((r) => r.id);
     if (userIds.length) {

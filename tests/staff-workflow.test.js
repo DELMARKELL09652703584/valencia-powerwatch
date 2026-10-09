@@ -22,6 +22,7 @@ let portalLoginEmails = {};
 let assignmentId;
 let evidenceId;
 let teamId;
+let linkedIncidentId;
 let serverOutput = '';
 
 const getAvailablePort = () => new Promise((resolve, reject) => {
@@ -358,6 +359,9 @@ test('Staff API scopes assignments and report evidence to assigned personnel tea
   assert.equal(allAssignments.length, 1);
   assert.equal(Number(allAssignments[0].id), Number(assignmentId));
   assert.equal(allAssignments[0].latest_stage, 'Assigned');
+  assert.ok(allAssignments[0].incident_id, 'dispatching a standalone report should create and link its incident');
+  linkedIncidentId = allAssignments[0].incident_id;
+  assert.equal(Number(allAssignments[0].report_incident_id), Number(allAssignments[0].incident_id));
   assert.match(allAssignments[0].dispatch_notes, /protective equipment/);
   assert.equal(Object.hasOwn(allAssignments[0], 'reporter_email'), false);
   const reportPhoto = allAssignments[0].attachments.find((attachment) => attachment.original_name === 'Report photo')
@@ -365,6 +369,13 @@ test('Staff API scopes assignments and report evidence to assigned personnel tea
   assert.ok(reportPhoto?.file_path);
   assert.equal((await fetch(`${baseUrl}${reportPhoto.file_path}`, { headers: { cookie: staffCookie } })).status, 200);
   assert.equal((await fetch(`${baseUrl}${reportPhoto.file_path}`, { headers: { cookie: unassignedCookie } })).status, 403);
+  const linkedIncidentResponse = await jsonRequest(`/api/incidents/${allAssignments[0].incident_id}`, adminCookie);
+  assert.equal(linkedIncidentResponse.status, 200);
+  const linkedIncident = (await linkedIncidentResponse.json()).incident;
+  assert.equal(linkedIncident.status, 'Restoration in Progress');
+  assert.equal(linkedIncident.linked_reports[0].report_code, allAssignments[0].report_code);
+  assert.equal((await jsonRequest(`/api/staff/assignments/${assignmentId}/verify`, unassignedCookie, 'POST', {})).status, 404);
+  assert.equal((await jsonRequest(`/api/staff/assignments/${assignmentId}/verify`, staffCookie, 'POST', {})).status, 409);
 
   const unassignedResponse = await jsonRequest('/api/staff/assignments', unassignedCookie);
   assert.equal(unassignedResponse.status, 200);
@@ -386,7 +397,8 @@ test('Staff response stages are ordered, documented, and notify the reporting re
     stage: 'Acknowledged',
     notes: 'Assignment accepted. Preparing equipment.',
   });
-  assert.equal(accepted.status, 201);
+  const acceptedBody = await accepted.json();
+  assert.equal(accepted.status, 201, JSON.stringify(acceptedBody));
 
   const enRoute = await jsonRequest(`/api/staff/assignments/${assignmentId}/updates`, staffCookie, 'POST', {
     stage: 'On the Way',
@@ -394,9 +406,17 @@ test('Staff response stages are ordered, documented, and notify the reporting re
     latitude: 7.906,
     longitude: 125.094,
   });
-  assert.equal(enRoute.status, 201);
+  const enRouteBody = await enRoute.json();
+  assert.equal(enRoute.status, 201, JSON.stringify(enRouteBody));
   const current = await jsonRequest(`/api/staff/assignments/${assignmentId}`, staffCookie);
   assert.equal((await current.json()).assignment.latest_stage, 'On the Way');
+  const residentReports = await jsonRequest('/api/reports/mine', residentCookie);
+  const residentReport = (await residentReports.json()).reports[0];
+  assert.equal(residentReport.status, 'In Progress');
+  assert.equal(residentReport.repair_status, 'En Route');
+  assert.equal(residentReport.incident_status, 'Restoration in Progress');
+  const adminIncidentResponse = await jsonRequest(`/api/incidents/${linkedIncidentId}`, adminCookie);
+  assert.equal((await adminIncidentResponse.json()).incident.repair_status, 'En Route');
   const notices = await jsonRequest('/api/notifications', residentCookie);
   assert.match(JSON.stringify(await notices.json()), /field crew/i);
 

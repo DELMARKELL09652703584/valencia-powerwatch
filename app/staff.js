@@ -168,6 +168,11 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
         <div><dt>Dispatch instructions</dt><dd>${escapeHtml(assignment.dispatch_notes || 'No additional instructions.')}</dd></div>
         ${assignment.reported_at ? `<div><dt>Reported</dt><dd>${escapeHtml(new Date(assignment.reported_at).toLocaleString())}</dd></div>` : ''}
       </div>
+      ${!compact && assignment.report_id && !assignment.report_incident_id && !assignment.incident_id
+        && !isTerminal
+        && !['Resolved', 'Rejected', 'Duplicate'].includes(assignment.report_status)
+        ? `<div class="staff-case-verification"><div><strong>Report verification</strong><span>This assigned report is not yet linked to a verified incident.</span></div><button class="staff-btn staff-btn-primary" type="button" data-action="verify-assigned-report" data-id="${assignment.id}">Verify &amp; create incident</button></div>`
+        : assignment.incident_code ? `<div class="staff-case-linked"><strong>Verified incident</strong><span>${escapeHtml(assignment.incident_code)} · ${escapeHtml(assignment.incident_title || '')}</span></div>` : ''}
       ${renderStageProgress(assignment)}
       ${assignment.updates?.[0] ? `<div class="staff-latest-update"><span>Latest update · ${escapeHtml(assignment.updates[0].stage)}</span><p>${escapeHtml(assignment.updates[0].notes || 'No field note attached.')}</p></div>` : ''}
     </section>` : ''}
@@ -595,6 +600,12 @@ document.addEventListener('click', async (event) => {
       button.disabled = true;
       await submitUpdate(root.querySelector(`form[data-form="update"][data-id="${CSS.escape(button.dataset.id)}"]`)
         || { dataset: { id: assignment.id }, querySelector: () => null }, button.dataset.stage);
+    } else if (action === 'verify-assigned-report') {
+      button.disabled = true;
+      const result = await send(`/api/staff/assignments/${encodeURIComponent(button.dataset.id)}/verify`, 'POST', {});
+      await refreshAssignments();
+      renderShell();
+      showToast(result.message || 'Report verified and linked to an incident.');
     } else if (action === 'share-location') {
       button.disabled = true;
       const position = await captureLocation();

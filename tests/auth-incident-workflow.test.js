@@ -247,10 +247,19 @@ test('closing an incident updates only its linked reports', { timeout: TEST_TIME
       incident_type: 'Unexpected',
       description: 'Isolated test incident linked to one report.',
       report_id: linkedReport.id,
+      initial_status: 'Verified',
+      priority: 'Critical',
     }),
   });
   assert.equal(createResponse.status, 201);
   const { incident } = await createResponse.json();
+  assert.equal(incident.status, 'Verified');
+  assert.equal(incident.priority, 'Critical');
+  const convertedReport = await getReport(adminCookie, linkedReport.id);
+  assert.equal(convertedReport.status, 'Verified');
+  assert.equal(convertedReport.verification_status, 'Verified');
+  assert.equal(Number(convertedReport.incident_id), Number(incident.id));
+  assert.equal(convertedReport.incident.incident_code, incident.incident_code);
 
   const ongoingResponse = await fetch(`${baseUrl}/api/incidents/${incident.id}/status`, {
     method: 'PUT',

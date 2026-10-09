@@ -62,6 +62,63 @@ body.dark-mode.admin-body .admin-shell .command-center-header h2 {
   color: #f1f7ff;
 }
 
+.case-management-page { display: grid; gap: 16px; min-width: 0; color: var(--admin-ink, #142c43); }
+.case-management-tabs { display: flex; gap: 7px; overflow-x: auto; padding: 3px 0 9px; border-bottom: 1px solid var(--admin-line, #dce5ee); }
+.case-management-tab, .case-status-tab { min-height: 40px; display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 8px; padding: 0 14px; border: 1px solid var(--admin-line, #dce5ee); border-radius: 9px; background: var(--admin-canvas, #f2f6fa); color: var(--admin-ink, #142c43); font: inherit; font-size: .82rem; font-weight: 700; cursor: pointer; }
+.case-management-tab.active, .case-status-tab.active { border-color: #1474c5; background: #e8f4ff; color: #075a9d; }
+.case-management-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.case-management-heading h2 { margin: 0; color: var(--admin-ink, #142c43); font-size: 1.5rem; font-weight: 800; }
+.case-management-heading p:not(.case-management-eyebrow) { max-width: 720px; margin: 6px 0 0; color: var(--admin-muted, #718399); font-size: .84rem; line-height: 1.5; }
+.case-management-eyebrow { margin: 0 0 4px; color: #1971ad; font-size: .68rem; font-weight: 850; letter-spacing: .1em; }
+.case-status-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 5px; }
+.case-status-tab { min-height: 37px; background: transparent; font-size: .76rem; }
+.case-status-tab span { min-width: 21px; padding: 2px 5px; border-radius: 999px; background: rgba(97, 119, 140, .12); font-size: .68rem; text-align: center; }
+.case-management-controls { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.case-search { min-height: 45px; flex: 1 1 360px; display: flex; align-items: center; gap: 10px; padding: 0 13px; border: 1px solid var(--admin-line, #dce5ee); border-radius: 9px; background: var(--admin-canvas, #f2f6fa); color: var(--admin-muted, #718399); }
+.case-search:focus-within { border-color: #3b92d3; box-shadow: 0 0 0 3px rgba(20, 116, 197, .1); }
+.case-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--admin-ink, #142c43); font: inherit; font-size: .84rem; }
+.case-result-count { color: var(--admin-muted, #718399); font-size: .78rem; font-weight: 700; white-space: nowrap; }
+.case-table-wrap { overflow: hidden; border: 1px solid var(--admin-line, #dce5ee); border-radius: 11px; background: var(--admin-canvas, #f2f6fa); }
+.case-management-table { width: 100%; min-width: 1020px; border-collapse: collapse; font-size: .8rem; }
+.case-management-table th { padding: 13px 11px; border-bottom: 1px solid var(--admin-line, #dce5ee); background: rgba(106, 143, 176, .1); color: var(--admin-ink, #142c43); font-size: .68rem; font-weight: 850; letter-spacing: .035em; text-align: left; white-space: nowrap; }
+.case-management-table td { padding: 12px 11px; border-bottom: 1px solid var(--admin-line, #dce5ee); color: var(--admin-ink, #142c43); vertical-align: middle; }
+.case-management-table tbody tr:last-child td { border-bottom: 0; }
+.case-management-table tbody tr:hover { background: rgba(66, 146, 208, .06); }
+.case-management-table td strong, .case-id-cell small, .case-management-table td small { display: block; }
+.case-id-cell { min-width: 120px; white-space: nowrap; }
+.case-id-cell strong { font-family: var(--mono); }
+.case-id-cell small, .case-management-table td small { margin-top: 4px; color: var(--admin-muted, #718399); font-size: .68rem; }
+.case-status-badge { display: inline-flex; align-items: center; justify-content: center; padding: 6px 9px; border-radius: 999px; background: #e5edf5; color: #475d72; font-size: .68rem; font-weight: 800; white-space: nowrap; }
+.case-status-badge.review { background: #fff3d9; color: #8a5a00; }
+.case-status-badge.verified { background: #e4f1ff; color: #1c62a0; }
+.case-status-badge.ongoing { background: #e3f2ff; color: #145f9b; }
+.case-status-badge.resolved { background: #e0f5e9; color: #1b7049; }
+.case-status-badge.rejected { background: #ffebeb; color: #a5323b; }
+.case-row-actions { display: flex; flex-wrap: wrap; gap: 5px; min-width: 170px; }
+.case-row-action { min-height: 32px; padding: 0 9px; border: 1px solid var(--admin-line, #dce5ee); border-radius: 7px; background: transparent; color: var(--admin-ink, #142c43); font: inherit; font-size: .68rem; font-weight: 750; cursor: pointer; white-space: nowrap; }
+.case-row-action:hover { border-color: #58a0d2; color: #0966aa; }
+.case-row-action.primary { border-color: #126fbd; background: #126fbd; color: #fff; }
+.case-row-action.primary:hover { background: #075a9d; color: #fff; }
+.case-empty { padding: 28px 16px !important; text-align: center; }
+body.dark-mode.admin-body .case-management-tab.active,
+body.dark-mode.admin-body .case-status-tab.active { border-color: #2387d4; background: #153859; color: #bfe3ff; }
+body.dark-mode.admin-body .case-status-tab span { background: rgba(180, 202, 222, .14); }
+body.dark-mode.admin-body .case-status-badge { background: #243548; color: #c3d2e0; }
+body.dark-mode.admin-body .case-status-badge.review { background: #493817; color: #ffd47d; }
+body.dark-mode.admin-body .case-status-badge.verified { background: #193b5a; color: #9dd6ff; }
+body.dark-mode.admin-body .case-status-badge.ongoing { background: #153c5a; color: #9dd6ff; }
+body.dark-mode.admin-body .case-status-badge.resolved { background: #143c2d; color: #9de0ba; }
+body.dark-mode.admin-body .case-status-badge.rejected { background: #4a252a; color: #ffb0b5; }
+body.dark-mode.admin-body .case-row-action.primary { border-color: #1677bd; background: #1269a8; }
+body.dark-mode.admin-body .case-row-action.primary:hover { background: #1984cf; }
+
+@media (max-width: 700px) {
+  .case-management-heading { align-items: flex-start; }
+  .case-management-heading h2 { font-size: 1.25rem; }
+  .case-management-controls { align-items: stretch; flex-direction: column; }
+  .case-search { flex-basis: auto; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   body.admin-body .admin-shell *,
   body.admin-body .admin-shell *::before,

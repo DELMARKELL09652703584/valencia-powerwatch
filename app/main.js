@@ -298,7 +298,7 @@ function renderRegister(message = '') {
 
 const ADMIN_PAGES = IS_ADMIN ? {
   dashboard: renderAdminDashboard,
-  reports: renderAdminReports,
+  reports: renderAdminUnifiedCases,
   verification: renderAdminVerification,
   dispatch: renderAdminDispatch,
   incidents: renderAdminIncidents,
@@ -707,6 +707,35 @@ async function submitForm(form) {
     await refreshConfig();
     setToast('Barangay updated.');
     closeDialog();
+    await render();
+    return;
+  }
+  if (type === 'verify-create-incident') {
+    const { report } = await api(`/api/reports/${target.dataset.id}`);
+    if (report.incident_id) throw new Error('This report has already been linked to an incident.');
+    if (['Resolved', 'Rejected', 'Duplicate'].includes(report.status)) {
+      throw new Error('Resolved, rejected, and duplicate reports cannot be converted into incidents.');
+    }
+    const result = await send('/api/incidents', 'POST', {
+      report_id: report.id,
+      title: String(values.title || '').trim(),
+      barangay: report.barangay,
+      location: report.location || report.purok || report.barangay,
+      latitude: report.latitude ?? null,
+      longitude: report.longitude ?? null,
+      incident_type: 'Unexpected',
+      outage_type: String(values.outage_type || report.possible_outage_type || 'Power Outage').trim(),
+      priority: values.priority || 'Medium',
+      description: report.description,
+      start_time: values.start_time ? new Date(values.start_time).toISOString() : new Date(report.date_time_noticed || report.reported_at).toISOString(),
+      affected_area: report.purok || report.affected_area || report.barangay,
+      affected_barangays: [report.barangay],
+      remarks: String(values.remarks || '').trim() || null,
+      initial_status: 'Verified',
+    });
+    setToast(result.message || 'Report verified and linked to an incident.');
+    closeDialog();
+    state.page = 'incidents';
     await render();
     return;
   }
@@ -1777,11 +1806,42 @@ async function handleClick(event) {
         state.reportPage = 1;
         await render();
         return;
-      case 'verify-report':
-        await send(`/api/reports/${id}/status`, 'PUT', { status: 'Verified' });
-        setToast('Report verified.');
+      case 'open-case-verification':
+        state.page = 'verification';
+        state.verificationReportId = id;
+        state.filters.verificationStatus = '';
+        state.filters.verificationSearch = '';
         await render();
         return;
+      case 'filter-unified-case':
+        state.filters.caseStatus = value;
+        await render();
+        return;
+      case 'verify-report': {
+        const { report } = await api(`/api/reports/${id}`);
+        if (report.incident_id) {
+          setToast('This report is already linked to a verified incident.');
+          state.page = 'incidents';
+          await render();
+          return;
+        }
+        if (['Resolved', 'Rejected', 'Duplicate'].includes(report.status)) {
+          throw new Error('Resolved, rejected, and duplicate reports cannot be converted into incidents.');
+        }
+        const noticedAt = new Date(report.date_time_noticed || report.reported_at || Date.now());
+        const localStart = new Date(noticedAt.getTime() - noticedAt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        const suggestedTitle = `${report.possible_outage_type || 'Power outage'} — ${report.purok || report.affected_area || report.barangay}`;
+        openDialog(`Verify & create incident · ${report.report_code}`, `
+          <div class="form-stack">
+            <p>This will verify the submitted report and create one linked incident record. Report history and evidence will be preserved.</p>
+            <label class="wide-field">Incident title<input class="input" name="title" maxlength="180" value="${escapeHtml(suggestedTitle)}" required></label>
+            <label>Priority<select class="input" name="priority"><option>Low</option><option selected>Medium</option><option>High</option><option>Critical</option></select></label>
+            <label>Outage type<input class="input" name="outage_type" value="${escapeHtml(report.possible_outage_type || 'Power Outage')}" required></label>
+            <label>Incident start time<input class="input" type="datetime-local" name="start_time" value="${escapeHtml(localStart)}" required></label>
+            <label class="wide-field">Incident remarks<textarea class="input" name="remarks" rows="3"></textarea></label>
+          </div>`, 'Verify & create incident', { form: 'verify-create-incident', id });
+        return;
+      }
       case 'verification-duplicate': {
         const { report } = await api(`/api/reports/${id}`);
         openDialog(`Mark ${report.report_code} as duplicate`, `
@@ -2859,9 +2919,7 @@ function openCommandPalette() {
 
   const navItems = [
     { label: 'Dashboard Overview', icon: '📊', type: 'page', key: 'dashboard' },
-    { label: 'Incident & Outage Monitoring', icon: '⚡', type: 'page', key: 'incidents' },
-    { label: 'Report Verification Queue', icon: '🔍', type: 'page', key: 'verification' },
-    { label: 'Citizen Reports Table', icon: '📋', type: 'page', key: 'reports' },
+    { label: 'Incidents & Reports', icon: '⚡', type: 'page', key: 'reports' },
     { label: 'Interactive GIS Outage Map', icon: '🗺️', type: 'page', key: 'map' },
     { label: 'Scheduled Maintenance Grid', icon: '🗓️', type: 'page', key: 'scheduled' },
     { label: 'Notifications', icon: '🔔', type: 'page', key: 'notifications' },
