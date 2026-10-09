@@ -53,6 +53,7 @@ test('database startup preserves existing accounts and credentials', () => {
       encoding: 'utf8',
       env: {
         ...process.env,
+        NODE_ENV: 'test',
         POWERWATCH_DATA_DIR: dataDirectory,
       },
     });
