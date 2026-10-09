@@ -54,3 +54,11 @@ test('Admin route guide text remains readable in dark mode', () => {
   assert.match(styles, /body\.dark-mode\.admin-body \.map-route-hud \.map-route-hud-btn:not\(\.secondary\) :where\(span\)\s*\{\s*color:\s*#fff\s*!important;/s);
   assert.match(adminPage, /\/app\/portal-polish\.css\?v=38/);
 });
+
+test('dispatch eligibility offers a direct path to staff access settings', () => {
+  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+
+  assert.match(mainScript, /data-action="open-staff-access">Open Manage Staff Team Access/);
+  assert.match(mainScript, /case 'open-staff-access':\s*\{\s*closeDialog\(\);\s*await goToPage\('dispatch'\);/);
+  assert.match(mainScript, /staffAccess\.open = true;/);
+});

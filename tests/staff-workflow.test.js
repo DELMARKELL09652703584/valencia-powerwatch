@@ -229,6 +229,8 @@ before(async () => {
   assert.equal(verification.status, 200);
   const eligibilityResponse = await jsonRequest(`/api/repair/dispatch-eligibility?report_id=${report.id}`, adminCookie);
   assert.equal(eligibilityResponse.status, 200);
+  assert.equal((await jsonRequest('/api/repair/dispatch-eligibility?report_id=invalid', adminCookie)).status, 400);
+  assert.equal((await jsonRequest(`/api/repair/dispatch-eligibility?report_id=${report.id}&incident_id=1`, adminCookie)).status, 400);
   const eligibility = await eligibilityResponse.json();
   assert.equal(eligibility.verified, true);
   assert.equal(eligibility.active_staff_in_barangay, 1);
@@ -251,6 +253,19 @@ before(async () => {
     barangay_names: ['Poblacion'],
   });
   assert.equal(restoredMembership.status, 200);
+  const legacyMembershipDb = new DatabaseSync(testDatabasePath);
+  try {
+    legacyMembershipDb.prepare('UPDATE staff_barangay_assignments SET barangay = ? WHERE user_id = ?')
+      .run(' POBLACION ', staff.id);
+  } finally {
+    legacyMembershipDb.close();
+  }
+  const normalizedEligibilityResponse = await jsonRequest(`/api/repair/dispatch-eligibility?report_id=${report.id}`, adminCookie);
+  const normalizedEligibility = await normalizedEligibilityResponse.json();
+  assert.equal(normalizedEligibility.reason, null, 'legacy case and whitespace differences must not block dispatch');
+  assert.equal(normalizedEligibility.teams.find((responseTeam) => responseTeam.id === team.id).eligible_staff_count, 1);
+  const staffMembershipView = await (await jsonRequest('/api/admin/staff-memberships', adminCookie)).json();
+  assert.deepEqual(staffMembershipView.staff.find((member) => member.id === staff.id).barangay_names, ['Poblacion']);
   const dispatchResponse = await jsonRequest('/api/repair/assign', adminCookie, 'POST', {
     team_id: team.id,
     report_id: report.id,

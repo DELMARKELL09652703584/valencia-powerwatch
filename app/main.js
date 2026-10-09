@@ -935,6 +935,18 @@ async function handleClick(event) {
       case 'close-dialog':
         closeDialog();
         return;
+      case 'open-staff-access': {
+        closeDialog();
+        await goToPage('dispatch');
+        const staffAccess = document.querySelector('.staff-team-management');
+        if (staffAccess) {
+          staffAccess.open = true;
+          staffAccess.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          setToast('No staff accounts are available to assign. Create a staff account first.');
+        }
+        return;
+      }
       case 'install-app': {
         if (deferredPwaInstallPrompt) {
           const installPrompt = deferredPwaInstallPrompt;
@@ -1893,15 +1905,18 @@ async function handleClick(event) {
               </div>
             </div>
 
-            <label class="wide-field">
-              <span>Select Emergency Response Crew <strong style="color:#ef4444;">*</strong></span>
-              <select class="input" name="team_id" required ${!verified || !eligibleTeams.length ? 'disabled' : ''}>
+            <div class="wide-field">
+              <label for="repair-team-select">Select Emergency Response Crew <strong style="color:#ef4444;">*</strong></label>
+              <select class="input" id="repair-team-select" name="team_id" required ${!verified || !eligibleTeams.length ? 'disabled' : ''}>
                 <option value="">-- Choose Emergency Crew --</option>
                 ${teamOptions}
               </select>
-              ${eligibilityMessage ? `<span class="muted small">${eligibilityMessage}</span>` : ''}
-              ${!verified ? '<span class="muted small">Verify this report before dispatch.</span>' : ''}
-            </label>
+              ${eligibilityMessage ? `<div class="muted small">${eligibilityMessage}</div>` : ''}
+              ${!verified ? '<div class="muted small">Verify this report before dispatch.</div>' : ''}
+              ${['no_staff_coverage', 'staff_not_assigned_to_team'].includes(eligibility.reason)
+                ? '<button type="button" class="button ghost small" data-action="open-staff-access">Open Manage Staff Team Access</button>'
+                : ''}
+            </div>
 
             <label class="wide-field">
               <span>Dispatch Priority</span>

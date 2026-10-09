@@ -25,19 +25,22 @@ const staffBarangaysFor = (userId) => db.prepare(`
   SELECT barangay FROM staff_barangay_assignments WHERE user_id = ? ORDER BY barangay COLLATE NOCASE
 `).all(userId).map((row) => row.barangay);
 
+const normalizeBarangayName = (barangay) => String(barangay || '').trim().toLowerCase();
+
 const staffCanAccessBarangay = (user, barangay) => user?.role !== 'personnel'
-  || (Boolean(barangay) && staffBarangaysFor(user.id).includes(String(barangay)));
+  || (Boolean(normalizeBarangayName(barangay))
+    && staffBarangaysFor(user.id).some((assigned) => normalizeBarangayName(assigned) === normalizeBarangayName(barangay)));
 
 const staffCanAccessIncident = (user, incident) => {
   if (user?.role !== 'personnel') return true;
-  const assignedAreas = new Set(staffBarangaysFor(user.id));
-  if (!incident || !assignedAreas.has(incident.barangay)) {
+  const assignedAreas = new Set(staffBarangaysFor(user.id).map(normalizeBarangayName));
+  if (!incident || !assignedAreas.has(normalizeBarangayName(incident.barangay))) {
     const areas = incident
       ? db.prepare('SELECT barangay FROM incident_areas WHERE incident_id = ?').all(incident.id)
       : [];
-    return areas.some((area) => assignedAreas.has(area.barangay));
+    return areas.some((area) => assignedAreas.has(normalizeBarangayName(area.barangay)));
   }
   return true;
 };
 
-module.exports = { staffBarangaysFor, staffCanAccessBarangay, staffCanAccessIncident };
+module.exports = { staffBarangaysFor, normalizeBarangayName, staffCanAccessBarangay, staffCanAccessIncident };

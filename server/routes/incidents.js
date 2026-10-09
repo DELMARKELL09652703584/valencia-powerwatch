@@ -79,11 +79,13 @@ router.get('/incidents', requireAuth, (req, res) => {
   if (req.user.role === 'personnel') {
     const assignedBarangays = staffBarangaysFor(req.user.id);
     if (!assignedBarangays.length) return res.json({ incidents: [], statuses: INCIDENT_STATUSES });
-    const placeholders = assignedBarangays.map(() => '?').join(', ');
-    where.push(`(i.barangay IN (${placeholders}) OR i.id IN (SELECT incident_id FROM incident_areas WHERE barangay IN (${placeholders})))`);
+    const normalizedPlaceholders = assignedBarangays.map(() => 'LOWER(TRIM(?))').join(', ');
+    where.push(`(LOWER(TRIM(i.barangay)) IN (${normalizedPlaceholders}) OR i.id IN (
+      SELECT incident_id FROM incident_areas WHERE LOWER(TRIM(barangay)) IN (${normalizedPlaceholders})
+    ))`);
     params.push(...assignedBarangays, ...assignedBarangays);
   }
-  if (barangay) { where.push('i.barangay = ?'); params.push(barangay); }
+  if (barangay) { where.push('LOWER(TRIM(i.barangay)) = LOWER(TRIM(?))'); params.push(barangay); }
   if (type) { where.push('i.incident_type = ?'); params.push(type); }
   if (status) { where.push('i.status = ?'); params.push(status); }
 

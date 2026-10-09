@@ -6,6 +6,7 @@ const express = require('express');
 const { db, DB_PATH, now } = require('../db');
 const { requireAuth, requireRole, audit, notifyUsers } = require('../auth');
 const { recordReportEvent, recordReportStatusChange } = require('../report-events');
+const { normalizeBarangayName } = require('../staff-access');
 
 const router = express.Router();
 const evidenceDirectory = path.join(path.dirname(DB_PATH), 'staff-evidence');
@@ -414,8 +415,10 @@ router.get('/admin/staff-memberships', requireAuth, requireRole('administrator')
       ...user,
       team_ids: memberships.filter((membership) => Number(membership.user_id) === Number(user.id))
         .map((membership) => Number(membership.team_id)),
-      barangay_names: barangayMemberships.filter((membership) => Number(membership.user_id) === Number(user.id))
-        .map((membership) => membership.barangay),
+      barangay_names: [...new Set(barangayMemberships
+        .filter((membership) => Number(membership.user_id) === Number(user.id))
+        .map((membership) => barangays.find((area) =>
+          normalizeBarangayName(area.name) === normalizeBarangayName(membership.barangay))?.name || membership.barangay))],
     })),
     teams,
     barangays: barangays.map((barangay) => barangay.name),

@@ -193,21 +193,19 @@ router.get('/repair/assignments/:id', requireAuth, requireRole('administrator', 
 });
 
 router.get('/repair/dispatch-eligibility', requireAuth, requireRole('administrator', 'utility'), (req, res) => {
-  const reportId = Number(req.query.report_id);
-  const incidentId = Number(req.query.incident_id);
-  if ((!Number.isSafeInteger(reportId) || reportId < 1) && (!Number.isSafeInteger(incidentId) || incidentId < 1)) {
-    return res.status(400).json({ error: 'A valid report or incident ID is required.' });
-  }
+  const hasReportId = req.query.report_id !== undefined;
+  const hasIncidentId = req.query.incident_id !== undefined;
+  if (hasReportId === hasIncidentId) return res.status(400).json({ error: 'Provide exactly one report or incident ID.' });
+  const selectedId = Number(hasReportId ? req.query.report_id : req.query.incident_id);
+  if (!Number.isSafeInteger(selectedId) || selectedId < 1) return res.status(400).json({ error: 'A valid report or incident ID is required.' });
 
-  const report = Number.isSafeInteger(reportId) && reportId > 0
-    ? db.prepare('SELECT id, barangay, verification_status FROM outage_reports WHERE id = ?').get(reportId)
+  const report = hasReportId
+    ? db.prepare('SELECT id, barangay, verification_status FROM outage_reports WHERE id = ?').get(selectedId)
     : null;
-  const incident = Number.isSafeInteger(incidentId) && incidentId > 0
-    ? db.prepare('SELECT id, barangay FROM outage_incidents WHERE id = ?').get(incidentId)
+  const incident = hasIncidentId
+    ? db.prepare('SELECT id, barangay FROM outage_incidents WHERE id = ?').get(selectedId)
     : null;
-  if ((reportId && !report) || (incidentId && !incident)) {
-    return res.status(404).json({ error: 'The selected report or incident was not found.' });
-  }
+  if (!report && !incident) return res.status(404).json({ error: 'The selected report or incident was not found.' });
 
   const barangay = incident?.barangay || report?.barangay;
   const areaStaffCount = activeStaffForBarangayCount(barangay);

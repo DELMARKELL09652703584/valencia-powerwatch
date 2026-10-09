@@ -165,7 +165,7 @@ router.get('/reports/map', requireAuth, (req, res) => {
   const assignedBarangays = req.user.role === 'personnel' ? staffBarangaysFor(req.user.id) : null;
   if (assignedBarangays && !assignedBarangays.length) return res.json({ reports: [] });
   const areaFilter = assignedBarangays
-    ? `AND r.barangay IN (${assignedBarangays.map(() => '?').join(', ')})`
+    ? `AND LOWER(TRIM(r.barangay)) IN (${assignedBarangays.map(() => 'LOWER(TRIM(?))').join(', ')})`
     : '';
   const rows = db.prepare(`
     SELECT r.id, r.report_code, r.incident_id, r.barangay, r.purok, r.location, r.location_source, r.location_accuracy_m, r.affected_area,
@@ -190,12 +190,12 @@ router.get('/reports', requireAuth, requireRole('personnel', 'administrator', 'u
   if (req.user.role === 'personnel') {
     const assignedBarangays = staffBarangaysFor(req.user.id);
     if (!assignedBarangays.length) return res.json({ reports: [], statuses: STATUS_FLOW });
-    where.push(`r.barangay IN (${assignedBarangays.map(() => '?').join(', ')})`);
+    where.push(`LOWER(TRIM(r.barangay)) IN (${assignedBarangays.map(() => 'LOWER(TRIM(?))').join(', ')})`);
     params.push(...assignedBarangays);
   }
   if (status) { where.push('r.status = ?'); params.push(status); }
   if (verification) { where.push('r.verification_status = ?'); params.push(verification); }
-  if (barangay) { where.push('r.barangay = ?'); params.push(barangay); }
+  if (barangay) { where.push('LOWER(TRIM(r.barangay)) = LOWER(TRIM(?))'); params.push(barangay); }
   if (q) {
     where.push('(r.report_code LIKE ? OR r.location LIKE ? OR r.affected_area LIKE ? OR r.description LIKE ?)');
     const like = `%${q}%`;
