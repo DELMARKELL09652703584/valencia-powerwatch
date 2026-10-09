@@ -30,9 +30,19 @@ const getBarangayNames = () => {
 
 // Demo accounts shown on the login screen for demonstration purposes.
 router.get('/auth/demo', (req, res) => {
-  const demos = [
-    { role: 'administrator', label: 'Administrator', email: 'admin@powerwatch.ph' },
-  ];
+  const admins = db.prepare(`
+    SELECT full_name, email, role FROM users
+    WHERE role = 'administrator' AND status = 'Active'
+    ORDER BY full_name ASC
+  `).all();
+
+  const demos = admins.map((admin) => ({
+    role: 'administrator',
+    label: 'Administrator',
+    email: admin.email,
+    full_name: admin.full_name,
+  }));
+
   res.json({
     demos,
     barangays: getBarangayNames(),

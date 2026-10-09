@@ -468,7 +468,14 @@ const nextCode = (prefix) => {
 // ---------------------------------------------------------------- seed
 
 const SEED_VERSION = 'v2.0_clean';
-const BUILT_IN_ADMIN_PASSWORD = 'ADMIN2023*';
+const BOOTSTRAP_ADMIN_EMAIL = process.env.POWERWATCH_ADMIN_EMAIL || 'admin@powerwatch.ph';
+const BOOTSTRAP_ADMIN_NAME = process.env.POWERWATCH_ADMIN_NAME || 'System Administrator';
+const TEST_BOOTSTRAP_ADMIN_PASSWORD = 'ADMIN2023*';
+const BOOTSTRAP_ADMIN_PASSWORD = (() => {
+  if (process.env.POWERWATCH_ADMIN_PASSWORD) return process.env.POWERWATCH_ADMIN_PASSWORD;
+  if (process.env.NODE_ENV === 'test' || process.env.npm_lifecycle_event === 'test' || process.argv.includes('--test')) return TEST_BOOTSTRAP_ADMIN_PASSWORD;
+  return null;
+})();
 
 const VALENCIA_BARANGAYS = [
   'Bagontaas', 'Banlag', 'Barobo', 'Batangan', 'Catumbalon', 'Colonia',
@@ -587,9 +594,9 @@ function seedIfFresh() {
 
 // Create the built-in admin accounts only when their identifiers are unused.
 const ensureAdminAccount = () => {
-  const existingAdmin = db.prepare(`
-    SELECT id FROM users
-    WHERE LOWER(COALESCE(username, '')) = LOWER('DELMARKEL2003') 
+  const legacyAdmin = db.prepare(`
+    SELECT * FROM users
+    WHERE LOWER(COALESCE(username, '')) = LOWER('DELMARKEL2003')
        OR LOWER(email) = LOWER('dsaroay@gmail.com')
     ORDER BY CASE
       WHEN LOWER(COALESCE(username, '')) = LOWER('DELMARKEL2003') THEN 0
@@ -598,36 +605,75 @@ const ensureAdminAccount = () => {
     LIMIT 1
   `).get();
 
-  if (existingAdmin) {
-    db.prepare(`
-      UPDATE users
-      SET username = ?, email = ?, contact_number = ?, password_hash = ?,
-          role = 'administrator', status = 'Active'
-      WHERE id = ?
-    `).run(
-      'DELMARKEL2003', 'dsaroay@gmail.com', '09652703584',
-      hashPassword(BUILT_IN_ADMIN_PASSWORD), existingAdmin.id
-    );
-  } else {
-    db.prepare(`
-      INSERT INTO users (full_name, username, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)
-    `).run(
-      'Delmarkel Saro-ay', 'DELMARKEL2003', 'dsaroay@gmail.com', '09652703584',
-      'Brgy. Guinoyuran, Valencia City, Bukidnon', 'Guinoyuran',
-      hashPassword(BUILT_IN_ADMIN_PASSWORD), now(), now()
-    );
+  if (legacyAdmin) {
+    return;
   }
 
-  const demoAdmin = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get('admin@powerwatch.ph');
-  if (!demoAdmin) {
-    db.prepare(`
-      INSERT INTO users (full_name, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
-      VALUES (?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)
-    `).run('System Administrator', 'admin@powerwatch.ph', '0917-555-0100', 'Brgy. Poblacion, Valencia City', 'Poblacion', hashPassword('admin123'), now(), now());
+  const configuredAdmin = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?) LIMIT 1').get(BOOTSTRAP_ADMIN_EMAIL, BOOTSTRAP_ADMIN_EMAIL.split('@')[0]);
+  if (configuredAdmin) {
+    return;
   }
 
-  // Ensure all existing users have a valid lowercase username derived from their email
+  if (process.env.NODE_ENV === 'test' || process.env.npm_lifecycle_event === 'test' || process.argv.includes('--test')) {
+    const legacyAdminExists = db.prepare('SELECT 1 FROM users WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)').get('dsaroay@gmail.com', 'DELMARKEL2003');
+    if (!legacyAdminExists) {
+      db.prepare(`
+        INSERT INTO users (full_name, username, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)
+      `).run(
+        'Delmarkel Saro-ay',
+        'DELMARKEL2003',
+        'dsaroay@gmail.com',
+        '09652703584',
+        'Brgy. Guinoyuran, Valencia City, Bukidnon',
+        'Guinoyuran',
+        hashPassword(TEST_BOOTSTRAP_ADMIN_PASSWORD),
+        now(),
+        now()
+      );
+    }
+
+    const demoAdminExists = db.prepare('SELECT 1 FROM users WHERE LOWER(email) = LOWER(?)').get(BOOTSTRAP_ADMIN_EMAIL);
+    if (!demoAdminExists) {
+      db.prepare(`
+        INSERT INTO users (full_name, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
+        VALUES (?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)
+      `).run(
+        BOOTSTRAP_ADMIN_NAME,
+        BOOTSTRAP_ADMIN_EMAIL,
+        '0917-555-0100',
+        'Brgy. Poblacion, Valencia City',
+        'Poblacion',
+        hashPassword('admin123'),
+        now(),
+        now()
+      );
+    }
+
+    checkpointDb();
+    return;
+  }
+
+  if (!BOOTSTRAP_ADMIN_PASSWORD) {
+    console.warn('No POWERWATCH_ADMIN_PASSWORD configured; skipping automatic admin bootstrap to avoid overwriting or creating a known default administrator.');
+    return;
+  }
+
+  db.prepare(`
+    INSERT INTO users (full_name, username, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)
+  `).run(
+    BOOTSTRAP_ADMIN_NAME,
+    BOOTSTRAP_ADMIN_EMAIL.split('@')[0],
+    BOOTSTRAP_ADMIN_EMAIL,
+    '0917-555-0100',
+    'Brgy. Poblacion, Valencia City, Bukidnon',
+    'Poblacion',
+    hashPassword(BOOTSTRAP_ADMIN_PASSWORD),
+    now(),
+    now()
+  );
+
   try {
     db.exec(`
       UPDATE users 
