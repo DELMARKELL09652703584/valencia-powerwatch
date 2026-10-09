@@ -397,9 +397,6 @@ const renderLogin = (message = '') => {
       <button class="staff-btn staff-btn-primary" type="submit">Sign in to field app</button>
     </form>
     <p class="staff-login-copy" style="margin:16px 0 0;font-size:.78rem">This is a separate Staff App. Resident and administrator accounts use their own portals.</p>
-    <nav aria-label="Other PowerWatch portals" style="display:flex;justify-content:center;gap:16px;margin-top:10px;font-size:.8rem">
-      <a href="/">User Portal</a><a href="/admin">Admin Portal</a>
-    </nav>
   </section></main>`;
 };
 

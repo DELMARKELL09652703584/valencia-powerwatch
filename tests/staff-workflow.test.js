@@ -208,7 +208,7 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
     fetch(`${baseUrl}/staff-manifest.json`),
     fetch(`${baseUrl}/staff-sw.js`),
     fetch(`${baseUrl}/app/staff.css?v=4`),
-    fetch(`${baseUrl}/app/staff.js?v=4`),
+    fetch(`${baseUrl}/app/staff.js?v=6`),
     Promise.all([
       'powerwatch-icon-192.png',
       'powerwatch-icon-512.png',
@@ -226,6 +226,9 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
   assert.equal(workerResponse.headers.get('service-worker-allowed'), '/staff');
   assert.equal(cssResponse.status, 200);
   assert.equal(jsResponse.status, 200);
+  const staffSource = await jsResponse.text();
+  assert.match(staffSource, /const renderLogin/);
+  assert.doesNotMatch(staffSource, /<a href="\/">User Portal<\/a>|<a href="\/admin">Admin Portal<\/a>/);
   assert.ok(iconResponses.every((response) => response.status === 200));
   const staffStyles = await cssResponse.text();
   assert.match(staffStyles, /width: min\(100%, 430px\)/);
