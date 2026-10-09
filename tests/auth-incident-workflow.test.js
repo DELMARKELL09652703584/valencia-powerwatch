@@ -172,6 +172,7 @@ test('unverified social-login claims cannot create accounts or sessions', { time
   assert.equal(authConfig.oauthProviders.googleLive, false);
   assert.equal(authConfig.oauthProviders.facebookLive, false);
   assert.equal(authConfig.passwordRecoveryEnabled, false);
+  assert.deepEqual(authConfig.demos, []);
 
   const unavailableProviderResponses = await Promise.all([
     fetch(`${baseUrl}/api/auth/oauth/google`),

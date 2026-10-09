@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const net = require('node:net');
@@ -9,6 +10,8 @@ const { DatabaseSync } = require('node:sqlite');
 
 const ROOT = path.resolve(__dirname, '..');
 const TEST_TIMEOUT_MS = 30000;
+const testAdminEmail = 'dsaroay@gmail.com';
+const testAdminPassword = `${crypto.randomUUID()}Aa1!`;
 let serverProcess;
 let baseUrl;
 let testDirectory;
@@ -123,8 +126,12 @@ before(async () => {
     cwd: runtimeRoot,
     env: {
       ...process.env,
+      NODE_ENV: 'test',
       PORT: String(port),
       POWERWATCH_DATA_DIR: path.join(runtimeRoot, 'data'),
+      POWERWATCH_ADMIN_EMAIL: testAdminEmail,
+      POWERWATCH_ADMIN_PASSWORD: testAdminPassword,
+      POWERWATCH_ADMIN_NAME: 'Isolated Test Administrator',
       GOOGLE_CLIENT_ID: '',
       GOOGLE_CLIENT_SECRET: '',
       FACEBOOK_CLIENT_ID: '',
@@ -147,8 +154,8 @@ before(async () => {
     }
   }
   const adminLogin = await jsonRequest('/api/auth/login', '', 'POST', {
-    email: 'admin@powerwatch.ph',
-    password: 'admin123',
+    email: testAdminEmail,
+    password: testAdminPassword,
     portal: 'admin',
   });
   const adminLoginResult = await adminLogin.json();
@@ -408,8 +415,8 @@ test('verified database roles assign each account its own portal after login', {
     jsonRequest('/api/auth/login', '', 'POST', { email: portalLoginEmails.resident, password: 'resident-password-123', portal: 'staff' }),
     jsonRequest('/api/auth/login', '', 'POST', { email: portalLoginEmails.staff, password: 'field-password-123', portal: 'admin' }),
     jsonRequest('/api/auth/login', '', 'POST', { email: portalLoginEmails.staff, password: 'field-password-123', portal: 'community' }),
-    jsonRequest('/api/auth/login', '', 'POST', { email: 'admin@powerwatch.ph', password: 'admin123', portal: 'staff' }),
-    jsonRequest('/api/auth/login', '', 'POST', { email: 'admin@powerwatch.ph', password: 'admin123', portal: 'community' }),
+    jsonRequest('/api/auth/login', '', 'POST', { email: testAdminEmail, password: testAdminPassword, portal: 'staff' }),
+    jsonRequest('/api/auth/login', '', 'POST', { email: testAdminEmail, password: testAdminPassword, portal: 'community' }),
   ]);
   assert.ok(mismatchedPortalAttempts.every((response) => response.status === 403));
 
@@ -448,7 +455,7 @@ test('built-in administrator account remains active and protected from account c
   const usersResponse = await jsonRequest('/api/admin/users?status=all', adminCookie);
   assert.equal(usersResponse.status, 200);
   const users = (await usersResponse.json()).users;
-  const builtInUser = users.find((user) => user.username === 'DELMARKEL2003');
+  const builtInUser = users.find((user) => user.email === testAdminEmail);
   assert.ok(builtInUser);
   const staffUser = users.find((user) => user.email === portalLoginEmails.staff);
   assert.ok(staffUser);

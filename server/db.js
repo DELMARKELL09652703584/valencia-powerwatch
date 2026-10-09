@@ -615,6 +615,22 @@ const ensureAdminAccount = () => {
   }
 
   if (process.env.NODE_ENV === 'test' || process.env.npm_lifecycle_event === 'test' || process.argv.includes('--test')) {
+    if (process.env.POWERWATCH_ADMIN_PASSWORD) {
+      db.prepare(`
+        INSERT INTO users (full_name, username, email, password_hash, role, status, created_at, last_login)
+        VALUES (?, ?, ?, ?, 'administrator', 'Active', ?, ?)
+      `).run(
+        BOOTSTRAP_ADMIN_NAME,
+        BOOTSTRAP_ADMIN_EMAIL.split('@')[0],
+        BOOTSTRAP_ADMIN_EMAIL,
+        hashPassword(process.env.POWERWATCH_ADMIN_PASSWORD),
+        now(),
+        now()
+      );
+      checkpointDb();
+      return;
+    }
+
     const legacyAdminExists = db.prepare('SELECT 1 FROM users WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)').get('dsaroay@gmail.com', 'DELMARKEL2003');
     if (!legacyAdminExists) {
       db.prepare(`

@@ -28,23 +28,9 @@ const getBarangayNames = () => {
   return rows.map((r) => r.name);
 };
 
-// Demo accounts shown on the login screen for demonstration purposes.
 router.get('/auth/demo', (req, res) => {
-  const admins = db.prepare(`
-    SELECT full_name, email, role FROM users
-    WHERE role = 'administrator' AND status = 'Active'
-    ORDER BY full_name ASC
-  `).all();
-
-  const demos = admins.map((admin) => ({
-    role: 'administrator',
-    label: 'Administrator',
-    email: admin.email,
-    full_name: admin.full_name,
-  }));
-
   res.json({
-    demos,
+    demos: [],
     barangays: getBarangayNames(),
     oauthProviders: {
       google: true,
