@@ -54,6 +54,7 @@ const createPersonnel = async (name, email, { teamId: assignedTeamId = teamId, b
     full_name: name,
     email,
     password: 'field-password-123',
+    confirm_password: 'field-password-123',
     role: 'personnel',
     team_ids: [assignedTeamId],
     barangay_names: barangays,
@@ -311,6 +312,14 @@ test('verified database roles assign each account its own portal after login', {
   assert.equal(staffSummary.assigned_teams, 2);
   assert.equal(staffSummary.assigned_barangays, 2);
   assert.equal(staffSummary.account_limit, null);
+  const staffDb = new DatabaseSync(testDatabasePath);
+  try {
+    const storedPassword = staffDb.prepare('SELECT password_hash FROM users WHERE id = ?').get(staffLoginUser.id).password_hash;
+    assert.notEqual(storedPassword, 'field-password-123');
+    assert.match(storedPassword, /^[0-9a-f]{32}:[0-9a-f]{128}$/);
+  } finally {
+    staffDb.close();
+  }
   const staffLogout = await jsonRequest('/api/auth/logout', staffCookie, 'POST');
   assert.equal(staffLogout.status, 200);
   const repeatStaffLogin = await login(portalLoginEmails.staff, 'field-password-123', 'staff');
@@ -318,6 +327,22 @@ test('verified database roles assign each account its own portal after login', {
   assert.equal(repeatStaffLogin.user.role, 'personnel');
   assert.equal(repeatStaffLogin.user.portal_path, '/staff');
   assert.equal((await jsonRequest('/api/auth/me', staffCookie)).status, 200);
+  const mismatchedPasswordCreation = await jsonRequest('/api/admin/users', adminCookie, 'POST', {
+    full_name: 'Mismatched Password Staff',
+    email: `mismatched-password-${Date.now()}@example.test`,
+    password: 'field-password-123',
+    confirm_password: 'different-password-123',
+    role: 'personnel',
+  });
+  assert.equal(mismatchedPasswordCreation.status, 400);
+  assert.equal((await mismatchedPasswordCreation.json()).error, 'Passwords do not match.');
+  const missingConfirmationCreation = await jsonRequest('/api/admin/users', adminCookie, 'POST', {
+    full_name: 'Missing Confirmation Staff',
+    email: `missing-confirmation-${Date.now()}@example.test`,
+    password: 'field-password-123',
+    role: 'personnel',
+  });
+  assert.equal(missingConfirmationCreation.status, 400);
   const unauthorizedStaffCreation = await Promise.all([
     jsonRequest('/api/admin/users', staffCookie, 'POST', {
       full_name: 'Staff-Created Account',
@@ -338,6 +363,7 @@ test('verified database roles assign each account its own portal after login', {
       full_name: 'Missing Area Assignment',
       email: `missing-area-${Date.now()}@example.test`,
       password: 'field-password-123',
+      confirm_password: 'field-password-123',
       role: 'personnel',
       team_ids: [teamId],
       barangay_names: [],
@@ -346,6 +372,7 @@ test('verified database roles assign each account its own portal after login', {
       full_name: 'Invalid Email Staff',
       email: 'not-an-email',
       password: 'field-password-123',
+      confirm_password: 'field-password-123',
       role: 'personnel',
       team_ids: [teamId],
       barangay_names: ['Poblacion'],
@@ -457,6 +484,7 @@ test('built-in administrator account remains active and protected from account c
       email: `new-${Date.now()}@example.test`,
       contact_number: '+639652703584',
       password: 'field-password-123',
+      confirm_password: 'field-password-123',
       role: 'personnel',
     }),
     jsonRequest('/api/profile', residentCookie, 'PUT', {
@@ -734,6 +762,7 @@ test('Staff account limit is administrator-configurable and enforced by the serv
     full_name: 'Over Limit Staff',
     email: `over-limit-${Date.now()}@example.test`,
     password: 'field-password-123',
+    confirm_password: 'field-password-123',
     role: 'personnel',
     team_ids: [teamId],
     barangay_names: ['Poblacion'],

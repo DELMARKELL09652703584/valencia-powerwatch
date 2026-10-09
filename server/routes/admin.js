@@ -74,12 +74,18 @@ router.get('/users', requireAuth, requireRole('administrator'), (req, res) => {
 
 // Residents register through the User Portal; this endpoint only provisions staff.
 router.post('/users', requireAuth, requireRole('administrator'), (req, res) => {
-  const { full_name, email, contact_number, address, role, password, team_ids: teamIds, barangay_names: barangayNames } = req.body || {};
+  const {
+    full_name, email, contact_number, address, role, password, confirm_password: confirmPassword,
+    team_ids: teamIds, barangay_names: barangayNames,
+  } = req.body || {};
   if (!full_name || !email || !password) return res.status(400).json({ error: 'Name, email, and password are required.' });
   if (role !== 'personnel') return res.status(403).json({ error: 'Only staff accounts can be created here. Residents must register through the User Portal.' });
   const cleanEmail = String(email).trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return res.status(400).json({ error: 'Please provide a valid staff email address.' });
-  if (String(password).length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+  if (typeof password !== 'string' || password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+  if (typeof confirmPassword !== 'string' || password !== confirmPassword) {
+    return res.status(400).json({ error: 'Passwords do not match.' });
+  }
   if (hasBuiltInAdminIdentifier({
     username: cleanEmail.split('@')[0],
     email: cleanEmail,

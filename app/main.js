@@ -671,11 +671,14 @@ async function submitForm(form) {
     const formData = new FormData(target);
     const team_ids = formData.getAll('team_ids').map(Number);
     const barangay_names = formData.getAll('barangay_names').map(String);
+    if (!values.password || !values.confirm_password) throw new Error('Enter and confirm an initial password.');
+    if (values.password !== values.confirm_password) throw new Error('Passwords do not match.');
     if (!team_ids.length) throw new Error('Select at least one assigned field team.');
     if (!barangay_names.length) throw new Error('Select at least one authorized barangay or operational area.');
     await send('/api/admin/users', 'POST', {
       full_name: values.full_name, email: values.email, contact_number: values.contact_number,
-      address: values.address, role: values.role, password: values.password, team_ids, barangay_names,
+      address: values.address, role: values.role, password: values.password,
+      confirm_password: values.confirm_password, team_ids, barangay_names,
     });
     setToast('Staff account created with assigned teams and barangays.');
     closeDialog();
@@ -2445,14 +2448,16 @@ async function handleClick(event) {
             <label class="wide-field">Staff email<input class="input" type="email" name="email" autocomplete="email" required></label>
             <label class="wide-field">Contact number<input class="input" name="contact_number" autocomplete="tel" placeholder="For field coordination"></label>
             <label class="wide-field">Address<input class="input" name="address" autocomplete="street-address"></label>
+            <label class="wide-field">Initial password<input class="input" type="password" name="password" minlength="6" autocomplete="new-password" required></label>
+            <label class="wide-field">Confirm password<input class="input" type="password" name="confirm_password" minlength="6" autocomplete="new-password" required><span>Both password fields must match. Give the initial password securely to the staff member.</span></label>
             <input type="hidden" name="role" value="personnel">
+            <p class="wide-field muted small">Role: Staff · Account status: Active. Passwords are securely hashed and never stored as plain text.</p>
             <fieldset class="wide-field staff-account-assignment"><legend>Assigned field teams <span aria-hidden="true">*</span></legend>
               ${activeTeams.map((team) => `<label><input type="checkbox" name="team_ids" value="${Number(team.id)}"> <span>${escapeHtml(team.name)}</span></label>`).join('')}
             </fieldset>
             <fieldset class="wide-field staff-account-assignment"><legend>Authorized barangays / areas <span aria-hidden="true">*</span></legend>
               ${barangays.map((barangay) => `<label><input type="checkbox" name="barangay_names" value="${escapeHtml(barangay)}"> <span>${escapeHtml(barangay)}</span></label>`).join('')}
             </fieldset>
-            <label class="wide-field">Initial password<input class="input" type="password" name="password" minlength="6" autocomplete="new-password" required><span>Give these exact sign-in credentials to the staff member. Passwords are securely hashed.</span></label>
             <p class="wide-field muted small">Only administrators create Staff accounts. Residents register themselves through the User Portal.</p>
           `, 'Create account', { form: 'new-user' });
         return;
