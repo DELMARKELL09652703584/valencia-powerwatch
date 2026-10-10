@@ -7012,6 +7012,70 @@ body.dark-mode .skeleton {
   background: #f6faff;
 }
 
+.community-body .report-step-form[data-form="report"] {
+  gap: 10px;
+}
+
+.community-body .report-step-form[data-form="report"] > h2,
+.community-body .report-step-form[data-form="report"] > p {
+  margin-block: 0;
+}
+
+.community-body .report-step-form[data-form="report"] .report-location-map {
+  height: clamp(170px, 24vh, 250px);
+  min-height: 170px;
+}
+
+.community-body .report-selected-barangay {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1.5px solid #86efac;
+  border-radius: 10px;
+  background: #f0fdf4;
+}
+
+.community-body .report-selected-barangay-icon {
+  font-size: 1.2rem;
+}
+
+.community-body .report-selected-barangay-label {
+  color: #166534;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.community-body .report-selected-barangay strong {
+  color: #14532d;
+  font-size: .9rem;
+}
+
+.community-body .report-step-form[data-form="report"] .mobile-gps {
+  gap: 7px;
+  padding: 9px 11px;
+}
+
+.community-body .report-step-form[data-form="report"] > [data-action="next-report-step"] {
+  min-height: 48px;
+}
+
+.community-body .report-step-form[data-form="report"] [data-gps="status"] {
+  font-size: .8rem;
+  line-height: 1.4;
+}
+
+.community-body [data-gps="status"] .button {
+  min-height: 32px;
+  margin-top: 4px;
+  padding: 5px 9px;
+  white-space: normal;
+}
+
 .community-body .report-location-map,
 .community-body .mobile-map,
 .community-body [id*="map"] {
@@ -8917,6 +8981,40 @@ body.dark-mode .mini-stepper-step {
   .community-body .mobile-tabs { bottom: max(8px, env(safe-area-inset-bottom)); width: calc(100% - 20px); min-height: 62px; border-radius: 18px; }
   .community-body .mobile-tab { min-height: 46px; }
 }
+
+.community-body .report-step-form[data-form="report"] {
+  gap: 10px;
+}
+
+.community-body .report-step-form[data-form="report"] > h2,
+.community-body .report-step-form[data-form="report"] > p {
+  margin-block: 0;
+}
+
+.community-body .report-step-form[data-form="report"] .report-location-map {
+  height: clamp(170px, 24vh, 250px);
+  min-height: 170px;
+}
+
+.community-body .report-selected-barangay {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1.5px solid #86efac;
+  border-radius: 10px;
+  background: #f0fdf4;
+}
+
+.community-body .report-selected-barangay-icon { font-size: 1.2rem; }
+.community-body .report-selected-barangay-label { color: #166534; font-size: .7rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+.community-body .report-selected-barangay strong { color: #14532d; font-size: .9rem; }
+.community-body .report-step-form[data-form="report"] .mobile-gps { gap: 7px; padding: 9px 11px; }
+.community-body .report-step-form[data-form="report"] > [data-action="next-report-step"] { min-height: 48px; }
+.community-body .report-step-form[data-form="report"] [data-gps="status"] { font-size: .8rem; line-height: 1.4; }
+.community-body [data-gps="status"] .button { min-height: 32px; margin-top: 4px; padding: 5px 9px; white-space: normal; }
 
 .community-body .possible-duplicate-notice,
 .community-body .possible-duplicate-clear {

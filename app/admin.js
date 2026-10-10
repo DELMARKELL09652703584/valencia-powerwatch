@@ -798,8 +798,8 @@ async function renderAdminDashboard() {
                     </td>
                     <td>
                       ${row.latitude && row.longitude
-                        ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:0.72rem;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;padding:2px 6px;border-radius:4px;font-weight:600;">📍 GPS (${Number(row.latitude).toFixed(3)}, ${Number(row.longitude).toFixed(3)})</span>`
-                        : '<span style="font-size:0.72rem;color:#94a3b8;">Centroid</span>'}
+                        ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:0.72rem;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;padding:2px 6px;border-radius:4px;font-weight:600;">📍 ${row.location_source === 'gps' ? 'GPS' : 'Map pin'} (${Number(row.latitude).toFixed(5)}, ${Number(row.longitude).toFixed(5)}) · ${row.location_confirmed ? 'confirmed' : 'unconfirmed'}</span>`
+                        : '<span style="font-size:0.72rem;color:#94a3b8;">No exact pin</span>'}
                     </td>
                     <td>${escapeHtml(row.reporter_name || 'Resident')}</td>
                     <td>${statusPill(row.status)}</td>

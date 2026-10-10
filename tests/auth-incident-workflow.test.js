@@ -37,6 +37,7 @@ const submitReport = async (cookie, description) => {
     location: 'Brgy. Poblacion, Valencia City (7.906, 125.094)',
     latitude: '7.906',
     longitude: '125.094',
+    location_confirmed: 'true',
     location_source: 'map_pin',
     barangay: 'Poblacion',
     purok: 'Functional audit test site',

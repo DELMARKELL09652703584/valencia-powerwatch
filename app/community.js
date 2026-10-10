@@ -541,7 +541,7 @@ async function renderMobileReportForm() {
   const stepper = `<div class="stepper">${stepNames.map((name, index) => `
     <div class="step ${step === index + 1 ? 'active' : ''} ${step > index + 1 ? 'complete' : ''}"><span class="step-number">${step > index + 1 ? '✓' : index + 1}</span><span>${name}</span></div>
   `).join('')}</div>`;
-  const hidden = ['barangay', 'location', 'purok', 'affected_area', 'date_time_noticed', 'possible_outage_type', 'description', 'latitude', 'longitude', 'location_source', 'location_accuracy_m', 'remarks']
+  const hidden = ['barangay', 'location', 'purok', 'affected_area', 'date_time_noticed', 'possible_outage_type', 'description', 'latitude', 'longitude', 'location_source', 'location_accuracy_m', 'location_confirmed', 'remarks']
     .map((name) => `<input type="hidden" name="${name}" value="${escapeHtml(draft[name] || '')}">`).join('');
   let formBody = '';
   const possibleDuplicates = state.mobilePossibleDuplicates || [];
@@ -570,14 +570,14 @@ async function renderMobileReportForm() {
       </div>
       <label>Search barangay<input type="search" name="barangay" list="report-barangay-options" data-location-search placeholder="Search barangay..." value="${escapeHtml(draft.barangay || state.user?.barangay || 'Poblacion')}" required></label>
       <datalist id="report-barangay-options">${state.barangays.map((barangay) => `<option value="${escapeHtml(barangay)}">`).join('')}</datalist>
-      ${locationMode === 'map' ? '<div class="report-location-map" id="report-location-map" aria-label="Tap to select outage location"></div>' : ''}
+      <div class="report-location-map" id="report-location-map" aria-label="Tap or drag the marker to select the outage location"></div>
       
-      <div id="report-assigned-barangay-badge" style="margin: 8px 0; padding: 10px 14px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+      <div id="report-assigned-barangay-badge" class="report-selected-barangay">
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:1.25rem;">🏛️</span>
+          <span class="report-selected-barangay-icon" aria-hidden="true">🏛️</span>
           <div>
-            <div style="font-size:0.75rem;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.5px;">Selected barangay:</div>
-            <strong id="assigned-barangay-name" style="font-size:0.95rem;color:#14532d;">Brgy. ${escapeHtml(draft.barangay || state.user?.barangay || 'Poblacion')}</strong>
+            <div class="report-selected-barangay-label">Selected barangay</div>
+            <strong id="assigned-barangay-name">Brgy. ${escapeHtml(draft.barangay || state.user?.barangay || 'Poblacion')}</strong>
           </div>
         </div>
         <span class="pill pill-ok" style="font-size:0.75rem;font-weight:750;">Report area</span>
@@ -592,7 +592,8 @@ async function renderMobileReportForm() {
         <input type="hidden" name="longitude" data-gps="longitude" value="${escapeHtml(draft.longitude || '')}">
         <input type="hidden" name="location_source" value="${escapeHtml(draft.location_source || '')}">
         <input type="hidden" name="location_accuracy_m" value="${escapeHtml(draft.location_accuracy_m || '')}">
-        <span class="muted small" data-gps="status">${draft.location_source && draft.latitude ? `📍 ${draft.location_source === 'gps' ? 'GPS fix' : 'Map pin'}: ${Number(draft.latitude).toFixed(5)}, ${Number(draft.longitude).toFixed(5)} · Barangay estimate: ${escapeHtml(draft.barangay || 'Valencia')}` : 'Exact coordinates are optional. If unavailable, describe the location in Address mode.'}</span>
+        <input type="hidden" name="location_confirmed" value="${draft.location_confirmed === 'true' ? 'true' : 'false'}">
+        <span class="muted small" data-gps="status" role="status" aria-live="polite">${draft.location_source && draft.latitude ? `${draft.location_confirmed === 'true' ? 'Location confirmed' : 'Location needs confirmation'}: ${draft.location_source === 'gps' ? 'GPS' : 'map pin'} · ${Number(draft.latitude).toFixed(5)}, ${Number(draft.longitude).toFixed(5)}${draft.location_accuracy_m ? ` · ±${Math.round(Number(draft.location_accuracy_m))} m reported accuracy` : ''}${draft.location_confirmed === 'true' ? '' : ' · Review the marker and barangay, then confirm below.'}` : 'Use GPS or tap/drag the map marker. Barangay lookup uses OpenStreetMap; if it cannot identify a barangay, choose one manually. Exact coordinates are optional in Address mode.'}</span>
       </div>
       <button type="button" class="button primary block" data-action="next-report-step">Next</button>`;
   } else if (step === 2) {
@@ -628,7 +629,7 @@ async function renderMobileReportForm() {
         <div class="review-item"><span class="review-label">Interruption Type</span><span class="review-value">${escapeHtml(draft.possible_outage_type || 'Power interruption')}</span></div>
         <div class="review-item"><span class="review-label">Barangay</span><span class="review-value">${escapeHtml(draft.barangay || '')}</span></div>
         <div class="review-item"><span class="review-label">Purok / Area</span><span class="review-value">${escapeHtml(draft.purok || draft.affected_area || 'Not specified')}</span></div>
-        <div class="review-item"><span class="review-label">${draft.latitude && draft.longitude ? 'Confirmed Coordinates' : 'Location description'}</span><span class="review-value">${draft.latitude && draft.longitude ? `${draft.location_source === 'gps' ? 'GPS' : 'Map pin'} · (${Number(draft.latitude).toFixed(5)}, ${Number(draft.longitude).toFixed(5)})${draft.location_accuracy_m ? ` · ±${Math.round(Number(draft.location_accuracy_m))} m` : ''}` : `${escapeHtml(draft.location || '')} · Exact coordinates not provided`}</span></div>
+        <div class="review-item"><span class="review-label">${draft.latitude && draft.longitude ? (draft.location_confirmed === 'true' ? 'Confirmed Coordinates' : 'Coordinates') : 'Location description'}</span><span class="review-value">${draft.latitude && draft.longitude ? `${draft.location_source === 'gps' ? 'GPS' : 'Map pin'} · (${Number(draft.latitude).toFixed(5)}, ${Number(draft.longitude).toFixed(5)})${draft.location_accuracy_m ? ` · ±${Math.round(Number(draft.location_accuracy_m))} m` : ''}` : `${escapeHtml(draft.location || '')} · Exact coordinates not provided`}</span></div>
         <div class="review-item"><span class="review-label">Date &amp; Time</span><span class="review-value">${escapeHtml(draft.date_time_noticed || '')}</span></div>
         <div class="review-item"><span class="review-label">Description</span><span class="review-value">${escapeHtml(draft.description || '')}</span></div>
         ${attachments.length ? `<div class="report-attachment-previews">${attachments.map((attachment) => attachment.type.startsWith('video/')
@@ -652,13 +653,8 @@ async function renderMobileReportForm() {
     subpageHeader: step === 3 ? { title: 'Add Evidence (Optional)', backAction: 'previous-report-step' } : null,
   });
 
-  if (state.reportLocationMap) {
-    state.reportLocationMap.remove();
-    state.reportLocationMap = null;
-    state.reportLocationMarker = null;
-    state.reportLocationSetPin = null;
-  }
-  if (step === 1 && locationMode === 'map') {
+  disposeReportLocationMap();
+  if (step === 1) {
     await ensureLeaflet();
     const locations = state.barangayLocations || [];
     const mapElement = document.getElementById('report-location-map');
@@ -687,12 +683,18 @@ async function renderMobileReportForm() {
     }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    const setPin = (latitude, longitude, customBarangayName = null, source = 'map_pin', accuracy = null) => {
+    const setPin = async (latitude, longitude, source = 'map_pin', accuracy = null, resolveBarangay = true) => {
       const lat = Number(latitude);
       const lng = Number(longitude);
       const point = [lat, lng];
       if (state.reportLocationMarker) state.reportLocationMarker.setLatLng(point);
-      else state.reportLocationMarker = L.marker(point).addTo(map);
+      else {
+        state.reportLocationMarker = L.marker(point, { draggable: true }).addTo(map);
+        state.reportLocationMarker.on('dragend', (event) => {
+          const markerPosition = event.target.getLatLng();
+          void setPin(markerPosition.lat, markerPosition.lng, 'map_pin');
+        });
+      }
 
       const latitudeInput = document.querySelector('[data-gps="latitude"]');
       const longitudeInput = document.querySelector('[data-gps="longitude"]');
@@ -705,38 +707,79 @@ async function renderMobileReportForm() {
 
       const latStr = lat.toFixed(6);
       const lngStr = lng.toFixed(6);
+      const selectedBarangay = barangayInput?.value.trim() || '';
       if (latitudeInput) latitudeInput.value = latStr;
       if (longitudeInput) longitudeInput.value = lngStr;
       if (sourceInput) sourceInput.value = source;
       if (accuracyInput) accuracyInput.value = accuracy !== null && accuracy !== undefined && accuracy !== ''
         && Number.isFinite(Number(accuracy)) ? String(Number(accuracy)) : '';
 
-      // Automatically detect and assign the nearest Barangay!
-      let assignedName = customBarangayName;
-      if (!assignedName) {
-        const nearest = findNearestBarangay(lat, lng, state.barangayLocations);
-        if (nearest && nearest.name) assignedName = nearest.name;
-        else assignedName = barangayInput?.value || 'Poblacion';
-      }
-
-      const formattedLocation = `Brgy. ${assignedName}, Valencia City (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+      const formattedLocation = `Valencia City coordinates (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
 
       if (locationInput && (state.mobileLocationMode || 'map') === 'map') locationInput.value = formattedLocation;
-      if (barangayInput && barangayInput.value !== assignedName) {
-        barangayInput.value = assignedName;
-      }
-      if (badgeName) badgeName.textContent = `Brgy. ${assignedName}`;
 
       if (state.mobileReportDraft) {
-        state.mobileReportDraft.barangay = assignedName;
+        state.mobileReportDraft.barangay = selectedBarangay;
         state.mobileReportDraft.latitude = latStr;
         state.mobileReportDraft.longitude = lngStr;
         state.mobileReportDraft.location_source = source;
+        if (resolveBarangay) state.mobileReportDraft.location_confirmed = 'false';
         state.mobileReportDraft.location_accuracy_m = accuracy !== null && accuracy !== undefined && accuracy !== ''
           && Number.isFinite(Number(accuracy)) ? String(Number(accuracy)) : '';
         if ((state.mobileLocationMode || 'map') === 'map') state.mobileReportDraft.location = formattedLocation;
       }
-      if (status) status.innerHTML = `📍 ${source === 'gps' ? 'GPS fix' : 'Map pin'}: <strong>${lat.toFixed(5)}, ${lng.toFixed(5)}</strong> · Barangay estimate: ${escapeHtml(assignedName)}`;
+      const confirmedInput = document.querySelector('[name="location_confirmed"]');
+      if (confirmedInput && resolveBarangay) confirmedInput.value = 'false';
+      if (confirmedInput && !resolveBarangay) confirmedInput.value = state.mobileReportDraft?.location_confirmed === 'true' ? 'true' : 'false';
+      if (!resolveBarangay) {
+        if (status) {
+          status.textContent = state.mobileReportDraft?.location_confirmed === 'true'
+            ? `Location confirmed for Brgy. ${escapeHtml(state.mobileReportDraft.barangay || 'selected barangay')}. ${lat.toFixed(5)}, ${lng.toFixed(5)}.`
+            : `Location needs confirmation: ${lat.toFixed(5)}, ${lng.toFixed(5)}. Choose the correct barangay and confirm before continuing.`;
+          if (state.mobileReportDraft?.location_confirmed !== 'true') {
+            status.innerHTML += ' <button type="button" class="button small ghost" data-action="confirm-selected-report-barangay">Confirm selected barangay</button>';
+          }
+        }
+        return;
+      }
+      if (status) status.textContent = `📍 ${source === 'gps' ? 'GPS fix' : 'Map pin'}: ${lat.toFixed(5)}, ${lng.toFixed(5)}${accuracy ? ` · ±${Math.round(Number(accuracy))} m reported accuracy` : ''} · Looking up barangay…`;
+
+      const requestId = ++state.reportGeocodeRequestId;
+      try {
+        const result = await api(`/api/barangays/reverse-geocode?lat=${encodeURIComponent(latStr)}&lon=${encodeURIComponent(lngStr)}`);
+        if (requestId !== state.reportGeocodeRequestId) return;
+        const detected = result.status === 'matched' ? result.barangay : null;
+        const registeredBarangay = state.user?.barangay?.trim() || '';
+        if (locationInput && (state.mobileLocationMode || 'map') === 'address' && !locationInput.value.trim() && result.display_name) {
+          locationInput.value = result.display_name;
+          if (state.mobileReportDraft) state.mobileReportDraft.location = result.display_name;
+        }
+        if (!detected) {
+          if (status) status.innerHTML = `Could not verify the barangay at this pin. No barangay was guessed. Choose the correct barangay above, then <button type="button" class="button small ghost" data-action="confirm-selected-report-barangay">confirm your selection</button>. You can also adjust the marker.`;
+          return;
+        }
+
+        const normalize = (name) => String(name || '').trim().toLocaleLowerCase('en');
+        if (!registeredBarangay || normalize(detected) === normalize(registeredBarangay)) {
+          if (barangayInput) barangayInput.value = detected;
+          if (badgeName) badgeName.textContent = `Brgy. ${detected}`;
+          if (state.mobileReportDraft) state.mobileReportDraft.barangay = detected;
+          if (locationInput && (state.mobileLocationMode || 'map') === 'map') {
+            locationInput.value = `Brgy. ${detected}, Valencia City (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+            if (state.mobileReportDraft) state.mobileReportDraft.location = locationInput.value;
+          }
+          if (status) status.innerHTML = `OpenStreetMap identifies <strong>Brgy. ${escapeHtml(detected)}</strong>. Review the pin and <button type="button" class="button small ghost" data-action="confirm-report-location">confirm this location</button>.`;
+          return;
+        }
+
+        if (barangayInput) barangayInput.value = registeredBarangay;
+        if (state.mobileReportDraft) state.mobileReportDraft.barangay = registeredBarangay;
+        if (badgeName) badgeName.textContent = `Brgy. ${registeredBarangay}`;
+        if (status) status.innerHTML = `GPS lookup identifies <strong>Brgy. ${escapeHtml(detected)}</strong>, which differs from your registered barangay (<strong>Brgy. ${escapeHtml(registeredBarangay)}</strong>). Choose the detected barangay or select the correct report barangay manually, then confirm. <button type="button" class="button small ghost" data-action="use-detected-report-barangay" data-value="${escapeHtml(detected)}">Use ${escapeHtml(detected)}</button> <button type="button" class="button small ghost" data-action="confirm-selected-report-barangay">Confirm selected barangay</button>`;
+      } catch (error) {
+        if (requestId !== state.reportGeocodeRequestId) return;
+        if (status) status.innerHTML = `${escapeHtml(error.message || 'Barangay lookup is unavailable.')} Choose the barangay manually, then <button type="button" class="button small ghost" data-action="confirm-selected-report-barangay">confirm your selection</button>.`;
+      }
     };
 
     state.reportLocationSetPin = setPin;
@@ -745,7 +788,7 @@ async function renderMobileReportForm() {
         map.removeLayer(state.reportLocationMarker);
         state.reportLocationMarker = null;
       }
-      for (const selector of ['[data-gps="latitude"]', '[data-gps="longitude"]', '[name="location_source"]', '[name="location_accuracy_m"]']) {
+      for (const selector of ['[data-gps="latitude"]', '[data-gps="longitude"]', '[name="location_source"]', '[name="location_accuracy_m"]', '[name="location_confirmed"]']) {
         const input = document.querySelector(selector);
         if (input) input.value = '';
       }
@@ -754,6 +797,7 @@ async function renderMobileReportForm() {
         delete state.mobileReportDraft.longitude;
         delete state.mobileReportDraft.location_source;
         delete state.mobileReportDraft.location_accuracy_m;
+        delete state.mobileReportDraft.location_confirmed;
       }
       const locationInput = document.querySelector('input[name="location"]');
       const status = document.querySelector('[data-gps="status"]');
@@ -763,10 +807,10 @@ async function renderMobileReportForm() {
     };
 
     if (['gps', 'map_pin'].includes(draft.location_source) && draft.latitude && draft.longitude) {
-      setPin(Number(draft.latitude), Number(draft.longitude), draft.barangay || null, draft.location_source, draft.location_accuracy_m);
+      void setPin(Number(draft.latitude), Number(draft.longitude), draft.location_source, draft.location_accuracy_m, false);
     }
 
-    map.on('click', (event) => setPin(event.latlng.lat, event.latlng.lng, null, 'map_pin'));
+    map.on('click', (event) => { void setPin(event.latlng.lat, event.latlng.lng, 'map_pin'); });
     window.requestAnimationFrame(() => map.invalidateSize());
   }
 }
@@ -801,6 +845,9 @@ async function moveMobileReportStep(direction) {
       && (!['gps', 'map_pin'].includes(values.get('location_source'))
         || !latitudes.at(-1) || !longitudes.at(-1))) {
       throw new Error('Tap an exact map location, or switch to Address and describe the location if GPS is unavailable.');
+    }
+    if (latitudes.at(-1) && longitudes.at(-1) && values.get('location_confirmed') !== 'true') {
+      throw new Error('Review the map pin and barangay, then confirm the report location before continuing.');
     }
   }
   const values = Object.fromEntries([...new FormData(form).entries()].filter(([name, value]) => name !== 'attachments' && !(value instanceof File)));
@@ -1109,7 +1156,7 @@ async function renderMobileReportDetail() {
       <div class="mobile-detail-row"><strong>Interruption Type</strong><span>${escapeHtml(report.possible_outage_type || 'Power outage')}</span></div>
       <div class="mobile-detail-row"><strong>Barangay</strong><span>${escapeHtml(report.barangay)}</span></div>
       <div class="mobile-detail-row"><strong>Location</strong><span>${escapeHtml(report.location || (hasCoordinates(report) ? `${report.latitude}, ${report.longitude}` : 'Not provided'))}</span></div>
-      <div class="mobile-detail-row"><strong>Pin / GPS</strong><span>${hasCoordinates(report) ? `${report.location_source === 'gps' ? 'GPS' : report.location_source === 'map_pin' ? 'Map pin' : 'Source not recorded'} · ${Number(report.latitude).toFixed(5)}, ${Number(report.longitude).toFixed(5)}${report.location_accuracy_m ? ` · ±${Math.round(Number(report.location_accuracy_m))} m` : ''}` : 'Exact location not available'}</span></div>
+      <div class="mobile-detail-row"><strong>Pin / GPS</strong><span>${hasCoordinates(report) ? `${report.location_source === 'gps' ? 'GPS' : report.location_source === 'map_pin' ? 'Map pin' : 'Source not recorded'} · ${Number(report.latitude).toFixed(5)}, ${Number(report.longitude).toFixed(5)}${report.location_accuracy_m ? ` · ±${Math.round(Number(report.location_accuracy_m))} m` : ''} · ${report.location_confirmed ? 'Resident confirmed' : 'Not confirmed'}` : 'Exact location not available'}</span></div>
       <h2>Description</h2><p>${escapeHtml(report.description || '')}</p>
       ${report.remarks ? `<h2>Additional notes</h2><p>${escapeHtml(report.remarks)}</p>` : ''}
       ${report.staff_remarks ? `<h2>Review update</h2><p>${escapeHtml(report.staff_remarks)}</p>` : ''}

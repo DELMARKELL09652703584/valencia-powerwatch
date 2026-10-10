@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { db, now, checkpointDb } = require('../db');
 const { UPLOAD_DIR } = require('../db');
+const { resolveBarangay } = require('../location-geocoder');
 const {
   COOKIE_NAME, hashPassword, verifyPassword, createSession, destroySession,
   requireAuth, publicUser, roleLabel, audit, notifyRole,
@@ -26,6 +27,70 @@ const saveProfilePhoto = async (photoData, userId) => {
 const getBarangayNames = () => {
   const rows = db.prepare("SELECT name FROM barangays WHERE status = 'Active' ORDER BY name").all();
   return rows.map((r) => r.name);
+};
+
+const VALENCIA_COORDINATE_BOUNDS = { minLatitude: 7.6, maxLatitude: 8.2, minLongitude: 124.8, maxLongitude: 125.4 };
+const geocodeCache = new Map();
+let geocodeQueue = Promise.resolve();
+let nextGeocodeAt = 0;
+let queuedGeocodeRequests = 0;
+
+const reverseGeocode = async (latitude, longitude) => {
+  const cacheKey = `${latitude.toFixed(6)},${longitude.toFixed(6)}`;
+  const cached = geocodeCache.get(cacheKey);
+  if (cached) return cached;
+  if (queuedGeocodeRequests >= 20) {
+    const error = new Error('Location lookup is busy. Please try again or choose your barangay manually.');
+    error.status = 503;
+    throw error;
+  }
+
+  queuedGeocodeRequests += 1;
+  const lookup = geocodeQueue.then(async () => {
+    const delay = Math.max(0, nextGeocodeAt - Date.now());
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+    nextGeocodeAt = Date.now() + 1000;
+
+    const url = new URL('https://nominatim.openstreetmap.org/reverse');
+    url.search = new URLSearchParams({
+      format: 'jsonv2',
+      lat: String(latitude),
+      lon: String(longitude),
+      zoom: '18',
+      addressdetails: '1',
+    }).toString();
+    let place;
+    try {
+      const response = await fetch(url, {
+        headers: { 'User-Agent': 'ValenciaPowerWatch/1.0 (https://valencia-powerwatch.onrender.com/)' },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!response.ok) throw new Error(`Location lookup returned HTTP ${response.status}.`);
+      place = await response.json();
+    } catch (cause) {
+      const error = new Error('The location lookup service is unavailable. Choose your barangay manually or try again.', { cause });
+      error.status = 503;
+      throw error;
+    }
+    const address = place.address || {};
+    const matchedBarangay = resolveBarangay(place, getBarangayNames());
+    return {
+      status: matchedBarangay ? 'matched' : 'unmatched',
+      barangay: matchedBarangay || null,
+      display_name: typeof place.display_name === 'string' ? place.display_name : null,
+      provider: 'OpenStreetMap Nominatim',
+    };
+  });
+  geocodeQueue = lookup.catch(() => {});
+
+  try {
+    const result = await lookup;
+    geocodeCache.set(cacheKey, result);
+    if (geocodeCache.size > 500) geocodeCache.delete(geocodeCache.keys().next().value);
+    return result;
+  } finally {
+    queuedGeocodeRequests -= 1;
+  }
 };
 
 router.get('/auth/demo', (req, res) => {
@@ -174,6 +239,27 @@ router.get('/barangays', requireAuth, (req, res) => {
 router.get('/barangays/locations', requireAuth, (req, res) => {
   const locations = db.prepare("SELECT name, latitude, longitude FROM barangays WHERE status = 'Active' ORDER BY name").all();
   res.json({ barangays: locations });
+});
+
+router.get('/barangays/reverse-geocode', requireAuth, async (req, res, next) => {
+  const latitude = Number(req.query.lat);
+  const longitude = Number(req.query.lon);
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90
+    || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+    return res.status(400).json({ error: 'Provide valid latitude and longitude.' });
+  }
+
+  if (latitude < VALENCIA_COORDINATE_BOUNDS.minLatitude || latitude > VALENCIA_COORDINATE_BOUNDS.maxLatitude
+    || longitude < VALENCIA_COORDINATE_BOUNDS.minLongitude || longitude > VALENCIA_COORDINATE_BOUNDS.maxLongitude) {
+    return res.json({ status: 'outside_city', barangay: null, provider: 'OpenStreetMap Nominatim' });
+  }
+
+  try {
+    return res.json(await reverseGeocode(latitude, longitude));
+  } catch (error) {
+    if (Number(error.status) === 503) return res.status(503).json({ error: error.message });
+    return next(error);
+  }
 });
 
 router.get('/settings', requireAuth, (req, res) => {

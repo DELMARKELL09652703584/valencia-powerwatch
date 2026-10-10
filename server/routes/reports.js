@@ -86,7 +86,7 @@ const savePhoto = async (photoData) => {
 
 // Resident submits an outage report
 router.post('/reports', requireAuth, requireRole('resident'), parseReportAttachments, async (req, res, next) => {
-  const { location, latitude, longitude, location_source, location_accuracy_m, barangay, date_time_noticed, description, affected_area, possible_outage_type, photoData, remarks, purok } = req.body || {};
+  const { location, latitude, longitude, location_source, location_accuracy_m, location_confirmed, barangay, date_time_noticed, description, affected_area, possible_outage_type, photoData, remarks, purok } = req.body || {};
 
   if (!barangay) return res.status(400).json({ error: 'Barangay is required.' });
   if (!db.prepare("SELECT 1 FROM barangays WHERE name = ? AND status = 'Active'").get(String(barangay).trim())) {
@@ -100,6 +100,7 @@ router.post('/reports', requireAuth, requireRole('resident'), parseReportAttachm
   const hasLongitude = longitude !== null && longitude !== undefined && longitude !== '';
   if (hasLatitude !== hasLongitude) return res.status(400).json({ error: 'Both GPS coordinates are required together.' });
   if (hasLatitude && !['gps', 'map_pin'].includes(location_source)) return res.status(400).json({ error: 'Choose GPS or a manually placed map pin as the location source.' });
+  if (hasLatitude && location_confirmed !== 'true') return res.status(400).json({ error: 'Confirm the report location before submitting.' });
   if (hasLatitude && (!Number.isFinite(Number(latitude)) || Number(latitude) < -90 || Number(latitude) > 90 || !Number.isFinite(Number(longitude)) || Number(longitude) < -180 || Number(longitude) > 180)) {
     return res.status(400).json({ error: 'Please provide valid GPS coordinates.' });
   }
@@ -122,11 +123,11 @@ router.post('/reports', requireAuth, requireRole('resident'), parseReportAttachm
   const reportedAt = now();
   const finalPurok = String(purok || affected_area || '').trim() || null;
   const info = db.prepare(`
-    INSERT INTO outage_reports (report_code, reporter_id, location, latitude, longitude, location_source, location_accuracy_m, barangay, purok, date_time_noticed, description, affected_area,
+    INSERT INTO outage_reports (report_code, reporter_id, location, latitude, longitude, location_confirmed, location_source, location_accuracy_m, barangay, purok, date_time_noticed, description, affected_area,
       possible_outage_type, photo_path, remarks, status, verification_status, repair_status, reported_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Submitted', 'Pending', 'Pending Assignment', ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Submitted', 'Pending', 'Pending Assignment', ?, ?)
   `).run(
-    code, req.user.id, String(location).trim(), hasLatitude ? Number(latitude) : null, hasLongitude ? Number(longitude) : null, hasLatitude ? location_source : null,
+    code, req.user.id, String(location).trim(), hasLatitude ? Number(latitude) : null, hasLongitude ? Number(longitude) : null, hasLatitude && location_confirmed === 'true' ? 1 : 0, hasLatitude ? location_source : null,
     location_accuracy_m === '' || location_accuracy_m === undefined ? null : Number(location_accuracy_m),
     String(barangay).trim(), finalPurok, date_time_noticed, String(description).trim(),
     affected_area || finalPurok, possible_outage_type || null, photoPath, remarks || null, reportedAt, reportedAt
@@ -168,7 +169,7 @@ router.get('/reports/map', requireAuth, (req, res) => {
     ? `AND LOWER(TRIM(r.barangay)) IN (${assignedBarangays.map(() => 'LOWER(TRIM(?))').join(', ')})`
     : '';
   const rows = db.prepare(`
-    SELECT r.id, r.report_code, r.incident_id, r.barangay, r.purok, r.location, r.location_source, r.location_accuracy_m, r.affected_area,
+    SELECT r.id, r.report_code, r.incident_id, r.barangay, r.purok, r.location, r.location_confirmed, r.location_source, r.location_accuracy_m, r.affected_area,
            r.latitude, r.longitude, r.possible_outage_type, r.description,
            r.status, r.verification_status, r.repair_status, r.assigned_team_name,
            r.reported_at, r.reporter_id,

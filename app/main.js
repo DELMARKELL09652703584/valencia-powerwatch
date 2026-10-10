@@ -353,14 +353,16 @@ async function refreshUnread() {
 }
 
 async function render() {
-  if (!state.user) return;
   if (IS_COMMUNITY) {
     const target = MOBILE_PAGES[state.mobileTab] ? state.mobileTab : 'home';
+    if (target !== 'report') disposeReportLocationMap();
+    if (!state.user) return;
     state.mobileTab = target;
     if (target === 'reports' && state.mobileReportId) return renderMobileReportDetail();
     if (target === 'report') return renderMobileReportForm();
     return MOBILE_PAGES[target]();
   }
+  if (!state.user) return;
   const target = ADMIN_PAGES[state.page] ? state.page : 'dashboard';
   state.page = target;
   return ADMIN_PAGES[target]();
@@ -564,6 +566,7 @@ async function submitForm(form) {
       location: values.location,
       latitude: values.latitude === '' ? null : Number(values.latitude),
       longitude: values.longitude === '' ? null : Number(values.longitude),
+      location_confirmed: values.location_confirmed,
       location_source: values.location_source,
       location_accuracy_m: values.location_accuracy_m === '' ? null : Number(values.location_accuracy_m),
       barangay: values.barangay,
@@ -919,6 +922,7 @@ async function handleClick(event) {
   try {
     switch (action) {
       case 'logout':
+        disposeReportLocationMap();
         if (typeof stopAdminTelemetryHeartbeat === 'function') stopAdminTelemetryHeartbeat();
         await send('/api/auth/logout', 'POST');
         state.user = null;
@@ -1057,51 +1061,88 @@ async function handleClick(event) {
       }
       case 'capture-gps': {
         const status = document.querySelector('[data-gps="status"]');
-        if (status) status.textContent = 'Locating…';
-        const position = await captureLocation();
-        if (!position) {
-          if (status) status.textContent = 'GPS unavailable. Allow location access or tap the map to place a pin.';
+        const originalLabel = actionButton.textContent;
+        let captured = false;
+        actionButton.disabled = true;
+        actionButton.setAttribute('aria-busy', 'true');
+        actionButton.textContent = 'Detecting location…';
+        if (status) status.textContent = 'Requesting device location…';
+        try {
+          if (!state.reportLocationSetPin) throw new Error('The report map is unavailable. Reload the page or choose Address mode and describe the location manually.');
+          const position = await captureLocation();
+          await state.reportLocationSetPin(position.latitude, position.longitude, 'gps', position.accuracy);
+          if (state.reportLocationMap) state.reportLocationMap.setView([position.latitude, position.longitude], 16, { animate: false });
+          captured = true;
+        } catch (error) {
+          if (status) status.textContent = error.message;
+        } finally {
+          actionButton.disabled = false;
+          actionButton.removeAttribute('aria-busy');
+          actionButton.textContent = originalLabel;
+        }
+        if (!captured) {
           return;
         }
-        const form = actionButton.closest('form') || document;
-        const latInput = form.querySelector('[data-gps="latitude"]');
-        const lngInput = form.querySelector('[data-gps="longitude"]');
-        const locationInput = form.querySelector('input[name="location"]');
-        const barangayInput = form.querySelector('input[name="barangay"]');
-        const latStr = position.latitude.toFixed(6);
-        const lngStr = position.longitude.toFixed(6);
-
-        if (latInput) latInput.value = latStr;
-        if (lngInput) lngInput.value = lngStr;
-
-        // Auto-detect and set Barangay!
-        const nearest = findNearestBarangay(position.latitude, position.longitude, state.barangayLocations);
-        const bgyName = nearest?.name || barangayInput?.value || 'Poblacion';
-        const formattedLocation = `Brgy. ${bgyName}, Valencia City (${position.latitude.toFixed(5)}, ${position.longitude.toFixed(5)})`;
-
-        if (locationInput && state.mobileLocationMode === 'map') {
-          locationInput.value = formattedLocation;
+        return;
+      }
+      case 'confirm-report-location': {
+        const form = actionButton.closest('form');
+        const barangayInput = form?.querySelector('[name="barangay"]');
+        const confirmedInput = form?.querySelector('[name="location_confirmed"]');
+        if (!barangayInput?.value.trim() || !confirmedInput) throw new Error('Select a barangay before confirming the location.');
+        confirmedInput.value = 'true';
+        if (state.mobileReportDraft) {
+          state.mobileReportDraft.location_confirmed = 'true';
+          state.mobileReportDraft.barangay = barangayInput.value.trim();
         }
-        if (barangayInput) {
-          barangayInput.value = bgyName;
+        const status = form.querySelector('[data-gps="status"]');
+        if (status) status.textContent = `Location confirmed for Brgy. ${barangayInput.value.trim()}. Coordinates: ${Number(form.querySelector('[data-gps="latitude"]')?.value).toFixed(5)}, ${Number(form.querySelector('[data-gps="longitude"]')?.value).toFixed(5)}.`;
+        return;
+      }
+      case 'use-detected-report-barangay': {
+        const form = actionButton.closest('form');
+        const barangayInput = form?.querySelector('[name="barangay"]');
+        const detected = state.barangays.find((name) => name.toLocaleLowerCase('en') === value.toLocaleLowerCase('en'));
+        if (!barangayInput || !detected) throw new Error('The detected barangay is not in the active official list. Choose one manually.');
+        barangayInput.value = detected;
+        const badgeName = document.getElementById('assigned-barangay-name');
+        if (badgeName) badgeName.textContent = `Brgy. ${detected}`;
+        const locationInput = form.querySelector('[name="location"]');
+        if (locationInput && state.mobileLocationMode === 'map') {
+          locationInput.value = `Brgy. ${detected}, Valencia City (${Number(form.querySelector('[data-gps="latitude"]')?.value).toFixed(5)}, ${Number(form.querySelector('[data-gps="longitude"]')?.value).toFixed(5)})`;
+        }
+        const confirmedInput = form.querySelector('[name="location_confirmed"]');
+        if (confirmedInput) confirmedInput.value = 'false';
+        if (state.mobileReportDraft) {
+          state.mobileReportDraft.barangay = detected;
+          state.mobileReportDraft.location_confirmed = 'false';
+          if (locationInput && state.mobileLocationMode === 'map') state.mobileReportDraft.location = locationInput.value;
+        }
+        const status = form.querySelector('[data-gps="status"]');
+        if (status) status.innerHTML = `Detected Brgy. ${escapeHtml(detected)} selected. Review the map marker, then <button type="button" class="button small ghost" data-action="confirm-report-location">confirm this location</button>.`;
+        return;
+      }
+      case 'confirm-selected-report-barangay': {
+        const form = actionButton.closest('form');
+        const barangayInput = form?.querySelector('[name="barangay"]');
+        const selected = state.barangays.find((name) => name.toLocaleLowerCase('en') === barangayInput?.value.trim().toLocaleLowerCase('en'));
+        if (!barangayInput || !selected) throw new Error('Choose one of the active official barangays before confirming.');
+        barangayInput.value = selected;
+        const confirmedInput = form.querySelector('[name="location_confirmed"]');
+        if (confirmedInput) confirmedInput.value = 'true';
+        if (state.mobileReportDraft) {
+          state.mobileReportDraft.barangay = selected;
+          state.mobileReportDraft.location_confirmed = 'true';
         }
         const badgeName = document.getElementById('assigned-barangay-name');
-        if (badgeName) badgeName.textContent = `Brgy. ${bgyName}`;
-
-        if (state.mobileReportDraft) {
-          state.mobileReportDraft.barangay = bgyName;
-          state.mobileReportDraft.latitude = latStr;
-          state.mobileReportDraft.longitude = lngStr;
-          state.mobileReportDraft.location_source = 'gps';
-          state.mobileReportDraft.location_accuracy_m = String(position.accuracy);
-          if (state.mobileLocationMode === 'map') state.mobileReportDraft.location = formattedLocation;
+        if (badgeName) badgeName.textContent = `Brgy. ${selected}`;
+        const locationInput = form.querySelector('[name="location"]');
+        if (locationInput && state.mobileLocationMode === 'map') {
+          locationInput.value = `Brgy. ${selected}, Valencia City (${Number(form.querySelector('[data-gps="latitude"]')?.value).toFixed(5)}, ${Number(form.querySelector('[data-gps="longitude"]')?.value).toFixed(5)})`;
+          if (state.mobileReportDraft) state.mobileReportDraft.location = locationInput.value;
         }
-        if (status) status.innerHTML = `📍 GPS fix: <strong>${position.latitude.toFixed(5)}, ${position.longitude.toFixed(5)}</strong> · Barangay estimate: ${escapeHtml(bgyName)} (${Math.round(position.accuracy)} m accuracy)`;
-
-        state.reportLocationSetPin?.(position.latitude, position.longitude, bgyName, 'gps', position.accuracy);
-        if (state.reportLocationMap) {
-          state.reportLocationMap.setView([position.latitude, position.longitude], 15);
-        }
+        const status = form.querySelector('[data-gps="status"]');
+        if (status) status.textContent = `You confirmed Brgy. ${selected} manually. The map pin coordinates will be saved as shown.`;
         return;
       }
       case 'mark-all-read':
@@ -2795,6 +2836,18 @@ document.addEventListener('click', async (event) => {
 
 document.addEventListener('input', (event) => {
   const input = event.target;
+  if (IS_COMMUNITY && input.matches('form[data-form="report"] input[name="barangay"]')) {
+    const form = input.form;
+    const confirmedInput = form?.querySelector('[name="location_confirmed"]');
+    if (confirmedInput) confirmedInput.value = 'false';
+    if (state.mobileReportDraft) {
+      state.mobileReportDraft.barangay = input.value;
+      state.mobileReportDraft.location_confirmed = 'false';
+    }
+    const status = form?.querySelector('[data-gps="status"]');
+    if (status) status.innerHTML = `Barangay selection changed. Confirm the official barangay name before continuing. <button type="button" class="button small ghost" data-action="confirm-selected-report-barangay">Confirm selected barangay</button>`;
+    return;
+  }
   if (!IS_COMMUNITY || !input.matches('form[data-form="login"] input[name="email"]')) return;
   const form = input.form;
   saveCommunityLoginIdentifier(input.value, form?.elements.remember?.checked === true);

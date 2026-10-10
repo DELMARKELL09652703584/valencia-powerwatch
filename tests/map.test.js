@@ -88,6 +88,7 @@ test('map reports include incident linkage and mapped location data', { timeout:
     latitude: '7.906',
     longitude: '125.094',
     location_source: 'map_pin',
+    location_confirmed: 'true',
     barangay: 'Poblacion',
     purok: 'Purok 1',
     date_time_noticed: new Date().toISOString(),
@@ -112,4 +113,54 @@ test('map reports include incident linkage and mapped location data', { timeout:
   assert.equal(mappedReport.incident_id, null);
   assert.equal(mappedReport.latitude, 7.906);
   assert.equal(mappedReport.longitude, 125.094);
+  assert.equal(mappedReport.location_confirmed, 1);
+});
+
+test('exact-pin reports require confirmation and out-of-area reverse lookup does not guess', { timeout: TEST_TIMEOUT_MS }, async () => {
+  const email = `location-test-${Date.now()}@example.test`;
+  const registerResponse = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      full_name: 'Location Confirmation Test',
+      email,
+      password: 'test-password-123',
+      barangay: 'Poblacion',
+    }),
+  });
+  assert.equal(registerResponse.status, 200);
+  const cookie = registerResponse.headers.get('set-cookie')?.split(';', 1)[0];
+  assert.ok(cookie);
+
+  const unconfirmed = new FormData();
+  for (const [key, value] of Object.entries({
+    location: 'Map pin',
+    latitude: '7.906',
+    longitude: '125.094',
+    location_source: 'map_pin',
+    location_confirmed: 'false',
+    barangay: 'Poblacion',
+    purok: 'Purok 1',
+    date_time_noticed: new Date().toISOString(),
+    description: 'Unconfirmed exact-pin submission.',
+    possible_outage_type: 'Unexpected',
+  })) unconfirmed.append(key, value);
+  const rejectedReport = await fetch(`${baseUrl}/api/reports`, {
+    method: 'POST',
+    headers: { cookie },
+    body: unconfirmed,
+  });
+  assert.equal(rejectedReport.status, 400);
+  assert.match((await rejectedReport.json()).error, /confirm the report location/i);
+
+  const outsideResponse = await fetch(`${baseUrl}/api/barangays/reverse-geocode?lat=7.5&lon=125.1`, { headers: { cookie } });
+  assert.equal(outsideResponse.status, 200);
+  assert.deepEqual(await outsideResponse.json(), {
+    status: 'outside_city',
+    barangay: null,
+    provider: 'OpenStreetMap Nominatim',
+  });
+
+  const invalidResponse = await fetch(`${baseUrl}/api/barangays/reverse-geocode?lat=invalid&lon=125.1`, { headers: { cookie } });
+  assert.equal(invalidResponse.status, 400);
 });

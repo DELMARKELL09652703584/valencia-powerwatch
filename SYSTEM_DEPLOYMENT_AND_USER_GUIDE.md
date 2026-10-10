@@ -98,12 +98,15 @@ flowchart TD
    - Or log in with `resident@test.com` / `password123`.
 3. **Submitting a Power Outage Report:**
    - Tap **"Report Outage"**.
-   - Select your Barangay (e.g., Poblacion, Bagontaas, Mailag, Batangan, etc.).
-   - Pinpoint your exact location on the interactive Leaflet GPS Map.
+   - Review your Barangay (the GPS lookup may suggest one when OpenStreetMap can match the point to an active Valencia barangay).
+   - Tap **Use current location (GPS)** and allow location permission, or tap/drag the marker to place it manually. The map pin and GPS accuracy are shown on the form.
+   - Review and confirm both the pin and barangay before continuing. If the lookup is unavailable or cannot identify a barangay, no barangay is guessed; select an active barangay manually and confirm it. A result differing from your registered barangay is shown for your choice.
+   - GPS is available only in a secure browser context (HTTPS or localhost) and with device location services enabled. The reverse lookup requires an internet connection. OpenStreetMap labels are not an official cadastral boundary determination; use the manual selection or adjust the pin if the returned label is wrong.
    - Choose outage type (Complete Blackout, Partial Voltage/Flicker, Line Down/Transformer Spark).
    - Optional: Attach a photo or notes.
    - Tap **"Submit Report"**.
 4. **Connectivity:** Report submission requires an active internet connection. If the connection drops, reconnect before submitting; reports are not currently saved to an offline queue.
+5. **Responder location:** Confirmed coordinates, barangay, and location-source details are stored with the report and shown to authorized Admin and assigned Staff users for triage and dispatch.
 
 ### B. Administrator Walkthrough
 1. **Login:** Navigate to `/admin` and enter administrator credentials.

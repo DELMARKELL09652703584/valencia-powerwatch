@@ -42,10 +42,22 @@ const state = {
   adminMapMode: 'pins',
   mobileNotificationPanelOpen: false,
   mobileNotificationPreview: [],
+  reportGeocodeRequestId: 0,
   bootError: '',
   maintenanceBackupHash: '',
   language: localStorage.getItem('powerwatch.language') || 'en',
 };
+
+function disposeReportLocationMap() {
+  if (state.reportLocationMap) {
+    state.reportLocationMap.stop();
+    state.reportLocationMap.remove();
+    state.reportLocationMap = null;
+  }
+  state.reportLocationMarker = null;
+  state.reportLocationSetPin = null;
+  state.reportLocationClearPin = null;
+}
 
 const LANG_STORAGE_KEY = 'powerwatch.language';
 const TRANSLATIONS = {
@@ -738,9 +750,9 @@ async function readPhoto(file) {
 }
 
 function captureLocation() {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
-      resolve(null);
+      reject(new Error('This browser does not support location services. Tap the map to place a pin or enter the address manually.'));
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -749,8 +761,15 @@ function captureLocation() {
         longitude: position.coords.longitude,
         accuracy: position.coords.accuracy
       }),
-      () => resolve(null),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+      (error) => {
+        const message = error.code === 1
+          ? 'Location permission was denied. Allow location access in your browser or tap the map to place a pin.'
+          : error.code === 2
+            ? 'Your device could not determine a location. Check that location services are enabled, or tap the map to place a pin.'
+            : 'Location detection timed out. Move to an area with a clearer GPS signal and try again, or tap the map to place a pin.';
+        reject(new Error(message));
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
     );
   });
 }

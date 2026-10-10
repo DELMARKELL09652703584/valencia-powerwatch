@@ -94,6 +94,7 @@ const submitReport = async ({ barangay = 'Poblacion', purok = 'Field Workflow Te
   if (withCoordinates) Object.assign(fields, {
     latitude: '7.906',
     longitude: '125.094',
+    location_confirmed: 'true',
     location_source: 'map_pin',
   });
   for (const [key, value] of Object.entries(fields)) form.append(key, value);
@@ -575,6 +576,9 @@ test('Staff API scopes assignments, reports, evidence, and incidents to authoriz
   assert.equal(allAssignments.length, 1);
   assert.equal(Number(allAssignments[0].id), Number(assignmentId));
   assert.equal(allAssignments[0].latest_stage, 'Assigned');
+  assert.equal(allAssignments[0].report_latitude, 7.906);
+  assert.equal(allAssignments[0].report_longitude, 125.094);
+  assert.equal(allAssignments[0].report_location_confirmed, 1);
   assert.equal(allAssignments[0].incident_id, null, 'dispatching a single report must not create a duplicate incident');
   assert.equal(allAssignments[0].report_incident_id, null);
   const reportDetail = await jsonRequest(`/api/reports/${primaryReportId}`, adminCookie);

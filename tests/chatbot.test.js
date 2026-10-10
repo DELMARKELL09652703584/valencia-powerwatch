@@ -56,6 +56,7 @@ const createResidentReport = async (cookie) => {
     location: 'Near the community hall',
     latitude: '7.906',
     longitude: '125.094',
+    location_confirmed: 'true',
     location_source: 'map_pin',
     barangay: 'Poblacion',
     date_time_noticed: new Date().toISOString(),

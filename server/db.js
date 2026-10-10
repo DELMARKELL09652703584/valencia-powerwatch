@@ -102,6 +102,7 @@ db.exec(`
     location TEXT,
     latitude REAL,
     longitude REAL,
+    location_confirmed INTEGER NOT NULL DEFAULT 0,
     barangay TEXT NOT NULL,
     date_time_noticed TEXT,
     description TEXT,
@@ -350,6 +351,7 @@ ensureColumn('users', 'preferred_language', "TEXT DEFAULT 'en'");
 ensureColumn('announcements', 'image_path', 'TEXT');
 ensureColumn('outage_reports', 'latitude', 'REAL');
 ensureColumn('outage_reports', 'longitude', 'REAL');
+ensureColumn('outage_reports', 'location_confirmed', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('outage_reports', 'purok', 'TEXT');
 ensureColumn('outage_reports', 'location_source', 'TEXT');
 ensureColumn('outage_reports', 'location_accuracy_m', 'REAL');
