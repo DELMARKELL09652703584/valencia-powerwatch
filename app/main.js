@@ -2612,7 +2612,7 @@ async function handleClick(event) {
         }
         if (!state.maintenanceBackupHash) throw new Error('Download the verified database backup first.');
         if (!window.confirm('Confirm that the verified database backup file has downloaded and is safely kept. Continue to the final confirmation?')) return;
-        let resetMessage = 'The clean reset is complete. Sign in with dsaroay@gmail.com; only that Admin account and system settings remain. Add barangays again before user registration or reporting.';
+        let resetMessage = 'The clean reset is complete. Sign in with dsaroay@gmail.com; only that Admin account and system settings remain, and all 31 official barangays are preserved.';
         {
           const expected = 'RESET ALL EXCEPT dsaroay@gmail.com';
           if (window.prompt(`This permanently deletes every other account and all operational/demo data. Type exactly:\n${expected}`) !== expected) return;
@@ -2624,7 +2624,7 @@ async function handleClick(event) {
           const fileWarning = result.failed_upload_file_deletes
             ? ` ${result.failed_upload_file_deletes} uploaded file(s) could not be removed; contact support before reuse.`
             : '';
-          resetMessage = `${result.message} Removed ${result.removed.users} account(s), ${result.removed.reports} report(s), ${result.removed.incidents} incident(s), ${result.removed.teams} team(s), and ${result.removed.barangays} barangay record(s). Add barangays again before user registration or reporting.${fileWarning}`;
+          resetMessage = `${result.message} Removed ${result.removed.users} account(s), ${result.removed.reports} report(s), ${result.removed.incidents} incident(s), and ${result.removed.teams} team(s). Preserved ${result.preserved_barangays} official barangays.${fileWarning}`;
         }
         state.maintenanceBackupHash = '';
         state.user = null;

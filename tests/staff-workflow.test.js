@@ -12,6 +12,14 @@ const ROOT = path.resolve(__dirname, '..');
 const TEST_TIMEOUT_MS = 30000;
 const testAdminEmail = 'dsaroay@gmail.com';
 const testAdminPassword = `${crypto.randomUUID()}Aa1!`;
+const OFFICIAL_VALENCIA_BARANGAYS = [
+  'Bagontaas', 'Banlag', 'Barobo', 'Batangan', 'Catumbalon', 'Colonia',
+  'Concepcion', 'Dagat-Kidavao', 'Guinoyuran', 'Kahapunan', 'Laligan',
+  'Lilingayon', 'Lourdes', 'Lumbayao', 'Lumbo', 'Lurogan', 'Maapag',
+  'Mabuhay', 'Mailag', 'Mt. Nebo', 'Nabago', 'Pinatilan', 'Poblacion',
+  'San Carlos', 'San Isidro', 'Sinabuagan', 'Sinayawan', 'Sugod',
+  'Tongantongan', 'Tugaya', 'Vintar',
+].sort();
 let serverProcess;
 let baseUrl;
 let testDirectory;
@@ -883,7 +891,8 @@ test('clean reset requires a verified backup, keeps only the selected admin, and
   assert.ok(reset.removed.reports >= 1);
   assert.ok(reset.removed.assignments >= 1);
   assert.ok(reset.removed.teams >= 2);
-  assert.ok(reset.removed.barangays >= 28);
+  assert.equal(reset.removed.barangays, 0);
+  assert.equal(reset.preserved_barangays, OFFICIAL_VALENCIA_BARANGAYS.length);
 
   const remainingUsersResponse = await jsonRequest('/api/admin/users?status=all', adminCookie);
   assert.equal(remainingUsersResponse.status, 200);
@@ -903,17 +912,19 @@ test('clean reset requires a verified backup, keeps only the selected admin, and
     ]) {
       assert.equal(Number(resetDb.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get().count), 0, `${table} should be empty`);
     }
-    assert.equal(Number(resetDb.prepare('SELECT COUNT(*) AS count FROM barangays').get().count), 0);
-    assert.equal(resetDb.prepare("SELECT value FROM settings WHERE key = 'barangay_seed_disabled'").get().value, 'true');
+    assert.equal(Number(resetDb.prepare('SELECT COUNT(*) AS count FROM barangays').get().count), OFFICIAL_VALENCIA_BARANGAYS.length);
+    assert.equal(resetDb.prepare("SELECT value FROM settings WHERE key = 'barangay_seed_disabled'").get(), undefined);
     assert.ok(Number(resetDb.prepare('SELECT COUNT(*) AS count FROM settings').get().count) > 0);
     assert.equal(Number(resetDb.prepare("SELECT COUNT(*) AS count FROM audit_logs WHERE action = 'Clean system reset'").get().count), 1);
     assert.equal(resetDb.prepare('PRAGMA integrity_check').get().integrity_check, 'ok');
     assert.deepEqual(resetDb.prepare('PRAGMA foreign_key_check').all(), []);
     assert.doesNotMatch(fs.readFileSync(path.join(ROOT, 'server', 'db.js'), 'utf8'), /Alpha Quick Response Unit/);
+    resetDb.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('barangay_seed_disabled', 'true')").run();
+    resetDb.exec('DELETE FROM barangays');
   } finally {
     resetDb.close();
   }
-  const restart = spawnSync(process.execPath, ['-e', "const { db } = require('./server/db'); console.log(db.prepare('SELECT COUNT(*) AS count FROM barangays').get().count); db.close();"], {
+  const restart = spawnSync(process.execPath, ['-e', "const { db } = require('./server/db'); console.log(JSON.stringify({ names: db.prepare('SELECT name FROM barangays WHERE status = \\'Active\\' ORDER BY name').all().map((row) => row.name), legacySeedSetting: db.prepare('SELECT value FROM settings WHERE key = \\'barangay_seed_disabled\\'').get() || null })); db.close();"], {
     cwd: path.join(testDirectory, 'runtime'),
     env: {
       ...process.env,
@@ -926,20 +937,23 @@ test('clean reset requires a verified backup, keeps only the selected admin, and
     encoding: 'utf8',
   });
   assert.equal(restart.status, 0, restart.stderr);
-  assert.equal(restart.stdout.trim().split(/\r?\n/).at(-1), '0', 'barangays remain cleared after server restart');
+  const restartedData = JSON.parse(restart.stdout.trim().split(/\r?\n/).at(-1));
+  assert.deepEqual(restartedData.names, OFFICIAL_VALENCIA_BARANGAYS, 'all official barangays are restored after server restart');
+  assert.equal(restartedData.legacySeedSetting, null);
 
   const managedUploads = fs.readdirSync(path.join(testDirectory, 'runtime', 'uploads'))
     .filter((filename) => /^(?:report_|photo_|announcement_|profile_)/.test(filename));
   assert.deepEqual(managedUploads, [retainedPhotoFilename]);
   assert.deepEqual(fs.readdirSync(path.join(testDirectory, 'runtime', 'data', 'staff-evidence')), []);
 
-  const readdedBarangay = await jsonRequest('/api/admin/barangays', adminCookie, 'POST', {
-    name: 'Poblacion',
-    area_description: 'Re-added for post-reset workflow test.',
-  });
-  assert.equal(readdedBarangay.status, 201);
   const barangayListResponse = await jsonRequest('/api/admin/barangays', adminCookie);
-  assert.deepEqual((await barangayListResponse.json()).barangays.map((barangay) => barangay.name), ['Poblacion']);
+  assert.deepEqual((await barangayListResponse.json()).barangays.map((barangay) => barangay.name), OFFICIAL_VALENCIA_BARANGAYS);
+  const duplicateBarangay = await jsonRequest('/api/admin/barangays', adminCookie, 'POST', { name: 'poblacion' });
+  assert.equal(duplicateBarangay.status, 409);
+  const adminSettingsResponse = await jsonRequest('/api/admin/settings', adminCookie);
+  assert.deepEqual((await adminSettingsResponse.json()).available_barangays, OFFICIAL_VALENCIA_BARANGAYS);
+  const publicBarangaysResponse = await jsonRequest('/api/auth/demo', '');
+  assert.deepEqual((await publicBarangaysResponse.json()).barangays, OFFICIAL_VALENCIA_BARANGAYS);
 
   const newResidentEmail = `fresh-resident-${Date.now()}@example.test`;
   const newResidentResponse = await jsonRequest('/api/auth/register', '', 'POST', {
@@ -950,6 +964,11 @@ test('clean reset requires a verified backup, keeps only the selected admin, and
   });
   assert.equal(newResidentResponse.status, 200);
   residentCookie = (await login(newResidentEmail, 'resident-password-123', 'community')).cookie;
+  const mapLocationsResponse = await jsonRequest('/api/barangays/locations', residentCookie);
+  assert.equal(mapLocationsResponse.status, 200);
+  const mapLocations = (await mapLocationsResponse.json()).barangays;
+  assert.deepEqual(mapLocations.map((barangay) => barangay.name), OFFICIAL_VALENCIA_BARANGAYS);
+  assert.ok(mapLocations.every((barangay) => Number.isFinite(barangay.latitude) && Number.isFinite(barangay.longitude)));
 
   const newTeamResponse = await jsonRequest('/api/repair-teams', adminCookie, 'POST', {
     name: 'Fresh Reset Response Team',
@@ -972,6 +991,12 @@ test('clean reset requires a verified backup, keeps only the selected admin, and
     dispatch_notes: 'Fresh post-reset workflow verification.',
   });
   assert.equal(dispatchResponse.status, 201);
+  const filteredReportsResponse = await jsonRequest('/api/reports?barangay=Poblacion', adminCookie);
+  assert.equal(filteredReportsResponse.status, 200);
+  assert.deepEqual((await filteredReportsResponse.json()).reports.map((report) => report.barangay), ['Poblacion']);
+  const barangayStatsResponse = await jsonRequest('/api/analytics/barangay', adminCookie);
+  assert.equal(barangayStatsResponse.status, 200);
+  assert.deepEqual((await barangayStatsResponse.json()).data, [{ barangay: 'Poblacion', c: 1 }]);
   const freshAssignments = await jsonRequest('/api/staff/assignments', staffCookie);
   assert.equal(freshAssignments.status, 200);
   assert.equal((await freshAssignments.json()).assignments.length, 1);

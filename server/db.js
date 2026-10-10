@@ -409,19 +409,19 @@ const BARANGAY_COORDINATES = {
   Vintar: [7.9667, 125.1342]
 };
 
-if (db.prepare("SELECT value FROM settings WHERE key = 'barangay_seed_disabled'").get()?.value !== 'true') {
-  db.prepare("DELETE FROM barangays WHERE name IN ('Napaliran', 'Pal-ing')").run();
+const VALENCIA_BARANGAYS = Object.keys(BARANGAY_COORDINATES);
+db.prepare("DELETE FROM settings WHERE key = 'barangay_seed_disabled'").run();
+db.prepare("DELETE FROM barangays WHERE name IN ('Napaliran', 'Pal-ing')").run();
 
-  const checkBgry = db.prepare('SELECT id FROM barangays WHERE name = ?');
-  const insBgry = db.prepare("INSERT INTO barangays (name, area_description, status, latitude, longitude) VALUES (?, ?, 'Active', ?, ?)");
-  const updateBgryCoords = db.prepare('UPDATE barangays SET latitude = ?, longitude = ? WHERE name = ?');
-  for (const [name, [lat, lng]] of Object.entries(BARANGAY_COORDINATES)) {
-    const existing = checkBgry.get(name);
-    if (existing) {
-      updateBgryCoords.run(lat, lng, name);
-    } else {
-      insBgry.run(name, `Service area within Brgy. ${name}, Valencia City, Bukidnon.`, lat, lng);
-    }
+const checkBgry = db.prepare('SELECT id FROM barangays WHERE name = ?');
+const insBgry = db.prepare("INSERT INTO barangays (name, area_description, status, latitude, longitude) VALUES (?, ?, 'Active', ?, ?)");
+const updateBgryCoords = db.prepare('UPDATE barangays SET latitude = ?, longitude = ? WHERE name = ?');
+for (const [name, [lat, lng]] of Object.entries(BARANGAY_COORDINATES)) {
+  const existing = checkBgry.get(name);
+  if (existing) {
+    updateBgryCoords.run(lat, lng, name);
+  } else {
+    insBgry.run(name, `Service area within Brgy. ${name}, Valencia City, Bukidnon.`, lat, lng);
   }
 }
 
@@ -477,15 +477,6 @@ const BOOTSTRAP_ADMIN_PASSWORD = (() => {
   if (process.env.NODE_ENV === 'test' || process.env.npm_lifecycle_event === 'test' || process.argv.includes('--test')) return TEST_BOOTSTRAP_ADMIN_PASSWORD;
   return null;
 })();
-
-const VALENCIA_BARANGAYS = [
-  'Bagontaas', 'Banlag', 'Barobo', 'Batangan', 'Catumbalon', 'Colonia',
-  'Concepcion', 'Dagat-Kidavao', 'Guinoyuran', 'Kahapunan', 'Laligan',
-  'Lilingayon', 'Lourdes', 'Lumbayao', 'Lumbo', 'Lurogan', 'Maapag',
-  'Mabuhay', 'Mailag', 'Mt. Nebo', 'Nabago', 'Pinatilan', 'Poblacion',
-  'San Carlos', 'San Isidro', 'Sinabuagan', 'Sinayawan', 'Sugod',
-  'Tongantongan', 'Tugaya', 'Vintar'
-];
 
 const SETTINGS_SEED = {
   outage_types: [
@@ -570,16 +561,6 @@ function seedIfFresh() {
       WHERE (username IS NULL OR username = '') AND INSTR(email, '@') > 1;
     `);
   } catch (err) {}
-
-  // Ensure 28 official Valencia City Barangays are present
-  const barangaySeedDisabled = db.prepare("SELECT value FROM settings WHERE key = 'barangay_seed_disabled'").get()?.value === 'true';
-  const bgryCount = Number(db.prepare('SELECT COUNT(*) as cnt FROM barangays').get().cnt || 0);
-  if (!barangaySeedDisabled && bgryCount === 0) {
-    const insBgry = db.prepare('INSERT INTO barangays (name, area_description, status) VALUES (?, ?, ?)');
-    for (const name of VALENCIA_BARANGAYS) {
-      insBgry.run(name, `Service area within Brgy. ${name}, Valencia City, Bukidnon.`, 'Active');
-    }
-  }
 
   // Ensure default system configuration settings exist
   for (const [key, value] of Object.entries(SETTINGS_SEED)) {

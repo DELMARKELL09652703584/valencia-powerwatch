@@ -33,8 +33,8 @@ test('Report verification updates the authoritative report without creating a du
   assert.match(mainSource, /status: 'Verified'/);
   assert.doesNotMatch(mainSource, /type === 'verify-create-incident'/);
   assert.match(adminSource, /Verify Report/);
-  assert.match(adminHtml, /app\/admin\.js\?v=29/);
-  assert.match(adminHtml, /app\/main\.js\?v=35/);
+  assert.match(adminHtml, /app\/admin\.js\?v=30/);
+  assert.match(adminHtml, /app\/main\.js\?v=36/);
   assert.match(adminHtml, /admin-theme\.css\?v=3/);
 });
 
