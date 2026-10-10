@@ -486,6 +486,7 @@ router.post('/maintenance/clean-reset', requireAuth, requireRole('administrator'
     teams: Number(db.prepare('SELECT COUNT(*) AS count FROM repair_teams').get().count),
     announcements: Number(db.prepare('SELECT COUNT(*) AS count FROM announcements').get().count),
     scheduled_outages: Number(db.prepare('SELECT COUNT(*) AS count FROM scheduled_outages').get().count),
+    barangays: Number(db.prepare('SELECT COUNT(*) AS count FROM barangays').get().count),
   };
   const retainedPhotoPath = db.prepare('SELECT profile_photo_path FROM users WHERE id = ?').get(adminId)?.profile_photo_path || '';
   const retainedPhotoFilename = retainedPhotoPath.startsWith('/uploads/') ? path.basename(retainedPhotoPath) : '';
@@ -509,6 +510,7 @@ router.post('/maintenance/clean-reset', requireAuth, requireRole('administrator'
       DELETE FROM outage_reports;
       DELETE FROM outage_incidents;
       DELETE FROM repair_teams;
+      DELETE FROM barangays;
       DELETE FROM sms_logs;
       DELETE FROM oauth_states;
       DELETE FROM password_reset_tokens;
@@ -517,6 +519,7 @@ router.post('/maintenance/clean-reset', requireAuth, requireRole('administrator'
     db.prepare('DELETE FROM oauth_accounts WHERE user_id != ?').run(adminId);
     db.prepare('DELETE FROM sessions WHERE token != ?').run(req.token);
     db.prepare('DELETE FROM users WHERE id != ?').run(adminId);
+    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('barangay_seed_disabled', 'true')").run();
     db.exec(`
       DELETE FROM sqlite_sequence WHERE name IN (
         'outage_reports','outage_incidents','incident_links','incident_areas',
@@ -560,7 +563,7 @@ router.post('/maintenance/clean-reset', requireAuth, requireRole('administrator'
 
   audit(req.user, 'Clean system reset', 'Removed all non-administrator accounts and operational/demo data after a verified database backup.');
   res.json({
-    message: 'Clean reset completed. Only the selected administrator account and system configuration remain.',
+    message: 'Clean reset completed. Only the selected administrator account and system configuration remain; all barangay records were removed.',
     retained_admin: req.user.email,
     removed,
     deleted_upload_files: deletedUploads,

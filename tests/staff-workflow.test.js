@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
-const { spawn } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const net = require('node:net');
 const os = require('node:os');
@@ -883,6 +883,7 @@ test('clean reset requires a verified backup, keeps only the selected admin, and
   assert.ok(reset.removed.reports >= 1);
   assert.ok(reset.removed.assignments >= 1);
   assert.ok(reset.removed.teams >= 2);
+  assert.ok(reset.removed.barangays >= 28);
 
   const remainingUsersResponse = await jsonRequest('/api/admin/users?status=all', adminCookie);
   assert.equal(remainingUsersResponse.status, 200);
@@ -902,7 +903,8 @@ test('clean reset requires a verified backup, keeps only the selected admin, and
     ]) {
       assert.equal(Number(resetDb.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get().count), 0, `${table} should be empty`);
     }
-    assert.ok(Number(resetDb.prepare('SELECT COUNT(*) AS count FROM barangays').get().count) >= 28);
+    assert.equal(Number(resetDb.prepare('SELECT COUNT(*) AS count FROM barangays').get().count), 0);
+    assert.equal(resetDb.prepare("SELECT value FROM settings WHERE key = 'barangay_seed_disabled'").get().value, 'true');
     assert.ok(Number(resetDb.prepare('SELECT COUNT(*) AS count FROM settings').get().count) > 0);
     assert.equal(Number(resetDb.prepare("SELECT COUNT(*) AS count FROM audit_logs WHERE action = 'Clean system reset'").get().count), 1);
     assert.equal(resetDb.prepare('PRAGMA integrity_check').get().integrity_check, 'ok');
@@ -911,10 +913,33 @@ test('clean reset requires a verified backup, keeps only the selected admin, and
   } finally {
     resetDb.close();
   }
+  const restart = spawnSync(process.execPath, ['-e', "const { db } = require('./server/db'); console.log(db.prepare('SELECT COUNT(*) AS count FROM barangays').get().count); db.close();"], {
+    cwd: path.join(testDirectory, 'runtime'),
+    env: {
+      ...process.env,
+      NODE_ENV: 'test',
+      POWERWATCH_DATA_DIR: path.join(testDirectory, 'runtime', 'data'),
+      POWERWATCH_ADMIN_EMAIL: testAdminEmail,
+      POWERWATCH_ADMIN_PASSWORD: testAdminPassword,
+      POWERWATCH_ADMIN_NAME: 'Isolated Test Administrator',
+    },
+    encoding: 'utf8',
+  });
+  assert.equal(restart.status, 0, restart.stderr);
+  assert.equal(restart.stdout.trim().split(/\r?\n/).at(-1), '0', 'barangays remain cleared after server restart');
+
   const managedUploads = fs.readdirSync(path.join(testDirectory, 'runtime', 'uploads'))
     .filter((filename) => /^(?:report_|photo_|announcement_|profile_)/.test(filename));
   assert.deepEqual(managedUploads, [retainedPhotoFilename]);
   assert.deepEqual(fs.readdirSync(path.join(testDirectory, 'runtime', 'data', 'staff-evidence')), []);
+
+  const readdedBarangay = await jsonRequest('/api/admin/barangays', adminCookie, 'POST', {
+    name: 'Poblacion',
+    area_description: 'Re-added for post-reset workflow test.',
+  });
+  assert.equal(readdedBarangay.status, 201);
+  const barangayListResponse = await jsonRequest('/api/admin/barangays', adminCookie);
+  assert.deepEqual((await barangayListResponse.json()).barangays.map((barangay) => barangay.name), ['Poblacion']);
 
   const newResidentEmail = `fresh-resident-${Date.now()}@example.test`;
   const newResidentResponse = await jsonRequest('/api/auth/register', '', 'POST', {
