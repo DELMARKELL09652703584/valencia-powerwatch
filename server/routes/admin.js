@@ -1,10 +1,13 @@
 const express = require('express');
 const fs = require('node:fs');
 const path = require('node:path');
-const { db, now, DB_PATH, seedIfFresh, VALENCIA_BARANGAYS } = require('../db');
+const os = require('node:os');
+const crypto = require('node:crypto');
+const { DatabaseSync } = require('node:sqlite');
+const { db, now, DB_PATH, UPLOAD_DIR, VALENCIA_BARANGAYS } = require('../db');
 const {
   requireAuth, requireRole, audit, hashPassword, roleLabel,
-  notifyUsers, notifyRole, clearDBTables, isBuiltInAdmin, hasBuiltInAdminIdentifier,
+  notifyUsers, notifyRole, isBuiltInAdmin, hasBuiltInAdminIdentifier,
 } = require('../auth');
 const { staffBarangaysFor } = require('../staff-access');
 
@@ -31,6 +34,52 @@ const staffAccountLimit = () => {
     throw new Error('The configured staff account limit is invalid. Update the staff account limit in system settings.');
   }
   return value;
+};
+
+const createVerifiedDatabaseBackup = () => {
+  const checkpoint = db.prepare('PRAGMA wal_checkpoint(TRUNCATE)').get();
+  if (Number(checkpoint?.busy)) {
+    throw Object.assign(new Error('The database is busy. Retry the backup before resetting.'), { status: 503 });
+  }
+  const buffer = fs.readFileSync(DB_PATH);
+  if (buffer.subarray(0, 16).toString() !== 'SQLite format 3\0') {
+    throw Object.assign(new Error('The database backup could not be verified.'), { status: 500 });
+  }
+
+  const temporaryPath = path.join(os.tmpdir(), `powerwatch-backup-${crypto.randomUUID()}.db`);
+  let snapshot;
+  try {
+    fs.writeFileSync(temporaryPath, buffer, { flag: 'wx' });
+    snapshot = new DatabaseSync(temporaryPath);
+    const integrity = snapshot.prepare('PRAGMA integrity_check').get();
+    if (integrity?.integrity_check !== 'ok') {
+      throw Object.assign(new Error('The database backup failed its integrity check.'), { status: 500 });
+    }
+  } finally {
+    snapshot?.close();
+    fs.rmSync(temporaryPath, { force: true });
+  }
+
+  return {
+    buffer,
+    sha256: crypto.createHash('sha256').update(buffer).digest('hex'),
+  };
+};
+
+const managedUploadFilename = (filename) => /^(?:report_\d+_[\w-]+|photo_\d+_\d+|announcement_[\w-]+|profile_\d+_\d+)\.(?:jpe?g|png|webp|mp4|mov)$/i.test(filename);
+
+const removeManagedUpload = (filename) => {
+  if (!managedUploadFilename(filename)) return false;
+  const uploadRoot = path.resolve(UPLOAD_DIR);
+  const filePath = path.resolve(uploadRoot, filename);
+  if (!filePath.startsWith(`${uploadRoot}${path.sep}`)) return false;
+  try {
+    fs.unlinkSync(filePath);
+    return true;
+  } catch (error) {
+    if (error.code === 'ENOENT') return false;
+    throw error;
+  }
 };
 
 // ---------------- Users ----------------
@@ -386,18 +435,137 @@ router.delete('/audit-logs', requireAuth, requireRole('administrator'), (req, re
 
 // ---------------- Data maintenance ----------------
 
-// Reset demonstration data (keeps accounts) and reload fresh seed content
-router.post('/maintenance/seed', requireAuth, requireRole('administrator'), (req, res) => {
-  clearDBTables();
-  seedIfFresh();
-  audit(req.user, 'Data maintenance', `${req.user.full_name} reset demonstration data to factory seed.`);
-  res.json({ message: 'Demonstration data reset to the original seed content.' });
-});
-
 // Download database backup
 router.get('/backup', requireAuth, requireRole('administrator'), (req, res) => {
+  const backup = createVerifiedDatabaseBackup();
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  res.download(DB_PATH, `valencia-powerwatch-${stamp}.db`);
+  res.set({
+    'Cache-Control': 'private, no-store',
+    'Content-Type': 'application/vnd.sqlite3',
+    'Content-Disposition': `attachment; filename="valencia-powerwatch-${stamp}.db"`,
+    'Content-Length': String(backup.buffer.length),
+    'X-Database-SHA256': backup.sha256,
+    'X-Content-Type-Options': 'nosniff',
+  });
+  res.send(backup.buffer);
+});
+
+router.post('/maintenance/clean-reset', requireAuth, requireRole('administrator'), (req, res) => {
+  const keepEmail = String(req.body?.keep_email || '').trim().toLowerCase();
+  const confirmation = String(req.body?.confirmation || '');
+  const expectedConfirmation = `RESET ALL EXCEPT ${keepEmail}`;
+  const backupSha256 = String(req.body?.backup_sha256 || '').toLowerCase();
+  if (String(req.user.email || '').toLowerCase() !== 'dsaroay@gmail.com'
+    || !isBuiltInAdmin(req.user)
+    || keepEmail !== 'dsaroay@gmail.com') {
+    return res.status(403).json({ error: 'Sign in with the Delmarkel Saro-ay administrator account that you chose to preserve.' });
+  }
+  if (confirmation !== expectedConfirmation) {
+    return res.status(400).json({ error: `Type "${expectedConfirmation}" exactly to confirm the reset.` });
+  }
+  if (!/^[a-f0-9]{64}$/.test(backupSha256)) {
+    return res.status(400).json({ error: 'Download a verified database backup before resetting.' });
+  }
+
+  let backup;
+  try {
+    backup = createVerifiedDatabaseBackup();
+  } catch (error) {
+    return res.status(error.status || 500).json({ error: error.message || 'A verified backup could not be created.' });
+  }
+  if (backup.sha256 !== backupSha256) {
+    return res.status(409).json({ error: 'The database changed after the backup. Download a fresh backup and retry the reset.' });
+  }
+
+  const adminId = Number(req.user.id);
+  const removed = {
+    users: Number(db.prepare('SELECT COUNT(*) AS count FROM users WHERE id != ?').get(adminId).count),
+    reports: Number(db.prepare('SELECT COUNT(*) AS count FROM outage_reports').get().count),
+    incidents: Number(db.prepare('SELECT COUNT(*) AS count FROM outage_incidents').get().count),
+    assignments: Number(db.prepare('SELECT COUNT(*) AS count FROM repair_assignments').get().count),
+    teams: Number(db.prepare('SELECT COUNT(*) AS count FROM repair_teams').get().count),
+    announcements: Number(db.prepare('SELECT COUNT(*) AS count FROM announcements').get().count),
+    scheduled_outages: Number(db.prepare('SELECT COUNT(*) AS count FROM scheduled_outages').get().count),
+  };
+  const retainedPhotoPath = db.prepare('SELECT profile_photo_path FROM users WHERE id = ?').get(adminId)?.profile_photo_path || '';
+  const retainedPhotoFilename = retainedPhotoPath.startsWith('/uploads/') ? path.basename(retainedPhotoPath) : '';
+
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    db.exec(`
+      DELETE FROM repair_assignment_updates;
+      DELETE FROM repair_assignment_evidence;
+      DELETE FROM staff_team_members;
+      DELETE FROM staff_barangay_assignments;
+      DELETE FROM report_status_history;
+      DELETE FROM report_attachments;
+      DELETE FROM incident_links;
+      DELETE FROM incident_areas;
+      DELETE FROM repair_assignments;
+      DELETE FROM citizen_feedback;
+      DELETE FROM announcements;
+      DELETE FROM notifications;
+      DELETE FROM scheduled_outages;
+      DELETE FROM outage_reports;
+      DELETE FROM outage_incidents;
+      DELETE FROM repair_teams;
+      DELETE FROM sms_logs;
+      DELETE FROM oauth_states;
+      DELETE FROM password_reset_tokens;
+      DELETE FROM audit_logs;
+    `);
+    db.prepare('DELETE FROM oauth_accounts WHERE user_id != ?').run(adminId);
+    db.prepare('DELETE FROM sessions WHERE token != ?').run(req.token);
+    db.prepare('DELETE FROM users WHERE id != ?').run(adminId);
+    db.exec(`
+      DELETE FROM sqlite_sequence WHERE name IN (
+        'outage_reports','outage_incidents','incident_links','incident_areas',
+        'scheduled_outages','announcements','notifications','audit_logs',
+        'citizen_feedback','sms_logs','report_attachments','report_status_history',
+        'repair_assignments','repair_teams','repair_assignment_updates',
+        'repair_assignment_evidence','staff_team_members','staff_barangay_assignments'
+      );
+    `);
+    db.exec('COMMIT');
+  } catch (error) {
+    db.exec('ROLLBACK');
+    return res.status(500).json({ error: `The reset was rolled back: ${error.message}` });
+  }
+
+  let deletedUploads = 0;
+  let failedUploadDeletes = 0;
+  try {
+    for (const filename of fs.readdirSync(UPLOAD_DIR)) {
+      if (filename === retainedPhotoFilename) continue;
+      try {
+        if (removeManagedUpload(filename)) deletedUploads++;
+      } catch {
+        failedUploadDeletes++;
+      }
+    }
+    const evidenceDirectory = path.join(path.dirname(DB_PATH), 'staff-evidence');
+    for (const filename of fs.readdirSync(evidenceDirectory)) {
+      if (!/^[\da-f-]{36}\.(?:jpg|png|webp|mp4|mov)$/i.test(filename)) continue;
+      try {
+        fs.unlinkSync(path.join(evidenceDirectory, filename));
+        deletedUploads++;
+      } catch (error) {
+        if (error.code !== 'ENOENT') failedUploadDeletes++;
+      }
+    }
+  } catch (error) {
+    failedUploadDeletes++;
+    console.error('Clean reset completed, but upload cleanup encountered an error:', error);
+  }
+
+  audit(req.user, 'Clean system reset', 'Removed all non-administrator accounts and operational/demo data after a verified database backup.');
+  res.json({
+    message: 'Clean reset completed. Only the selected administrator account and system configuration remain.',
+    retained_admin: req.user.email,
+    removed,
+    deleted_upload_files: deletedUploads,
+    failed_upload_file_deletes: failedUploadDeletes,
+  });
 });
 
 // ---------------- Real-Time Telemetry & Audio Ping Heartbeat ----------------

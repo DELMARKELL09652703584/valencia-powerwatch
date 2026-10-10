@@ -2579,13 +2579,56 @@ async function handleClick(event) {
         await render();
         return;
       case 'backup':
-        window.location.assign('/api/admin/backup');
+        {
+          const response = await fetch('/api/admin/backup', { credentials: 'same-origin' });
+          if (!response.ok) {
+            const result = await response.json().catch(() => ({}));
+            throw new Error(result.error || 'Database backup could not be downloaded.');
+          }
+          const backup = await response.blob();
+          const backupHash = response.headers.get('x-database-sha256');
+          const signature = new TextDecoder().decode(await backup.slice(0, 16).arrayBuffer());
+          const backupDigest = await crypto.subtle.digest('SHA-256', await backup.arrayBuffer());
+          const verifiedHash = [...new Uint8Array(backupDigest)]
+            .map((byte) => byte.toString(16).padStart(2, '0'))
+            .join('');
+          if (!/^[a-f0-9]{64}$/i.test(backupHash || '')
+            || verifiedHash !== backupHash.toLowerCase()
+            || signature !== 'SQLite format 3\u0000') {
+            throw new Error('The downloaded database backup could not be verified.');
+          }
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(backup);
+          link.download = `valencia-powerwatch-${new Date().toISOString().replace(/[:.]/g, '-')}.db`;
+          link.click();
+          window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+          state.maintenanceBackupHash = backupHash;
+          setToast('Verified backup download started. Keep the .db file before resetting.');
+        }
         return;
       case 'seed-reset':
-        if (!window.confirm('Reset system data to a clean/fresh state? All reports, incidents, schedules, announcements, and user submissions will be removed.')) return;
-        await send('/api/admin/maintenance/seed', 'POST');
+        if (String(state.user?.email || '').toLowerCase() !== 'dsaroay@gmail.com') {
+          throw new Error('Sign in as Delmarkel Saro-ay (dsaroay@gmail.com), the administrator account selected to keep.');
+        }
+        if (!state.maintenanceBackupHash) throw new Error('Download the verified database backup first.');
+        if (!window.confirm('Confirm that the verified database backup file has downloaded and is safely kept. Continue to the final confirmation?')) return;
+        let resetMessage = 'The clean reset is complete. Sign in with dsaroay@gmail.com; only that Admin account and essential configuration remain.';
+        {
+          const expected = 'RESET ALL EXCEPT dsaroay@gmail.com';
+          if (window.prompt(`This permanently deletes every other account and all operational/demo data. Type exactly:\n${expected}`) !== expected) return;
+          const result = await send('/api/admin/maintenance/clean-reset', 'POST', {
+            keep_email: 'dsaroay@gmail.com',
+            confirmation: expected,
+            backup_sha256: state.maintenanceBackupHash,
+          });
+          const fileWarning = result.failed_upload_file_deletes
+            ? ` ${result.failed_upload_file_deletes} uploaded file(s) could not be removed; contact support before reuse.`
+            : '';
+          resetMessage = `${result.message} Removed ${result.removed.users} account(s), ${result.removed.reports} report(s), ${result.removed.incidents} incident(s), and ${result.removed.teams} team(s).${fileWarning}`;
+        }
+        state.maintenanceBackupHash = '';
         state.user = null;
-        renderLogin('System data was reset to a fresh state. Sign in again to continue.');
+        renderLogin(resetMessage);
         return;
       default:
         return;

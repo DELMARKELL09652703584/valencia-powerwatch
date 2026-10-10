@@ -701,86 +701,12 @@ const ensureAdminAccount = () => {
   checkpointDb();
 };
 
-const seedRepairTeams = () => {
-  try {
-    const count = db.prepare('SELECT COUNT(*) AS total FROM repair_teams').get()?.total || 0;
-    if (count === 0) {
-      const teams = [
-        {
-          team_code: 'TEAM-01',
-          name: 'Alpha Quick Response Unit',
-          lead_technician: 'Engr. Carlos Mendoza',
-          contact_number: '0917-889-1234',
-          vehicle_type: 'FIBECO Heavy Boom Truck #01',
-          base_station: 'Central Substation, Sayre Highway',
-          current_latitude: 7.9064,
-          current_longitude: 125.0941,
-          status: 'Available'
-        },
-        {
-          team_code: 'TEAM-02',
-          name: 'Bravo Overhead Line Squad',
-          lead_technician: 'Foreman Arnel Guingona',
-          contact_number: '0917-889-5678',
-          vehicle_type: 'Utility Line Rig #02',
-          base_station: 'Poblacion Operations Base, Valencia',
-          current_latitude: 7.9045,
-          current_longitude: 125.0912,
-          status: 'Available'
-        },
-        {
-          team_code: 'TEAM-03',
-          name: 'Charlie Transformer & Substation Team',
-          lead_technician: 'Engr. Reynante Silva',
-          contact_number: '0917-889-9012',
-          vehicle_type: 'Heavy Service Rig #05',
-          base_station: 'Valencia Central Switchyard',
-          current_latitude: 7.9152,
-          current_longitude: 125.0988,
-          status: 'Available'
-        },
-        {
-          team_code: 'TEAM-04',
-          name: 'Delta Emergency Rescue Unit',
-          lead_technician: 'Supervisor Jason Tan',
-          contact_number: '0917-889-3456',
-          vehicle_type: 'Rapid Response Pickup #04',
-          base_station: 'Bagontaas Auxiliary Outpost',
-          current_latitude: 7.9304,
-          current_longitude: 125.1077,
-          status: 'Available'
-        }
-      ];
-
-      const stmt = db.prepare(`
-        INSERT INTO repair_teams (team_code, name, lead_technician, contact_number, vehicle_type, base_station, current_latitude, current_longitude, location_updated_at, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      for (const t of teams) {
-        const ts = now();
-        stmt.run(t.team_code, t.name, t.lead_technician, t.contact_number, t.vehicle_type, t.base_station, t.current_latitude, t.current_longitude, ts, t.status, ts);
-      }
-    }
-
-    db.exec(`
-      UPDATE repair_teams 
-      SET location_updated_at = COALESCE(location_updated_at, created_at, datetime('now'))
-      WHERE current_latitude IS NOT NULL AND current_longitude IS NOT NULL AND location_updated_at IS NULL;
-    `);
-  } catch (err) {
-    console.error('Error seeding repair teams:', err);
-  }
-};
-
 seedIfFresh();
 ensureAdminAccount();
-seedRepairTeams();
 checkpointDb();
 
 module.exports = {
   ensureAdminAccount,
-  seedRepairTeams,
   checkpointDb,
   db,
   ROOT,

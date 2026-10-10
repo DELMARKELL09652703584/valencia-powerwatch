@@ -43,6 +43,7 @@ const state = {
   mobileNotificationPanelOpen: false,
   mobileNotificationPreview: [],
   bootError: '',
+  maintenanceBackupHash: '',
   language: localStorage.getItem('powerwatch.language') || 'en',
 };
 

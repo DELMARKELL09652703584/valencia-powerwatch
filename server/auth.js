@@ -148,32 +148,6 @@ const notifyAllActive = (title, message, type = 'general') => {
   notifyUsers(rows, title, message, type);
 };
 
-const clearDBTables = () => {
-  db.exec(`
-    DELETE FROM oauth_states;
-    DELETE FROM incident_links;
-    DELETE FROM incident_areas;
-    DELETE FROM report_attachments;
-    DELETE FROM outage_reports;
-    DELETE FROM outage_incidents;
-    DELETE FROM scheduled_outages;
-    DELETE FROM announcements;
-    DELETE FROM notifications;
-    DELETE FROM citizen_feedback;
-    DELETE FROM sms_logs;
-    DELETE FROM audit_logs;
-    DELETE FROM sessions;
-    DELETE FROM oauth_accounts;
-    DELETE FROM password_reset_tokens;
-    DELETE FROM settings WHERE key = 'seed_version';
-    DELETE FROM sqlite_sequence WHERE name IN (
-      'outage_reports','outage_incidents','incident_links','incident_areas',
-      'scheduled_outages','announcements','notifications','audit_logs',
-      'citizen_feedback','sms_logs','report_attachments','sessions','oauth_accounts'
-    );
-  `);
-};
-
 module.exports = {
   COOKIE_NAME,
   PORTAL_ROLES,
@@ -196,5 +170,4 @@ module.exports = {
   notifyAllResidents,
   notifyAllStaff,
   notifyAllActive,
-  clearDBTables,
 };

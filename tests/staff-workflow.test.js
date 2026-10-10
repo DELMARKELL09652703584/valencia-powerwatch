@@ -809,6 +809,7 @@ test('Staff account limit is administrator-configurable and enforced by the serv
     key: 'staff_account_limit',
     value: summary.total - 1,
   });
+
   assert.equal(belowCurrentCount.status, 409);
   const configuredLimit = await jsonRequest('/api/admin/settings', adminCookie, 'PUT', {
     key: 'staff_account_limit',
@@ -835,4 +836,118 @@ test('Staff account limit is administrator-configurable and enforced by the serv
   const settings = await jsonRequest('/api/admin/settings', adminCookie);
   assert.equal((await settings.json()).settings.staff_account_limit, null);
   await createPersonnel('Unlimited Test Staff', `unlimited-${Date.now()}@example.test`);
+});
+
+test('clean reset requires a verified backup, keeps only the selected admin, and allows fresh workflows', { timeout: TEST_TIMEOUT_MS }, async () => {
+  const wrongConfirmation = await jsonRequest('/api/admin/maintenance/clean-reset', adminCookie, 'POST', {
+    keep_email: testAdminEmail,
+    confirmation: 'RESET',
+    backup_sha256: '0'.repeat(64),
+  });
+  assert.equal(wrongConfirmation.status, 400);
+
+  const deniedReset = await jsonRequest('/api/admin/maintenance/clean-reset', adminCookie, 'POST', {
+    keep_email: testAdminEmail,
+    confirmation: `RESET ALL EXCEPT ${testAdminEmail}`,
+    backup_sha256: '0'.repeat(64),
+  });
+  assert.equal(deniedReset.status, 409);
+
+  const retainedPhotoFilename = 'profile_9000_123.png';
+  fs.writeFileSync(path.join(testDirectory, 'runtime', 'uploads', retainedPhotoFilename), 'admin-profile');
+  const beforeBackupDb = new DatabaseSync(testDatabasePath);
+  try {
+    beforeBackupDb.prepare('UPDATE users SET profile_photo_path = ? WHERE LOWER(email) = LOWER(?)')
+      .run(`/uploads/${retainedPhotoFilename}`, testAdminEmail);
+  } finally {
+    beforeBackupDb.close();
+  }
+
+  const backupResponse = await jsonRequest('/api/admin/backup', adminCookie);
+  assert.equal(backupResponse.status, 200);
+  assert.match(backupResponse.headers.get('content-type') || '', /application\/vnd\.sqlite3/);
+  const backup = Buffer.from(await backupResponse.arrayBuffer());
+  assert.equal(backup.subarray(0, 16).toString(), 'SQLite format 3\0');
+  const backupSha256 = crypto.createHash('sha256').update(backup).digest('hex');
+  assert.equal(backupResponse.headers.get('x-database-sha256'), backupSha256);
+
+  const resetResponse = await jsonRequest('/api/admin/maintenance/clean-reset', adminCookie, 'POST', {
+    keep_email: testAdminEmail,
+    confirmation: `RESET ALL EXCEPT ${testAdminEmail}`,
+    backup_sha256: backupSha256,
+  });
+  assert.equal(resetResponse.status, 200, JSON.stringify(await resetResponse.clone().json()));
+  const reset = await resetResponse.json();
+  assert.equal(reset.retained_admin, testAdminEmail);
+  assert.ok(reset.removed.users >= 3);
+  assert.ok(reset.removed.reports >= 1);
+  assert.ok(reset.removed.assignments >= 1);
+  assert.ok(reset.removed.teams >= 2);
+
+  const remainingUsersResponse = await jsonRequest('/api/admin/users?status=all', adminCookie);
+  assert.equal(remainingUsersResponse.status, 200);
+  const remainingUsers = (await remainingUsersResponse.json()).users;
+  assert.deepEqual(remainingUsers.map((user) => user.email), [testAdminEmail]);
+  assert.equal((await login(testAdminEmail, testAdminPassword, 'admin')).user.email, testAdminEmail);
+  assert.equal((await jsonRequest('/api/staff/assignments', staffCookie)).status, 401);
+  assert.equal((await jsonRequest('/api/staff/assignments', residentCookie)).status, 401);
+
+  const resetDb = new DatabaseSync(testDatabasePath);
+  try {
+    for (const table of [
+      'outage_reports', 'outage_incidents', 'report_attachments', 'report_status_history',
+      'repair_teams', 'repair_assignments', 'repair_assignment_updates', 'repair_assignment_evidence',
+      'staff_team_members', 'staff_barangay_assignments', 'scheduled_outages', 'announcements',
+      'notifications', 'citizen_feedback', 'sms_logs', 'oauth_states', 'password_reset_tokens',
+    ]) {
+      assert.equal(Number(resetDb.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get().count), 0, `${table} should be empty`);
+    }
+    assert.ok(Number(resetDb.prepare('SELECT COUNT(*) AS count FROM barangays').get().count) >= 28);
+    assert.ok(Number(resetDb.prepare('SELECT COUNT(*) AS count FROM settings').get().count) > 0);
+    assert.equal(Number(resetDb.prepare("SELECT COUNT(*) AS count FROM audit_logs WHERE action = 'Clean system reset'").get().count), 1);
+    assert.equal(resetDb.prepare('PRAGMA integrity_check').get().integrity_check, 'ok');
+    assert.deepEqual(resetDb.prepare('PRAGMA foreign_key_check').all(), []);
+    assert.doesNotMatch(fs.readFileSync(path.join(ROOT, 'server', 'db.js'), 'utf8'), /Alpha Quick Response Unit/);
+  } finally {
+    resetDb.close();
+  }
+  const managedUploads = fs.readdirSync(path.join(testDirectory, 'runtime', 'uploads'))
+    .filter((filename) => /^(?:report_|photo_|announcement_|profile_)/.test(filename));
+  assert.deepEqual(managedUploads, [retainedPhotoFilename]);
+  assert.deepEqual(fs.readdirSync(path.join(testDirectory, 'runtime', 'data', 'staff-evidence')), []);
+
+  const newResidentEmail = `fresh-resident-${Date.now()}@example.test`;
+  const newResidentResponse = await jsonRequest('/api/auth/register', '', 'POST', {
+    full_name: 'Fresh Reset Resident',
+    email: newResidentEmail,
+    password: 'resident-password-123',
+    barangay: 'Poblacion',
+  });
+  assert.equal(newResidentResponse.status, 200);
+  residentCookie = (await login(newResidentEmail, 'resident-password-123', 'community')).cookie;
+
+  const newTeamResponse = await jsonRequest('/api/repair-teams', adminCookie, 'POST', {
+    name: 'Fresh Reset Response Team',
+    lead_technician: 'Fresh Reset Team Lead',
+  });
+  assert.equal(newTeamResponse.status, 201);
+  teamId = (await newTeamResponse.json()).team.id;
+  const newStaff = await createPersonnel('Fresh Reset Staff', `fresh-staff-${Date.now()}@example.test`);
+  const newStaffLogin = await login(newStaff.email, 'field-password-123', 'staff');
+  staffCookie = newStaffLogin.cookie;
+  const newReport = await submitReport();
+  const verificationResponse = await jsonRequest(`/api/reports/${newReport.id}/status`, adminCookie, 'PUT', {
+    status: 'Verified',
+    priority: 'High',
+  });
+  assert.equal(verificationResponse.status, 200);
+  const dispatchResponse = await jsonRequest('/api/repair/assign', adminCookie, 'POST', {
+    team_id: teamId,
+    report_id: newReport.id,
+    dispatch_notes: 'Fresh post-reset workflow verification.',
+  });
+  assert.equal(dispatchResponse.status, 201);
+  const freshAssignments = await jsonRequest('/api/staff/assignments', staffCookie);
+  assert.equal(freshAssignments.status, 200);
+  assert.equal((await freshAssignments.json()).assignments.length, 1);
 });
