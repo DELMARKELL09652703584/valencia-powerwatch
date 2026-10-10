@@ -1,6 +1,7 @@
 const root = document.getElementById('staff-app');
 const toast = document.getElementById('staff-toast');
 let refreshTimer = null;
+let evidencePreviewUrl = null;
 const activeStages = ['Dispatched', 'En Route', 'Arrived On Site', 'In Progress'];
 const stages = ['Assigned', 'Acknowledged', 'On the Way', 'Arrived', 'Inspecting', 'Repairing', 'Completed'];
 const pages = [
@@ -25,6 +26,9 @@ const state = {
   assignmentsLoaded: false,
   notificationsLoaded: false,
 };
+
+const supportedEvidenceTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime']);
+const maxEvidenceBytes = 8 * 1024 * 1024;
 
 const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, (char) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -102,10 +106,18 @@ const displayLocation = (assignment) => [
   assignment.target_barangay && `Barangay ${assignment.target_barangay}`,
 ].filter(Boolean).join(', ') || 'Location details not supplied';
 
-const valenciaMap = (latitude, longitude) => {
+const hasValidCoordinates = (latitude, longitude) => {
+  if ([null, undefined, ''].includes(latitude) || [null, undefined, ''].includes(longitude)) return false;
   const lat = Number(latitude);
   const lng = Number(longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return '';
+  return Number.isFinite(lat) && lat >= -90 && lat <= 90
+    && Number.isFinite(lng) && lng >= -180 && lng <= 180;
+};
+
+const valenciaMap = (latitude, longitude) => {
+  if (!hasValidCoordinates(latitude, longitude)) return '';
+  const lat = Number(latitude);
+  const lng = Number(longitude);
   const bounds = `${lng - 0.006},${lat - 0.004},${lng + 0.006},${lat + 0.004}`;
   return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bounds)}&layer=mapnik&marker=${encodeURIComponent(`${lat},${lng}`)}`;
 };
@@ -117,9 +129,9 @@ const taskCoordinates = (assignment) => ({
 
 const routeUrl = (assignment) => {
   const { latitude, longitude } = taskCoordinates(assignment);
+  if (!hasValidCoordinates(latitude, longitude)) return '';
   const lat = Number(latitude);
   const lng = Number(longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return '';
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${lat},${lng}`)}&travelmode=driving`;
 };
 
@@ -140,6 +152,8 @@ const stageButtons = (assignment) => {
 
 const assignmentCard = (assignment, { compact = false } = {}) => {
   const destination = routeUrl(assignment);
+  const coordinates = taskCoordinates(assignment);
+  const hasCoordinates = hasValidCoordinates(coordinates.latitude, coordinates.longitude);
   const isTerminal = ['Completed', 'Resolved', 'Cancelled'].includes(assignment.status);
   const title = assignment.incident_title || assignment.report_code || assignment.incident_code || assignment.assignment_code;
   const stage = assignment.latest_stage || 'Assigned';
@@ -162,8 +176,8 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
         <div><dt>Reported problem</dt><dd>${escapeHtml(assignment.possible_outage_type || 'Power interruption')}</dd></div>
         <div><dt>Barangay</dt><dd>${escapeHtml(assignment.target_barangay || 'Not specified')}</dd></div>
         <div><dt>Purok</dt><dd>${escapeHtml(assignment.target_purok || 'Not specified')}</dd></div>
-        ${assignment.target_latitude !== null && assignment.target_latitude !== undefined && assignment.target_longitude !== null && assignment.target_longitude !== undefined
-          ? `<div><dt>GPS coordinates</dt><dd>${Number(assignment.target_latitude).toFixed(5)}, ${Number(assignment.target_longitude).toFixed(5)}</dd></div>` : ''}
+        ${hasCoordinates
+          ? `<div><dt>GPS coordinates</dt><dd>${Number(coordinates.latitude).toFixed(5)}, ${Number(coordinates.longitude).toFixed(5)}</dd></div>` : ''}
       </div>
       <div class="staff-detail-copy">
         <div><dt>Report details</dt><dd>${escapeHtml(assignment.report_description || assignment.incident_description || 'No description supplied.')}</dd></div>
@@ -191,11 +205,14 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
 };
 
 const renderStageProgress = (assignment) => {
+  if (assignment.status === 'Cancelled') {
+    return '<p class="staff-cancelled-note" role="status">This assignment was cancelled by dispatch. Contact your administrator if you need clarification.</p>';
+  }
   const current = stageIndex(assignment);
-  const stagesToShow = stages.slice(0, -1);
-  return `<ol class="staff-stage-progress" aria-label="Response progress">${stagesToShow.map((stage, index) => `<li class="${index < current ? 'is-complete' : index === current ? 'is-current' : ''}" ${index === current ? 'aria-current="step"' : ''}>
+  const progress = stages.map((stage, index) => `<li class="${index < current ? 'is-complete' : index === current ? 'is-current' : ''}" ${index === current ? 'aria-current="step"' : ''}>
     <span>${index < current ? icon('check') : index + 1}</span><small>${escapeHtml(stage)}</small>
-  </li>`).join('')}</ol>`;
+  </li>`).join('');
+  return `<div class="staff-progress-scroll"><ol class="staff-stage-progress" aria-label="Response progress">${progress}</ol></div>`;
 };
 
 const renderEvidence = (assignment, { readOnly = false } = {}) => {
@@ -223,9 +240,15 @@ const renderEvidence = (assignment, { readOnly = false } = {}) => {
     ${(reportEvidence || staffEvidence) ? `<div class="staff-evidence-list">${reportEvidence}${staffEvidence}</div>` : '<p class="staff-muted">No evidence photos or videos are attached yet.</p>'}
     ${readOnly ? '' : `<form class="staff-note-form" data-form="evidence" data-id="${assignment.id}">
       <label class="staff-upload-drop"><input type="file" name="evidence" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime" capture="environment" required>
-        <span class="staff-upload-icon">${icon('camera')}</span><strong>Take or choose field evidence</strong><small>JPG, PNG, WebP, MP4 or MOV · max 8 MB</small>
+        <span class="staff-upload-icon">${icon('camera')}</span><strong>Take or choose field evidence</strong><small>Photo or video · JPG, PNG, WebP, MP4 or MOV · max 8 MB</small>
       </label>
-      <button class="staff-btn staff-btn-primary" type="submit">Upload evidence</button>
+      <div class="staff-evidence-preview" data-evidence-preview aria-live="polite"></div>
+      <div class="staff-upload-progress" data-upload-progress hidden aria-live="polite">
+        <div><span data-upload-message>Preparing upload…</span><strong data-upload-percent>0%</strong></div>
+        <progress max="100" value="0" data-upload-bar></progress>
+      </div>
+      <p class="staff-upload-confirmation" data-upload-confirmation role="status" hidden></p>
+      <button class="staff-btn staff-btn-primary" type="submit" disabled>Upload evidence</button>
     </form>`}
   </section>`;
 };
@@ -297,17 +320,24 @@ const renderHome = () => {
   const active = activeAssignments();
   const prioritySorted = [...active].sort((a, b) => {
     const rank = (value) => String(value).toLowerCase() === 'critical' ? 0 : String(value).toLowerCase() === 'high' ? 1 : 2;
-    return rank(a.priority) - rank(b.priority);
+    return rank(a.priority) - rank(b.priority) || stageIndex(a) - stageIndex(b);
   });
   return `<header class="staff-page-heading"><div><p class="staff-eyebrow">Field response center</p>
     <h1>Good day, ${escapeHtml((state.user.full_name || 'Team').split(' ')[0])}</h1>
-    <p>Here is your field response overview.</p></div>
+    <p>${active.length ? `${active.length} active field task${active.length === 1 ? '' : 's'} · highest priority first.` : 'Your field response overview and next steps.'}</p></div>
   </header>
   ${renderStats()}
   <div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Needs attention</span><h2>Priority assignments</h2></div>
     <button class="staff-text-action" type="button" data-action="navigate" data-page="tasks">All tasks <span aria-hidden="true">›</span></button>
   </div>
-  ${prioritySorted.length ? `<div class="staff-assignment-list">${prioritySorted.slice(0, 4).map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div>`
+  ${prioritySorted.length ? `<section class="staff-next-task">
+      <div class="staff-next-task-heading"><span class="staff-next-task-label">Next field action</span><span>${prioritySorted.length} task${prioritySorted.length === 1 ? '' : 's'} active</span></div>
+      ${assignmentCard(prioritySorted[0], { compact: true })}
+    </section>
+    ${prioritySorted.length > 1 ? `<details class="staff-other-tasks">
+      <summary>Other active tasks <span>${prioritySorted.length - 1}</span></summary>
+      <div class="staff-assignment-list">${prioritySorted.slice(1, 5).map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div>
+    </details>` : ''}`
     : '<div class="staff-card staff-empty"><strong>No active response tasks</strong>New incidents assigned to your team will appear here.</div>'}
   ${renderAreaReports()}
   <div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Dispatch</span><h2>Assigned crews</h2></div></div>
@@ -337,12 +367,14 @@ const renderTasks = () => {
 };
 
 const renderMap = () => {
-  const assignments = activeAssignments().filter((assignment) => routeUrl(assignment));
+  const active = activeAssignments();
+  const assignments = active.filter((assignment) => routeUrl(assignment));
+  const noGpsAssignments = active.filter((assignment) => !routeUrl(assignment));
   const selected = assignments.find((assignment) => String(assignment.id) === String(state.selectedId)) || assignments[0];
   const coordinates = selected && taskCoordinates(selected);
   const mapUrl = selected && valenciaMap(coordinates.latitude, coordinates.longitude);
   return `<header class="staff-page-heading"><div><p class="staff-eyebrow">Field navigation</p><h1>Incident map</h1>
-    <p>Choose an active assignment to view its reported GPS point.</p></div></header>
+    <p>Map pins and directions are shown only when valid report coordinates are available.</p></div></header>
   ${assignments.length ? `<label class="staff-field staff-map-select">Choose an active assignment
     <select class="staff-upload-input" data-action="select-map-assignment">${assignments.map((assignment) => `<option value="${assignment.id}" ${String(selected.id) === String(assignment.id) ? 'selected' : ''}>${escapeHtml(assignment.assignment_code)} · ${escapeHtml(assignment.target_barangay || 'Valencia City')}</option>`).join('')}</select>
   </label>
@@ -351,8 +383,16 @@ const renderMap = () => {
     <div class="staff-map-location">${icon('pin')}<div><strong>${escapeHtml(selected.target_barangay || 'Valencia City')}</strong><span>${escapeHtml(displayLocation(selected))}</span></div></div>
     <div class="staff-map-actions"><a class="staff-btn staff-btn-primary" href="${escapeHtml(routeUrl(selected))}" target="_blank" rel="noopener">${icon('route')} Start navigation</a>
       <button class="staff-btn staff-btn-quiet" type="button" data-action="view-assignment" data-id="${selected.id}">Incident details</button></div>
-  </section><p class="staff-muted staff-map-help">Map location uses the incident GPS point. Confirm the site details before dispatching.</p>`
-    : '<div class="staff-card staff-empty"><strong>No active assignment with GPS</strong>Assigned locations with coordinates will be available here.</div>'}`;
+  </section><p class="staff-muted staff-map-help">Directions use the reported GPS point. Confirm the location details before travel.</p>`
+    : '<div class="staff-card staff-empty"><strong>No active assignment has a valid GPS point</strong>GPS is not available for mapping or directions yet. Review the reported location details below and confirm the site with dispatch; no location is being estimated.</div>'}
+  ${noGpsAssignments.length ? `<section class="staff-map-unlocated">
+    <div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Location needs confirmation</span><h2>Tasks without GPS</h2></div></div>
+    <div class="staff-assignment-list">${noGpsAssignments.map((assignment) => `<article class="staff-card staff-unlocated-card">
+      <div><strong>${escapeHtml(assignment.assignment_code || assignment.report_code || 'Field assignment')}</strong><p>${escapeHtml(displayLocation(assignment))}</p></div>
+      <span class="staff-status">${icon('alert')} No GPS</span>
+      <button class="staff-btn staff-btn-quiet" type="button" data-action="view-assignment" data-id="${assignment.id}">Review reported details</button>
+    </article>`).join('')}</div>
+  </section>` : ''}`;
 };
 
 const renderAlerts = () => `<header class="staff-page-heading"><div><p class="staff-eyebrow">Updates from PowerWatch</p><h1>Notifications</h1>
@@ -409,7 +449,10 @@ const renderShell = () => {
         <button class="staff-btn staff-icon-button" type="button" data-action="${state.page === 'alerts' ? 'refresh-notifications' : 'refresh'}" aria-label="${state.page === 'alerts' ? 'Refresh notifications' : 'Refresh assignments'}">${icon('refresh')}</button>
       </div>
     </header>
-    <main class="staff-main">${content}</main>
+    <main class="staff-main">
+      ${navigator.onLine ? '' : '<div class="staff-offline-banner" role="status"><strong>You are offline.</strong> Updates and evidence cannot be saved until the connection returns.</div>'}
+      ${content}
+    </main>
     <nav class="staff-bottom-nav" aria-label="Staff app navigation">${pages.map(([key, iconName, label]) => `<button class="staff-tab" type="button" data-action="navigate" data-page="${key}" aria-current="${state.page === key ? 'page' : 'false'}">
       <span class="staff-tab-icon">${icon(iconName)}${key === 'alerts' && state.unreadNotifications ? `<span class="staff-tab-badge">${state.unreadNotifications > 9 ? '9+' : state.unreadNotifications}</span>` : ''}</span><span class="staff-tab-label">${label}</span>
     </button>`).join('')}</nav>
@@ -557,17 +600,91 @@ const submitUpdate = async (form, stage) => {
   renderShell();
 };
 
+const uploadEvidenceRequest = (url, data, onProgress) => new Promise((resolve, reject) => {
+  const request = new XMLHttpRequest();
+  request.open('POST', url);
+  request.withCredentials = true;
+  request.upload.addEventListener('progress', (event) => {
+    if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100));
+  });
+  request.addEventListener('load', () => {
+    const contentType = request.getResponseHeader('content-type') || '';
+    let result = request.responseText;
+    if (contentType.includes('application/json')) {
+      try {
+        result = JSON.parse(request.responseText);
+      } catch {
+        reject(new Error('The server returned an invalid upload response.'));
+        return;
+      }
+    }
+    if (request.status < 200 || request.status >= 300) {
+      const error = new Error((result && result.error) || 'Evidence could not be uploaded.');
+      error.status = request.status;
+      reject(error);
+      return;
+    }
+    resolve(result);
+  });
+  request.addEventListener('error', () => reject(new Error('Upload failed because the server could not be reached. Evidence was not saved.')));
+  request.addEventListener('abort', () => reject(new Error('Upload was cancelled. Evidence was not saved.')));
+  request.send(data);
+});
+
+const setEvidenceUploadState = (form, percent, message) => {
+  const progress = form.querySelector('[data-upload-progress]');
+  if (!progress) return;
+  progress.hidden = false;
+  progress.querySelector('[data-upload-bar]').value = percent;
+  progress.querySelector('[data-upload-percent]').textContent = `${percent}%`;
+  progress.querySelector('[data-upload-message]').textContent = message;
+};
+
 const uploadEvidence = async (form) => {
   const file = form.querySelector('[name="evidence"]')?.files?.[0];
   if (!file) throw new Error('Choose a photo or video before uploading.');
+  if (!supportedEvidenceTypes.has(file.type)) throw new Error('Choose a JPG, PNG, WebP, MP4, or MOV file.');
+  if (file.size > maxEvidenceBytes) throw new Error('Evidence must be 8 MB or smaller.');
+  if (!navigator.onLine) throw new Error('You are offline. Evidence was not saved; reconnect and retry.');
   const data = new FormData();
   data.append('evidence', file);
-  await api(`/api/staff/assignments/${encodeURIComponent(form.dataset.id)}/evidence`, { method: 'POST', body: data });
-  showToast('Field photo uploaded to the incident record.');
-  await refreshAssignments();
+  setEvidenceUploadState(form, 0, 'Uploading evidence…');
+  try {
+    await uploadEvidenceRequest(`/api/staff/assignments/${encodeURIComponent(form.dataset.id)}/evidence`, data, (percent) => {
+      setEvidenceUploadState(form, percent, percent === 100 ? 'Upload sent; confirming it was saved…' : 'Uploading evidence…');
+    });
+  } catch (error) {
+    const confirmation = form.querySelector('[data-upload-confirmation]');
+    if (confirmation) {
+      confirmation.hidden = false;
+      confirmation.textContent = `${error.message} Evidence was not confirmed as saved. Retry after checking the file and connection.`;
+    }
+    throw error;
+  }
+  const confirmation = form.querySelector('[data-upload-confirmation]');
+  if (confirmation) {
+    confirmation.hidden = false;
+    confirmation.textContent = 'Evidence uploaded and saved to this assignment.';
+  }
+  setEvidenceUploadState(form, 100, 'Upload complete.');
+  if (evidencePreviewUrl) URL.revokeObjectURL(evidencePreviewUrl);
+  evidencePreviewUrl = null;
   state.selectedId = form.dataset.id;
   state.page = 'detail';
+  try {
+    await refreshAssignments();
+  } catch (error) {
+    if (error.status === 401) {
+      state.user = null;
+      renderLogin('Evidence was saved, but your session ended. Sign in again to refresh the assignment.');
+      return;
+    }
+    renderShell();
+    showToast('Evidence was saved, but the assignment could not refresh. Refresh before making another upload.');
+    return;
+  }
   renderShell();
+  showToast('Evidence uploaded and saved to the incident record.');
 };
 
 const syncInstallButton = () => {
@@ -683,6 +800,8 @@ document.addEventListener('click', async (event) => {
       syncInstallButton();
     } else if (action === 'logout') {
       await send('/api/auth/logout', 'POST');
+      if (evidencePreviewUrl) URL.revokeObjectURL(evidencePreviewUrl);
+      evidencePreviewUrl = null;
       state.user = null;
       state.assignments = [];
       state.reports = [];
@@ -696,7 +815,9 @@ document.addEventListener('click', async (event) => {
       state.user = null;
       renderLogin('Your session expired. Sign in again to continue.');
     } else {
-      showToast(error.message || 'The action could not be completed.');
+      showToast(!navigator.onLine
+        ? 'You are offline. The action was not confirmed; reconnect and retry.'
+        : error.message || 'The action could not be completed.');
       const nextButton = root.querySelector(`[data-action="${action}"]`);
       if (nextButton) nextButton.disabled = false;
     }
@@ -707,7 +828,66 @@ document.addEventListener('change', (event) => {
   if (event.target.matches('[data-action="select-map-assignment"]')) {
     state.selectedId = event.target.value;
     renderShell();
+    return;
   }
+  if (event.target.matches('input[name="evidence"]')) {
+    const input = event.target;
+    const form = input.closest('form[data-form="evidence"]');
+    const file = input.files?.[0];
+    const preview = form?.querySelector('[data-evidence-preview]');
+    const confirmation = form?.querySelector('[data-upload-confirmation]');
+    const uploadButton = form?.querySelector('button[type="submit"]');
+    if (evidencePreviewUrl) URL.revokeObjectURL(evidencePreviewUrl);
+    evidencePreviewUrl = null;
+    if (!form || !preview || !uploadButton) return;
+    if (confirmation) {
+      confirmation.hidden = true;
+      confirmation.textContent = '';
+    }
+    const progress = form.querySelector('[data-upload-progress]');
+    if (progress) {
+      progress.hidden = true;
+      progress.querySelector('[data-upload-bar]').value = 0;
+      progress.querySelector('[data-upload-percent]').textContent = '0%';
+      progress.querySelector('[data-upload-message]').textContent = 'Preparing upload…';
+    }
+    if (!file) {
+      preview.innerHTML = '';
+      uploadButton.disabled = true;
+      return;
+    }
+    if (!supportedEvidenceTypes.has(file.type)) {
+      input.value = '';
+      preview.innerHTML = '';
+      uploadButton.disabled = true;
+      showToast('Unsupported evidence type. Choose a JPG, PNG, WebP, MP4, or MOV file.');
+      return;
+    }
+    if (file.size > maxEvidenceBytes) {
+      input.value = '';
+      preview.innerHTML = '';
+      uploadButton.disabled = true;
+      showToast('Evidence must be 8 MB or smaller.');
+      return;
+    }
+    evidencePreviewUrl = URL.createObjectURL(file);
+    const media = file.type.startsWith('video/')
+      ? `<video src="${escapeHtml(evidencePreviewUrl)}" controls preload="metadata" aria-label="Selected evidence preview"></video>`
+      : `<img src="${escapeHtml(evidencePreviewUrl)}" alt="Selected evidence preview">`;
+    const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+    preview.innerHTML = `<div class="staff-evidence-preview-media">${media}</div><div><strong>${escapeHtml(file.name)}</strong><span>${sizeMb} MB · ${file.type.startsWith('video/') ? 'Video' : 'Photo'} preview</span></div>`;
+    uploadButton.disabled = false;
+  }
+});
+
+window.addEventListener('online', () => {
+  if (state.user) {
+    renderShell();
+    showToast('Connection restored. You can submit updates and evidence.');
+  }
+});
+window.addEventListener('offline', () => {
+  if (state.user) renderShell();
 });
 
 document.addEventListener('submit', async (event) => {
@@ -734,7 +914,9 @@ document.addEventListener('submit', async (event) => {
     }
   } catch (error) {
     if (formType === 'login') renderLogin(error.message || 'Sign-in failed. Check your email and password.');
-    else showToast(error.message || 'The form could not be submitted.');
+    else showToast(!navigator.onLine
+      ? 'You are offline. The update was not saved; reconnect and retry.'
+      : error.message || 'The form could not be submitted.');
     if (submitButton) submitButton.disabled = false;
   }
 });

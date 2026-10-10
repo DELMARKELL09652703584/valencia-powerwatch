@@ -290,6 +290,77 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
 
+.staff-offline-banner {
+  display: grid;
+  gap: 3px;
+  margin: 0 0 14px;
+  padding: 12px 13px;
+  border: 1px solid #edc36b;
+  border-radius: 12px;
+  background: #fff8e7;
+  color: #754509;
+  font-size: .8rem;
+  line-height: 1.4;
+}
+.staff-offline-banner strong { font-size: .85rem; }
+.staff-next-task {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 10px;
+  border: 1px solid #b8d6eb;
+  border-radius: 17px;
+  background: linear-gradient(145deg, #eaf6ff, #fff 72%);
+}
+.staff-next-task-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 1px 3px; }
+.staff-next-task-label { color: #0b5792; font-size: .69rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.staff-next-task-heading > span:last-child { color: var(--staff-muted); font-size: .7rem; font-weight: 700; }
+.staff-next-task .staff-assignment { border-color: #d7e7f2; }
+.staff-other-tasks { margin: -7px 0 20px; }
+.staff-other-tasks > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--staff-line);
+  border-radius: 11px;
+  background: #fff;
+  color: #31516b;
+  font-size: .8rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+.staff-other-tasks > summary span { color: #0b5cad; }
+.staff-other-tasks[open] > summary { margin-bottom: 9px; }
+.staff-progress-scroll { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.staff-stage-progress { width: max(100%, 490px); grid-template-columns: repeat(7, minmax(64px, 1fr)); }
+.staff-stage-progress li small { font-size: .62rem; }
+.staff-evidence-preview {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+.staff-evidence-preview:empty { display: none; }
+.staff-evidence-preview-media { width: 76px; height: 68px; overflow: hidden; border: 1px solid var(--staff-line); border-radius: 10px; background: #10253a; }
+.staff-evidence-preview-media img, .staff-evidence-preview-media video { width: 100%; height: 100%; display: block; object-fit: cover; }
+.staff-evidence-preview > div:last-child { min-width: 0; display: grid; gap: 4px; }
+.staff-evidence-preview strong { overflow-wrap: anywhere; font-size: .78rem; }
+.staff-evidence-preview span { color: var(--staff-muted); font-size: .7rem; }
+.staff-upload-progress { display: grid; gap: 6px; color: var(--staff-muted); font-size: .75rem; }
+.staff-upload-progress > div { display: flex; justify-content: space-between; gap: 8px; }
+.staff-upload-progress strong { color: var(--staff-blue); }
+.staff-upload-progress progress { width: 100%; height: 9px; accent-color: var(--staff-blue); }
+.staff-upload-confirmation { margin: 0; padding: 9px 11px; border-radius: 9px; background: #eaf9f2; color: #08734f; font-size: .78rem; line-height: 1.4; }
+.staff-map-unlocated { display: grid; gap: 8px; margin-top: 18px; }
+.staff-unlocated-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 9px; }
+.staff-unlocated-card > div p { margin: 5px 0 0; color: var(--staff-muted); font-size: .78rem; line-height: 1.4; }
+.staff-unlocated-card > .staff-btn { grid-column: 1 / -1; }
+.staff-cancelled-note { margin: 0; padding: 10px 12px; border: 1px solid #e8c5c9; border-radius: 10px; background: #fff4f4; color: #8f2832; font-size: .78rem; line-height: 1.45; }
+
 .staff-icon { width: 18px; height: 18px; flex: 0 0 auto; }
 .staff-topbar { min-height: 62px; background: linear-gradient(112deg, #09233f 0%, #0b5cad 68%, #07829a 100%); }
 .staff-topbar-brand img { width: 36px; height: 36px; padding: 3px; border: 1px solid rgba(255,255,255,.28); border-radius: 11px; background: rgba(255,255,255,.1); }
@@ -368,6 +439,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .staff-stage-progress li.is-complete .staff-icon { width: 13px; height: 13px; }
 .staff-stage-progress li.is-current { color: #0b5cad; }
 .staff-stage-progress li.is-current > span { border: 2px solid #0b5cad; background: #eaf5ff; color: #0b5cad; }
+.staff-progress-scroll .staff-stage-progress { width: max(100%, 490px); grid-template-columns: repeat(7, minmax(64px, 1fr)); }
 .staff-evidence-card, .staff-note-form { display: grid; gap: 11px; }
 .staff-section-heading > div { display: flex; align-items: center; gap: 8px; }
 .staff-section-heading > div > .staff-icon { color: #0b6c9f; }

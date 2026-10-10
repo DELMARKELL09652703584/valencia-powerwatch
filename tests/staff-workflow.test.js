@@ -297,8 +297,8 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
     fetch(`${baseUrl}/staff`),
     fetch(`${baseUrl}/staff-manifest.json`),
     fetch(`${baseUrl}/staff-sw.js`),
-    fetch(`${baseUrl}/app/staff.css?v=4`),
-    fetch(`${baseUrl}/app/staff.js?v=6`),
+    fetch(`${baseUrl}/app/staff.css?v=7`),
+    fetch(`${baseUrl}/app/staff.js?v=10`),
     Promise.all([
       'powerwatch-icon-192.png',
       'powerwatch-icon-512.png',
@@ -318,6 +318,14 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
   assert.equal(jsResponse.status, 200);
   const staffSource = await jsResponse.text();
   assert.match(staffSource, /const renderLogin/);
+  assert.match(staffSource, /Next field action/);
+  assert.match(staffSource, /Tasks without GPS/);
+  assert.match(staffSource, /Upload complete\./);
+  assert.match(staffSource, /You are offline\./);
+  assert.match(staffSource, /new XMLHttpRequest\(\)/);
+  assert.match(staffSource, /const hasValidCoordinates = \(latitude, longitude\)/);
+  assert.match(staffSource, /\[null, undefined, ''\]\.includes\(latitude\)/);
+  assert.match(staffSource, /GPS is not available for mapping or directions yet/);
   assert.doesNotMatch(staffSource, /<a href="\/">User Portal<\/a>|<a href="\/admin">Admin Portal<\/a>/);
   assert.ok(iconResponses.every((response) => response.status === 200));
   const staffStyles = await cssResponse.text();
@@ -327,10 +335,14 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
   assert.match(staffStyles, /grid-template-columns: repeat\(2, minmax\(0,1fr\)\)/);
   assert.doesNotMatch(staffStyles, /grid-template-columns: repeat\(4, minmax\(0,1fr\)\)/);
   assert.match(staffStyles, /staff-stage-progress/);
+  assert.match(staffStyles, /staff-progress-scroll \.staff-stage-progress/);
+  assert.match(staffStyles, /staff-evidence-preview/);
   assert.match(staffStyles, /staff-upload-drop/);
   const workerSource = await workerResponse.text();
   const shellAssets = workerSource.match(/const STAFF_SHELL = \[[\s\S]*?\];/)?.[0] || '';
   assert.doesNotMatch(shellAssets, /\/api\/|\/admin/);
+  assert.match(shellAssets, /staff\.css\?v=7/);
+  assert.match(shellAssets, /staff\.js\?v=10/);
 });
 
 test('verified database roles assign each account its own portal after login', { timeout: TEST_TIMEOUT_MS }, async () => {
