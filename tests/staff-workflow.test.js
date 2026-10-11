@@ -44,6 +44,7 @@ test('Staff portal shows report times, recent field updates, and accurate assign
   const staffApp = fs.readFileSync(path.join(ROOT, 'app', 'staff.js'), 'utf8');
   const staffPage = fs.readFileSync(path.join(ROOT, 'staff.html'), 'utf8');
   const serviceWorker = fs.readFileSync(path.join(ROOT, 'staff-sw.js'), 'utf8');
+  const updateManager = fs.readFileSync(path.join(ROOT, 'app', 'staff-pwa-update.js'), 'utf8');
 
   assert.match(staffApp, /Incident noticed: \$\{escapeHtml\(new Date\(report\.date_time_noticed\)\.toLocaleString\(\)\)\}/);
   assert.match(staffApp, /Report submitted: \$\{escapeHtml\(new Date\(report\.reported_at\)\.toLocaleString\(\)\)\}/);
@@ -56,8 +57,17 @@ test('Staff portal shows report times, recent field updates, and accurate assign
   assert.match(staffApp, /No active assignment has an exact GPS point/);
   assert.match(staffApp, /No assignments have been dispatched/);
   assert.match(staffApp, /No assignments match this filter/);
-  assert.match(staffPage, /\/app\/staff\.js\?v=13/);
-  assert.match(serviceWorker, /\/app\/staff\.js\?v=13/);
+  assert.match(staffPage, /\/app\/staff\.js\?v=14/);
+  assert.match(serviceWorker, /\/app\/staff\.js\?v=14/);
+  assert.match(staffPage, /\/app\/staff-pwa-update\.js\?v=1/);
+  assert.match(updateManager, /registration\.update\(\)/);
+  assert.match(updateManager, /\.waiting/);
+  assert.match(updateManager, /controllerchange/);
+  assert.match(updateManager, /SKIP_WAITING/);
+  assert.match(staffPage, /Staff App update ready/);
+  assert.match(serviceWorker, /event\.data\?\.type === 'SKIP_WAITING'/);
+  const installHandler = serviceWorker.match(/self\.addEventListener\('install',[\s\S]*?\n\}\);/)?.[0] || '';
+  assert.doesNotMatch(installHandler, /skipWaiting/);
 });
 
 const getAvailablePort = () => new Promise((resolve, reject) => {
@@ -141,7 +151,7 @@ before(async () => {
   for (const file of ['community.html', 'admin.html', 'staff.html', 'staff-manifest.json', 'staff-sw.js']) {
     fs.copyFileSync(path.join(ROOT, file), path.join(runtimeRoot, file));
   }
-  for (const file of ['staff.css', 'staff.js']) {
+  for (const file of ['staff.css', 'staff.js', 'staff-pwa-update.js']) {
     fs.copyFileSync(path.join(ROOT, 'app', file), path.join(runtimeRoot, 'app', file));
   }
   fs.copyFileSync(path.join(ROOT, 'assets', 'powerwatch-logo.svg'), path.join(runtimeRoot, 'assets', 'powerwatch-logo.svg'));
@@ -336,12 +346,13 @@ after(async () => {
 });
 
 test('Staff PWA has an isolated install route, manifest, and service-worker scope', { timeout: TEST_TIMEOUT_MS }, async () => {
-  const [pageResponse, manifestResponse, workerResponse, cssResponse, jsResponse, iconResponses] = await Promise.all([
+  const [pageResponse, manifestResponse, workerResponse, cssResponse, jsResponse, updateResponse, iconResponses] = await Promise.all([
     fetch(`${baseUrl}/staff`),
     fetch(`${baseUrl}/staff-manifest.json`),
     fetch(`${baseUrl}/staff-sw.js`),
-    fetch(`${baseUrl}/app/staff.css?v=8`),
-    fetch(`${baseUrl}/app/staff.js?v=13`),
+    fetch(`${baseUrl}/app/staff.css?v=9`),
+    fetch(`${baseUrl}/app/staff.js?v=14`),
+    fetch(`${baseUrl}/app/staff-pwa-update.js?v=1`),
     Promise.all([
       'powerwatch-icon-192.png',
       'powerwatch-icon-512.png',
@@ -359,6 +370,7 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
   assert.equal(workerResponse.headers.get('service-worker-allowed'), '/staff');
   assert.equal(cssResponse.status, 200);
   assert.equal(jsResponse.status, 200);
+  assert.equal(updateResponse.status, 200, await updateResponse.text());
   const staffSource = await jsResponse.text();
   assert.match(staffSource, /const renderLogin/);
   assert.match(staffSource, /Next field action/);
@@ -393,8 +405,9 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
   const workerSource = await workerResponse.text();
   const shellAssets = workerSource.match(/const STAFF_SHELL = \[[\s\S]*?\];/)?.[0] || '';
   assert.doesNotMatch(shellAssets, /\/api\/|\/admin/);
-  assert.match(shellAssets, /staff\.css\?v=8/);
-  assert.match(shellAssets, /staff\.js\?v=13/);
+  assert.match(shellAssets, /staff\.css\?v=9/);
+  assert.match(shellAssets, /staff\.js\?v=14/);
+  assert.match(shellAssets, /staff-pwa-update\.js\?v=1/);
 });
 
 test('verified database roles assign each account its own portal after login', { timeout: TEST_TIMEOUT_MS }, async () => {

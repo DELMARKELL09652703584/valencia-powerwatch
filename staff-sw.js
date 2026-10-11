@@ -3,14 +3,14 @@ const STAFF_CACHE = `powerwatch-field-${STAFF_BUILD_ID}`;
 const STAFF_SHELL = [
   '/staff',
   '/staff-manifest.json',
-  '/app/staff.css?v=8',
-  '/app/staff.js?v=13',
+  '/app/staff.css?v=9',
+  '/app/staff.js?v=14',
+  '/app/staff-pwa-update.js?v=1',
   '/assets/powerwatch-logo.svg',
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(STAFF_CACHE).then((cache) => cache.addAll(STAFF_SHELL)));
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -19,6 +19,10 @@ self.addEventListener('activate', (event) => {
       .map((key) => caches.delete(key)),
   )));
   self.clients.claim();
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('fetch', (event) => {

@@ -220,11 +220,37 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .staff-tab[aria-current="page"] { color: #076b98; background: #e9f7fb; }
 .staff-tab[aria-current="page"] .staff-tab-label { color: #075d85; }
 .staff-toast { position: fixed; z-index: 50; right: 15px; bottom: calc(88px + env(safe-area-inset-bottom)); left: 15px; width: fit-content; max-width: min(480px, calc(100vw - 30px)); margin: auto; padding: 11px 15px; border-radius: 12px; background: #102d49; color: #fff; box-shadow: var(--staff-shadow); font-size: .86rem; }
+.staff-update-notice {
+  position: fixed;
+  z-index: 60;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  left: max(12px, env(safe-area-inset-left));
+  display: grid;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #b5d7ec;
+  border-radius: 16px;
+  background: #fff;
+  color: var(--staff-ink);
+  box-shadow: 0 14px 42px rgba(18, 42, 63, .22);
+}
+.staff-update-copy { display: grid; gap: 4px; }
+.staff-update-copy strong { font-size: .95rem; }
+.staff-update-copy span { color: var(--staff-muted); font-size: .82rem; line-height: 1.45; }
+.staff-update-actions { display: flex; gap: 8px; }
+.staff-update-actions .staff-btn { flex: 1; min-height: 42px; }
 .staff-empty { padding: 27px 16px; color: var(--staff-muted); text-align: center; }
 .staff-empty strong { display: block; margin-bottom: 5px; color: var(--staff-ink); }
 .staff-location { color: #0b6397; font-size: .79rem; font-weight: 750; }
 
 @media (min-width: 560px) {
+  .staff-update-notice {
+    right: 20px;
+    bottom: 20px;
+    left: auto;
+    width: min(440px, calc(100vw - 40px));
+  }
   body.staff-app {
     min-height: 100dvh;
     display: grid;

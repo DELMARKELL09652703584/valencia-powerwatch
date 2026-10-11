@@ -843,10 +843,11 @@ document.addEventListener('click', async (event) => {
       if (!('serviceWorker' in navigator)) {
         showToast('Service workers are not available in this browser.');
       } else {
-        const registration = await navigator.serviceWorker.getRegistration('/staff');
-        if (!registration) throw new Error('The Staff App service worker is not registered yet.');
-        await registration.update();
-        showToast('Staff App is up to date.');
+        if (typeof window.powerWatchCheckStaffUpdate !== 'function') {
+          throw new Error('The Staff App update checker is not ready yet. Reload and try again.');
+        }
+        await window.powerWatchCheckStaffUpdate();
+        showToast('Update check complete. If an update is available, you can install it from the notice.');
       }
     } else if (action === 'install' && state.installPrompt) {
       await state.installPrompt.prompt();
@@ -989,12 +990,5 @@ document.addEventListener('submit', async (event) => {
     if (submitButton) submitButton.disabled = false;
   }
 });
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/staff-sw.js', { scope: '/staff' })
-      .catch((error) => console.error('Staff app offline support could not be enabled.', error));
-  });
-}
 
 ensureAuthenticated();
