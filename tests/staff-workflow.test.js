@@ -155,7 +155,16 @@ before(async () => {
     fs.copyFileSync(path.join(ROOT, 'app', file), path.join(runtimeRoot, 'app', file));
   }
   fs.copyFileSync(path.join(ROOT, 'assets', 'powerwatch-logo.svg'), path.join(runtimeRoot, 'assets', 'powerwatch-logo.svg'));
-  for (const file of ['powerwatch-icon-180.png', 'powerwatch-icon-192.png', 'powerwatch-icon-512.png', 'powerwatch-icon-maskable-512.png']) {
+  for (const file of [
+    'powerwatch-icon-180.png',
+    'powerwatch-icon-192.png',
+    'powerwatch-icon-512.png',
+    'powerwatch-icon-maskable-512.png',
+    'powerwatch-field-icon-180.png',
+    'powerwatch-field-icon-192.png',
+    'powerwatch-field-icon-512.png',
+    'powerwatch-field-icon-maskable-512.png',
+  ]) {
     fs.copyFileSync(path.join(ROOT, 'assets', file), path.join(runtimeRoot, 'assets', file));
   }
 
@@ -357,9 +366,10 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
     fetch(`${baseUrl}/app/staff.js?v=14`),
     fetch(`${baseUrl}/app/staff-pwa-update.js?v=1`),
     Promise.all([
-      'powerwatch-icon-192.png',
-      'powerwatch-icon-512.png',
-      'powerwatch-icon-maskable-512.png',
+      'powerwatch-field-icon-180.png',
+      'powerwatch-field-icon-192.png',
+      'powerwatch-field-icon-512.png',
+      'powerwatch-field-icon-maskable-512.png',
     ].map((icon) => fetch(`${baseUrl}/assets/${icon}`))),
   ]);
   assert.equal(pageResponse.status, 200);
@@ -372,6 +382,9 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
   assert.equal(manifest.start_url, '/staff');
   assert.equal(manifest.scope, '/staff');
   assert.equal(manifest.display, 'standalone');
+  assert.equal(manifest.name, 'Valencia PowerWatch Field');
+  assert.ok(manifest.icons.every((icon) => icon.src.includes('powerwatch-field-icon')));
+  assert.match(staffPage, /href="\/assets\/powerwatch-field-icon-180\.png"/);
   assert.equal(workerResponse.status, 200);
   assert.equal(workerResponse.headers.get('service-worker-allowed'), '/staff');
   assert.equal(workerResponse.headers.get('cache-control'), 'no-cache, must-revalidate');

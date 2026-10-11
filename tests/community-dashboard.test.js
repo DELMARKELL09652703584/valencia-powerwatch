@@ -214,6 +214,7 @@ test('User Portal PWA is distinct from Staff and preserves its own cache during 
   assert.equal(manifest.display, 'standalone');
   assert.equal(manifest.name, 'Valencia PowerWatch');
   assert.equal(manifest.id, '/community');
+  assert.equal(staffManifest.name, 'Valencia PowerWatch Field');
   assert.equal(staffManifest.start_url, '/staff');
   assert.equal(staffManifest.scope, '/staff');
   assert.equal(staffManifest.id, '/staff');
@@ -221,8 +222,12 @@ test('User Portal PWA is distinct from Staff and preserves its own cache during 
   assert.ok(manifest.icons.some((icon) => icon.sizes === '192x192'));
   assert.ok(manifest.icons.some((icon) => icon.sizes === '512x512'));
   assert.ok(manifest.icons.some((icon) => icon.purpose === 'maskable'));
+  assert.ok(manifest.icons.every((icon) => !icon.src.includes('powerwatch-field-icon')));
+  assert.ok(staffManifest.icons.every((icon) => icon.src.includes('powerwatch-field-icon')));
   assert.match(communityPage, /href="\/manifest\.json"/);
   assert.match(staffPage, /href="\/staff-manifest\.json"/);
+  assert.match(staffPage, /rel="icon" type="image\/png" sizes="192x192" href="\/assets\/powerwatch-field-icon-192\.png"/);
+  assert.match(staffPage, /rel="apple-touch-icon" sizes="180x180" href="\/assets\/powerwatch-field-icon-180\.png"/);
   assert.match(staffPage, /\/app\/staff-pwa-update\.js\?v=1/);
   assert.ok(worker.includes("['/', '/index.html'"));
   assert.ok(worker.includes("'/app/community.js'"));
