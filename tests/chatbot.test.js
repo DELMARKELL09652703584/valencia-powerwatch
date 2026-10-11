@@ -155,12 +155,21 @@ test('chatbot validates empty and oversized questions', async () => {
 });
 
 test('chatbot assets are loaded only by the User Portal', async () => {
-  const [community, admin, script] = await Promise.all([
+  const [community, admin, script, portal, styles] = await Promise.all([
     fetch(`${baseUrl}/community`).then((response) => response.text()),
     fetch(`${baseUrl}/admin`).then((response) => response.text()),
     fetch(`${baseUrl}/app/chatbot.js`).then((response) => response.text()),
+    fetch(`${baseUrl}/app/community.js`).then((response) => response.text()),
+    fetch(`${baseUrl}/app/portal-polish.css`).then((response) => response.text()),
   ]);
   assert.match(community, /\/app\/chatbot\.js\?v=1/);
   assert.doesNotMatch(admin, /\/app\/chatbot\.js/);
   assert.match(script, /\/api\/chatbot/);
+  assert.match(portal, /class="powerwatch-chat-launcher"[\s\S]*?<svg class="powerwatch-chat-launcher-icon"/);
+  assert.doesNotMatch(portal, /class="powerwatch-chat-launcher"[^>]*>[\s\S]*?<span>Ask PowerWatch<\/span>/);
+  assert.match(portal, /aria-controls="powerwatch-chat-panel"/);
+  assert.match(styles, /\.powerwatch-chat-launcher\s*\{[^}]*width:\s*48px/);
+  assert.match(styles, /touch-action:\s*none/);
+  assert.match(styles, /prefers-reduced-motion:\s*reduce/);
+  assert.match(styles, /bottom:\s*calc\(88px \+ env\(safe-area-inset-bottom\)\)/);
 });

@@ -739,33 +739,51 @@ button:disabled {
   position: fixed;
   z-index: 40;
   right: max(12px, env(safe-area-inset-right));
-  bottom: calc(82px + env(safe-area-inset-bottom));
+  bottom: calc(88px + env(safe-area-inset-bottom));
   width: auto;
   max-width: calc(100% - 24px);
   pointer-events: none;
 }
 
 .powerwatch-chat-launcher {
+  position: relative;
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
   min-height: 48px;
-  display: flex;
+  display: grid;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  margin-left: 0;
-  padding: 0 16px;
+  margin: 0;
+  padding: 0;
   border: 1px solid rgba(255, 255, 255, .5);
-  border-radius: 999px;
+  border-radius: 50%;
   background: linear-gradient(120deg, #0b5f91, #087b87);
-  box-shadow: 0 8px 22px rgba(5, 44, 75, .25);
+  box-shadow: 0 8px 22px rgba(5, 44, 75, .25), 0 0 0 0 rgba(8, 123, 135, .28);
   color: #fff;
   font: inherit;
-  font-size: .85rem;
-  font-weight: 750;
+  font-size: 0;
   cursor: pointer;
   pointer-events: auto;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+  animation: powerwatch-chat-pulse 3.2s ease-out infinite;
+}
+
+@keyframes powerwatch-chat-pulse {
+  0%, 70%, 100% {
+    box-shadow: 0 8px 22px rgba(5, 44, 75, .25), 0 0 0 0 rgba(8, 123, 135, .28);
+  }
+  84% {
+    box-shadow: 0 8px 22px rgba(5, 44, 75, .25), 0 0 0 7px rgba(8, 123, 135, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .powerwatch-chat-launcher {
+    animation: none;
+  }
 }
 
 .powerwatch-chat-launcher:active,
@@ -788,12 +806,9 @@ button:disabled {
 
 .powerwatch-chat-launcher-icon {
   display: grid;
-  width: 25px;
-  height: 25px;
+  width: 23px;
+  height: 23px;
   place-items: center;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, .17);
-  font-size: 1.1rem;
 }
 
 .powerwatch-chat-panel {
@@ -1110,7 +1125,7 @@ button:disabled {
 @media (min-width: 781px) {
   .powerwatch-chatbot {
     right: max(24px, env(safe-area-inset-right));
-    bottom: 24px;
+    bottom: max(24px, env(safe-area-inset-bottom));
   }
 
   .powerwatch-chat-panel {
@@ -1120,16 +1135,15 @@ button:disabled {
 
 @media (max-width: 480px) {
   .powerwatch-chat-launcher {
-    min-height: 44px;
-    gap: 7px;
-    padding: 0 12px;
-    font-size: .78rem !important;
+    width: 46px;
+    min-width: 46px;
+    height: 46px;
+    min-height: 46px;
   }
 
   .powerwatch-chat-launcher-icon {
     width: 22px;
     height: 22px;
-    font-size: 1rem;
   }
 
   .pwa-update-notice {
