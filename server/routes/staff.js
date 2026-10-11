@@ -42,6 +42,13 @@ db.exec(`
     mime_type TEXT NOT NULL,
     created_at TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS repair_assignment_location_confirmations (
+    assignment_id INTEGER PRIMARY KEY REFERENCES repair_assignments(id) ON DELETE CASCADE,
+    staff_id INTEGER NOT NULL REFERENCES users(id),
+    confirmed_purok TEXT NOT NULL,
+    confirmed_location TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
 `);
 
 const STAGES = ['Assigned', 'Acknowledged', 'On the Way', 'Arrived', 'Inspecting', 'Repairing', 'Completed'];
@@ -77,8 +84,11 @@ const assignmentForTeamMember = (user, assignmentId) => {
            t.current_longitude AS team_longitude, t.status AS team_status,
            r.report_code, r.possible_outage_type, r.description AS report_description,
            r.location AS report_location, r.barangay AS report_barangay,
-           r.purok AS report_purok, r.latitude AS report_latitude,
+           r.purok AS report_purok, r.affected_area AS report_affected_area,
+           r.latitude AS report_latitude,
            r.longitude AS report_longitude, r.location_confirmed AS report_location_confirmed,
+           r.location_source AS report_location_source,
+           r.location_accuracy_m AS report_location_accuracy_m,
            r.date_time_noticed, r.reported_at, r.photo_path,
            r.status AS report_status, r.verification_status, r.incident_id AS report_incident_id,
            u.full_name AS reporter_name, u.contact_number AS reporter_contact,
@@ -122,11 +132,18 @@ const assignmentForTeamMember = (user, assignmentId) => {
       original_name: 'Resident report photo',
     });
   }
+  const locationConfirmation = db.prepare(`
+    SELECT c.confirmed_purok, c.confirmed_location, c.created_at, u.full_name AS staff_name
+    FROM repair_assignment_location_confirmations c
+    JOIN users u ON u.id = c.staff_id
+    WHERE c.assignment_id = ?
+  `).get(assignment.id) || null;
   return {
     ...assignment,
     updates,
     evidence,
     attachments,
+    location_confirmation: locationConfirmation,
     latest_stage: updates[0]?.stage || ({
       Dispatched: 'Assigned',
       'En Route': 'On the Way',
@@ -214,6 +231,71 @@ router.post('/staff/assignments/:id/verify', requireAuth, requireRole('personnel
   audit(req.user, 'Assigned report verified', `${req.user.full_name} verified ${report.report_code}.`);
   notifyUsers([report.reporter_id], 'Report verified', `Your report ${report.report_code} has been verified.`, 'report');
   res.json({ message: `Report ${report.report_code} verified.` });
+});
+
+router.post('/staff/assignments/:id/location', requireAuth, requireRole('personnel'), requireAssignment, requireOpenAssignment, (req, res) => {
+  const assignment = req.staffAssignment;
+  const confirmed = req.body?.confirmed === true;
+  const purok = String(req.body?.purok || '').trim();
+  const location = String(req.body?.location || '').trim();
+  if (!confirmed) return res.status(400).json({ error: 'Confirm that these location details were checked with the resident or at the site.' });
+  if (purok.length < 2 || purok.length > 120) return res.status(400).json({ error: 'Enter a purok or sitio between 2 and 120 characters.' });
+  if (location.length < 2 || location.length > 300) return res.status(400).json({ error: 'Enter location details between 2 and 300 characters.' });
+
+  const previousPurok = assignment.target_purok || assignment.report_purok || '';
+  const previousLocation = assignment.target_location || assignment.report_location || '';
+  const timestamp = now();
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    db.prepare(`
+      UPDATE repair_assignments
+      SET target_purok = ?, target_location = ?, updated_at = ?
+      WHERE id = ?
+    `).run(purok, location, timestamp, assignment.id);
+    if (assignment.report_id) {
+      db.prepare(`
+        UPDATE outage_reports
+        SET purok = ?, location = ?, affected_area = ?, updated_at = ?
+        WHERE id = ?
+      `).run(purok, location, location, timestamp, assignment.report_id);
+      recordReportEvent({
+        reportId: assignment.report_id,
+        eventType: 'location',
+        title: 'Field location details confirmed',
+        details: `${assignment.assignment_code}: Purok "${previousPurok}" / location "${previousLocation}" updated to Purok "${purok}" / location "${location}" after staff confirmation. GPS coordinates were not changed.`,
+        actor: req.user,
+        createdAt: timestamp,
+      });
+    }
+    if (assignment.incident_id) {
+      db.prepare(`
+        UPDATE outage_incidents SET location = ?, affected_area = ?, updated_at = ?
+        WHERE id = ?
+      `).run(location, location, timestamp, assignment.incident_id);
+    }
+    db.prepare(`
+      INSERT INTO repair_assignment_location_confirmations
+        (assignment_id, staff_id, confirmed_purok, confirmed_location, created_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(assignment_id) DO UPDATE SET
+        staff_id = excluded.staff_id,
+        confirmed_purok = excluded.confirmed_purok,
+        confirmed_location = excluded.confirmed_location,
+        created_at = excluded.created_at
+    `).run(assignment.id, req.user.id, purok, location, timestamp);
+    db.exec('COMMIT');
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
+  audit(req.user, 'Assigned incident location confirmed',
+    `${req.user.full_name} confirmed the textual location for ${assignment.assignment_code}; GPS coordinates were not changed.`);
+  if (assignment.report_id) {
+    const reporter = db.prepare('SELECT reporter_id FROM outage_reports WHERE id = ?').get(assignment.report_id);
+    if (reporter) notifyUsers([reporter.reporter_id], 'Report location details updated',
+      `Field staff confirmed the reported purok and location details for ${assignment.report_code}.`, 'report');
+  }
+  res.json({ message: 'Purok and location details confirmed. The saved GPS coordinates were not changed.' });
 });
 
 router.post('/staff/assignments/:id/updates', requireAuth, requireRole('personnel'), requireAssignment, requireOpenAssignment, (req, res) => {

@@ -185,6 +185,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .staff-filter[aria-pressed="true"] { border-color: #0b5cad; background: #e5f2fc; color: #0b518e; }
 .staff-note-form { display: grid; gap: 10px; }
 .staff-note-form textarea { width: 100%; min-height: 88px; resize: vertical; padding: 11px; border: 1px solid var(--staff-line); border-radius: 11px; background: #fff; color: var(--staff-ink); }
+.staff-checkbox { display: flex; align-items: flex-start; gap: 9px; color: var(--staff-muted); font-size: .76rem; line-height: 1.45; }
+.staff-checkbox input { flex: 0 0 auto; width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--staff-accent); }
 .staff-upload-input { width: 100%; min-height: 44px; padding: 8px; border: 1px dashed #9bb3c5; border-radius: 10px; background: #f7fafc; color: var(--staff-muted); font-size: .8rem; }
 .staff-evidence-list { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
 .staff-evidence-list img, .staff-evidence-list video { width: 100%; max-height: 240px; border-radius: 10px; background: #0b1727; object-fit: cover; }

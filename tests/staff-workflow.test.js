@@ -56,8 +56,8 @@ test('Staff portal shows report times, recent field updates, and accurate assign
   assert.match(staffApp, /No active assignment has an exact GPS point/);
   assert.match(staffApp, /No assignments have been dispatched/);
   assert.match(staffApp, /No assignments match this filter/);
-  assert.match(staffPage, /\/app\/staff\.js\?v=12/);
-  assert.match(serviceWorker, /\/app\/staff\.js\?v=12/);
+  assert.match(staffPage, /\/app\/staff\.js\?v=13/);
+  assert.match(serviceWorker, /\/app\/staff\.js\?v=13/);
 });
 
 const getAvailablePort = () => new Promise((resolve, reject) => {
@@ -340,8 +340,8 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
     fetch(`${baseUrl}/staff`),
     fetch(`${baseUrl}/staff-manifest.json`),
     fetch(`${baseUrl}/staff-sw.js`),
-    fetch(`${baseUrl}/app/staff.css?v=7`),
-    fetch(`${baseUrl}/app/staff.js?v=12`),
+    fetch(`${baseUrl}/app/staff.css?v=8`),
+    fetch(`${baseUrl}/app/staff.js?v=13`),
     Promise.all([
       'powerwatch-icon-192.png',
       'powerwatch-icon-512.png',
@@ -370,6 +370,14 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
   assert.match(staffSource, /\[null, undefined, ''\]\.includes\(latitude\)/);
   assert.match(staffSource, /No active assignments to map/);
   assert.match(staffSource, /No active assignment has an exact GPS point/);
+  assert.match(staffSource, /Navigate to Incident/);
+  assert.match(staffSource, /dir_action=navigate/);
+  assert.match(staffSource, /The destination remains the saved incident coordinates/);
+  assert.match(staffSource, /Destination: \$\{Number\(coordinates\.latitude\)\.toFixed\(6\)\}/);
+  assert.match(staffSource, /report_location_accuracy_m/);
+  assert.match(staffSource, /report_affected_area/);
+  assert.match(staffSource, /data-form="confirm-location"/);
+  assert.match(staffSource, /GPS coordinates remain unchanged/);
   assert.doesNotMatch(staffSource, /<a href="\/">User Portal<\/a>|<a href="\/admin">Admin Portal<\/a>/);
   assert.ok(iconResponses.every((response) => response.status === 200));
   const staffStyles = await cssResponse.text();
@@ -385,8 +393,8 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
   const workerSource = await workerResponse.text();
   const shellAssets = workerSource.match(/const STAFF_SHELL = \[[\s\S]*?\];/)?.[0] || '';
   assert.doesNotMatch(shellAssets, /\/api\/|\/admin/);
-  assert.match(shellAssets, /staff\.css\?v=7/);
-  assert.match(shellAssets, /staff\.js\?v=12/);
+  assert.match(shellAssets, /staff\.css\?v=8/);
+  assert.match(shellAssets, /staff\.js\?v=13/);
 });
 
 test('verified database roles assign each account its own portal after login', { timeout: TEST_TIMEOUT_MS }, async () => {
@@ -614,6 +622,9 @@ test('Staff API scopes assignments, reports, evidence, and incidents to authoriz
   assert.equal(allAssignments[0].report_latitude, 7.906);
   assert.equal(allAssignments[0].report_longitude, 125.094);
   assert.equal(allAssignments[0].report_location_confirmed, 1);
+  assert.equal(allAssignments[0].report_location_accuracy_m, null);
+  assert.equal(allAssignments[0].report_affected_area, 'Field Workflow Test Site');
+  assert.equal(allAssignments[0].report_location_source, 'map_pin');
   assert.equal(allAssignments[0].reporter_contact, '+639171234567');
   assert.ok(allAssignments[0].date_time_noticed);
   assert.equal(allAssignments[0].incident_id, null, 'dispatching a single report must not create a duplicate incident');
@@ -642,6 +653,38 @@ test('Staff API scopes assignments, reports, evidence, and incidents to authoriz
   assert.ok(reportPhoto?.file_path);
   assert.equal((await fetch(`${baseUrl}${reportPhoto.file_path}`, { headers: { cookie: staffCookie } })).status, 200);
   assert.equal((await fetch(`${baseUrl}${reportPhoto.file_path}`, { headers: { cookie: unassignedCookie } })).status, 403);
+  const unconfirmedLocation = await jsonRequest(`/api/staff/assignments/${assignmentId}/location`, staffCookie, 'POST', {
+    confirmed: false,
+    purok: 'Purok 3',
+    location: 'Near the covered court entrance',
+  });
+  assert.equal(unconfirmedLocation.status, 400);
+  const unauthorizedLocation = await jsonRequest(`/api/staff/assignments/${assignmentId}/location`, unassignedCookie, 'POST', {
+    confirmed: true,
+    purok: 'Purok 3',
+    location: 'Near the covered court entrance',
+  });
+  assert.equal(unauthorizedLocation.status, 404);
+  const confirmedLocationResponse = await jsonRequest(`/api/staff/assignments/${assignmentId}/location`, staffCookie, 'POST', {
+    confirmed: true,
+    purok: 'Purok 3, Field Site',
+    location: 'Beside the covered court entrance, follow the access road.',
+  });
+  assert.equal(confirmedLocationResponse.status, 200);
+  const updatedAssignmentResponse = await jsonRequest(`/api/staff/assignments/${assignmentId}`, staffCookie);
+  const updatedAssignment = (await updatedAssignmentResponse.json()).assignment;
+  assert.equal(updatedAssignment.target_purok, 'Purok 3, Field Site');
+  assert.equal(updatedAssignment.report_latitude, 7.906);
+  assert.equal(updatedAssignment.report_longitude, 125.094);
+  assert.equal(updatedAssignment.report_location_confirmed, 1);
+  assert.equal(updatedAssignment.location_confirmation.staff_name, 'Assigned Field Staff');
+  assert.equal(updatedAssignment.location_confirmation.confirmed_location, 'Beside the covered court entrance, follow the access road.');
+  const updatedReportResponse = await jsonRequest(`/api/reports/${primaryReportId}`, adminCookie);
+  const updatedReportBody = await updatedReportResponse.json();
+  assert.equal(updatedReportBody.report.purok, 'Purok 3, Field Site');
+  assert.equal(updatedReportBody.report.location, 'Beside the covered court entrance, follow the access road.');
+  assert.equal(updatedReportBody.report.latitude, 7.906);
+  assert.equal(updatedReportBody.report.longitude, 125.094);
   assert.equal((await jsonRequest(`/api/staff/assignments/${assignmentId}/verify`, unassignedCookie, 'POST', {})).status, 404);
   const alreadyVerified = await jsonRequest(`/api/staff/assignments/${assignmentId}/verify`, staffCookie, 'POST', {});
   assert.equal(alreadyVerified.status, 409);

@@ -132,7 +132,7 @@ const routeUrl = (assignment) => {
   if (!hasValidCoordinates(latitude, longitude)) return '';
   const lat = Number(latitude);
   const lng = Number(longitude);
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${lat},${lng}`)}&travelmode=driving`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${lat},${lng}`)}&travelmode=driving&dir_action=navigate`;
 };
 
 const stageButtons = (assignment) => {
@@ -155,6 +155,7 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
   const coordinates = taskCoordinates(assignment);
   const hasCoordinates = hasValidCoordinates(coordinates.latitude, coordinates.longitude);
   const isTerminal = ['Completed', 'Resolved', 'Cancelled'].includes(assignment.status);
+  const confirmedLocation = assignment.location_confirmation;
   const title = assignment.incident_title || assignment.report_code || assignment.incident_code || assignment.assignment_code;
   const stage = assignment.latest_stage || 'Assigned';
   return `<article class="staff-card staff-assignment ${String(assignment.priority).toLowerCase() === 'critical' ? 'staff-assignment-critical' : ''}">
@@ -175,17 +176,40 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
         <div><dt>Incident</dt><dd>${escapeHtml(assignment.report_code || assignment.incident_code || 'Linked outage')}</dd></div>
         <div><dt>Reported problem</dt><dd>${escapeHtml(assignment.possible_outage_type || assignment.outage_type || assignment.incident_type || 'Power interruption')}</dd></div>
         <div><dt>Barangay</dt><dd>${escapeHtml(assignment.target_barangay || 'Not specified')}</dd></div>
-        <div><dt>Purok</dt><dd>${escapeHtml(assignment.target_purok || 'Not specified')}</dd></div>
+        <div><dt>${confirmedLocation ? 'Field-confirmed purok' : 'Reported purok'}</dt><dd>${escapeHtml(confirmedLocation?.confirmed_purok || assignment.target_purok || 'Not specified')}</dd></div>
         ${hasCoordinates
-          ? `<div><dt>GPS coordinates</dt><dd>${Number(coordinates.latitude).toFixed(5)}, ${Number(coordinates.longitude).toFixed(5)} · ${assignment.incident_id ? 'Incident location' : assignment.report_location_confirmed ? 'Resident confirmed' : 'Resident-reported, unconfirmed'}</dd></div>` : ''}
+          ? `<div><dt>GPS coordinates</dt><dd>${Number(coordinates.latitude).toFixed(5)}, ${Number(coordinates.longitude).toFixed(5)} · ${assignment.incident_id ? 'Incident location' : assignment.report_location_confirmed ? 'Resident-confirmed pin' : 'Resident-reported, unconfirmed'}</dd></div>` : '<div><dt>GPS coordinates</dt><dd>No exact coordinates supplied; confirm the site with dispatch before travel.</dd></div>'}
+        ${assignment.report_location_accuracy_m !== null && assignment.report_location_accuracy_m !== undefined
+          ? `<div><dt>Reported GPS accuracy</dt><dd>About ${Math.round(Number(assignment.report_location_accuracy_m))} m</dd></div>` : ''}
       </div>
       <div class="staff-detail-copy">
         <div><dt>Report details</dt><dd>${escapeHtml(assignment.report_description || assignment.incident_description || 'No description supplied.')}</dd></div>
+        ${confirmedLocation?.confirmed_location
+          ? `<div><dt>Field-confirmed directions</dt><dd>${escapeHtml(confirmedLocation.confirmed_location)}</dd></div>`
+          : assignment.report_affected_area && assignment.report_affected_area !== assignment.report_purok
+          ? `<div><dt>Additional location directions</dt><dd>${escapeHtml(assignment.report_affected_area)}</dd></div>` : ''}
         ${assignment.reporter_name ? `<div><dt>Reported by</dt><dd>${escapeHtml(assignment.reporter_name)}</dd></div>` : ''}
         ${assignment.reporter_contact ? `<div><dt>Authorized contact</dt><dd><a href="tel:${escapeHtml(assignment.reporter_contact)}">${escapeHtml(assignment.reporter_contact)}</a></dd></div>` : ''}
         <div><dt>Dispatch instructions</dt><dd>${escapeHtml(assignment.dispatch_notes || 'No additional instructions.')}</dd></div>
+        ${assignment.date_time_noticed ? `<div><dt>Interruption noticed</dt><dd>${escapeHtml(new Date(assignment.date_time_noticed).toLocaleString())}</dd></div>` : ''}
         ${(assignment.reported_at || assignment.incident_start_time) ? `<div><dt>${assignment.reported_at ? 'Report submitted' : 'Incident started'}</dt><dd>${escapeHtml(new Date(assignment.reported_at || assignment.incident_start_time).toLocaleString())}</dd></div>` : ''}
       </div>
+      ${confirmedLocation
+        ? `<p class="staff-muted" role="status">Location text confirmed by ${escapeHtml(confirmedLocation.staff_name)} · ${escapeHtml(new Date(confirmedLocation.created_at).toLocaleString())}. GPS coordinates remain unchanged.</p>`
+        : '<p class="staff-muted">Purok and location are resident-reported and have not been field-confirmed.</p>'}
+      ${!isTerminal ? `<form class="staff-note-form" data-form="confirm-location" data-id="${assignment.id}">
+        <h3 class="staff-section-title">Confirm purok and location details</h3>
+        <label class="staff-field">Confirmed purok or sitio
+          <input name="purok" minlength="2" maxlength="120" value="${escapeHtml(confirmedLocation?.confirmed_purok || assignment.target_purok || '')}" required>
+        </label>
+        <label class="staff-field">Street, landmark, or directions
+          <textarea name="location" minlength="2" maxlength="300" required>${escapeHtml(confirmedLocation?.confirmed_location || assignment.target_location || assignment.report_location || '')}</textarea>
+        </label>
+        <label class="staff-checkbox"><input type="checkbox" name="confirmed" required>
+          <span>I checked these text location details with the resident or at the incident site. This does not confirm or change the GPS pin.</span>
+        </label>
+        <button class="staff-btn staff-btn-quiet" type="submit">Save confirmed location details</button>
+      </form>` : ''}
       ${!compact && assignment.report_id && !['Verified', 'Officially Confirmed'].includes(assignment.verification_status) && !assignment.incident_id
         && !isTerminal
         && !['Resolved', 'Rejected', 'Duplicate'].includes(assignment.report_status)
@@ -196,7 +220,7 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
     </section>` : ''}
     <div class="staff-assignment-actions">
       ${compact ? `<button class="staff-btn staff-btn-quiet" type="button" data-action="view-assignment" data-id="${assignment.id}">Details</button>` : ''}
-      ${destination ? `<a class="staff-btn staff-btn-route" href="${escapeHtml(destination)}" target="_blank" rel="noopener">${icon('route')}Navigate</a>` : '<span class="staff-muted staff-no-pin">No GPS pin was provided.</span>'}
+      ${destination ? `<a class="staff-btn staff-btn-route" href="${escapeHtml(destination)}" target="_blank" rel="noopener">${icon('route')}Navigate to Incident</a>` : '<span class="staff-muted staff-no-pin">No GPS pin was provided.</span>'}
       ${isTerminal ? '' : stageButtons(assignment)}
     </div>
     ${compact ? '' : renderEvidence(assignment, { readOnly: isTerminal })}
@@ -404,16 +428,17 @@ const renderMap = () => {
     ? '<div class="staff-card staff-empty"><strong>No active assignments to map</strong>Your team has no active dispatches right now. New assigned incidents will appear here; completed tasks remain available in Tasks.</div>'
     : '<div class="staff-card staff-empty"><strong>No active assignment has an exact GPS point</strong>The active assignments do not include valid coordinates. Review the reported location details and confirm the site with dispatch; no location is being estimated.</div>';
   return `<header class="staff-page-heading"><div><p class="staff-eyebrow">Field navigation</p><h1>Incident map</h1>
-    <p>Map pins and directions use exact GPS coordinates saved with the assigned report or incident.</p></div></header>
+    <p>The destination pin and route use the coordinates saved with this assigned report or incident.</p></div></header>
   ${assignments.length ? `<label class="staff-field staff-map-select">Choose an active assignment
     <select class="staff-upload-input" data-action="select-map-assignment">${assignments.map((assignment) => `<option value="${assignment.id}" ${String(selected.id) === String(assignment.id) ? 'selected' : ''}>${escapeHtml(assignment.assignment_code)} · ${escapeHtml(assignment.target_barangay || 'Valencia City')}</option>`).join('')}</select>
   </label>
   <section class="staff-card staff-map-card">
     <iframe class="staff-map-frame" title="OpenStreetMap incident location" loading="lazy" referrerpolicy="no-referrer" src="${escapeHtml(mapUrl)}"></iframe>
-    <div class="staff-map-location">${icon('pin')}<div><strong>${escapeHtml(selected.target_barangay || 'Valencia City')}</strong><span>${escapeHtml(displayLocation(selected))}</span></div></div>
-    <div class="staff-map-actions"><a class="staff-btn staff-btn-primary" href="${escapeHtml(routeUrl(selected))}" target="_blank" rel="noopener">${icon('route')} Start navigation</a>
+    <div class="staff-map-location">${icon('pin')}<div><strong>${escapeHtml(selected.target_barangay || 'Valencia City')}</strong><span>${escapeHtml(displayLocation(selected))}</span>
+      <span>Destination: ${Number(coordinates.latitude).toFixed(6)}, ${Number(coordinates.longitude).toFixed(6)} · ${selected.incident_id ? 'incident location' : selected.report_location_confirmed ? 'resident-confirmed' : 'resident-reported, not confirmed'}</span></div></div>
+    <div class="staff-map-actions"><a class="staff-btn staff-btn-primary" href="${escapeHtml(routeUrl(selected))}" target="_blank" rel="noopener">${icon('route')} Navigate to Incident</a>
       <button class="staff-btn staff-btn-quiet" type="button" data-action="view-assignment" data-id="${selected.id}">Incident details</button></div>
-  </section><p class="staff-muted staff-map-help">Directions use the assigned incident GPS point. Confirm the location details before travel.</p>`
+  </section><p class="staff-muted staff-map-help">Google Maps provides route, distance, and travel-time details when supported. Allow location access in Google Maps to use your current position; if denied or unavailable, enable device location or set your starting point manually. The destination remains the saved incident coordinates.</p>`
     : emptyMessage}
   ${noGpsAssignments.length ? `<section class="staff-map-unlocated">
     <div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Location needs confirmation</span><h2>Tasks without GPS</h2></div></div>
@@ -924,7 +949,7 @@ document.addEventListener('submit', async (event) => {
   const form = event.target.closest('form[data-form]');
   if (!form) return;
   const { form: formType } = form.dataset;
-  if (!['login', 'update', 'evidence'].includes(formType)) return;
+  if (!['login', 'update', 'evidence', 'confirm-location'].includes(formType)) return;
   event.preventDefault();
   const submitButton = form.querySelector('button[type="submit"]');
   if (submitButton) submitButton.disabled = true;
@@ -941,6 +966,20 @@ document.addEventListener('submit', async (event) => {
       await submitUpdate(form, assignment.latest_stage || 'Assigned');
     } else if (formType === 'evidence') {
       await uploadEvidence(form);
+    } else if (formType === 'confirm-location') {
+      const confirmed = form.querySelector('[name="confirmed"]').checked;
+      const purok = form.querySelector('[name="purok"]').value.trim();
+      const location = form.querySelector('[name="location"]').value.trim();
+      const result = await send(`/api/staff/assignments/${encodeURIComponent(form.dataset.id)}/location`, 'POST', {
+        confirmed,
+        purok,
+        location,
+      });
+      await refreshAssignments();
+      state.selectedId = form.dataset.id;
+      state.page = 'detail';
+      renderShell();
+      showToast(result.message || 'Location details confirmed.');
     }
   } catch (error) {
     if (formType === 'login') renderLogin(error.message || 'Sign-in failed. Check your email and password.');
