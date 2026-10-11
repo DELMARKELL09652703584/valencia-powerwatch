@@ -419,6 +419,20 @@ router.post('/repair/assign', requireAuth, requireRole('administrator', 'utility
   audit(req.user, 'Repair team dispatched', `Dispatched ${team.name} to ${targetBarangay}${targetPurok ? ' (' + targetPurok + ')' : ''} under assignment ${code}.`);
 
   const createdAssignment = getAssignmentRow(assignmentId);
+  const assignedStaff = db.prepare(`
+    SELECT u.id
+    FROM staff_team_members m
+    JOIN users u ON u.id = m.user_id
+    WHERE m.team_id = ? AND u.role = 'personnel' AND u.status = 'Active'
+  `).all(team.id).map((member) => Number(member.id));
+  if (assignedStaff.length) {
+    notifyUsers(
+      assignedStaff,
+      'New field assignment',
+      `${code} was assigned to ${team.name} in Brgy. ${targetBarangay}${targetPurok ? ` (${targetPurok})` : ''}. Open the Staff App to review the incident and dispatch instructions.`,
+      'incident',
+    );
+  }
   res.status(201).json({
     assignment: createdAssignment,
     message: `Repair team "${team.name}" successfully dispatched to Brgy. ${targetBarangay}${targetPurok ? ' (' + targetPurok + ')' : ''}.`,

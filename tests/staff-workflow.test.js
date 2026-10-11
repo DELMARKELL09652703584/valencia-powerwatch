@@ -314,6 +314,19 @@ before(async () => {
   residentLoginUser = residentLogin.user;
 });
 
+test('new repair assignments notify active members of the assigned team only', async () => {
+  const assignedResponse = await jsonRequest('/api/notifications', staffCookie);
+  assert.equal(assignedResponse.status, 200);
+  const assignedNotifications = (await assignedResponse.json()).notifications;
+  assert.ok(assignedNotifications.some((notification) =>
+    notification.title === 'New field assignment' && notification.message.includes('Brgy. Poblacion')));
+
+  const otherTeamResponse = await jsonRequest('/api/notifications', unassignedCookie);
+  assert.equal(otherTeamResponse.status, 200);
+  const otherTeamNotifications = (await otherTeamResponse.json()).notifications;
+  assert.equal(otherTeamNotifications.some((notification) => notification.title === 'New field assignment'), false);
+});
+
 after(async () => {
   if (serverProcess && serverProcess.exitCode === null) {
     serverProcess.kill();
