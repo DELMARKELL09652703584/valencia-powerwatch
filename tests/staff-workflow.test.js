@@ -148,7 +148,7 @@ before(async () => {
   fs.mkdirSync(path.join(runtimeRoot, 'assets'), { recursive: true });
   fs.writeFileSync(path.join(runtimeRoot, 'package.json'), JSON.stringify({ type: 'commonjs' }));
   fs.cpSync(path.join(ROOT, 'server'), path.join(runtimeRoot, 'server'), { recursive: true });
-  for (const file of ['community.html', 'admin.html', 'staff.html', 'staff-manifest.json', 'staff-sw.js']) {
+  for (const file of ['community.html', 'admin.html', 'staff.html', 'manifest.json', 'staff-manifest.json', 'sw.js', 'staff-sw.js']) {
     fs.copyFileSync(path.join(ROOT, file), path.join(runtimeRoot, file));
   }
   for (const file of ['staff.css', 'staff.js', 'staff-pwa-update.js']) {
@@ -345,11 +345,14 @@ after(async () => {
   if (testDirectory && fs.existsSync(testDirectory)) fs.rmSync(testDirectory, { recursive: true, force: true });
 });
 
-test('Staff PWA has an isolated install route, manifest, and service-worker scope', { timeout: TEST_TIMEOUT_MS }, async () => {
-  const [pageResponse, manifestResponse, workerResponse, cssResponse, jsResponse, updateResponse, iconResponses] = await Promise.all([
+test('User and Staff PWAs have separate install URLs, manifests, and service-worker scopes', { timeout: TEST_TIMEOUT_MS }, async () => {
+  const [pageResponse, manifestResponse, workerResponse, communityPageResponse, communityManifestResponse, communityWorkerResponse, cssResponse, jsResponse, updateResponse, iconResponses] = await Promise.all([
     fetch(`${baseUrl}/staff`),
     fetch(`${baseUrl}/staff-manifest.json`),
     fetch(`${baseUrl}/staff-sw.js`),
+    fetch(`${baseUrl}/community`),
+    fetch(`${baseUrl}/manifest.json`),
+    fetch(`${baseUrl}/sw.js`),
     fetch(`${baseUrl}/app/staff.css?v=9`),
     fetch(`${baseUrl}/app/staff.js?v=14`),
     fetch(`${baseUrl}/app/staff-pwa-update.js?v=1`),
@@ -360,7 +363,10 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
     ].map((icon) => fetch(`${baseUrl}/assets/${icon}`))),
   ]);
   assert.equal(pageResponse.status, 200);
-  assert.match(await pageResponse.text(), /Field Staff/);
+  const staffPage = await pageResponse.text();
+  assert.match(staffPage, /Field Staff/);
+  assert.match(staffPage, /href="\/staff-manifest\.json"/);
+  assert.match(staffPage, /\/app\/staff-pwa-update\.js\?v=1/);
   assert.equal(manifestResponse.status, 200);
   const manifest = await manifestResponse.json();
   assert.equal(manifest.start_url, '/staff');
@@ -368,6 +374,18 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
   assert.equal(manifest.display, 'standalone');
   assert.equal(workerResponse.status, 200);
   assert.equal(workerResponse.headers.get('service-worker-allowed'), '/staff');
+  assert.equal(workerResponse.headers.get('cache-control'), 'no-cache, must-revalidate');
+  assert.equal(communityPageResponse.status, 200);
+  assert.match(await communityPageResponse.text(), /href="\/manifest\.json"/);
+  assert.equal(communityManifestResponse.status, 200);
+  const communityManifest = await communityManifestResponse.json();
+  assert.equal(communityManifest.id, '/community');
+  assert.equal(communityManifest.start_url, '/community');
+  assert.equal(communityManifest.scope, '/');
+  assert.notEqual(communityManifest.id, manifest.id);
+  assert.equal(communityWorkerResponse.status, 200);
+  assert.equal(communityWorkerResponse.headers.get('service-worker-allowed'), '/');
+  assert.equal(communityWorkerResponse.headers.get('cache-control'), 'no-cache, must-revalidate');
   assert.equal(cssResponse.status, 200);
   assert.equal(jsResponse.status, 200);
   assert.equal(updateResponse.status, 200, await updateResponse.text());
@@ -408,6 +426,9 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
   assert.match(shellAssets, /staff\.css\?v=9/);
   assert.match(shellAssets, /staff\.js\?v=14/);
   assert.match(shellAssets, /staff-pwa-update\.js\?v=1/);
+  const communityWorkerSource = await communityWorkerResponse.text();
+  assert.match(communityWorkerSource, /powerwatch-community-/);
+  assert.doesNotMatch(communityWorkerSource, /powerwatch-field-/);
 });
 
 test('verified database roles assign each account its own portal after login', { timeout: TEST_TIMEOUT_MS }, async () => {

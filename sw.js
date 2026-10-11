@@ -1,5 +1,6 @@
 const BUILD_ID = '__POWERWATCH_BUILD_ID__';
-const CACHE_NAME = `powerwatch-${BUILD_ID}`;
+const COMMUNITY_CACHE_PREFIX = 'powerwatch-community-';
+const CACHE_NAME = `${COMMUNITY_CACHE_PREFIX}${BUILD_ID}`;
 const STATIC_ASSETS = [
   '/community',
   '/community.html',
@@ -45,7 +46,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const cacheNames = await caches.keys();
     await Promise.all(cacheNames
-      .filter((name) => name.startsWith('powerwatch-') && name !== CACHE_NAME)
+      .filter((name) => name.startsWith(COMMUNITY_CACHE_PREFIX) && name !== CACHE_NAME)
       .map((name) => caches.delete(name)));
     await self.clients.claim();
   })());

@@ -199,23 +199,44 @@ test('User Portal provides an accessible PWA install button', () => {
   assert.match(communityPage, /\/app\/pwa-update\.js\?v=3/);
 });
 
-test('User Portal manifest and service worker launch the User Portal without caching Admin assets', () => {
+test('User Portal PWA is distinct from Staff and preserves its own cache during updates', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
+  const staffManifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'staff-manifest.json'), 'utf8'));
   const worker = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  const staffWorker = fs.readFileSync(path.join(ROOT, 'staff-sw.js'), 'utf8');
   const pwaUpdate = fs.readFileSync(path.join(ROOT, 'app', 'pwa-update.js'), 'utf8');
   const server = fs.readFileSync(path.join(ROOT, 'server', 'index.js'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
+  const staffPage = fs.readFileSync(path.join(ROOT, 'staff.html'), 'utf8');
 
   assert.equal(manifest.start_url, '/community');
   assert.equal(manifest.scope, '/');
   assert.equal(manifest.display, 'standalone');
   assert.equal(manifest.name, 'Valencia PowerWatch');
+  assert.equal(manifest.id, '/community');
+  assert.equal(staffManifest.start_url, '/staff');
+  assert.equal(staffManifest.scope, '/staff');
+  assert.equal(staffManifest.id, '/staff');
+  assert.notEqual(manifest.id, staffManifest.id);
   assert.ok(manifest.icons.some((icon) => icon.sizes === '192x192'));
   assert.ok(manifest.icons.some((icon) => icon.sizes === '512x512'));
   assert.ok(manifest.icons.some((icon) => icon.purpose === 'maskable'));
+  assert.match(communityPage, /href="\/manifest\.json"/);
+  assert.match(staffPage, /href="\/staff-manifest\.json"/);
+  assert.match(staffPage, /\/app\/staff-pwa-update\.js\?v=1/);
   assert.ok(worker.includes("['/', '/index.html'"));
   assert.ok(worker.includes("'/app/community.js'"));
   assert.ok(!worker.includes("'/app/admin.js'"));
+  assert.ok(worker.includes("const COMMUNITY_CACHE_PREFIX = 'powerwatch-community-'"));
+  assert.ok(worker.includes("name.startsWith(COMMUNITY_CACHE_PREFIX)"));
+  assert.ok(!worker.includes("name.startsWith('powerwatch-')"));
+  assert.ok(staffWorker.includes("key.startsWith('powerwatch-field-')"));
+  assert.ok(!worker.includes("powerwatch-field-"));
   assert.match(pwaUpdate, /new URL\('\/', window\.location\.origin\)/);
   assert.match(pwaUpdate, /existingRegistration\.scope !== userPortalScope/);
   assert.match(server, /Service-Worker-Allowed', '\/'/);
+  assert.match(server, /app\.get\('\/sw\.js'/);
+  assert.match(server, /app\.get\('\/staff-sw\.js'/);
+  assert.match(server, /Service-Worker-Allowed', '\/staff'/);
+  assert.match(server, /Cache-Control', 'no-cache, must-revalidate'/);
 });
