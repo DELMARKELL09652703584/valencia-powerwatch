@@ -78,9 +78,10 @@ const assignmentForTeamMember = (user, assignmentId) => {
            r.report_code, r.possible_outage_type, r.description AS report_description,
            r.location AS report_location, r.barangay AS report_barangay,
            r.purok AS report_purok, r.latitude AS report_latitude,
-           r.longitude AS report_longitude, r.location_confirmed AS report_location_confirmed, r.reported_at, r.photo_path,
+           r.longitude AS report_longitude, r.location_confirmed AS report_location_confirmed,
+           r.date_time_noticed, r.reported_at, r.photo_path,
            r.status AS report_status, r.verification_status, r.incident_id AS report_incident_id,
-           u.full_name AS reporter_name,
+           u.full_name AS reporter_name, u.contact_number AS reporter_contact,
            i.incident_code, i.title AS incident_title, i.description AS incident_description,
            i.incident_type, i.outage_type, i.start_time AS incident_start_time
     FROM repair_assignments a

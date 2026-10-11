@@ -277,11 +277,17 @@ const renderStats = () => {
   const awaiting = assignments.filter((assignment) => assignment.latest_stage === 'Assigned').length;
   const repairing = assignments.filter((assignment) => assignment.latest_stage === 'Repairing').length;
   const completed = assignments.filter((assignment) => ['Completed', 'Resolved'].includes(assignment.status)).length;
+  const verified = state.reports.filter((report) =>
+    ['Verified', 'Officially Confirmed'].includes(report.verification_status)).length;
+  const resolvedReports = state.reports.filter((report) =>
+    ['Resolved', 'Closed'].includes(report.status)).length;
   return `<div class="staff-stats">
     <div class="staff-stat staff-stat-new"><span>New</span><strong>${awaiting}</strong></div>
     <div class="staff-stat staff-stat-active"><span>Active</span><strong>${active.length}</strong></div>
+    <div class="staff-stat"><span>Verified reports</span><strong>${verified}</strong></div>
     <div class="staff-stat staff-stat-repair"><span>Repairing</span><strong>${repairing}</strong></div>
     <div class="staff-stat staff-stat-critical"><span>Critical</span><strong>${critical}</strong></div>
+    <div class="staff-stat staff-stat-done"><span>Resolved reports</span><strong>${resolvedReports}</strong></div>
   </div><button class="staff-completed-summary" type="button" data-action="open-history">
     <span>${icon('check')} Completed assignments</span><strong>${completed}<span aria-hidden="true">›</span></strong>
   </button>`;

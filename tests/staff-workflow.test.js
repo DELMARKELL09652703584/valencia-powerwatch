@@ -49,12 +49,15 @@ test('Staff portal shows report times, recent field updates, and accurate assign
   assert.match(staffApp, /Report submitted: \$\{escapeHtml\(new Date\(report\.reported_at\)\.toLocaleString\(\)\)\}/);
   assert.match(staffApp, /const renderRecentUpdates = \(\) =>/);
   assert.match(staffApp, /assignment\.updates \|\| \[\]/);
+  assert.match(staffApp, /Verified reports/);
+  assert.match(staffApp, /Resolved reports/);
+  assert.match(staffApp, /report\.verification_status/);
   assert.match(staffApp, /No active assignments to map/);
   assert.match(staffApp, /No active assignment has an exact GPS point/);
   assert.match(staffApp, /No assignments have been dispatched/);
   assert.match(staffApp, /No assignments match this filter/);
-  assert.match(staffPage, /\/app\/staff\.js\?v=11/);
-  assert.match(serviceWorker, /\/app\/staff\.js\?v=11/);
+  assert.match(staffPage, /\/app\/staff\.js\?v=12/);
+  assert.match(serviceWorker, /\/app\/staff\.js\?v=12/);
 });
 
 const getAvailablePort = () => new Promise((resolve, reject) => {
@@ -192,6 +195,7 @@ before(async () => {
     full_name: 'Assigned Incident Resident',
     email: `staff-test-${Date.now()}@example.test`,
     password: 'resident-password-123',
+    contact_number: '+639171234567',
     barangay: 'Poblacion',
     role: 'personnel',
   });
@@ -324,7 +328,7 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
     fetch(`${baseUrl}/staff-manifest.json`),
     fetch(`${baseUrl}/staff-sw.js`),
     fetch(`${baseUrl}/app/staff.css?v=7`),
-    fetch(`${baseUrl}/app/staff.js?v=11`),
+    fetch(`${baseUrl}/app/staff.js?v=12`),
     Promise.all([
       'powerwatch-icon-192.png',
       'powerwatch-icon-512.png',
@@ -369,7 +373,7 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
   const shellAssets = workerSource.match(/const STAFF_SHELL = \[[\s\S]*?\];/)?.[0] || '';
   assert.doesNotMatch(shellAssets, /\/api\/|\/admin/);
   assert.match(shellAssets, /staff\.css\?v=7/);
-  assert.match(shellAssets, /staff\.js\?v=11/);
+  assert.match(shellAssets, /staff\.js\?v=12/);
 });
 
 test('verified database roles assign each account its own portal after login', { timeout: TEST_TIMEOUT_MS }, async () => {
@@ -597,6 +601,8 @@ test('Staff API scopes assignments, reports, evidence, and incidents to authoriz
   assert.equal(allAssignments[0].report_latitude, 7.906);
   assert.equal(allAssignments[0].report_longitude, 125.094);
   assert.equal(allAssignments[0].report_location_confirmed, 1);
+  assert.equal(allAssignments[0].reporter_contact, '+639171234567');
+  assert.ok(allAssignments[0].date_time_noticed);
   assert.equal(allAssignments[0].incident_id, null, 'dispatching a single report must not create a duplicate incident');
   assert.equal(allAssignments[0].report_incident_id, null);
   const reportDetail = await jsonRequest(`/api/reports/${primaryReportId}`, adminCookie);
