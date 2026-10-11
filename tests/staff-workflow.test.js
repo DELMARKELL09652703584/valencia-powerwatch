@@ -415,6 +415,9 @@ test('verified database roles assign each account its own portal after login', {
   assert.equal((await jsonRequest('/api/admin/users', adminCookie)).status, 200);
   assert.equal((await jsonRequest('/api/admin/users', staffCookie)).status, 403);
   assert.equal((await jsonRequest('/api/admin/users', residentCookie)).status, 403);
+  assert.equal((await jsonRequest('/api/admin/telemetry-heartbeat', staffCookie)).status, 403);
+  assert.equal((await jsonRequest('/api/admin/telemetry-heartbeat', residentCookie)).status, 403);
+  assert.equal((await jsonRequest('/api/admin/telemetry-heartbeat', adminCookie)).status, 200);
   const staffSummary = (await (await jsonRequest('/api/admin/users?status=all', adminCookie)).json()).staff_summary;
   assert.equal(staffSummary.total, 2);
   assert.equal(staffSummary.active, 2);

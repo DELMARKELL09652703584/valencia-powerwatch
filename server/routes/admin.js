@@ -572,7 +572,7 @@ router.post('/maintenance/clean-reset', requireAuth, requireRole('administrator'
 });
 
 // ---------------- Real-Time Telemetry & Audio Ping Heartbeat ----------------
-router.get('/telemetry-heartbeat', requireAuth, requireRole('administrator', 'personnel', 'utility'), (req, res) => {
+router.get('/telemetry-heartbeat', requireAuth, requireRole('administrator'), (req, res) => {
   const sinceId = Number(req.query.since_report_id) || 0;
 
   const maxRow = db.prepare('SELECT MAX(id) AS max_id FROM outage_reports').get();
