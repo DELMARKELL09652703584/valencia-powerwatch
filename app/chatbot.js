@@ -3,6 +3,7 @@
 (() => {
   const conversation = [];
   const POSITION_KEY = 'powerwatch-chat-position';
+  const isBisayaQuestion = (text) => /\b(unsa|unsaon|asa|akong|nako|dili|ngano|pwede|palihog|tabang|naa|naay|wala|walay|brownout|karon|sunod|kuryente|gi-submit|gi report)\b/i.test(text);
   let sending = false;
   let panelOpen = false;
   let dragState = null;
@@ -96,7 +97,7 @@
     if (!conversation.length) {
       const welcome = document.createElement('p');
       welcome.className = 'powerwatch-chat-welcome';
-      welcome.textContent = 'Hi! Ask me how to report or track an outage, or ask about current system information.';
+      welcome.textContent = 'Hi! Ask me or pangutana lang about reporting, report status, and current outage information.';
       messages.append(welcome);
       return;
     }
@@ -148,7 +149,12 @@
     if (sending) return;
     sending = true;
     conversation.push({ role: 'user', text: question });
-    conversation.push({ role: 'assistant', text: 'Checking the help guide and current system records…' });
+    conversation.push({
+      role: 'assistant',
+      text: isBisayaQuestion(question)
+        ? 'Sige, nagtan-aw ko sa tabang ug sa kasamtangang rekord sa sistema…'
+        : 'Checking the help guide and current system records…',
+    });
     renderConversation();
     document.querySelectorAll('.powerwatch-chat-form button').forEach((button) => {
       button.disabled = true;

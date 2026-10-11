@@ -119,6 +119,16 @@ test('chatbot gives in-app feature guidance with navigation actions', async () =
   assert.deepEqual(result.action, { label: 'Open report form', tab: 'report' });
 });
 
+test('chatbot answers common Cebuano questions in Cebuano with localized navigation', async () => {
+  const cookie = await createResidentSession();
+  const response = await ask(cookie, 'Unsaon pag report og brownout?');
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.match(result.answer, /Aron mo-report og brownout/i);
+  assert.match(result.answer, /barangay ug purok/i);
+  assert.deepEqual(result.action, { label: 'Ablihi ang report form', tab: 'report' });
+});
+
 test('chatbot explicitly distinguishes live system data from unknown information', async () => {
   const cookie = await createResidentSession();
   const outageResponse = await ask(cookie, 'Are there current outages right now?');
@@ -139,10 +149,20 @@ test('chatbot reports only the signed-in resident’s own report status', async 
   assert.match(ownerAnswer.answer, new RegExp(report.report.report_code));
   assert.equal(ownerAnswer.source, 'your-report-records');
 
+  const codeOnlyResponse = await ask(ownerCookie, `Unsa na status sa ${report.report.report_code}?`);
+  const codeOnlyAnswer = await codeOnlyResponse.json();
+  assert.match(codeOnlyAnswer.answer, new RegExp(report.report.report_code));
+  assert.match(codeOnlyAnswer.answer, /Poblacion, Purok 1/);
+  assert.match(codeOnlyAnswer.answer, /Oras nga namatikdan/i);
+  assert.equal(codeOnlyAnswer.action.label, 'Ablihi ang akong reports');
+
   const otherCookie = await createResidentSession();
   const otherResponse = await ask(otherCookie, `What is my report ${report.report.report_code}?`);
   const otherAnswer = await otherResponse.json();
   assert.match(otherAnswer.answer, /could not find report/i);
+  const codeOnlyOtherResponse = await ask(otherCookie, `Status sa ${report.report.report_code}`);
+  const codeOnlyOtherAnswer = await codeOnlyOtherResponse.json();
+  assert.match(codeOnlyOtherAnswer.answer, /wala koy nakitang report/i);
 });
 
 test('chatbot validates empty and oversized questions', async () => {
@@ -162,7 +182,7 @@ test('chatbot assets are loaded only by the User Portal', async () => {
     fetch(`${baseUrl}/app/community.js`).then((response) => response.text()),
     fetch(`${baseUrl}/app/portal-polish.css`).then((response) => response.text()),
   ]);
-  assert.match(community, /\/app\/chatbot\.js\?v=1/);
+  assert.match(community, /\/app\/chatbot\.js\?v=2/);
   assert.doesNotMatch(admin, /\/app\/chatbot\.js/);
   assert.match(script, /\/api\/chatbot/);
   assert.match(portal, /class="powerwatch-chat-launcher"[\s\S]*?<svg class="powerwatch-chat-launcher-icon"/);

@@ -329,9 +329,9 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
         </header>
         <div class="powerwatch-chat-messages" id="powerwatch-chat-messages" aria-live="polite" aria-relevant="additions text"></div>
         <div class="powerwatch-chat-prompts" id="powerwatch-chat-prompts">
-          <button type="button" data-chatbot-prompt="How do I report an outage?">Report an outage</button>
-          <button type="button" data-chatbot-prompt="How do I track my report?">Track my report</button>
-          <button type="button" data-chatbot-prompt="Are there current outages or schedules?">Current outages</button>
+          <button type="button" data-chatbot-prompt="Unsaon pag report og brownout?">Report an outage · I-report ang brownout</button>
+          <button type="button" data-chatbot-prompt="Asa na ang status sa akong report?">Track my report · I-track akong report</button>
+          <button type="button" data-chatbot-prompt="Naa bay brownout karon?">Current outages · Brownout karon</button>
         </div>
         <form class="powerwatch-chat-form" id="powerwatch-chat-form">
           <label class="visually-hidden" for="powerwatch-chat-input">Ask the PowerWatch assistant</label>
