@@ -7,6 +7,8 @@ const ROOT = path.resolve(__dirname, '..');
 const adminSource = fs.readFileSync(path.join(ROOT, 'app', 'admin.js'), 'utf8');
 const mainSource = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
 const adminHtml = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+const communityHtml = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
+const styles = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
 
 test('Admin navigation consolidates report verification and incident operations', () => {
   const nav = adminSource.match(/const ADMIN_NAV = \[([\s\S]*?)\n\];/)?.[1] || '';
@@ -51,4 +53,6 @@ test('Admin login does not expose seeded credentials and hides unconfigured OAut
   assert.match(mainSource, /button\.hidden = !state\.oauthProviders\?\.\[`\\?\$\{button\.dataset\.provider\}Live`\\?\]/);
   assert.match(mainSource, /row\.hidden = !hasAvailableProvider/);
   assert.match(mainSource, /app\.innerHTML = `<main class="login-page">[\s\S]*?syncOAuthProviderControls\(\);\s*\}/);
+  assert.match(styles, /\.social-row\[hidden\],[\s\S]*?\.social-btn\[hidden\],[\s\S]*?\.auth-divider\[hidden\]\s*\{\s*display:\s*none\s*!important;/);
+  assert.match(communityHtml, /\/style\.css\?v=38/);
 });

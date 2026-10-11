@@ -3082,6 +3082,9 @@ body.admin-body {
   font-weight: 700;
   padding: 16px 18px;
 }
+.social-row[hidden],
+.social-btn[hidden],
+.auth-divider[hidden] { display: none !important; }
 .social-btn:disabled { cursor: not-allowed; opacity: .58; background: #f0f3f6; color: #607080; }
 
 .switch-text {

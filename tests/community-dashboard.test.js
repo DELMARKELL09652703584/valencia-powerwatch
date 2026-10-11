@@ -99,7 +99,7 @@ test('report details activity, ETR, and feedback remain readable in Night Ops mo
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-report-timeline\s*\{[^}]*background:\s*var\(--pw-panel\);/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-etr-badge\.is-restored\s*\{[^}]*background:\s*#0d302b;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.report-feedback-question,\s*body\.dark-mode\.community-body \.report-feedback-rating-label\s*\{[^}]*color:\s*var\(--pw-text\);/s);
-  assert.match(communityPage, /\/style\.css\?v=37/);
+  assert.match(communityPage, /\/style\.css\?v=38/);
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=58/);
 });
 
