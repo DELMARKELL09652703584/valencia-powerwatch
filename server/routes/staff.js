@@ -81,7 +81,8 @@ const assignmentForTeamMember = (user, assignmentId) => {
            r.longitude AS report_longitude, r.location_confirmed AS report_location_confirmed, r.reported_at, r.photo_path,
            r.status AS report_status, r.verification_status, r.incident_id AS report_incident_id,
            u.full_name AS reporter_name,
-           i.incident_code, i.title AS incident_title, i.description AS incident_description
+           i.incident_code, i.title AS incident_title, i.description AS incident_description,
+           i.incident_type, i.outage_type, i.start_time AS incident_start_time
     FROM repair_assignments a
     JOIN repair_teams t ON t.id = a.team_id
     LEFT JOIN outage_reports r ON r.id = a.report_id
@@ -271,7 +272,7 @@ router.post('/staff/assignments/:id/updates', requireAuth, requireRole('personne
         eventType: 'repair',
         title: `Field response ${stage.toLowerCase()}`,
         details: cleanNotes || `${req.staffAssignment.team_name} updated the response to ${stage}.`,
-        fromStatus: req.staffAssignment.report?.status || null,
+        fromStatus: req.staffAssignment.report_status || null,
         toStatus: nextReportStatus,
         actor: req.user,
         createdAt: timestamp,

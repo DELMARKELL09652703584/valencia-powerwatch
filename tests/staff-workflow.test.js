@@ -40,6 +40,23 @@ let teamId;
 let alternateTeamId;
 let serverOutput = '';
 
+test('Staff portal shows report times, recent field updates, and accurate assignment/map empty states', () => {
+  const staffApp = fs.readFileSync(path.join(ROOT, 'app', 'staff.js'), 'utf8');
+  const staffPage = fs.readFileSync(path.join(ROOT, 'staff.html'), 'utf8');
+  const serviceWorker = fs.readFileSync(path.join(ROOT, 'staff-sw.js'), 'utf8');
+
+  assert.match(staffApp, /Incident noticed: \$\{escapeHtml\(new Date\(report\.date_time_noticed\)\.toLocaleString\(\)\)\}/);
+  assert.match(staffApp, /Report submitted: \$\{escapeHtml\(new Date\(report\.reported_at\)\.toLocaleString\(\)\)\}/);
+  assert.match(staffApp, /const renderRecentUpdates = \(\) =>/);
+  assert.match(staffApp, /assignment\.updates \|\| \[\]/);
+  assert.match(staffApp, /No active assignments to map/);
+  assert.match(staffApp, /No active assignment has an exact GPS point/);
+  assert.match(staffApp, /No assignments have been dispatched/);
+  assert.match(staffApp, /No assignments match this filter/);
+  assert.match(staffPage, /\/app\/staff\.js\?v=11/);
+  assert.match(serviceWorker, /\/app\/staff\.js\?v=11/);
+});
+
 const getAvailablePort = () => new Promise((resolve, reject) => {
   const server = net.createServer();
   server.once('error', reject);
@@ -307,7 +324,7 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
     fetch(`${baseUrl}/staff-manifest.json`),
     fetch(`${baseUrl}/staff-sw.js`),
     fetch(`${baseUrl}/app/staff.css?v=7`),
-    fetch(`${baseUrl}/app/staff.js?v=10`),
+    fetch(`${baseUrl}/app/staff.js?v=11`),
     Promise.all([
       'powerwatch-icon-192.png',
       'powerwatch-icon-512.png',
@@ -334,7 +351,8 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
   assert.match(staffSource, /new XMLHttpRequest\(\)/);
   assert.match(staffSource, /const hasValidCoordinates = \(latitude, longitude\)/);
   assert.match(staffSource, /\[null, undefined, ''\]\.includes\(latitude\)/);
-  assert.match(staffSource, /GPS is not available for mapping or directions yet/);
+  assert.match(staffSource, /No active assignments to map/);
+  assert.match(staffSource, /No active assignment has an exact GPS point/);
   assert.doesNotMatch(staffSource, /<a href="\/">User Portal<\/a>|<a href="\/admin">Admin Portal<\/a>/);
   assert.ok(iconResponses.every((response) => response.status === 200));
   const staffStyles = await cssResponse.text();
@@ -351,7 +369,7 @@ test('Staff PWA has an isolated install route, manifest, and service-worker scop
   const shellAssets = workerSource.match(/const STAFF_SHELL = \[[\s\S]*?\];/)?.[0] || '';
   assert.doesNotMatch(shellAssets, /\/api\/|\/admin/);
   assert.match(shellAssets, /staff\.css\?v=7/);
-  assert.match(shellAssets, /staff\.js\?v=10/);
+  assert.match(shellAssets, /staff\.js\?v=11/);
 });
 
 test('verified database roles assign each account its own portal after login', { timeout: TEST_TIMEOUT_MS }, async () => {
@@ -696,6 +714,8 @@ test('Staff response stages are ordered, documented, and notify the reporting re
   assert.equal(residentReport.repair_status, 'En Route');
   assert.equal(residentReport.incident_id, null);
   assert.ok(residentReport.timeline.some((event) => event.to_status === 'In Progress' && event.actor_name === 'Assigned Field Staff'));
+  assert.ok(residentReport.timeline.some((event) => event.title === 'Field response on the way'
+    && event.from_status === 'Acknowledged' && event.to_status === 'In Progress'));
   assert.equal(Object.hasOwn(residentReport, 'staff_remarks'), false);
   assert.ok(residentReport.timeline.every((event) => !Object.hasOwn(event, 'details') && !Object.hasOwn(event, 'actor_user_id')));
   const timelineDb = new DatabaseSync(testDatabasePath);

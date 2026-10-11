@@ -17,11 +17,32 @@ test('community dashboard keeps personal notifications out of the home feed', ()
   assert.ok(homeRendererEnd > homeRendererStart);
   assert.doesNotMatch(homeRenderer, /\/api\/(?:notifications|announcements)/);
   assert.doesNotMatch(communityScript, /class="recent-updates"/);
-  assert.match(communityPage, /\/app\/community\.js\?v=31/);
+  assert.match(communityPage, /\/app\/community\.js\?v=32/);
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=58/);
   assert.match(portalStyles, /body\.community-body \.home-report-action\s*\{/);
   assert.match(portalStyles, /body\.community-body \.home-track-action svg\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;[^}]*fill:\s*none;/s);
   assert.match(portalStyles, /@media \(max-width: 600px\)\s*\{\s*body\.community-body \.mobile-home-header\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
+});
+
+test('community map uses exact outage coordinates and functional base-layer controls', () => {
+  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
+  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+  const mapStart = communityScript.indexOf('async function renderMobileMap()');
+  const mapEnd = communityScript.indexOf('\nfunction filterMobileNotifications', mapStart);
+  const mapRenderer = communityScript.slice(mapStart, mapEnd);
+
+  assert.ok(mapStart >= 0);
+  assert.ok(mapEnd > mapStart);
+  assert.match(mapRenderer, /const coordinatesFor = \(item\) => hasCoordinates\(item\)\s*\? \[Number\(item\.latitude\), Number\(item\.longitude\)\]\s*: null;/);
+  assert.match(mapRenderer, /const reportCoordinatesFor = \(report\) => hasCoordinates\(report\) && Number\(report\.location_confirmed\) === 1/);
+  assert.doesNotMatch(mapRenderer, /barangayLocations/);
+  assert.match(mapRenderer, /No active incidents or confirmed open reports have exact mappable coordinates yet\./);
+  assert.match(mapRenderer, /Reported: \$\{escapeHtml\(formatDate\(rep\.reported_at\)\)\}/);
+  assert.match(mapRenderer, /Incident started: \$\{escapeHtml\(formatDate\(incident\.start_time\)\)\}/);
+  assert.match(mapRenderer, /https:\/\/\{s\}\.tile\.openstreetmap\.org\/\{z\}\/\{x\}\/\{y\}\.png/);
+  assert.match(mapRenderer, /World_Imagery\/MapServer\/tile\/\{z\}\/\{y\}\/\{x\}/);
+  assert.match(mainScript, /case 'set-mobile-map-mode':[\s\S]*?powerwatch\.mobile-map-mode/);
+  assert.match(mainScript, /case 'set-mobile-map-layer':[\s\S]*?powerwatch\.mobile-map-layer/);
 });
 
 test('community report location remains readable in Night Ops mode', () => {
@@ -161,7 +182,7 @@ test('community bottom navigation shows accessible icon and text labels', () => 
   assert.match(portalStyles, /body\.community-body \.mobile-tab\.active::after\s*\{[^}]*transform:\s*translateX\(50%\) scaleX\(1\);/s);
   assert.match(portalStyles, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*body\.community-body \.mobile-tab,/s);
   assert.match(portalStyles, /body\.community-body \.mobile-tab-icon,\s*body\.community-body \.mobile-tab-icon svg\s*\{[^}]*width:\s*22px;[^}]*height:\s*22px;/s);
-  assert.match(communityPage, /\/app\/community\.js\?v=31/);
+  assert.match(communityPage, /\/app\/community\.js\?v=32/);
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=58/);
 });
 
@@ -174,7 +195,7 @@ test('User Portal provides an accessible PWA install button', () => {
   assert.match(communityScript, /data-action="install-app"[\s\S]*?<span>Install<\/span>/);
   assert.match(mainScript, /case 'install-app':\s*\{[\s\S]*?installPrompt\.prompt\(\)/);
   assert.match(mainScript, /window\.addEventListener\('beforeinstallprompt'/);
-  assert.match(communityPage, /\/app\/community\.js\?v=31/);
+  assert.match(communityPage, /\/app\/community\.js\?v=32/);
   assert.match(communityPage, /\/app\/pwa-update\.js\?v=3/);
 });
 

@@ -1176,10 +1176,9 @@ async function renderMobileReportDetail() {
 }
 
 async function renderMobileMap() {
-  const [{ incidents }, { scheduled }, { barangays: barangayLocations }, { reports = [] }, { reports: myReports = [] }] = await Promise.all([
+  const [{ incidents }, { scheduled }, { reports = [] }, { reports: myReports = [] }] = await Promise.all([
     api('/api/incidents'),
     api('/api/scheduled/upcoming'),
-    api('/api/barangays/locations'),
     api('/api/reports/map').catch(() => ({ reports: [] })),
     api('/api/reports/mine').catch(() => ({ reports: [] })),
   ]);
@@ -1189,12 +1188,10 @@ async function renderMobileMap() {
   const activeIncidentIds = new Set(activeIncidents.map((item) => Number(item.id)));
   const activeUnlinkedReports = (reports || []).filter((item) => !activeIncidentIds.has(Number(item.incident_id)));
 
-  const coordinatesFor = (item) => {
-    if (hasCoordinates(item)) return [Number(item.latitude), Number(item.longitude)];
-    const barangay = (barangayLocations || []).find((location) => location.name === item.barangay);
-    return hasCoordinates(barangay) ? [Number(barangay.latitude), Number(barangay.longitude)] : null;
-  };
-  const reportCoordinatesFor = (report) => hasCoordinates(report)
+  const coordinatesFor = (item) => hasCoordinates(item)
+    ? [Number(item.latitude), Number(item.longitude)]
+    : null;
+  const reportCoordinatesFor = (report) => hasCoordinates(report) && Number(report.location_confirmed) === 1
     ? [Number(report.latitude), Number(report.longitude)]
     : null;
   const activeMapSignals = [
@@ -1242,12 +1239,12 @@ async function renderMobileMap() {
     <div class="mobile-map-legend" style="display:flex;flex-wrap:wrap;gap:8px 12px;font-size:0.75rem;">
       <span><i class="legend-dot red"></i>Active Incident</span>
       <span><i class="legend-dot orange"></i>My Report / Submitted</span>
-      <span><i class="legend-dot blue"></i>Scheduled</span>
+      ${scheduled.some(hasCoordinates) ? '<span><i class="legend-dot blue"></i>Scheduled location</span>' : ''}
     </div>
   `;
 
   mobileShell(`
-    ${mobileHero('Power Outage Map', 'Explore active interruptions, your submitted reports, and maintenance across Valencia City.')}
+    ${mobileHero('Power Outage Map', 'Explore active interruption locations and your submitted reports across Valencia City.')}
 
     <div class="mobile-map-controls" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
       <div class="mobile-segments" role="group" aria-label="Map display mode" style="flex:1;min-width:180px;margin-bottom:0;">
@@ -1260,7 +1257,9 @@ async function renderMobileMap() {
       </div>
     </div>
     <p class="mobile-map-help">${isHeatmap
-      ? `Heat shows ${activeMapSignals.length} mapped active incidents and open reports not yet linked to an incident. Scheduled outages are excluded. Choose a barangay below to zoom in.`
+      ? activeMapSignals.length
+        ? `Heat shows ${activeMapSignals.length} mapped active incidents and confirmed open reports not yet linked to an incident. Scheduled outages are excluded. Choose a barangay below to zoom in.`
+        : 'No active incidents or confirmed open reports have exact mappable coordinates yet. Barangay-center estimates are not shown.'
       : 'Tap a pin for its status and location details. Your reports include verification and repair information; incident pins open outage details.'}</p>
     <p class="mobile-map-help">Street map emphasizes roads and place labels for locating an area; it is not 360-degree Street View. Satellite view adds aerial context and road labels; imagery is not live outage evidence.</p>
     ${legendMarkup}
@@ -1470,6 +1469,11 @@ async function renderMobileMap() {
               <span class="map-popup-icon">📍</span>
               <span><strong>Brgy. ${escapeHtml(rep.barangay || 'Valencia')}</strong>${rep.purok ? ` · ${escapeHtml(rep.purok)}` : ''}</span>
             </div>
+            <div class="map-popup-row">
+              <span class="map-popup-icon">🕒</span>
+              <span>Reported: ${escapeHtml(formatDate(rep.reported_at))}</span>
+            </div>
+            ${rep.description ? `<div class="map-popup-row"><span class="map-popup-icon">ℹ️</span><span>${escapeHtml(rep.description)}</span></div>` : ''}
             ${rep.assigned_team_name ? `
             <div class="map-popup-row">
               <span class="map-popup-icon">🛠️</span>
@@ -1513,8 +1517,13 @@ async function renderMobileMap() {
           <div class="map-popup-meta">
             <div class="map-popup-row">
               <span class="map-popup-icon">📍</span>
-              <span><strong>${escapeHtml(incident.barangay || 'Valencia City')}</strong></span>
+              <span><strong>${escapeHtml((incident.affected_barangays || [incident.barangay || 'Valencia City']).join(', '))}</strong></span>
             </div>
+            <div class="map-popup-row">
+              <span class="map-popup-icon">🕒</span>
+              <span>Incident started: ${escapeHtml(formatDate(incident.start_time))}</span>
+            </div>
+            ${incident.description ? `<div class="map-popup-row"><span class="map-popup-icon">ℹ️</span><span>${escapeHtml(incident.description)}</span></div>` : ''}
             <div class="map-popup-row">
               <span class="map-popup-icon">⏳</span>
               <span><strong>Estimated Restoration:</strong> <span style="color:#0284c7;font-weight:600;">${escapeHtml(formatEtr(incident.estimated_restoration_time))}</span></span>
