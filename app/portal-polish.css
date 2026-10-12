@@ -6437,10 +6437,10 @@ body.community-body #app .community-login-register > button {
   align-items: center;
   justify-content: center;
   padding: 0 18px;
-  border: 1px solid rgba(255, 255, 255, .8);
+  border: 1px solid rgba(255, 255, 255, .8) !important;
   border-radius: 999px;
-  background: linear-gradient(135deg, #1688ed, #0864c4);
-  box-shadow: 0 6px 16px rgba(3, 37, 76, .3);
+  background: linear-gradient(135deg, #1688ed, #0864c4) !important;
+  box-shadow: 0 6px 16px rgba(3, 37, 76, .3) !important;
   color: #fff !important;
   font-size: .96rem;
   font-weight: 750;
@@ -6466,8 +6466,8 @@ body.community-body #app .community-login-register > button:focus-visible {
 }
 
 body.dark-mode.community-body #app .community-login-register > button {
-  border-color: #a5d9ff;
-  background: linear-gradient(135deg, #2563eb, #087eac);
+  border-color: #a5d9ff !important;
+  background: linear-gradient(135deg, #2563eb, #087eac) !important;
   color: #fff !important;
 }
 
