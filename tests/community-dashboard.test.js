@@ -210,7 +210,7 @@ test('User Portal PWA is distinct from Staff and preserves its own cache during 
   const staffPage = fs.readFileSync(path.join(ROOT, 'staff.html'), 'utf8');
 
   assert.equal(manifest.start_url, '/community');
-  assert.equal(manifest.scope, '/');
+  assert.equal(manifest.scope, '/community');
   assert.equal(manifest.display, 'standalone');
   assert.equal(manifest.name, 'Valencia PowerWatch');
   assert.equal(manifest.id, '/community');
@@ -237,9 +237,9 @@ test('User Portal PWA is distinct from Staff and preserves its own cache during 
   assert.ok(!worker.includes("name.startsWith('powerwatch-')"));
   assert.ok(staffWorker.includes("key.startsWith('powerwatch-field-')"));
   assert.ok(!worker.includes("powerwatch-field-"));
-  assert.match(pwaUpdate, /new URL\('\/', window\.location\.origin\)/);
+  assert.match(pwaUpdate, /new URL\('\/community', window\.location\.origin\)/);
   assert.match(pwaUpdate, /existingRegistration\.scope !== userPortalScope/);
-  assert.match(server, /Service-Worker-Allowed', '\/'/);
+  assert.match(server, /Service-Worker-Allowed', '\/community'/);
   assert.match(server, /app\.get\('\/sw\.js'/);
   assert.match(server, /app\.get\('\/staff-sw\.js'/);
   assert.match(server, /Service-Worker-Allowed', '\/staff'/);

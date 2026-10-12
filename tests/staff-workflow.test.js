@@ -394,10 +394,10 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
   const communityManifest = await communityManifestResponse.json();
   assert.equal(communityManifest.id, '/community');
   assert.equal(communityManifest.start_url, '/community');
-  assert.equal(communityManifest.scope, '/');
+  assert.equal(communityManifest.scope, '/community');
   assert.notEqual(communityManifest.id, manifest.id);
   assert.equal(communityWorkerResponse.status, 200);
-  assert.equal(communityWorkerResponse.headers.get('service-worker-allowed'), '/');
+  assert.equal(communityWorkerResponse.headers.get('service-worker-allowed'), '/community');
   assert.equal(communityWorkerResponse.headers.get('cache-control'), 'no-cache, must-revalidate');
   assert.equal(cssResponse.status, 200);
   assert.equal(jsResponse.status, 200);

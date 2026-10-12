@@ -124,7 +124,7 @@ app.get('/staff-manifest.json', (req, res) => {
 app.get('/sw.js', async (req, res, next) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-  res.setHeader('Service-Worker-Allowed', '/');
+  res.setHeader('Service-Worker-Allowed', '/community');
   try {
     const workerSource = await fs.readFile(path.join(ROOT, 'sw.js'), 'utf8');
     const buildId = JSON.stringify(process.env.RENDER_GIT_COMMIT || 'development');

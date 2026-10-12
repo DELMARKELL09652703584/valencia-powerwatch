@@ -73,7 +73,7 @@
   });
 
   const workerUrl = new URL('/sw.js', window.location.origin).href;
-  const userPortalScope = new URL('/', window.location.origin).href;
+  const userPortalScope = new URL('/community', window.location.origin).href;
   navigator.serviceWorker.getRegistrations()
     .then((registrations) => Promise.all(registrations
       .filter((existingRegistration) => {
