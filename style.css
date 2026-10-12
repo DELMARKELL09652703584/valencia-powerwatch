@@ -8939,8 +8939,8 @@ body.dark-mode .mini-stepper-step {
   width: 100%;
   max-width: 520px;
   background:
-    radial-gradient(ellipse at 85% 15%, rgba(35, 121, 196, .13), transparent 24rem),
-    linear-gradient(160deg, #f7fbff 0%, #edf5fb 100%);
+    linear-gradient(180deg, rgba(5, 60, 100, .34), rgba(4, 58, 94, .04) 50%, rgba(6, 55, 87, .42)),
+    url('/assets/valencia-city-panorama.jpg') center / cover no-repeat;
 }
 
 .community-body .mobile-auth-content {

@@ -19,6 +19,7 @@ test('community dashboard keeps personal notifications out of the home feed', ()
   assert.doesNotMatch(communityScript, /class="recent-updates"/);
   assert.match(communityPage, /\/app\/community\.js\?v=33/);
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=59/);
+  assert.match(communityPage, /\/style\.css\?v=39/);
   assert.match(portalStyles, /body\.community-body \.home-report-action\s*\{/);
   assert.match(portalStyles, /body\.community-body \.home-track-action svg\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;[^}]*fill:\s*none;/s);
   assert.match(portalStyles, /@media \(max-width: 600px\)\s*\{\s*body\.community-body \.mobile-home-header\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
@@ -120,7 +121,7 @@ test('report details activity, ETR, and feedback remain readable in Night Ops mo
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-report-timeline\s*\{[^}]*background:\s*var\(--pw-panel\);/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-etr-badge\.is-restored\s*\{[^}]*background:\s*#0d302b;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.report-feedback-question,\s*body\.dark-mode\.community-body \.report-feedback-rating-label\s*\{[^}]*color:\s*var\(--pw-text\);/s);
-  assert.match(communityPage, /\/style\.css\?v=38/);
+  assert.match(communityPage, /\/style\.css\?v=39/);
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=59/);
 });
 
@@ -186,6 +187,22 @@ test('community bottom navigation shows accessible icon and text labels', () => 
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=59/);
 });
 
+test('Community login preserves the Valencia panorama backdrop and caches it for offline launch', () => {
+  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
+  const worker = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  const loginRuleStart = styles.indexOf('.community-body .mobile-auth-page {');
+  const loginRuleEnd = styles.indexOf('\n}', loginRuleStart);
+  const loginRule = styles.slice(loginRuleStart, loginRuleEnd);
+
+  assert.ok(loginRuleStart >= 0);
+  assert.ok(loginRuleEnd > loginRuleStart);
+  assert.match(loginRule, /url\('\/assets\/valencia-city-panorama\.jpg'\) center \/ cover no-repeat/);
+  assert.match(worker, /'\/assets\/valencia-city-panorama\.jpg'/);
+  assert.ok(worker.includes('/\\.(?:jpe?g|png|svg|webp|woff2?)$/.test(pathname)'));
+  assert.ok(fs.existsSync(path.join(ROOT, 'assets', 'valencia-city-panorama.jpg')));
+});
+
 test('User Portal provides an accessible PWA install button', () => {
   const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
   const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
@@ -225,6 +242,7 @@ test('User Portal PWA is distinct from Staff and preserves its own cache during 
   assert.ok(manifest.icons.every((icon) => !icon.src.includes('powerwatch-field-icon')));
   assert.ok(staffManifest.icons.every((icon) => icon.src.includes('powerwatch-field-icon')));
   assert.match(communityPage, /href="\/manifest\.json"/);
+  assert.match(communityPage, /\/style\.css\?v=39/);
   assert.match(staffPage, /href="\/staff-manifest\.json"/);
   assert.match(staffPage, /rel="icon" type="image\/png" sizes="192x192" href="\/assets\/powerwatch-field-icon-192\.png"/);
   assert.match(staffPage, /rel="apple-touch-icon" sizes="180x180" href="\/assets\/powerwatch-field-icon-180\.png"/);

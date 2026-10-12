@@ -16,6 +16,7 @@ const STATIC_ASSETS = [
   '/assets/powerwatch-icon-192.png',
   '/assets/powerwatch-icon-512.png',
   '/assets/powerwatch-icon-maskable-512.png',
+  '/assets/valencia-city-panorama.jpg',
   '/manifest.json',
 ];
 
@@ -30,7 +31,7 @@ function isCacheableStaticAsset(pathname) {
       '/app/chatbot.js',
       '/app/pwa-update.js',
     ].includes(pathname)
-    || (pathname.startsWith('/assets/') && /\.(?:png|svg|webp|woff2?)$/.test(pathname))
+    || (pathname.startsWith('/assets/') && /\.(?:jpe?g|png|svg|webp|woff2?)$/.test(pathname))
     || (pathname.startsWith('/vendor/leaflet/') && /\.(?:css|js|png)$/.test(pathname));
 }
 
