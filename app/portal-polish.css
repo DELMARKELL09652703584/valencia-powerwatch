@@ -6417,6 +6417,11 @@ body.community-body .community-login-card .social-icon-svg {
 }
 
 body.community-body .community-login-register {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
   margin: 14px 0 0;
   padding: 0 6px;
   color: #fff;
@@ -6425,11 +6430,45 @@ body.community-body .community-login-register {
   text-shadow: 0 1px 5px rgba(4, 21, 35, .72);
 }
 
-body.community-body .community-login-register button {
-  color: #fff;
+body.community-body #app .community-login-register > button {
+  display: inline-flex;
+  min-width: 96px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, .8);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1688ed, #0864c4);
+  box-shadow: 0 6px 16px rgba(3, 37, 76, .3);
+  color: #fff !important;
+  font-size: .96rem;
   font-weight: 750;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  line-height: 1.2;
+  text-decoration: none;
+  text-shadow: none;
+  transition: background-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+body.community-body #app .community-login-register > button:hover {
+  background: linear-gradient(135deg, #0877d7, #0758ae);
+  box-shadow: 0 8px 20px rgba(3, 37, 76, .38);
+  transform: translateY(-1px);
+}
+
+body.community-body #app .community-login-register > button:active {
+  transform: scale(.97);
+}
+
+body.community-body #app .community-login-register > button:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+
+body.dark-mode.community-body #app .community-login-register > button {
+  border-color: #a5d9ff;
+  background: linear-gradient(135deg, #2563eb, #087eac);
+  color: #fff !important;
 }
 
 body.dark-mode.community-body .community-login-card,
