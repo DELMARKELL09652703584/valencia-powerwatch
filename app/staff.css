@@ -29,13 +29,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 [hidden] { display: none !important; }
 
 .staff-loading, .staff-login-page {
-  width: min(100%, 430px);
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
   min-height: 100dvh;
   display: grid;
-  place-content: center;
+  align-content: safe center;
   justify-items: center;
   gap: 14px;
-  padding: 28px;
+  padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   background: var(--staff-bg);
   text-align: center;
 }
@@ -530,9 +533,19 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .staff-login-card { border-radius: 18px; box-shadow: 0 18px 48px rgba(18,42,63,.11); }
 
 @media (max-width: 380px) {
+  .staff-login-page { padding-right: 12px; padding-left: 12px; }
+  .staff-login-card { padding: 20px; }
   .staff-main { padding-right: 11px; padding-left: 11px; }
   .staff-stat { padding-right: 9px; padding-left: 10px; }
   .staff-stage-progress { padding-right: 3px; padding-left: 3px; }
   .staff-stage-progress li small { font-size: .49rem; }
   .staff-assignment-actions .staff-btn { padding-right: 7px; padding-left: 7px; font-size: .7rem; }
+}
+
+@media (max-height: 760px) {
+  .staff-login-page { align-content: start; }
+  .staff-login-card { padding-top: 20px; padding-bottom: 20px; }
+  .staff-brand { margin-bottom: 16px; }
+  .staff-login-copy { margin-bottom: 16px; }
+  .staff-login-form { gap: 12px; }
 }

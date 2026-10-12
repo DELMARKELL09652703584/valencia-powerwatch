@@ -43,6 +43,7 @@ let serverOutput = '';
 test('Staff portal shows report times, recent field updates, and accurate assignment/map empty states', () => {
   const staffApp = fs.readFileSync(path.join(ROOT, 'app', 'staff.js'), 'utf8');
   const staffPage = fs.readFileSync(path.join(ROOT, 'staff.html'), 'utf8');
+  const staffStyles = fs.readFileSync(path.join(ROOT, 'app', 'staff.css'), 'utf8');
   const serviceWorker = fs.readFileSync(path.join(ROOT, 'staff-sw.js'), 'utf8');
   const updateManager = fs.readFileSync(path.join(ROOT, 'app', 'staff-pwa-update.js'), 'utf8');
 
@@ -58,9 +59,12 @@ test('Staff portal shows report times, recent field updates, and accurate assign
   assert.match(staffApp, /No assignments have been dispatched/);
   assert.match(staffApp, /No assignments match this filter/);
   assert.match(staffPage, /\/app\/staff\.js\?v=15/);
-  assert.match(staffPage, /\/app\/staff\.css\?v=10/);
+  assert.match(staffPage, /\/app\/staff\.css\?v=11/);
   assert.match(serviceWorker, /\/app\/staff\.js\?v=15/);
-  assert.match(serviceWorker, /\/app\/staff\.css\?v=10/);
+  assert.match(serviceWorker, /\/app\/staff\.css\?v=11/);
+  assert.match(staffStyles, /\.staff-login-page\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*100vh;[^}]*min-height:\s*100svh;[^}]*min-height:\s*100dvh;[^}]*align-content:\s*safe center;[^}]*env\(safe-area-inset-top\)/s);
+  assert.match(staffStyles, /@media \(max-height:\s*760px\)\s*\{\s*\.staff-login-page\s*\{[^}]*align-content:\s*start;/s);
+  assert.match(staffStyles, /@media \(max-width:\s*380px\)\s*\{\s*\.staff-login-page\s*\{/s);
   assert.match(staffApp, /Install Staff App/);
   assert.match(staffApp, /aria-controls="staff-install-help"/);
   assert.match(staffApp, /In Chrome, open the ⋮ menu and choose <b>Install app<\/b> or <b>Add to Home screen<\/b>/);
@@ -369,7 +373,7 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
     fetch(`${baseUrl}/community`),
     fetch(`${baseUrl}/manifest.json`),
     fetch(`${baseUrl}/sw.js`),
-    fetch(`${baseUrl}/app/staff.css?v=10`),
+    fetch(`${baseUrl}/app/staff.css?v=11`),
     fetch(`${baseUrl}/app/staff.js?v=15`),
     fetch(`${baseUrl}/app/staff-pwa-update.js?v=1`),
     Promise.all([
@@ -433,7 +437,9 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
   assert.doesNotMatch(staffSource, /<a href="\/">User Portal<\/a>|<a href="\/admin">Admin Portal<\/a>/);
   assert.ok(iconResponses.every((response) => response.status === 200));
   const staffStyles = await cssResponse.text();
-  assert.match(staffStyles, /width: min\(100%, 430px\)/);
+  assert.match(staffStyles, /\.staff-login-page\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*100dvh;/s);
+  assert.match(staffStyles, /env\(safe-area-inset-bottom\)/);
+  assert.match(staffStyles, /@media \(max-height:\s*760px\)/);
   assert.match(staffStyles, /@media \(min-width: 560px\)/);
   assert.match(staffStyles, /place-items: center/);
   assert.match(staffStyles, /grid-template-columns: repeat\(2, minmax\(0,1fr\)\)/);
@@ -445,7 +451,7 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
   const workerSource = await workerResponse.text();
   const shellAssets = workerSource.match(/const STAFF_SHELL = \[[\s\S]*?\];/)?.[0] || '';
   assert.doesNotMatch(shellAssets, /\/api\/|\/admin/);
-  assert.match(shellAssets, /staff\.css\?v=10/);
+  assert.match(shellAssets, /staff\.css\?v=11/);
   assert.match(shellAssets, /staff\.js\?v=15/);
   assert.match(shellAssets, /staff-pwa-update\.js\?v=1/);
   const communityWorkerSource = await communityWorkerResponse.text();
