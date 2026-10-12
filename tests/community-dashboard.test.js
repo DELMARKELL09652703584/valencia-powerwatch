@@ -18,7 +18,8 @@ test('community dashboard keeps personal notifications out of the home feed', ()
   assert.doesNotMatch(homeRenderer, /\/api\/(?:notifications|announcements)/);
   assert.doesNotMatch(communityScript, /class="recent-updates"/);
   assert.match(communityPage, /\/app\/community\.js\?v=33/);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=59/);
+  assert.match(communityPage, /\/app\/main\.js\?v=37/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=61/);
   assert.match(communityPage, /\/style\.css\?v=39/);
   assert.match(portalStyles, /body\.community-body \.home-report-action\s*\{/);
   assert.match(portalStyles, /body\.community-body \.home-track-action svg\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;[^}]*fill:\s*none;/s);
@@ -55,7 +56,7 @@ test('community report location remains readable in Night Ops mode', () => {
   assert.match(communityScript, /id="report-assigned-barangay-badge"/);
   assert.match(communityScript, /id="assigned-barangay-name"/);
   assert.match(communityScript, /class="mobile-gps"/);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=59/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=61/);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.stepper \.step > span:last-child\s*\{[^}]*color:\s*var\(--pw-body\)\s*!important;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.stepper \.step\.active \.step-number\s*\{[^}]*background:\s*var\(--pw-primary\);/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body #report-assigned-barangay-badge\s*\{[^}]*background:\s*#10352b\s*!important;/s);
@@ -71,7 +72,7 @@ test('community report review notices have readable Night Ops colors', () => {
   assert.match(portalStyles, /body\.dark-mode\.community-body \.possible-duplicate-notice\.is-unavailable\s*\{[^}]*background:\s*#3a211e\s*!important;[^}]*color:\s*#ffd2c8\s*!important;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.possible-duplicate-notice\.is-unavailable p\s*\{[^}]*color:\s*#f0c9c0\s*!important;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.possible-duplicate-notice,\s*body\.dark-mode\.community-body \.possible-duplicate-clear\s*\{[^}]*background:\s*#332a1a\s*!important;/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=59/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=61/);
 });
 
 test('community report review keeps the Back button label visible in both themes', () => {
@@ -83,7 +84,7 @@ test('community report review keeps the Back button label visible in both themes
   assert.match(portalStyles, /body\.community-body \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\),\s*body\.community-body \.mobile-auth-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)\s*\{\s*color:\s*#fff\s*!important;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\),\s*body\.dark-mode\.community-body \.mobile-auth-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)\s*\{/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \:is\(\.button\.primary, \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\), \.mobile-auth-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)\)\s*\{/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=59/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=61/);
 });
 
 test('community report location method buttons retain their theme colors', () => {
@@ -96,7 +97,7 @@ test('community report location method buttons retain their theme colors', () =>
   assert.match(portalStyles, /body\.community-body \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)/);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)/);
   assert.match(portalStyles, /body\.community-body \.mobile-tab\.active,\s*body\.community-body \.mobile-segment\.active\s*\{[^}]*color:\s*var\(--pw-primary\);/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=59/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=61/);
 });
 
 test('community home greeting stays legible over the Night Ops header', () => {
@@ -122,7 +123,7 @@ test('report details activity, ETR, and feedback remain readable in Night Ops mo
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-etr-badge\.is-restored\s*\{[^}]*background:\s*#0d302b;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.report-feedback-question,\s*body\.dark-mode\.community-body \.report-feedback-rating-label\s*\{[^}]*color:\s*var\(--pw-text\);/s);
   assert.match(communityPage, /\/style\.css\?v=39/);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=59/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=61/);
 });
 
 test('community notification panel preserves readable text in Light and Night Ops themes', () => {
@@ -153,7 +154,7 @@ test('community theme toggle is an accessible icon-only control', () => {
   assert.match(themeToggle, /<span id="theme-btn-icon" aria-hidden="true">\$\{isDark \? '☀️' : '🌙'\}<\/span>/);
   assert.doesNotMatch(themeToggle, /theme-btn-text|Night Ops<\/span>|Light<\/span>/);
   assert.match(portalStyles, /\.community-body \.mobile-theme-toggle\s*\{[^}]*width:\s*42px;[^}]*min-width:\s*42px;[^}]*min-height:\s*42px;/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=59/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=61/);
 });
 
 test('community bottom navigation shows accessible icon and text labels', () => {
@@ -184,7 +185,7 @@ test('community bottom navigation shows accessible icon and text labels', () => 
   assert.match(portalStyles, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*body\.community-body \.mobile-tab,/s);
   assert.match(portalStyles, /body\.community-body \.mobile-tab-icon,\s*body\.community-body \.mobile-tab-icon svg\s*\{[^}]*width:\s*22px;[^}]*height:\s*22px;/s);
   assert.match(communityPage, /\/app\/community\.js\?v=33/);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=59/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=61/);
 });
 
 test('Community login preserves the Valencia panorama backdrop and caches it for offline launch', () => {
@@ -201,6 +202,32 @@ test('Community login preserves the Valencia panorama backdrop and caches it for
   assert.match(worker, /'\/assets\/valencia-city-panorama\.jpg'/);
   assert.ok(worker.includes('/\\.(?:jpe?g|png|svg|webp|woff2?)$/.test(pathname)'));
   assert.ok(fs.existsSync(path.join(ROOT, 'assets', 'valencia-city-panorama.jpg')));
+});
+
+test('Community login uses the responsive branded card layout and preserves auth actions', () => {
+  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const loginStart = mainScript.indexOf('function renderLogin(');
+  const loginEnd = mainScript.indexOf('\nfunction ', loginStart + 1);
+  const loginRenderer = mainScript.slice(loginStart, loginEnd);
+
+  assert.ok(loginStart >= 0);
+  assert.ok(loginEnd > loginStart);
+  assert.match(loginRenderer, /class="mobile-auth-page community-login-page"/);
+  assert.match(loginRenderer, /class="community-login-hero"/);
+  assert.match(loginRenderer, /class="community-login-hero-actions"[^>]*>\$\{mobileThemeToggle\(\)\}\$\{mobileInstallButton\(\)\}/);
+  assert.match(loginRenderer, /class="mobile-auth-content community-login-card"/);
+  assert.match(loginRenderer, /Login to your Valencia PowerWatch account/);
+  assert.match(loginRenderer, /Email or Mobile Number/);
+  assert.match(loginRenderer, /class="community-login-password-heading"[^>]*>[\s\S]*?data-action="forgot-password"/);
+  assert.match(loginRenderer, /data-form="login"/);
+  assert.match(loginRenderer, /data-action="toggle-password"/);
+  assert.match(loginRenderer, /data-action="start-oauth"/);
+  assert.match(loginRenderer, /Don't have an account\?[\s\S]*?data-action="go-register">Register/);
+  assert.match(portalStyles, /body\.community-body \.community-login-page[^}]*100dvh/s);
+  assert.match(portalStyles, /body\.community-body \.community-login-card\s*\{/);
+  assert.match(portalStyles, /body\.dark-mode\.community-body \.community-login-card,/);
+  assert.match(portalStyles, /env\(safe-area-inset-top\)/);
 });
 
 test('User Portal provides an accessible PWA install button', () => {

@@ -64,20 +64,27 @@ function renderLogin(message = '', loginIdentifier = null, rememberIdentifier = 
     if (state.mobileAuthScreen === 'register') return renderRegister();
     const rememberedIdentifier = loginIdentifier ?? readCommunityLoginIdentifier();
     const shouldRememberIdentifier = rememberIdentifier ?? true;
-    app.innerHTML = `<main class="mobile-auth-page">
-      <section class="mobile-auth-content">
-        <div class="mobile-theme-toolbar">${mobileThemeToggle()}</div>
+    app.innerHTML = `<main class="mobile-auth-page community-login-page">
+      <header class="community-login-hero">
+        <div class="community-login-hero-actions">${mobileThemeToggle()}${mobileInstallButton()}</div>
         <div class="mobile-auth-brand"><img class="auth-brand-logo" src="/assets/powerwatch-logo.svg" alt=""><div><strong>Valencia</strong><b>PowerWatch</b></div></div>
-        <h1>Welcome back</h1>
-        <p>Sign in to report interruptions and stay updated.</p>
+      </header>
+      <section class="mobile-auth-content community-login-card">
+        <h1>Welcome Back!</h1>
+        <p>Login to your Valencia PowerWatch account.</p>
         ${message ? `<div class="inline-alert">${escapeHtml(message)}</div>` : ''}
         <form class="mobile-auth-form" data-form="login">
-          <label>Email or mobile number<input name="email" type="text" value="${escapeHtml(rememberedIdentifier)}" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" required></label>
-          <label>Password<span class="mobile-password-field"><input name="password" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" required><button type="button" data-action="toggle-password" aria-label="Show password">&#9673;</button></span></label>
-          <div class="auth-options-row"><label><input type="checkbox" name="remember" ${shouldRememberIdentifier ? 'checked' : ''}> Remember me</label><button type="button" data-action="forgot-password">Forgot Password?</button></div>
+          <label>Email or Mobile Number<span class="community-login-input-wrap">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 8a7 7 0 0 0-14 0h14Z"/></svg>
+            <input name="email" type="text" value="${escapeHtml(rememberedIdentifier)}" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" required>
+          </span></label>
+          <label class="community-login-password-label"><span class="community-login-password-heading"><span>Password</span><button type="button" data-action="forgot-password">Forgot Password?</button></span><span class="mobile-password-field community-login-input-wrap">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1"/></svg>
+            <input name="password" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" required><button type="button" data-action="toggle-password" aria-label="Show password"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
+          </span></label>
+          <div class="auth-options-row"><label><input type="checkbox" name="remember" ${shouldRememberIdentifier ? 'checked' : ''}> Remember me</label></div>
           <button class="button primary mobile-auth-submit" type="submit">Login</button>
         </form>
-        ${mobileInstallButton()}
         <div class="auth-divider"><span>or continue with</span></div>
         <div class="social-row">
           <button type="button" class="social-btn social-google-btn" data-action="start-oauth" data-provider="google" title="Continue with Google">
@@ -96,9 +103,8 @@ function renderLogin(message = '', loginIdentifier = null, rememberIdentifier = 
             <span>Facebook</span>
           </button>
         </div>
-        <p class="mobile-auth-switch">New here? <button type="button" data-action="go-register">Create an account</button></p>
       </section>
-      <footer class="login-footer">Valencia City, Bukidnon</footer>
+      <p class="mobile-auth-switch community-login-register">Don't have an account? <button type="button" data-action="go-register">Register</button></p>
       <div class="toast" role="status" hidden></div>
     </main>`;
     syncOAuthProviderControls();
