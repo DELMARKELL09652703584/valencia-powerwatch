@@ -6251,7 +6251,7 @@ body.community-body .community-login-password-heading {
   gap: 12px;
 }
 
-body.community-body .mobile-auth-page .community-login-card .mobile-auth-form .community-login-password-heading > button {
+body.community-body #app .mobile-auth-page .community-login-card .mobile-auth-form .community-login-password-heading > button {
   min-height: 32px;
   padding: 0;
   border: 0;
@@ -6393,7 +6393,7 @@ body.dark-mode.community-body .community-login-card .community-login-input-wrap 
   color: #e6eef7 !important;
 }
 
-body.dark-mode.community-body .mobile-auth-page .community-login-card .mobile-auth-form .community-login-password-heading > button {
+body.dark-mode.community-body #app .mobile-auth-page .community-login-card .mobile-auth-form .community-login-password-heading > button {
   color: #67e8f9 !important;
 }
 
