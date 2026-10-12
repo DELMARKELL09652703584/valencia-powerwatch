@@ -6251,7 +6251,7 @@ body.community-body .community-login-password-heading {
   gap: 12px;
 }
 
-body.community-body .community-login-card .community-login-password-heading button {
+body.community-body .mobile-auth-page .community-login-card .mobile-auth-form .community-login-password-heading > button {
   min-height: 32px;
   padding: 0;
   border: 0;
@@ -6391,6 +6391,10 @@ body.dark-mode.community-body .community-login-card .community-login-input-wrap 
 
 body.dark-mode.community-body .community-login-card .community-login-input-wrap input {
   color: #e6eef7 !important;
+}
+
+body.dark-mode.community-body .mobile-auth-page .community-login-card .mobile-auth-form .community-login-password-heading > button {
+  color: #67e8f9 !important;
 }
 
 body.dark-mode.community-body .community-login-card .auth-options-row input[type="checkbox"] {
