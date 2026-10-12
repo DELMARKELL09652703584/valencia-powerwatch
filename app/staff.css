@@ -93,6 +93,20 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .staff-btn-success { background: var(--staff-green); color: #fff; }
 .staff-btn-danger { background: #fff0f0; border-color: #f2c7cb; color: var(--staff-red); }
 .staff-btn-quiet { background: transparent; border-color: var(--staff-line); }
+.staff-install-login { width: 100%; margin: 0 0 18px; }
+.staff-install-help {
+  width: min(100% - 32px, 430px);
+  margin: 12px auto;
+  padding: 16px;
+  border: 1px solid #b7d8ef;
+  border-radius: 14px;
+  background: #eff8ff;
+  color: #173b57;
+  line-height: 1.5;
+}
+.staff-install-help p { margin: 7px 0 12px; font-size: .88rem; }
+.staff-install-help .staff-btn { min-height: 40px; }
+.staff-login-card .staff-install-help { width: 100%; margin: 0 0 20px; }
 .staff-form-error, .staff-banner-error {
   padding: 11px 13px;
   border: 1px solid #f1c0c5;

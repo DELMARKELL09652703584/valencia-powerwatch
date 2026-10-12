@@ -500,10 +500,11 @@ const renderShell = () => {
         <div><strong>Valencia PowerWatch</strong><span>Field response · ${escapeHtml(title)}</span></div>
       </div>
       <div class="staff-topbar-actions">
-        <button class="staff-btn" type="button" data-action="install" hidden>Install</button>
+        <button class="staff-btn" type="button" data-action="install" aria-controls="staff-install-help" aria-expanded="false">Install Staff App</button>
         <button class="staff-btn staff-icon-button" type="button" data-action="${state.page === 'alerts' ? 'refresh-notifications' : 'refresh'}" aria-label="${state.page === 'alerts' ? 'Refresh notifications' : 'Refresh assignments'}">${icon('refresh')}</button>
       </div>
     </header>
+    ${renderInstallHelp()}
     <main class="staff-main">
       ${navigator.onLine ? '' : '<div class="staff-offline-banner" role="status"><strong>You are offline.</strong> Updates and evidence cannot be saved until the connection returns.</div>'}
       ${content}
@@ -518,6 +519,8 @@ const renderShell = () => {
 const renderLogin = (message = '') => {
   root.innerHTML = `<main class="staff-login-page"><section class="staff-login-card">
     <div class="staff-brand"><img src="/assets/powerwatch-logo.svg" alt=""><div><strong>Valencia PowerWatch</strong><span>Field response app</span></div></div>
+    <button class="staff-btn staff-btn-primary staff-install-login" type="button" data-action="install" aria-controls="staff-install-help" aria-expanded="false">Install Staff App</button>
+    ${renderInstallHelp()}
     <p class="staff-eyebrow">Authorized personnel only</p><h1>Staff sign in</h1>
     <p class="staff-login-copy">Use the personnel account created by your administrator to access your assigned incidents.</p>
     ${message ? `<p class="staff-form-error" role="alert">${escapeHtml(message)}</p>` : ''}
@@ -528,7 +531,14 @@ const renderLogin = (message = '') => {
     </form>
     <p class="staff-login-copy" style="margin:16px 0 0;font-size:.78rem">This is a separate Staff App. Resident and administrator accounts use their own portals.</p>
   </section></main>`;
+  syncInstallButton();
 };
+
+const renderInstallHelp = () => `<section class="staff-install-help" id="staff-install-help" aria-live="polite" hidden>
+  <strong>Install PowerWatch Field</strong>
+  <p>In Chrome, open the ⋮ menu and choose <b>Install app</b> or <b>Add to Home screen</b>. If you use Safari on iPhone, tap Share, then <b>Add to Home Screen</b>.</p>
+  <button class="staff-btn staff-btn-quiet" type="button" data-action="dismiss-install-help">Close</button>
+</section>`;
 
 const refreshAssignments = async () => {
   const result = await api('/api/staff/assignments');
@@ -743,8 +753,15 @@ const uploadEvidence = async (form) => {
 };
 
 const syncInstallButton = () => {
-  const button = root.querySelector('[data-action="install"]');
-  if (button) button.hidden = !state.installPrompt || window.matchMedia('(display-mode: standalone)').matches;
+  const isInstalled = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+  root.querySelectorAll('[data-action="install"]').forEach((button) => {
+    button.hidden = isInstalled;
+  });
+  if (isInstalled) {
+    const help = root.querySelector('#staff-install-help');
+    if (help) help.hidden = true;
+  }
 };
 
 window.addEventListener('beforeinstallprompt', (event) => {
@@ -849,11 +866,24 @@ document.addEventListener('click', async (event) => {
         await window.powerWatchCheckStaffUpdate();
         showToast('Update check complete. If an update is available, you can install it from the notice.');
       }
-    } else if (action === 'install' && state.installPrompt) {
-      await state.installPrompt.prompt();
-      await state.installPrompt.userChoice;
-      state.installPrompt = null;
-      syncInstallButton();
+    } else if (action === 'install') {
+      if (state.installPrompt) {
+        const prompt = state.installPrompt;
+        state.installPrompt = null;
+        await prompt.prompt();
+        await prompt.userChoice;
+        syncInstallButton();
+      } else {
+        const help = root.querySelector('#staff-install-help');
+        if (help) {
+          help.hidden = !help.hidden;
+          button.setAttribute('aria-expanded', String(!help.hidden));
+        }
+      }
+    } else if (action === 'dismiss-install-help') {
+      const help = root.querySelector('#staff-install-help');
+      if (help) help.hidden = true;
+      root.querySelector('[data-action="install"]')?.setAttribute('aria-expanded', 'false');
     } else if (action === 'logout') {
       await send('/api/auth/logout', 'POST');
       if (evidencePreviewUrl) URL.revokeObjectURL(evidencePreviewUrl);

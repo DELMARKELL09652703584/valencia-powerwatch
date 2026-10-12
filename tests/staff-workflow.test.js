@@ -57,8 +57,15 @@ test('Staff portal shows report times, recent field updates, and accurate assign
   assert.match(staffApp, /No active assignment has an exact GPS point/);
   assert.match(staffApp, /No assignments have been dispatched/);
   assert.match(staffApp, /No assignments match this filter/);
-  assert.match(staffPage, /\/app\/staff\.js\?v=14/);
-  assert.match(serviceWorker, /\/app\/staff\.js\?v=14/);
+  assert.match(staffPage, /\/app\/staff\.js\?v=15/);
+  assert.match(staffPage, /\/app\/staff\.css\?v=10/);
+  assert.match(serviceWorker, /\/app\/staff\.js\?v=15/);
+  assert.match(serviceWorker, /\/app\/staff\.css\?v=10/);
+  assert.match(staffApp, /Install Staff App/);
+  assert.match(staffApp, /aria-controls="staff-install-help"/);
+  assert.match(staffApp, /In Chrome, open the ⋮ menu and choose <b>Install app<\/b> or <b>Add to Home screen<\/b>/);
+  assert.match(staffApp, /else if \(action === 'install'\)[\s\S]*?if \(state\.installPrompt\)[\s\S]*?help\.hidden = !help\.hidden/);
+  assert.match(staffApp, /dismiss-install-help/);
   assert.match(staffPage, /\/app\/staff-pwa-update\.js\?v=1/);
   assert.match(updateManager, /registration\.update\(\)/);
   assert.match(updateManager, /\.waiting/);
@@ -362,8 +369,8 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
     fetch(`${baseUrl}/community`),
     fetch(`${baseUrl}/manifest.json`),
     fetch(`${baseUrl}/sw.js`),
-    fetch(`${baseUrl}/app/staff.css?v=9`),
-    fetch(`${baseUrl}/app/staff.js?v=14`),
+    fetch(`${baseUrl}/app/staff.css?v=10`),
+    fetch(`${baseUrl}/app/staff.js?v=15`),
     fetch(`${baseUrl}/app/staff-pwa-update.js?v=1`),
     Promise.all([
       'powerwatch-field-icon-180.png',
@@ -404,6 +411,8 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
   assert.equal(updateResponse.status, 200, await updateResponse.text());
   const staffSource = await jsResponse.text();
   assert.match(staffSource, /const renderLogin/);
+  assert.match(staffSource, /Install Staff App/);
+  assert.match(staffSource, /In Chrome, open the ⋮ menu/);
   assert.match(staffSource, /Next field action/);
   assert.match(staffSource, /Tasks without GPS/);
   assert.match(staffSource, /Upload complete\./);
@@ -436,8 +445,8 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
   const workerSource = await workerResponse.text();
   const shellAssets = workerSource.match(/const STAFF_SHELL = \[[\s\S]*?\];/)?.[0] || '';
   assert.doesNotMatch(shellAssets, /\/api\/|\/admin/);
-  assert.match(shellAssets, /staff\.css\?v=9/);
-  assert.match(shellAssets, /staff\.js\?v=14/);
+  assert.match(shellAssets, /staff\.css\?v=10/);
+  assert.match(shellAssets, /staff\.js\?v=15/);
   assert.match(shellAssets, /staff-pwa-update\.js\?v=1/);
   const communityWorkerSource = await communityWorkerResponse.text();
   assert.match(communityWorkerSource, /powerwatch-community-/);
