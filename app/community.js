@@ -461,10 +461,8 @@ async function renderMobileHome() {
       </div>
       ${barangayHeroMarkup}
       <section class="home-primary-actions" aria-label="Main actions">
-        <button type="button" class="home-report-action" data-mobile-tab="report">
-          <span class="home-action-icon" aria-hidden="true">+</span>
-          <span><strong>Report a power interruption</strong><small>Send a report with location and evidence</small></span>
-          <span class="home-action-arrow" aria-hidden="true">›</span>
+        <button type="button" class="home-report-action" data-mobile-tab="report" aria-label="Report a power interruption" title="Report a power interruption">
+          <svg class="home-report-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><path d="m9 14 2 2 4-4"/><path d="M19 3v4m-2-2h4"/></svg>
         </button>
         <button type="button" class="home-track-action" data-mobile-tab="reports">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><path d="m9 14 2 2 4-4"/></svg>
