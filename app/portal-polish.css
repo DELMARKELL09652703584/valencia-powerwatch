@@ -6379,6 +6379,27 @@ body.community-body .community-login-card .mobile-auth-submit {
   font-weight: 700;
 }
 
+body.community-body #app .mobile-auth-page .community-login-card .mobile-auth-form .mobile-auth-submit {
+  width: min(100%, 260px);
+  min-height: 48px;
+  margin-inline: auto;
+  padding: 0 16px;
+  border: 1px solid #0864c4 !important;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1688ed, #0864c4) !important;
+  box-shadow: 0 4px 12px rgba(3, 37, 76, .22);
+  font-size: 1rem;
+}
+
+body.community-body #app .mobile-auth-page .community-login-card .mobile-auth-form .mobile-auth-submit:hover {
+  background: linear-gradient(135deg, #0877d7, #0758ae) !important;
+}
+
+body.dark-mode.community-body #app .mobile-auth-page .community-login-card .mobile-auth-form .mobile-auth-submit {
+  border-color: #087eac !important;
+  background: linear-gradient(135deg, #2563eb, #087eac) !important;
+}
+
 body.community-body .community-login-card .auth-divider {
   margin: 17px 0 12px;
   color: #51687c;
