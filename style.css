@@ -4146,7 +4146,7 @@ body.admin-body {
   position: fixed;
   top: 8px;
   left: 8px;
-  width: min(320px, calc(100vw - 16px));
+  width: min(280px, calc(100vw - 16px));
   max-height: calc(100vh - 16px);
   max-height: calc(100dvh - 16px);
   box-sizing: border-box;
