@@ -552,8 +552,10 @@ function renderReportDistribution(data) {
     .map((status) => ({ status, count: statusCounts.get(status) || 0 }));
   const total = Number(data.total) || 0;
   const percentage = (count) => total ? `${((count / total) * 100).toFixed(1)}%` : '0.0%';
+  const positiveStatuses = statuses.filter((item) => item.count > 0);
+  const zeroStatuses = statuses.filter((item) => item.count === 0);
   let angle = -90;
-  const slices = statuses.filter((item) => item.count > 0).map((item) => {
+  const slices = positiveStatuses.map((item) => {
     const endAngle = angle + (item.count / total) * 360;
     const color = REPORT_STATUS_COLORS[item.status] || '#64748b';
     const label = REPORT_STATUS_LABELS[item.status] || item.status;
@@ -561,7 +563,7 @@ function renderReportDistribution(data) {
     angle = endAngle;
     return markup;
   }).join('');
-  const legend = statuses.map((item) => {
+  const legendItem = (item) => {
     const label = REPORT_STATUS_LABELS[item.status] || item.status;
     const color = REPORT_STATUS_COLORS[item.status] || '#64748b';
     return `<button type="button" class="report-status-legend-item" data-report-status="${escapeHtml(item.status)}" data-report-label="${escapeHtml(label)}" data-report-count="${item.count}" data-report-percentage="${percentage(item.count)}" aria-label="${escapeHtml(label)}: ${item.count} reports, ${percentage(item.count)}">
@@ -570,7 +572,16 @@ function renderReportDistribution(data) {
       <strong>${item.count.toLocaleString()}</strong>
       <small>${percentage(item.count)}</small>
     </button>`;
-  }).join('');
+  };
+  const legend = positiveStatuses.map(legendItem).join('');
+  const zeroStatusList = zeroStatuses.length ? `<details class="report-status-zero-list">
+    <summary>Statuses with no reports <span>${zeroStatuses.length}</span></summary>
+    <div>${zeroStatuses.map(legendItem).join('')}</div>
+  </details>` : '';
+  const leadingStatus = positiveStatuses.reduce((leading, item) => item.count > leading.count ? item : leading, positiveStatuses[0]);
+  const leadingLabel = leadingStatus ? REPORT_STATUS_LABELS[leadingStatus.status] || leadingStatus.status : 'No reports';
+  const leadingCount = leadingStatus ? leadingStatus.count : 0;
+  const leadingPercentage = percentage(leadingCount);
   const categoryMax = Math.max(1, ...data.categories.map((item) => Number(item.count)));
   const categoryBars = data.categories.map((item) => {
     const count = Number(item.count);
@@ -591,9 +602,13 @@ function renderReportDistribution(data) {
       <article class="report-distribution-card report-status-card">
         <header><div><h4>Report status</h4><p>Each report counted once by its current status.</p></div></header>
         ${total ? `<div class="report-status-chart-layout">
-          <svg class="report-status-pie" viewBox="0 0 240 240" role="img" aria-label="Pie chart of ${total} reports by status">${slices}</svg>
+          <svg class="report-status-pie" viewBox="0 0 240 240" role="img" aria-label="Donut chart of ${total} reports by status">${slices}
+            <circle class="report-status-hole" cx="120" cy="120" r="58"></circle>
+            <text class="report-status-center-count" x="120" y="117" text-anchor="middle" data-report-center-count>${leadingCount.toLocaleString()}</text>
+            <text class="report-status-center-label" x="120" y="138" text-anchor="middle" textLength="96" lengthAdjust="spacingAndGlyphs" data-report-center-label>${escapeHtml(leadingLabel)}</text>
+          </svg>
           <div class="report-status-legend" aria-label="Report status legend">${legend}</div>
-        </div><p class="report-status-detail" data-report-status-detail aria-live="polite">Select or hover over a slice or legend item for details.</p>`
+        </div><p class="report-status-detail" data-report-status-detail aria-live="polite">${escapeHtml(leadingLabel)}: ${leadingCount.toLocaleString()} reports (${leadingPercentage})</p>${zeroStatusList}`
           : '<div class="report-distribution-empty"><span aria-hidden="true">◔</span><strong>No outage reports yet</strong><p>Report status data will appear here when residents submit reports.</p></div>'}
       </article>
       <article class="report-distribution-card report-type-card">
@@ -646,11 +661,16 @@ async function refreshAdminReportDistribution() {
 
 function bindReportStatusInteractions(container) {
   const detail = container.querySelector('[data-report-status-detail]');
-  if (!detail) return;
+  const centerCount = container.querySelector('[data-report-center-count]');
+  const centerLabel = container.querySelector('[data-report-center-label]');
+  if (!detail || !centerCount || !centerLabel) return;
   const updateDetail = (target) => {
     const item = target.closest('[data-report-status]');
     if (!item) return;
-    detail.textContent = `${item.dataset.reportLabel}: ${Number(item.dataset.reportCount).toLocaleString()} reports (${item.dataset.reportPercentage})`;
+    const count = Number(item.dataset.reportCount);
+    detail.textContent = `${item.dataset.reportLabel}: ${count.toLocaleString()} reports (${item.dataset.reportPercentage})`;
+    centerCount.textContent = count.toLocaleString();
+    centerLabel.textContent = item.dataset.reportLabel;
   };
   container.addEventListener('pointerover', (event) => updateDetail(event.target));
   container.addEventListener('focusin', (event) => updateDetail(event.target));
