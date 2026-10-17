@@ -452,7 +452,6 @@ const VALENCIA_ELECTRIC_FEEDERS = [
     freq: '60.01 Hz',
     substation: 'Valencia Central Substation',
     status: 'Energized (Nominal)',
-    color: '#06b6d4',
     isFaulted: false,
     path: [
       [7.9135, 125.0934], // Central Substation
@@ -472,7 +471,6 @@ const VALENCIA_ELECTRIC_FEEDERS = [
     freq: '60.02 Hz',
     substation: 'Valencia Central Substation',
     status: 'Energized (Nominal)',
-    color: '#3b82f6',
     isFaulted: false,
     path: [
       [7.9135, 125.0934], // Central Substation
@@ -491,7 +489,6 @@ const VALENCIA_ELECTRIC_FEEDERS = [
     freq: '0.00 Hz',
     substation: 'Valencia Central Substation',
     status: 'De-energized (Fault Detected)',
-    color: '#ef4444',
     isFaulted: true,
     path: [
       [7.9135, 125.0934], // Central Substation
@@ -509,7 +506,6 @@ const VALENCIA_ELECTRIC_FEEDERS = [
     freq: '60.01 Hz',
     substation: 'Valencia Central Substation',
     status: 'Energized (Nominal)',
-    color: '#10b981',
     isFaulted: false,
     path: [
       [7.9135, 125.0934], // Central Substation
@@ -531,25 +527,25 @@ function renderElectricFeedersOnMap(map) {
   activeElectricFeedersLayer = L.layerGroup().addTo(map);
 
   VALENCIA_ELECTRIC_FEEDERS.forEach((feeder) => {
-    // 1. Dark glowing backing stroke
+    const feederColor = feeder.isFaulted ? '#d94f4f' : '#316d85';
     L.polyline(feeder.path, {
-      color: feeder.isFaulted ? '#7f1d1d' : '#0f172a',
-      weight: 7,
-      opacity: 0.85,
+      color: '#f8fafc',
+      weight: 5.5,
+      opacity: 0.9,
       lineCap: 'round',
       lineJoin: 'round'
     }).addTo(activeElectricFeedersLayer);
 
-    // 2. Neon animated pulsing core line
-    const neonLine = L.polyline(feeder.path, {
-      color: feeder.color,
-      weight: 3.5,
-      opacity: 0.95,
-      className: `electric-feeder-pulse ${feeder.isFaulted ? 'fault' : ''}`
+    const feederLine = L.polyline(feeder.path, {
+      color: feederColor,
+      weight: 3,
+      opacity: 0.88,
+      lineCap: 'round',
+      lineJoin: 'round'
     }).addTo(activeElectricFeedersLayer);
 
     // Telemetry popup on feeder click
-    neonLine.bindPopup(`
+    feederLine.bindPopup(`
       <div class="map-popup-card holographic" style="min-width:240px;">
         <div class="map-popup-header">
           <span class="scada-telemetry-badge">${escapeHtml(feeder.id)}</span>

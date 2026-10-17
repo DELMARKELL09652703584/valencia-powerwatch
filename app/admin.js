@@ -1742,7 +1742,7 @@ async function renderAdminMap() {
           <h3>Layers &amp; Smart Grid</h3>
           <label class="map-layer-option map-layer-option-feeders">
             <input type="checkbox" data-action="toggle-admin-feeders" ${state.adminFeedersMode !== false ? 'checked' : ''}>
-            <span>⚡ 13.2kV Feeders (Pulsing)</span>
+            <span>⚡ 13.2kV Feeders</span>
             <b class="heatmap-badge">2030</b>
           </label>
           <label class="map-layer-option map-layer-option-cyber">
