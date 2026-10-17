@@ -527,7 +527,6 @@ function renderElectricFeedersOnMap(map) {
   activeElectricFeedersLayer = L.layerGroup().addTo(map);
 
   VALENCIA_ELECTRIC_FEEDERS.forEach((feeder) => {
-    const feederColor = feeder.isFaulted ? '#d94f4f' : '#64748b';
     L.polyline(feeder.path, {
       color: '#f8fafc',
       weight: 5.5,
@@ -537,7 +536,7 @@ function renderElectricFeedersOnMap(map) {
     }).addTo(activeElectricFeedersLayer);
 
     const feederLine = L.polyline(feeder.path, {
-      color: feederColor,
+      color: '#737373',
       weight: 3,
       opacity: 0.88,
       lineCap: 'round',
