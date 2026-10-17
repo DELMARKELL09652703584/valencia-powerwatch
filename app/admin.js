@@ -526,7 +526,6 @@ async function renderAdminDashboard() {
   const allIncidents = incRes.incidents || [];
   const teams = teamRes.teams || [];
   const insights = insightsRes;
-  const active = allIncidents.filter((i) => !['Closed', 'Restored', 'Resolved'].includes(i.status)).slice(0, 5);
   const resolvedCount = Number(stats.resolved || 0) + Number(stats.restored || 0);
   state.activeIncidentsCount = Number(stats.ongoing || stats.active_incidents || 0);
 
@@ -537,13 +536,6 @@ async function renderAdminDashboard() {
     { label: 'Field Repair Units', value: stats.active_dispatches || 0, tag: 'DISPATCH', sub: `${stats.available_crews || 0}/${stats.total_crews || 4} Crews Ready`, tone: 'emerald', page: 'dispatch', icon: '🚛' },
     { label: 'Scheduled Work', value: stats.scheduled || 0, tag: 'PREVENTIVE', sub: 'Planned Feeder Windows', tone: 'violet', page: 'scheduled', icon: '🗓️' },
     { label: 'Grid Restored', value: resolvedCount, tag: 'RESTORED', sub: `Avg ETR: ${stats.avg_duration_hours ? stats.avg_duration_hours + 'h' : 'Optimal'}`, tone: 'teal', page: 'history', icon: '✅' },
-  ];
-
-  const topBarangays = (barangay.data || []).slice(0, 3);
-  const focusCards = [
-    { icon: '📊', label: 'Customer Impact', value: `${stats.affected_customers || 0}`, sub: 'affected accounts', tone: 'critical' },
-    { icon: '🚨', label: 'Priority Areas', value: topBarangays.length ? `${topBarangays[0]?.barangay || 'N/A'}` : 'No active alert', sub: topBarangays.length > 1 ? `${topBarangays[1]?.barangay || 'Monitoring stable'}` : 'Monitoring stable', tone: 'warning' },
-    { icon: '🛠️', label: 'Crew Readiness', value: `${stats.available_crews || 0}/${stats.total_crews || 4}`, sub: 'units on standby', tone: 'success' },
   ];
 
   const barangayRows = (barangay.data || []).slice(0, 6).map((row) => ({ label: row.barangay, value: Number(row.c) || 0 }));
@@ -649,20 +641,6 @@ async function renderAdminDashboard() {
       `).join('')}
     </div>
 
-    <section class="dashboard-focus-grid" aria-label="Operational snapshot">
-      <h2 class="dashboard-section-label">Operational snapshot</h2>
-      ${focusCards.map((item) => `
-        <div class="dashboard-focus-item focus-${item.tone}">
-          <div class="focus-item-header">
-            <span class="focus-icon">${item.icon}</span>
-            <span>${escapeHtml(item.label)}</span>
-          </div>
-          <strong>${escapeHtml(item.value)}</strong>
-          <small>${escapeHtml(item.sub)}</small>
-        </div>
-      `).join('')}
-    </section>
-
     <section class="bi-insights-panel admin-bi-panel" aria-labelledby="admin-bi-title">
       <header class="bi-insights-header">
         <div><span class="bi-eyebrow">EXPLAINABLE BUSINESS INTELLIGENCE · ${escapeHtml(insights.scope.name)}</span><h2 id="admin-bi-title">Operational trends &amp; response insights</h2></div>
@@ -763,42 +741,6 @@ async function renderAdminDashboard() {
       </section>
     </div>
 
-    <div class="dashboard-activity-grid">
-      <section class="panel" style="grid-column:1 / -1;">
-        <div class="panel-head">
-          <div>
-            <h2>Active Grid Outages</h2>
-            <span style="font-size:0.75rem;color:var(--admin-muted);">Confirmed power interruptions in progress</span>
-          </div>
-          <button class="link-button" data-page="incidents">View all &rarr;</button>
-        </div>
-        ${active.length ? `
-          <ul class="feed-list" style="margin:0;padding:0;list-style:none;">
-            ${active.map((item) => `
-              <li style="padding:12px;border-bottom:1px solid var(--admin-line);display:flex;align-items:center;justify-content:space-between;gap:12px;">
-                <div style="flex:1;min-width:0;">
-                  <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px;">
-                    <strong style="color:#e11d48;font-size:0.88rem;">⚡ ${escapeHtml(item.incident_code)}</strong>
-                    <span style="font-weight:700;font-size:0.84rem;color:var(--admin-ink);">${escapeHtml(item.title)}</span>
-                  </div>
-                  <div class="feed-meta" style="font-size:0.78rem;color:#64748b;">
-                    <span>📍 Brgy. ${escapeHtml(item.barangay)}</span>
-                    ${item.customers_affected ? ` · <span>👥 ${item.customers_affected} affected accounts</span>` : ''}
-                    ${item.estimated_restoration ? ` · <span style="color:#0284c7;font-weight:600;">⏱️ ETR: ${escapeHtml(item.estimated_restoration)}</span>` : ''}
-                  </div>
-                </div>
-                <div style="display:flex;align-items:center;gap:8px;">
-                  ${statusPill(item.status)}
-                  <button type="button" class="button ghost small" data-action="view-incident-details" data-id="${item.id}" style="font-size:0.72rem;padding:3px 8px;">
-                    Details ›
-                  </button>
-                </div>
-              </li>
-            `).join('')}
-          </ul>
-        ` : emptyState('No active grid outages', 'The city currently has no ongoing unscheduled interruptions.', '⚡')}
-      </section>
-    </div>
   </section>`);
 
   // Initialize interactive GIS Radar Mini-Map
