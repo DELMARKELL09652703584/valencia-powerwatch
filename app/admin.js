@@ -526,7 +526,6 @@ async function renderAdminDashboard() {
   const allIncidents = incRes.incidents || [];
   const teams = teamRes.teams || [];
   const insights = insightsRes;
-  const recent = allReports.slice(0, 6);
   const active = allIncidents.filter((i) => !['Closed', 'Restored', 'Resolved'].includes(i.status)).slice(0, 5);
   const resolvedCount = Number(stats.resolved || 0) + Number(stats.restored || 0);
   state.activeIncidentsCount = Number(stats.ongoing || stats.active_incidents || 0);
@@ -765,60 +764,7 @@ async function renderAdminDashboard() {
     </div>
 
     <div class="dashboard-activity-grid">
-      <!-- QUEUE 1: Recent Citizen Reports -->
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>Recent Citizen Reports</h2>
-            <span style="font-size:0.75rem;color:var(--admin-muted);">Incoming resident interruption reports</span>
-          </div>
-          ${canManage() ? '<button class="link-button" data-page="reports">View all &rarr;</button>' : ''}
-        </div>
-        ${recent.length ? `
-          <div class="table-scroll">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Report Code</th>
-                  <th>Barangay &amp; Purok</th>
-                  <th>Location Type</th>
-                  <th>Reporter</th>
-                  <th>Status</th>
-                  <th>Reported Time</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${recent.map((row) => `
-                  <tr>
-                    <td class="mono" style="font-weight:700;color:#0284c7;">${escapeHtml(row.report_code)}</td>
-                    <td>
-                      <strong>Brgy. ${escapeHtml(row.barangay)}</strong>
-                      ${row.purok ? `<div style="font-size:0.75rem;color:#0369a1;">📍 ${escapeHtml(row.purok)}</div>` : ''}
-                    </td>
-                    <td>
-                      ${row.latitude && row.longitude
-                        ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:0.72rem;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;padding:2px 6px;border-radius:4px;font-weight:600;">📍 ${row.location_source === 'gps' ? 'GPS' : 'Map pin'} (${Number(row.latitude).toFixed(5)}, ${Number(row.longitude).toFixed(5)}) · ${row.location_confirmed ? 'confirmed' : 'unconfirmed'}</span>`
-                        : '<span style="font-size:0.72rem;color:#94a3b8;">No exact pin</span>'}
-                    </td>
-                    <td>${escapeHtml(row.reporter_name || 'Resident')}</td>
-                    <td>${statusPill(row.status)}</td>
-                    <td class="muted" style="font-size:0.78rem;">${escapeHtml(formatDateTime(row.reported_at))}</td>
-                    <td>
-                      <button type="button" class="button ghost small" data-action="open-assign-repair-modal" data-id="${row.id}" style="font-size:0.72rem;padding:3px 7px;">
-                        Triage ›
-                      </button>
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        ` : emptyState('No reports yet', 'Resident reports will appear here once submitted.', '📋')}
-      </section>
-
-      <!-- QUEUE 2: Active Grid Incidents -->
-      <section class="panel">
+      <section class="panel" style="grid-column:1 / -1;">
         <div class="panel-head">
           <div>
             <h2>Active Grid Outages</h2>
