@@ -119,6 +119,212 @@ body.dark-mode.admin-body .case-row-action.primary:hover { background: #1984cf; 
   .case-search { flex-basis: auto; }
 }
 
+body.admin-body .login-page .admin-login-art {
+  min-height: 100vh;
+  gap: 22px;
+  padding: clamp(40px, 7vh, 76px) clamp(34px, 6vw, 90px);
+  background:
+    linear-gradient(155deg, rgba(5, 30, 63, .58), rgba(13, 79, 154, .52)),
+    url('/assets/valencia-city-panorama.jpg') center/cover;
+}
+
+body.admin-body .login-page .admin-art-brand {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+body.admin-body .login-page .admin-art-brand img {
+  width: clamp(88px, 10vw, 132px);
+  height: clamp(88px, 10vw, 132px);
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, .22));
+}
+
+body.admin-body .login-page .admin-art-brand strong,
+body.admin-body .login-page .admin-art-brand b {
+  font-size: clamp(2.1rem, 3.4vw, 3.2rem);
+  letter-spacing: -.04em;
+}
+
+body.admin-body .login-page .admin-login-art .portal-name {
+  width: fit-content;
+  margin: 8px 0 0;
+  padding: 9px 13px;
+  border: 1px solid rgba(205, 232, 255, .36);
+  border-radius: 999px;
+  background: rgba(5, 35, 68, .3);
+  backdrop-filter: blur(8px);
+}
+
+body.admin-body .login-page .admin-login-art .art-slogan {
+  align-self: flex-start;
+  max-width: 460px;
+  margin-top: auto;
+  text-align: left;
+  font-size: clamp(1.5rem, 2.5vw, 2.15rem);
+  font-style: normal;
+  line-height: 1.25;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .25);
+}
+
+body.admin-body .login-page .login-panel {
+  align-items: center;
+  padding: 36px;
+}
+
+body.admin-body .login-page .login-panel .login-content {
+  width: min(450px, 100%);
+  padding: clamp(28px, 4vw, 42px);
+  border: 1px solid #e0e8f0;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 22px 65px rgba(23, 57, 88, .1);
+}
+
+body.admin-body .login-page .login-panel .login-content h1 {
+  margin-bottom: 9px;
+  font-size: clamp(1.8rem, 2.4vw, 2.15rem);
+  letter-spacing: -.04em;
+}
+
+body.admin-body .login-page .login-panel .login-intro {
+  margin-bottom: 26px;
+  line-height: 1.55;
+}
+
+body.admin-body .login-page .login-panel .form-stack label input:not([type="checkbox"]) {
+  min-height: 49px;
+  border-radius: 11px;
+}
+
+body.admin-body .login-page .login-panel .form-stack label input:not([type="checkbox"]):focus {
+  border-color: #358bc9;
+  box-shadow: 0 0 0 4px rgba(31, 126, 190, .12);
+}
+
+body.admin-body .login-page .login-panel .admin-login-options {
+  margin-top: 2px;
+}
+
+body.admin-body .login-page .login-panel .form-stack > .button {
+  min-height: 49px;
+  font-size: .96rem;
+  letter-spacing: .01em;
+}
+
+body.admin-body .login-page .login-panel .social-btn {
+  min-height: 44px;
+  border-radius: 10px;
+}
+
+body.admin-body .login-page .login-footer {
+  width: 100%;
+}
+
+body.dark-mode.admin-body .login-page .login-panel .login-content {
+  border-color: var(--pw-line);
+  background: var(--pw-panel);
+  box-shadow: 0 22px 65px rgba(0, 0, 0, .22);
+}
+
+body.dark-mode.admin-body .login-page .login-panel .login-content h1 {
+  color: var(--pw-text);
+}
+
+@media (max-width: 900px) {
+  body.admin-body .login-page .admin-login-art {
+    min-height: 250px;
+    gap: 12px;
+    padding: 28px clamp(22px, 6vw, 44px) 42px;
+  }
+
+  body.admin-body .login-page .admin-art-brand img {
+    width: 68px;
+    height: 68px;
+  }
+
+  body.admin-body .login-page .admin-art-brand strong,
+  body.admin-body .login-page .admin-art-brand b {
+    font-size: 1.75rem;
+  }
+
+  body.admin-body .login-page .admin-login-art .portal-name {
+    margin-top: 0;
+    font-size: .75rem;
+  }
+
+  body.admin-body .login-page .admin-login-art .art-slogan {
+    align-self: flex-end;
+    font-size: 1.25rem;
+  }
+
+  body.admin-body .login-page .login-panel {
+    position: relative;
+    margin-top: -22px;
+    padding: 0 18px;
+    background: transparent;
+  }
+
+  body.admin-body .login-page .login-panel .login-content {
+    width: min(560px, 100%);
+  }
+
+  body.admin-body .login-page .login-footer {
+    margin-top: 12px;
+    border-top: 0;
+    background: transparent;
+  }
+}
+
+@media (max-width: 600px) {
+  body.admin-body .login-page .admin-login-art {
+    min-height: 210px;
+    padding: 24px 22px 38px;
+  }
+
+  body.admin-body .login-page .admin-art-brand {
+    gap: 13px;
+  }
+
+  body.admin-body .login-page .admin-art-brand img {
+    width: 58px;
+    height: 58px;
+  }
+
+  body.admin-body .login-page .admin-art-brand strong,
+  body.admin-body .login-page .admin-art-brand b {
+    font-size: 1.5rem;
+  }
+
+  body.admin-body .login-page .admin-login-art .portal-name {
+    padding: 7px 10px;
+    font-size: .68rem;
+  }
+
+  body.admin-body .login-page .admin-login-art .art-slogan {
+    font-size: 1.05rem;
+  }
+
+  body.admin-body .login-page .login-panel {
+    margin-top: -20px;
+    padding: 0 12px;
+  }
+
+  body.admin-body .login-page .login-panel .login-content {
+    padding: 27px 21px;
+    border-radius: 18px;
+  }
+
+  body.admin-body .login-page .login-panel .login-intro {
+    margin-bottom: 21px;
+  }
+
+  body.admin-body .login-page .login-footer {
+    padding: 13px 8px;
+    font-size: .74rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   body.admin-body .admin-shell *,
   body.admin-body .admin-shell *::before,

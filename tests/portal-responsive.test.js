@@ -26,6 +26,17 @@ test('portal layouts remain constrained on narrow mobile screens', () => {
   assert.match(adminPage, /\/app\/portal-polish\.css\?v=38/);
 });
 
+test('Admin login design adapts to mobile and Night Ops themes', () => {
+  const styles = fs.readFileSync(path.join(ROOT, 'app', 'admin-theme.css'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+
+  assert.match(styles, /body\.admin-body \.login-page \.login-panel \.login-content\s*\{[^}]*border-radius:\s*22px;[^}]*background:\s*#fff;/s);
+  assert.match(styles, /body\.dark-mode\.admin-body \.login-page \.login-panel \.login-content\s*\{[^}]*background:\s*var\(--pw-panel\);/s);
+  assert.match(styles, /@media \(max-width: 900px\)\s*\{[\s\S]*?body\.admin-body \.login-page \.login-panel\s*\{[^}]*margin-top:\s*-22px;/);
+  assert.match(styles, /@media \(max-width: 600px\)\s*\{[\s\S]*?body\.admin-body \.login-page \.login-panel \.login-content\s*\{[^}]*padding:\s*27px 21px;/);
+  assert.match(adminPage, /\/app\/admin-theme\.css\?v=4/);
+});
+
 test('home weather widget stays compact in Light Mode and Night Ops', () => {
   const styles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
 
