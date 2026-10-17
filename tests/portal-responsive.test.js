@@ -80,7 +80,7 @@ test('route guide card is compact while keeping actions easy to tap', () => {
   const styles = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
 
   assert.match(styles, /\.map-route-hud\s*\{[^}]*width:\s*min\(320px,\s*calc\(100vw - 16px\)\);[^}]*padding:\s*7px 8px;/s);
-  assert.match(styles, /\.map-route-hud-btn\s*\{[^}]*min-height:\s*34px;[^}]*font-size:\s*0\.7rem;/s);
+  assert.match(styles, /\.map-route-hud-btn\s*\{[^}]*min-height:\s*30px;[^}]*font-size:\s*0\.65rem;/s);
 });
 
 test('dispatch eligibility offers a direct path to staff access settings', () => {
