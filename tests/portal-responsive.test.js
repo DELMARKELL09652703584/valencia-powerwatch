@@ -35,7 +35,7 @@ test('Admin login design adapts to mobile and Night Ops themes', () => {
   assert.match(styles, /@media \(max-width: 900px\)\s*\{[\s\S]*?body\.admin-body \.login-page \.login-panel\s*\{[^}]*margin-top:\s*-22px;/);
   assert.match(styles, /@media \(max-width: 600px\)\s*\{[\s\S]*?body\.admin-body \.login-page \.login-panel \.login-content\s*\{[^}]*padding:\s*27px 21px;/);
   assert.match(styles, /body\.admin-body \.login-page \.login-panel \.admin-login-options input\[type="checkbox"\]\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;[^}]*min-height:\s*18px;/s);
-  assert.match(adminPage, /\/app\/admin-theme\.css\?v=9/);
+  assert.match(adminPage, /\/app\/admin-theme\.css\?v=10/);
 });
 
 test('Admin dashboard report charts use live data and remain responsive in both themes', () => {
@@ -59,12 +59,13 @@ test('Admin dashboard report charts use live data and remain responsive in both 
   assert.match(styles, /\.report-status-pie\s*\{[^}]*width:\s*min\(100%,\s*224px\)/);
   assert.match(styles, /\.report-status-legend-item\s*\{[^}]*border:\s*1px solid/);
   assert.match(styles, /\.report-type-list\s*\{[^}]*align-content:\s*center/);
+  assert.match(styles, /\.report-distribution-total strong\s*\{[^}]*font-size:\s*1\.2rem/);
   assert.match(styles, /body\.dark-mode\.admin-body \.report-status-hole\s*\{[^}]*fill:\s*var\(--pw-bg\)/);
   assert.match(styles, /body\.dark-mode\.admin-body \.report-status-legend-item\s*\{/);
   assert.match(styles, /\.report-status-zero-list summary\s*\{/);
   assert.match(styles, /@media \(max-width: 600px\)\s*\{[\s\S]*?\.report-status-chart-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
   assert.match(styles, /body\.dark-mode\.admin-body \.report-distribution-panel/);
-  assert.match(adminPage, /\/app\/admin-theme\.css\?v=9/);
+  assert.match(adminPage, /\/app\/admin-theme\.css\?v=10/);
   assert.match(adminPage, /\/app\/admin\.js\?v=34/);
 });
 

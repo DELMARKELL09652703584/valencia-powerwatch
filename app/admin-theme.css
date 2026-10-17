@@ -363,9 +363,9 @@ body.admin-body .admin-dashboard-page > [data-report-distribution] {
 .report-distribution-header h3 { margin: 0; color: var(--admin-ink, #142c43); font-size: 1.2rem; letter-spacing: -.02em; }
 .report-distribution-header p,
 .report-distribution-card > header p { margin: 5px 0 0; color: var(--admin-muted, #718399); font-size: .76rem; line-height: 1.45; }
-.report-distribution-total { display: grid; justify-items: end; flex: 0 0 auto; padding: 10px 14px; border: 1px solid rgba(20, 120, 189, .13); border-radius: 12px; background: linear-gradient(145deg, rgba(20, 120, 189, .09), rgba(14, 165, 233, .035)); }
-.report-distribution-total strong { color: #1478bd; font-size: 1.65rem; font-variant-numeric: tabular-nums; line-height: 1; }
-.report-distribution-total span { margin-top: 5px; color: var(--admin-muted, #718399); font-size: .68rem; font-weight: 700; }
+.report-distribution-total { display: grid; justify-items: end; flex: 0 0 auto; padding: 9px 12px; border: 1px solid rgba(20, 120, 189, .13); border-radius: 12px; background: linear-gradient(145deg, rgba(20, 120, 189, .09), rgba(14, 165, 233, .035)); }
+.report-distribution-total strong { color: #1478bd; font-size: 1.2rem; font-variant-numeric: tabular-nums; line-height: 1; }
+.report-distribution-total span { margin-top: 4px; color: var(--admin-muted, #718399); font-size: .66rem; font-weight: 700; }
 .report-distribution-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(270px, .85fr); gap: 14px; }
 .report-distribution-card { min-width: 0; padding: 18px; border: 1px solid var(--admin-line, #dce5ee); border-radius: 14px; background: var(--admin-canvas, #f7f9fc); }
 .report-status-card { background: linear-gradient(145deg, #f8fbff, #f1f6fb); }
@@ -458,7 +458,7 @@ body.dark-mode.admin-body .report-distribution-retry { border-color: #416682; co
   .report-distribution-panel { gap: 12px; margin-top: 14px; padding: 13px; border-radius: 13px; }
   .report-distribution-header h3 { font-size: 1.02rem; }
   .report-distribution-header p { max-width: 230px; font-size: .69rem; }
-  .report-distribution-total strong { font-size: 1.4rem; }
+  .report-distribution-total strong { font-size: 1.15rem; }
   .report-distribution-card { padding: 12px; }
   .report-status-chart-layout { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .report-status-chart-layout { min-height: 0; }
