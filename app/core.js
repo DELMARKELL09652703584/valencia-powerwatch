@@ -509,7 +509,7 @@ async function renderRouteGuideOnMap({
         </div>
         <div class="map-route-hud-actions" style="flex-wrap:wrap;gap:6px;">
           <button type="button" class="map-route-hud-btn" data-action="sim-crew-dispatch" title="Start crew tracker" style="background:#0284c7;color:#fff;box-shadow:0 0 10px rgba(2,132,199,0.5);flex:1 1 100%;">
-            <span>🚀 Tracker</span>
+            <span>🚀 Crew Tracker</span>
           </button>
           <a href="https://www.google.com/maps/dir/?api=1&origin=${origin.latitude},${origin.longitude}&destination=${destLat},${destLng}&travelmode=driving"
              target="_blank" rel="noopener noreferrer" class="map-route-hud-btn primary">
