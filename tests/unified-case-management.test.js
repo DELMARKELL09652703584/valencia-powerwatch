@@ -37,7 +37,7 @@ test('Report verification updates the authoritative report without creating a du
   assert.match(adminSource, /Verify Report/);
   assert.match(adminHtml, /app\/admin\.js\?v=31/);
   assert.match(adminHtml, /app\/main\.js\?v=36/);
-  assert.match(adminHtml, /admin-theme\.css\?v=4/);
+  assert.match(adminHtml, /admin-theme\.css\?v=5/);
 });
 
 test('Staff account form requires matching initial and confirmation passwords', () => {

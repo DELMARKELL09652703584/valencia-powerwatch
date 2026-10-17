@@ -206,6 +206,15 @@ body.admin-body .login-page .login-panel .admin-login-options {
   margin-top: 2px;
 }
 
+body.admin-body .login-page .login-panel .admin-login-options input[type="checkbox"] {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  margin: 0;
+  padding: 0;
+}
+
 body.admin-body .login-page .login-panel .form-stack > .button {
   min-height: 49px;
   font-size: .96rem;

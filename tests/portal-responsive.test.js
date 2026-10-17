@@ -34,7 +34,8 @@ test('Admin login design adapts to mobile and Night Ops themes', () => {
   assert.match(styles, /body\.dark-mode\.admin-body \.login-page \.login-panel \.login-content\s*\{[^}]*background:\s*var\(--pw-panel\);/s);
   assert.match(styles, /@media \(max-width: 900px\)\s*\{[\s\S]*?body\.admin-body \.login-page \.login-panel\s*\{[^}]*margin-top:\s*-22px;/);
   assert.match(styles, /@media \(max-width: 600px\)\s*\{[\s\S]*?body\.admin-body \.login-page \.login-panel \.login-content\s*\{[^}]*padding:\s*27px 21px;/);
-  assert.match(adminPage, /\/app\/admin-theme\.css\?v=4/);
+  assert.match(styles, /body\.admin-body \.login-page \.login-panel \.admin-login-options input\[type="checkbox"\]\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;[^}]*min-height:\s*18px;/s);
+  assert.match(adminPage, /\/app\/admin-theme\.css\?v=5/);
 });
 
 test('home weather widget stays compact in Light Mode and Night Ops', () => {
