@@ -511,19 +511,13 @@ function statCards(stats) {
 
 async function renderAdminDashboard() {
   adminShell(loadingState('Connecting to Valencia Smart Grid Command Center…'));
-  const [{ stats }, monthly, barangay, incidentStatus, repRes, incRes, teamRes, insightsRes] = await Promise.all([
+  const [{ stats }, monthly, teamRes, insightsRes] = await Promise.all([
     api('/api/analytics/dashboard'),
     api('/api/analytics/monthly'),
-    api('/api/analytics/barangay'),
-    api('/api/analytics/status'),
-    api('/api/reports'),
-    api('/api/incidents'),
     api('/api/repair-teams'),
     api('/api/analytics/insights'),
   ]);
 
-  const allReports = repRes.reports || [];
-  const allIncidents = incRes.incidents || [];
   const teams = teamRes.teams || [];
   const insights = insightsRes;
   const resolvedCount = Number(stats.resolved || 0) + Number(stats.restored || 0);
@@ -537,19 +531,6 @@ async function renderAdminDashboard() {
     { label: 'Scheduled Work', value: stats.scheduled || 0, tag: 'PREVENTIVE', sub: 'Planned Feeder Windows', tone: 'violet', page: 'scheduled', icon: '🗓️' },
     { label: 'Grid Restored', value: resolvedCount, tag: 'RESTORED', sub: `Avg ETR: ${stats.avg_duration_hours ? stats.avg_duration_hours + 'h' : 'Optimal'}`, tone: 'teal', page: 'history', icon: '✅' },
   ];
-
-  const barangayRows = (barangay.data || []).slice(0, 6).map((row) => ({ label: row.barangay, value: Number(row.c) || 0 }));
-  const otherCount = (barangay.data || []).slice(6).reduce((sum, row) => sum + (Number(row.c) || 0), 0);
-  if (otherCount) barangayRows.push({ label: 'Others', value: otherCount });
-  const barMaximum = Math.max(1, ...barangayRows.map((row) => row.value));
-  const barTicks = Array.from({ length: 5 }, (_, index) => Math.ceil(barMaximum * (4 - index) / 4));
-  const barangayBars = barangayRows.map((row) => `
-    <div class="dashboard-bar-item" title="${escapeHtml(row.label)}: ${row.value} reports" data-page="reports" style="cursor:pointer;">
-      <strong style="color:var(--admin-blue-deep);">${row.value}</strong>
-      <div><i style="height:${Math.max(4, (row.value / barMaximum) * 100)}%;"></i></div>
-      <span>${escapeHtml(row.label)}</span>
-    </div>
-  `).join('');
 
   const monthlyRows = (monthly.data || []).slice(-12);
   const trendCopy = insights.trend.direction === 'up'
@@ -658,40 +639,6 @@ async function renderAdminDashboard() {
     </section>
 
     <div class="dashboard-visual-grid scada-visual-grid">
-      <!-- PANEL 1: GIS Outage Radar Map -->
-      <section class="dashboard-visual-panel radar-map-panel">
-        <header>
-          <div>
-            <h3>📍 Incident &amp; Repair Team Map</h3>
-            <span style="font-size:0.75rem;color:var(--admin-muted);">Reported locations and available crews</span>
-          </div>
-          <button type="button" class="link-button" data-page="map" style="font-size:0.78rem;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
-            Open Full GIS Map &rarr;
-          </button>
-        </header>
-        <div class="dashboard-radar-canvas" id="dashboard-radar-map" style="height:280px;border-radius:12px;overflow:hidden;border:1px solid var(--admin-line);"></div>
-        <footer style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:10px;font-size:0.75rem;color:#64748b;">
-          <span>⚡ Active Outage Marker</span>
-          <span>📌 Citizen Report Pin</span>
-          <span>🚒 Emergency Response Unit</span>
-        </footer>
-      </section>
-
-      <!-- PANEL 2: Barangay Impact Ranking -->
-      <section class="dashboard-visual-panel dashboard-bar-panel">
-        <header>
-          <div>
-            <h3>🏛️ Reports by Barangay</h3>
-            <span style="font-size:0.75rem;color:var(--admin-muted);">${stats.reports_total || 0} total reported interruptions</span>
-          </div>
-          <button type="button" class="link-button" data-page="reports" style="font-size:0.78rem;">View in Incidents &amp; Reports &rarr;</button>
-        </header>
-        ${barangayRows.length
-          ? `<div class="dashboard-bar-chart"><div class="dashboard-bar-axis">${barTicks.map((tick) => `<span>${tick}</span>`).join('')}</div><div class="dashboard-bar-plot">${barangayBars}</div></div>`
-          : `<div class="dashboard-chart-empty">${emptyState('No reports by barangay', 'Barangay totals appear when residents submit reports.', '📊')}</div>`}
-      </section>
-
-      <!-- PANEL 3: Monthly & 24H Outage Trend -->
       <section class="dashboard-visual-panel dashboard-trend-panel">
         <header>
           <div>
@@ -742,85 +689,6 @@ async function renderAdminDashboard() {
     </div>
 
   </section>`);
-
-  // Initialize interactive GIS Radar Mini-Map
-  const radarElement = document.getElementById('dashboard-radar-map');
-  if (radarElement) {
-    try {
-      await loadAdminMapLibrary();
-      const radarMap = L.map(radarElement, {
-        zoomControl: true,
-        minZoom: 10,
-        maxZoom: 18,
-        attributionControl: false
-      }).setView([7.9064, 125.0941], 12);
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        subdomains: 'abc',
-        maxZoom: 18
-      }).addTo(radarMap);
-
-      // Plot active reports with coordinates
-      allReports.filter((r) => r.latitude && r.longitude && r.status !== 'Resolved').forEach((r) => {
-        L.circleMarker([Number(r.latitude), Number(r.longitude)], {
-          radius: 7,
-          color: '#ffffff',
-          fillColor: '#ea580c',
-          fillOpacity: 0.95,
-          weight: 2
-        }).addTo(radarMap).bindPopup(`
-          <div style="font-family:sans-serif;font-size:0.82rem;">
-            <strong style="color:#ea580c;">📌 ${escapeHtml(r.report_code)}</strong><br>
-            <strong>Brgy. ${escapeHtml(r.barangay)}</strong>${r.purok ? ' · ' + escapeHtml(r.purok) : ''}<br>
-            <span>Status: ${escapeHtml(r.status)}</span>
-          </div>
-        `);
-      });
-
-      // Plot active incidents
-      allIncidents.filter((i) => i.latitude && i.longitude && i.status !== 'Closed').forEach((i) => {
-        L.circleMarker([Number(i.latitude), Number(i.longitude)], {
-          radius: 9,
-          color: '#ffffff',
-          fillColor: '#e11d48',
-          fillOpacity: 1,
-          weight: 2.5
-        }).addTo(radarMap).bindPopup(`
-          <div style="font-family:sans-serif;font-size:0.82rem;">
-            <strong style="color:#b91c1c;">⚡ ${escapeHtml(i.incident_code)}</strong><br>
-            <strong>${escapeHtml(i.title)}</strong><br>
-            <span>Brgy. ${escapeHtml(i.barangay)}</span><br>
-            <span>Status: ${escapeHtml(i.status)}</span>
-          </div>
-        `);
-      });
-
-      // Plot repair teams
-      teams.forEach((t) => {
-        if (!t.current_latitude || !t.current_longitude) return;
-        const isAvail = t.status === 'Available';
-        const truckIcon = L.divIcon({
-          className: 'crew-truck-radar-marker',
-          html: `<div style="background:${isAvail ? '#059669' : '#0284c7'};color:#fff;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);" title="${escapeHtml(t.name)}">🚒</div>`,
-          iconSize: [26, 26],
-          iconAnchor: [13, 13]
-        });
-        L.marker([Number(t.current_latitude), Number(t.current_longitude)], { icon: truckIcon })
-          .addTo(radarMap)
-          .bindPopup(`
-            <div style="font-family:sans-serif;font-size:0.82rem;">
-              <strong style="color:#0f172a;">🚒 ${escapeHtml(t.name)}</strong><br>
-              <span>${escapeHtml(t.vehicle_type)}</span><br>
-              <span style="color:${isAvail ? '#059669' : '#0284c7'};font-weight:700;">Status: ${escapeHtml(t.status)}</span>
-            </div>
-          `);
-      });
-
-      window.setTimeout(() => radarMap.invalidateSize(), 200);
-    } catch (e) {
-      console.warn('Radar map load warning:', e);
-    }
-  }
 }
 
 async function renderAdminUnifiedCases() {
