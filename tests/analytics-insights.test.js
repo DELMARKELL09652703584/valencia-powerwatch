@@ -62,6 +62,10 @@ before(async () => {
     insertIncident.run('PRIOR-POB', 'Previous Poblacion outage', 'Poblacion', 'Unexpected', 'Closed', prior, timestamp(new Date(new Date(prior).getTime() + 3600000)), adminId, timestamp(now), timestamp(now), timestamp(new Date(new Date(prior).getTime() + 3600000)));
     db.prepare("INSERT INTO outage_reports (report_code, reporter_id, barangay, date_time_noticed, description, status, verification_status, reported_at, updated_at) VALUES ('VPR-POB', ?, 'Poblacion', ?, 'Open local report', 'Submitted', 'Pending', ?, ?)").run(residentId, timestamp(now), timestamp(now), timestamp(now));
     db.prepare("INSERT INTO outage_reports (report_code, reporter_id, barangay, date_time_noticed, description, status, verification_status, reported_at, updated_at) VALUES ('VPR-BAN', ?, 'Banlag', ?, 'Other barangay report', 'Submitted', 'Pending', ?, ?)").run(otherResidentId, timestamp(now), timestamp(now), timestamp(now));
+    const insertReport = db.prepare('INSERT INTO outage_reports (report_code, reporter_id, barangay, date_time_noticed, description, possible_outage_type, status, verification_status, reported_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    insertReport.run('VPR-BAN-VERIFIED', otherResidentId, 'Banlag', timestamp(now), 'Verified line interruption', 'Line Fault', 'Verified', 'Verified', timestamp(now), timestamp(now));
+    insertReport.run('VPR-BAN-PROGRESS', otherResidentId, 'Banlag', timestamp(now), 'Transformer repair underway', 'Transformer Issue', 'In Progress', 'Verified', timestamp(now), timestamp(now));
+    insertReport.run('VPR-BAN-CLOSED', otherResidentId, 'Banlag', timestamp(now), 'Closed power interruption', 'Line Fault', 'Closed', 'Verified', timestamp(now), timestamp(now));
     const teamId = Number(db.prepare("INSERT INTO repair_teams (team_code, name, lead_technician, created_at) VALUES ('TEAM-TEST', 'Test team', 'Test lead', ?)").run(timestamp(now)).lastInsertRowid);
     const dispatched = new Date(now.getTime() - 4 * 3600000);
     const arrived = new Date(now.getTime() - 2 * 3600000);
@@ -145,4 +149,27 @@ test('insights are authenticated, barangay-scoped for residents, and explain the
   assert.equal(stats.active_dispatches, 1);
   assert.equal(stats.available_crews, 1);
   assert.equal(stats.total_crews, 1);
+});
+
+test('Admin report distribution uses actual report statuses and outage types', { timeout: TEST_TIMEOUT_MS }, async () => {
+  const anonymous = await fetch(`${baseUrl}/api/analytics/dashboard-report-distribution`);
+  assert.equal(anonymous.status, 401);
+
+  const resident = await fetch(`${baseUrl}/api/analytics/dashboard-report-distribution`, { headers: { cookie: residentCookie } });
+  assert.equal(resident.status, 403);
+
+  const response = await fetch(`${baseUrl}/api/analytics/dashboard-report-distribution`, { headers: { cookie: adminCookie } });
+  assert.equal(response.status, 200);
+  const distribution = await response.json();
+  const statuses = Object.fromEntries(distribution.statuses.map(({ status, count }) => [status, count]));
+  const categories = Object.fromEntries(distribution.categories.map(({ category, count }) => [category, count]));
+
+  assert.equal(distribution.total, 5);
+  assert.deepEqual(statuses, { Submitted: 2, Verified: 1, 'In Progress': 1, Closed: 1 });
+  assert.deepEqual(categories, { 'Line Fault': 2, Unspecified: 2, 'Transformer Issue': 1 });
+  assert.equal(distribution.statuses.reduce((sum, item) => sum + item.count, 0), distribution.total);
+  assert.equal(distribution.categories.reduce((sum, item) => sum + item.count, 0), distribution.total);
+  assert.equal(((statuses.Submitted / distribution.total) * 100).toFixed(1), '40.0');
+  assert.equal(((statuses.Verified / distribution.total) * 100).toFixed(1), '20.0');
+  assert.ok(distribution.latest_update);
 });

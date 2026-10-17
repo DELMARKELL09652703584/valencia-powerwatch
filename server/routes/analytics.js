@@ -292,6 +292,24 @@ router.get('/dashboard', requireAuth, (req, res) => {
   });
 });
 
+router.get('/dashboard-report-distribution', requireAuth, requireRole('administrator'), (req, res) => {
+  const statuses = db.prepare(`
+    SELECT status, COUNT(*) AS count
+    FROM outage_reports
+    GROUP BY status
+  `).all().map((row) => ({ status: row.status, count: Number(row.count) }));
+  const categories = db.prepare(`
+    SELECT COALESCE(NULLIF(TRIM(possible_outage_type), ''), 'Unspecified') AS category, COUNT(*) AS count
+    FROM outage_reports
+    GROUP BY COALESCE(NULLIF(TRIM(possible_outage_type), ''), 'Unspecified')
+    ORDER BY count DESC, category COLLATE NOCASE ASC
+  `).all().map((row) => ({ category: row.category, count: Number(row.count) }));
+  const total = Number(db.prepare('SELECT COUNT(*) AS count FROM outage_reports').get().count);
+  const latestUpdate = db.prepare('SELECT MAX(updated_at) AS latest_update FROM outage_reports').get().latest_update;
+
+  res.json({ total, statuses, categories, latest_update: latestUpdate });
+});
+
 // Analytics (administrator / personnel / utility)
 router.get('/summary', requireAuth, requireRole('administrator', 'personnel', 'utility'), (req, res) => {
   const range = readDateRange(req, res);

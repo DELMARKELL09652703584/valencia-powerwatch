@@ -35,9 +35,9 @@ test('Report verification updates the authoritative report without creating a du
   assert.match(mainSource, /status: 'Verified'/);
   assert.doesNotMatch(mainSource, /type === 'verify-create-incident'/);
   assert.match(adminSource, /Verify Report/);
-  assert.match(adminHtml, /app\/admin\.js\?v=31/);
+  assert.match(adminHtml, /app\/admin\.js\?v=32/);
   assert.match(adminHtml, /app\/main\.js\?v=36/);
-  assert.match(adminHtml, /admin-theme\.css\?v=5/);
+  assert.match(adminHtml, /admin-theme\.css\?v=6/);
 });
 
 test('Staff account form requires matching initial and confirmation passwords', () => {

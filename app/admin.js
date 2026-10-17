@@ -237,6 +237,7 @@ async function tickAdminTelemetry() {
       playScadaAlertChime('high');
       showScadaEmergencyBanner(data.newReports);
       setToast(`🚨 Bag-ong Report: Brgy. ${data.newReports[0].barangay} (${data.newReports[0].report_code})`);
+      if (state.page === 'dashboard') refreshAdminReportDistribution();
     } else if (data.latestReportId) {
       lastPolledReportId = Math.max(lastPolledReportId, data.latestReportId);
     }
@@ -291,6 +292,7 @@ async function tickAdminTelemetry() {
         if (dispatchVal && typeof data.metrics.ongoingRepairs === 'number') {
           dispatchVal.textContent = data.metrics.ongoingRepairs.toLocaleString();
         }
+        if (Date.now() - lastReportDistributionRefreshAt >= 30000) refreshAdminReportDistribution();
       }
     }
   } catch (err) {
@@ -509,6 +511,152 @@ function statCards(stats) {
   </div>`).join('')}</div>`;
 }
 
+const REPORT_STATUS_ORDER = [
+  'Submitted', 'Under Review', 'Verified', 'Officially Confirmed', 'Assigned',
+  'Acknowledged', 'In Progress', 'Resolved', 'Closed', 'Unverified', 'Duplicate', 'Rejected',
+];
+const REPORT_STATUS_LABELS = { Submitted: 'Pending verification' };
+const REPORT_STATUS_COLORS = {
+  Submitted: '#f59e0b',
+  'Under Review': '#eab308',
+  Verified: '#0ea5e9',
+  'Officially Confirmed': '#2563eb',
+  Assigned: '#8b5cf6',
+  Acknowledged: '#6366f1',
+  'In Progress': '#f97316',
+  Resolved: '#10b981',
+  Closed: '#0f766e',
+  Unverified: '#64748b',
+  Duplicate: '#a855f7',
+  Rejected: '#ef4444',
+};
+
+function reportPiePath(startAngle, endAngle, radius = 100) {
+  const center = 120;
+  if (endAngle - startAngle >= 359.999) {
+    return `M ${center} ${center - radius} A ${radius} ${radius} 0 1 1 ${center} ${center + radius} A ${radius} ${radius} 0 1 1 ${center} ${center - radius} Z`;
+  }
+  const point = (angle) => {
+    const radians = (angle * Math.PI) / 180;
+    return [center + radius * Math.cos(radians), center + radius * Math.sin(radians)];
+  };
+  const start = point(startAngle);
+  const end = point(endAngle);
+  const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+  return `M ${center} ${center} L ${start[0]} ${start[1]} A ${radius} ${radius} 0 ${largeArc} 1 ${end[0]} ${end[1]} Z`;
+}
+
+function renderReportDistribution(data) {
+  const statusCounts = new Map(data.statuses.map(({ status, count }) => [status, Number(count)]));
+  const statuses = [...REPORT_STATUS_ORDER, ...data.statuses.map((item) => item.status).filter((status) => !REPORT_STATUS_ORDER.includes(status))]
+    .map((status) => ({ status, count: statusCounts.get(status) || 0 }));
+  const total = Number(data.total) || 0;
+  const percentage = (count) => total ? `${((count / total) * 100).toFixed(1)}%` : '0.0%';
+  let angle = -90;
+  const slices = statuses.filter((item) => item.count > 0).map((item) => {
+    const endAngle = angle + (item.count / total) * 360;
+    const color = REPORT_STATUS_COLORS[item.status] || '#64748b';
+    const label = REPORT_STATUS_LABELS[item.status] || item.status;
+    const markup = `<path class="report-status-slice" d="${reportPiePath(angle, endAngle)}" fill="${color}" data-report-status="${escapeHtml(item.status)}" data-report-label="${escapeHtml(label)}" data-report-count="${item.count}" data-report-percentage="${percentage(item.count)}" tabindex="0" role="button" aria-label="${escapeHtml(label)}: ${item.count} reports, ${percentage(item.count)}"><title>${escapeHtml(label)}: ${item.count} reports (${percentage(item.count)})</title></path>`;
+    angle = endAngle;
+    return markup;
+  }).join('');
+  const legend = statuses.map((item) => {
+    const label = REPORT_STATUS_LABELS[item.status] || item.status;
+    const color = REPORT_STATUS_COLORS[item.status] || '#64748b';
+    return `<button type="button" class="report-status-legend-item" data-report-status="${escapeHtml(item.status)}" data-report-label="${escapeHtml(label)}" data-report-count="${item.count}" data-report-percentage="${percentage(item.count)}" aria-label="${escapeHtml(label)}: ${item.count} reports, ${percentage(item.count)}">
+      <span class="report-status-legend-swatch" style="--report-status-color:${color}"></span>
+      <span class="report-status-legend-label">${escapeHtml(label)}</span>
+      <strong>${item.count.toLocaleString()}</strong>
+      <small>${percentage(item.count)}</small>
+    </button>`;
+  }).join('');
+  const categoryMax = Math.max(1, ...data.categories.map((item) => Number(item.count)));
+  const categoryBars = data.categories.map((item) => {
+    const count = Number(item.count);
+    return `<div class="report-type-row" title="${escapeHtml(item.category)}: ${count} reports (${percentage(count)})">
+      <div class="report-type-label"><span>${escapeHtml(item.category)}</span><strong>${count.toLocaleString()}</strong></div>
+      <div class="report-type-track"><span style="width:${Math.max(count ? 4 : 0, (count / categoryMax) * 100)}%"></span></div>
+      <small>${percentage(count)}</small>
+    </div>`;
+  }).join('');
+  const updatedAt = data.latest_update ? formatDateTime(data.latest_update) : 'No reports recorded';
+
+  return `<section class="report-distribution-panel" aria-label="Power interruption report analytics">
+    <header class="report-distribution-header">
+      <div><p class="report-distribution-eyebrow">REPORT INTELLIGENCE</p><h3>Power interruption reports</h3><p>Distribution by current report status and reported outage type.</p></div>
+      <div class="report-distribution-total"><strong>${total.toLocaleString()}</strong><span>Total reports</span></div>
+    </header>
+    <div class="report-distribution-grid">
+      <article class="report-distribution-card report-status-card">
+        <header><div><h4>Report status</h4><p>Each report counted once by its current status.</p></div></header>
+        ${total ? `<div class="report-status-chart-layout">
+          <svg class="report-status-pie" viewBox="0 0 240 240" role="img" aria-label="Pie chart of ${total} reports by status">${slices}</svg>
+          <div class="report-status-legend" aria-label="Report status legend">${legend}</div>
+        </div><p class="report-status-detail" data-report-status-detail aria-live="polite">Select or hover over a slice or legend item for details.</p>`
+          : '<div class="report-distribution-empty"><span aria-hidden="true">◔</span><strong>No outage reports yet</strong><p>Report status data will appear here when residents submit reports.</p></div>'}
+      </article>
+      <article class="report-distribution-card report-type-card">
+        <header><div><h4>Interruption types</h4><p>Categories from resident-submitted outage reports.</p></div></header>
+        ${categoryBars ? `<div class="report-type-list">${categoryBars}</div>` : '<div class="report-distribution-empty compact"><strong>No outage types to show</strong><p>Type distribution will appear when reports are submitted.</p></div>'}
+      </article>
+    </div>
+    <footer class="report-distribution-footer"><span>Latest report update: ${escapeHtml(updatedAt)}</span><span data-report-chart-updated>Live data · refreshes every 30 seconds</span></footer>
+  </section>`;
+}
+
+let lastReportDistributionRefreshAt = 0;
+let reportDistributionRequest = null;
+
+async function refreshAdminReportDistribution() {
+  if (reportDistributionRequest) return reportDistributionRequest;
+  const chart = document.querySelector('[data-report-distribution]');
+  if (!chart) return;
+  const isLoaded = chart.dataset.loaded === 'true';
+  if (!isLoaded) chart.innerHTML = '<div class="report-distribution-loading" role="status">Loading report analytics…</div>';
+  lastReportDistributionRefreshAt = Date.now();
+  reportDistributionRequest = (async () => {
+    try {
+      const data = await api('/api/analytics/dashboard-report-distribution');
+      const currentChart = document.querySelector('[data-report-distribution]');
+      if (!currentChart) return;
+      currentChart.innerHTML = renderReportDistribution(data);
+      currentChart.dataset.loaded = 'true';
+      bindReportStatusInteractions(currentChart);
+    } catch (error) {
+      const currentChart = document.querySelector('[data-report-distribution]');
+      if (!currentChart) return;
+      if (currentChart.dataset.loaded === 'true') {
+        const footer = currentChart.querySelector('.report-distribution-footer');
+        if (footer) {
+          footer.setAttribute('role', 'status');
+          footer.innerHTML = `<span>Could not refresh report analytics: ${escapeHtml(error.message || 'Please check your connection and try again.')}</span><button type="button" class="report-distribution-retry">Retry</button>`;
+          footer.querySelector('.report-distribution-retry')?.addEventListener('click', refreshAdminReportDistribution, { once: true });
+        }
+      } else {
+        currentChart.innerHTML = `<div class="report-distribution-error" role="alert"><strong>Could not load report analytics</strong><p>${escapeHtml(error.message || 'Please check your connection and try again.')}</p><button type="button" class="report-distribution-retry">Retry</button></div>`;
+        currentChart.querySelector('.report-distribution-retry')?.addEventListener('click', refreshAdminReportDistribution, { once: true });
+      }
+    } finally {
+      reportDistributionRequest = null;
+    }
+  })();
+  return reportDistributionRequest;
+}
+
+function bindReportStatusInteractions(container) {
+  const detail = container.querySelector('[data-report-status-detail]');
+  if (!detail) return;
+  const updateDetail = (target) => {
+    const item = target.closest('[data-report-status]');
+    if (!item) return;
+    detail.textContent = `${item.dataset.reportLabel}: ${Number(item.dataset.reportCount).toLocaleString()} reports (${item.dataset.reportPercentage})`;
+  };
+  container.addEventListener('pointerover', (event) => updateDetail(event.target));
+  container.addEventListener('focusin', (event) => updateDetail(event.target));
+  container.addEventListener('click', (event) => updateDetail(event.target));
+}
+
 async function renderAdminDashboard() {
   adminShell(loadingState('Connecting to Valencia Smart Grid Command Center…'));
   const { stats } = await api('/api/analytics/dashboard');
@@ -582,7 +730,9 @@ async function renderAdminDashboard() {
       `).join('')}
     </div>
 
+    <div data-report-distribution>${loadingState('Loading report analytics…')}</div>
   </section>`);
+  refreshAdminReportDistribution();
 }
 
 async function renderAdminUnifiedCases() {
