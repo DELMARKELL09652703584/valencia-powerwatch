@@ -4146,7 +4146,8 @@ body.admin-body {
   position: fixed;
   top: 8px;
   left: 8px;
-  width: min(280px, calc(100vw - 16px));
+  width: min(300px, calc(100vw - 16px));
+  height: 170px;
   max-height: calc(100vh - 16px);
   max-height: calc(100dvh - 16px);
   box-sizing: border-box;
@@ -4157,7 +4158,7 @@ body.admin-body {
   border: 1.5px solid #93c5fd;
   border-radius: 14px;
   box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.28), 0 4px 10px -2px rgba(15, 23, 42, 0.12);
-  padding: 7px 8px;
+  padding: 6px 7px;
   display: flex;
   flex-direction: column;
   font-family: inherit;
@@ -4176,6 +4177,9 @@ body.admin-body {
 .map-route-hud-header:active {
   cursor: grabbing;
 }
+.map-route-hud.is-minimized {
+  height: auto;
+}
 .map-route-hud-controls {
   display: flex;
   align-items: center;
@@ -4183,8 +4187,8 @@ body.admin-body {
   flex: 0 0 auto;
 }
 .map-route-hud-minimize {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   display: grid;
   place-items: center;
   border: 0;
@@ -4206,7 +4210,7 @@ body.dark-mode.admin-body .map-route-hud-minimize {
 .map-route-hud-content {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 4px;
   min-height: 0;
 }
 .map-route-hud-content[hidden] {
@@ -4220,7 +4224,7 @@ body.dark-mode.admin-body .map-route-hud-minimize {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 800;
   color: #1e3a8a;
 }
@@ -4231,8 +4235,8 @@ body.dark-mode.admin-body .map-route-hud-minimize {
   font-size: 1.1rem;
   line-height: 1;
   cursor: pointer;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -4245,18 +4249,18 @@ body.dark-mode.admin-body .map-route-hud-minimize {
 .map-route-hud-endpoints {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 0.72rem;
+  gap: 2px;
+  font-size: 0.68rem;
   color: #334155;
   background: #f8fafc;
-  padding: 5px 7px;
+  padding: 4px 6px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
 }
 .map-route-hud-point {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4268,8 +4272,8 @@ body.dark-mode.admin-body .map-route-hud-minimize {
   background: #eff6ff;
   border: 1px solid #bfdbfe;
   border-radius: 8px;
-  padding: 5px 6px;
-  font-size: 0.7rem;
+  padding: 4px 5px;
+  font-size: 0.66rem;
   color: #1d4ed8;
 }
 .map-route-hud-stat {
@@ -4280,7 +4284,7 @@ body.dark-mode.admin-body .map-route-hud-minimize {
 }
 .map-route-hud-actions {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 .map-route-hud-btn {
   flex: 1;
@@ -4288,10 +4292,10 @@ body.dark-mode.admin-body .map-route-hud-minimize {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-height: 30px;
-  padding: 3px 5px;
+  min-height: 28px;
+  padding: 2px 4px;
   border-radius: 6px;
-  font-size: 0.65rem;
+  font-size: 0.64rem;
   font-weight: 750;
   text-decoration: none;
   cursor: pointer;

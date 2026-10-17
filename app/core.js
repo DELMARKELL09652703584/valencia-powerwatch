@@ -384,6 +384,7 @@ function setupRouteGuideFloating(hud, map) {
     minimizeButton.title = expanded ? 'Expand route guide' : 'Minimize route guide';
     minimizeButton.textContent = expanded ? '+' : '−';
     content.hidden = expanded;
+    hud.classList.toggle('is-minimized', expanded);
     const rect = hud.getBoundingClientRect();
     place(rect.left, rect.top);
   });
