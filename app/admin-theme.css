@@ -346,6 +346,10 @@ body.dark-mode.admin-body .login-page .login-panel .login-content h1 {
   color: var(--admin-ink, #142c43);
 }
 
+body.admin-body .admin-dashboard-page > [data-report-distribution] {
+  order: 7;
+}
+
 .report-distribution-header,
 .report-distribution-card > header {
   display: flex;
