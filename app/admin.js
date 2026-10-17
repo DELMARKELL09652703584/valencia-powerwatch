@@ -515,17 +515,20 @@ async function renderAdminDashboard() {
 
   const resolvedCount = Number(stats.resolved || 0) + Number(stats.restored || 0);
   state.activeIncidentsCount = Number(stats.ongoing || stats.active_incidents || 0);
+  const deployedUnits = Number(stats.active_dispatches || 0);
+  const availableCrews = Number(stats.available_crews || 0);
+  const totalCrews = Number(stats.total_crews || 0);
 
   const cards = [
     { label: 'Citizen Reports', value: stats.reports_total, tag: 'INTAKE', sub: `${stats.reports_verified || 0} Verified · ${stats.reports_pending || 0} Pending`, tone: 'blue', page: 'reports', icon: '📋' },
     { label: 'Pending Triage', value: Number(stats.reports_pending || 0) + Number(stats.reports_under_review || 0), tag: 'TRIAGE', sub: 'Requires inspection', tone: 'amber', page: 'verification', icon: '⏳' },
     { label: 'Active Outages', value: state.activeIncidentsCount, tag: 'OUTAGE', sub: `${stats.affected_customers || 0} Affected Accounts`, tone: 'red', page: 'outage-monitoring', icon: '⚡' },
-    { label: 'Field Repair Units', value: stats.active_dispatches || 0, tag: 'DISPATCH', sub: `${stats.available_crews || 0}/${stats.total_crews || 4} Crews Ready`, tone: 'emerald', page: 'dispatch', icon: '🚛' },
+    { label: 'Deployed Repair Units', value: deployedUnits, tag: 'DISPATCH', sub: `${availableCrews} available of ${totalCrews} crews`, tone: 'emerald', page: 'dispatch', icon: '🚛' },
     { label: 'Scheduled Work', value: stats.scheduled || 0, tag: 'PREVENTIVE', sub: 'Planned Feeder Windows', tone: 'violet', page: 'scheduled', icon: '🗓️' },
     { label: 'Grid Restored', value: resolvedCount, tag: 'RESTORED', sub: `Avg ETR: ${stats.avg_duration_hours ? stats.avg_duration_hours + 'h' : 'Optimal'}`, tone: 'teal', page: 'history', icon: '✅' },
   ];
 
-  const nowPst = new Intl.DateTimeFormat('en-PH', {
+  const nowPhilippineTime = new Intl.DateTimeFormat('en-PH', {
     timeZone: 'Asia/Manila',
     weekday: 'short',
     month: 'short',
@@ -540,12 +543,12 @@ async function renderAdminDashboard() {
       <div class="command-header-main">
         <div class="command-badge-row">
           <span class="command-badge"><span class="command-badge-dot"></span> CITY POWER OPERATIONS</span>
-          <span class="command-timestamp">🕒 ${nowPst} PST (UTC+8)</span>
+          <span class="command-timestamp">🕒 ${nowPhilippineTime} Philippine Time (UTC+8)</span>
         </div>
         <h2>Valencia Smart Grid Operations</h2>
         <div class="command-telemetry-status">
           ${state.activeIncidentsCount > 0
-            ? `<span class="telemetry-pill alert"><span class="pulse-dot red"></span> <strong>${state.activeIncidentsCount} Grid Outages Active</strong> · ${stats.active_dispatches || 0} Response Units Deployed</span>`
+            ? `<span class="telemetry-pill alert"><span class="pulse-dot red"></span> <strong>${state.activeIncidentsCount} Grid Outages Active</strong> · ${deployedUnits} Response Units Deployed</span>`
             : `<span class="telemetry-pill normal"><span class="pulse-dot green"></span> <strong>No active incidents recorded</strong> · Status reflects PowerWatch records, not live grid telemetry</span>`}
         </div>
       </div>

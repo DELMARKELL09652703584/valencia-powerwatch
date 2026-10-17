@@ -65,7 +65,9 @@ before(async () => {
     const teamId = Number(db.prepare("INSERT INTO repair_teams (team_code, name, lead_technician, created_at) VALUES ('TEAM-TEST', 'Test team', 'Test lead', ?)").run(timestamp(now)).lastInsertRowid);
     const dispatched = new Date(now.getTime() - 4 * 3600000);
     const arrived = new Date(now.getTime() - 2 * 3600000);
-    db.prepare("INSERT INTO repair_assignments (assignment_code, team_id, assigned_by, status, target_barangay, dispatched_at, arrived_at, updated_at) VALUES ('ASG-TEST', ?, ?, 'Arrived On Site', 'Poblacion', ?, ?, ?)").run(teamId, adminId, timestamp(dispatched), timestamp(arrived), timestamp(arrived));
+    const insertAssignment = db.prepare("INSERT INTO repair_assignments (assignment_code, team_id, assigned_by, status, target_barangay, dispatched_at, arrived_at, updated_at) VALUES (?, ?, ?, ?, 'Poblacion', ?, ?, ?)");
+    insertAssignment.run('ASG-TEST', teamId, adminId, 'Arrived On Site', timestamp(dispatched), timestamp(arrived), timestamp(arrived));
+    insertAssignment.run('ASG-COMPLETED-TEST', teamId, adminId, 'Completed', timestamp(dispatched), null, timestamp(arrived));
     console.log(JSON.stringify({ adminId, residentId }));
     db.close();
   `;
@@ -136,4 +138,11 @@ test('insights are authenticated, barangay-scoped for residents, and explain the
   assert.deepEqual(admin.scope, { type: 'city', name: 'Valencia City' });
   assert.equal(admin.current.unexpected_incidents, 3);
   assert.ok(admin.hotspots.some((item) => item.barangay === 'Banlag'));
+
+  const dashboardResponse = await fetch(`${baseUrl}/api/analytics/dashboard`, { headers: { cookie: adminCookie } });
+  assert.equal(dashboardResponse.status, 200);
+  const { stats } = await dashboardResponse.json();
+  assert.equal(stats.active_dispatches, 1);
+  assert.equal(stats.available_crews, 1);
+  assert.equal(stats.total_crews, 1);
 });

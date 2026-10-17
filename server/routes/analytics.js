@@ -261,7 +261,10 @@ router.get('/dashboard', requireAuth, (req, res) => {
     .filter((v) => v !== null);
   const avgDuration = avgDur.length ? Math.round(avgDur.reduce((a, b) => a + b, 0) / avgDur.length * 10) / 10 : null;
 
-  const activeDispatches = Number(db.prepare("SELECT COUNT(*) AS c FROM repair_assignments WHERE status NOT IN ('Resolved', 'Cancelled')").get()?.c || 0);
+  const activeDispatches = Number(db.prepare(`
+    SELECT COUNT(*) AS c FROM repair_assignments
+    WHERE status IN ('Dispatched', 'En Route', 'Arrived On Site', 'In Progress')
+  `).get()?.c || 0);
   const availableCrews = Number(db.prepare("SELECT COUNT(*) AS c FROM repair_teams WHERE status = 'Available'").get()?.c || 0);
   const totalCrews = Number(db.prepare("SELECT COUNT(*) AS c FROM repair_teams").get()?.c || 0);
   const affectedCustomers = Number(db.prepare("SELECT COALESCE(SUM(customers_affected), 0) AS c FROM outage_incidents WHERE status NOT IN ('Closed', 'Restored', 'Resolved')").get()?.c || 0);
