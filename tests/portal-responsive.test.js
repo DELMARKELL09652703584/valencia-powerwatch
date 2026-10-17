@@ -84,6 +84,15 @@ test('route guide card is compact while keeping actions easy to tap', () => {
   assert.match(styles, /\.map-route-hud-btn\s*\{[^}]*min-height:\s*30px;[^}]*font-size:\s*0\.65rem;/s);
 });
 
+test('Admin map removes the top barangay finder and keeps sidebar map focus', () => {
+  const adminScript = fs.readFileSync(path.join(ROOT, 'app', 'admin.js'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+
+  assert.doesNotMatch(adminScript, /Find a barangay|data-map-focus|power-map-focus/);
+  assert.match(adminScript, /id="map-fly-select"/);
+  assert.match(adminPage, /\/app\/admin\.js\?v=31/);
+});
+
 test('dispatch eligibility offers a direct path to staff access settings', () => {
   const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
 

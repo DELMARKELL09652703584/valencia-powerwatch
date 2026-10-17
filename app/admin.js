@@ -1702,7 +1702,6 @@ async function renderAdminMap() {
           <button type="button" class="map-control-cyber ${state.adminCyberMode ? 'active' : ''}" data-action="toggle-admin-cyber" aria-label="Toggle Cyber 2030 Dark Matrix" title="Cyber 2030 Dark Mode">🌌</button>
           <button type="button" class="map-control-feeders ${state.adminFeedersMode !== false ? 'active' : ''}" data-action="toggle-admin-feeders" aria-label="Toggle Smart Grid Feeder Lines" title="Toggle 13.2kV Distribution Feeders">⚡</button>
         </div>
-        <label class="power-map-focus"><span>⌖</span><select data-map-focus aria-label="Focus map on a barangay"><option value="">Find a barangay</option>${barangays.map((item) => `<option value="${escapeHtml(item.name)}">${escapeHtml(item.name)}</option>`).join('')}</select></label>
       </div>
       <aside class="power-map-sidebar">
         <section class="power-map-panel">
@@ -1992,11 +1991,6 @@ async function renderAdminMap() {
     if (layers.rivers) { map.removeLayer(satelliteTiles); streetTiles.addTo(map); }
     else { map.removeLayer(streetTiles); satelliteTiles.addTo(map); }
     saveLayerPreference();
-  });
-  document.querySelector('[data-map-focus]')?.addEventListener('change', (event) => {
-    const barangay = barangays.find((item) => item.name === event.currentTarget.value);
-    if (barangay && hasCoordinates(barangay)) map.flyTo([Number(barangay.latitude), Number(barangay.longitude)], 15, { duration: .6 });
-    else if (barangay) setToast(`Map coordinates are not set for ${barangay.name}.`);
   });
   document.querySelector('[data-map-home]')?.addEventListener('click', () => map.flyTo(mapCenter, Number(mapSettings.zoom) || 12, { duration: .6 }));
   document.querySelector('[data-map-geolocate]')?.addEventListener('click', () => {
