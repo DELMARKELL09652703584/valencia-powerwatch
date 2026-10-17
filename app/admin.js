@@ -605,7 +605,7 @@ function renderReportDistribution(data) {
           <svg class="report-status-pie" viewBox="0 0 240 240" role="img" aria-label="Donut chart of ${total} reports by status">${slices}
             <circle class="report-status-hole" cx="120" cy="120" r="58"></circle>
             <text class="report-status-center-count" x="120" y="117" text-anchor="middle" data-report-center-count>${leadingCount.toLocaleString()}</text>
-            <text class="report-status-center-label" x="120" y="138" text-anchor="middle" textLength="96" lengthAdjust="spacingAndGlyphs" data-report-center-label>${escapeHtml(leadingLabel)}</text>
+            <text class="report-status-center-label" x="120" y="138" text-anchor="middle" data-report-center-label>${escapeHtml(leadingLabel)}</text>
           </svg>
           <div class="report-status-legend" aria-label="Report status legend">${legend}</div>
         </div><p class="report-status-detail" data-report-status-detail aria-live="polite">${escapeHtml(leadingLabel)}: ${leadingCount.toLocaleString()} reports (${leadingPercentage})</p>${zeroStatusList}`
