@@ -511,15 +511,8 @@ function statCards(stats) {
 
 async function renderAdminDashboard() {
   adminShell(loadingState('Connecting to Valencia Smart Grid Command Center…'));
-  const [{ stats }, monthly, teamRes, insightsRes] = await Promise.all([
-    api('/api/analytics/dashboard'),
-    api('/api/analytics/monthly'),
-    api('/api/repair-teams'),
-    api('/api/analytics/insights'),
-  ]);
+  const { stats } = await api('/api/analytics/dashboard');
 
-  const teams = teamRes.teams || [];
-  const insights = insightsRes;
   const resolvedCount = Number(stats.resolved || 0) + Number(stats.restored || 0);
   state.activeIncidentsCount = Number(stats.ongoing || stats.active_incidents || 0);
 
@@ -531,42 +524,6 @@ async function renderAdminDashboard() {
     { label: 'Scheduled Work', value: stats.scheduled || 0, tag: 'PREVENTIVE', sub: 'Planned Feeder Windows', tone: 'violet', page: 'scheduled', icon: '🗓️' },
     { label: 'Grid Restored', value: resolvedCount, tag: 'RESTORED', sub: `Avg ETR: ${stats.avg_duration_hours ? stats.avg_duration_hours + 'h' : 'Optimal'}`, tone: 'teal', page: 'history', icon: '✅' },
   ];
-
-  const monthlyRows = (monthly.data || []).slice(-12);
-  const trendCopy = insights.trend.direction === 'up'
-    ? `${insights.current.unexpected_incidents} confirmed unexpected incidents in the last 90 days, up ${insights.trend.change_percent}% from the previous 90 days.`
-    : insights.trend.direction === 'down'
-      ? `${insights.current.unexpected_incidents} confirmed unexpected incidents in the last 90 days, down ${Math.abs(insights.trend.change_percent)}% from the previous 90 days.`
-      : insights.trend.direction === 'new_activity'
-        ? `${insights.current.unexpected_incidents} confirmed unexpected incidents in the last 90 days; none were recorded in the previous comparison period.`
-        : `${insights.current.unexpected_incidents} confirmed unexpected incidents in the last 90 days, unchanged from the previous 90 days.`;
-  const forecastCopy = insights.projection.status === 'available'
-    ? `Baseline estimate: about ${insights.projection.next_month_unexpected_incidents} confirmed unexpected incidents next month, calculated as the six-month average (${insights.projection.sample_incidents} incidents across ${insights.projection.sample_months} active months). It is not a scheduled outage or certainty.`
-    : `Forecast withheld: the six complete months contain ${insights.projection.sample_incidents} confirmed unexpected incidents across ${insights.projection.sample_months} active months. At least 12 incidents across 3 months are required.`;
-  const medianHours = (value) => value === null ? 'No data' : `${value}h`;
-  const trendMaximum = Math.max(1, ...monthlyRows.flatMap((row) => [Number(row.scheduled) || 0, Number(row.unexpected) || 0]));
-  const chartX = (index) => monthlyRows.length < 2 ? 300 : 34 + (index / (monthlyRows.length - 1)) * 532;
-  const chartY = (value) => 205 - ((Number(value) || 0) / trendMaximum) * 170;
-  const scheduledPoints = monthlyRows.map((row, index) => `${chartX(index)},${chartY(row.scheduled)}`).join(' ');
-  const unexpectedPoints = monthlyRows.map((row, index) => `${chartX(index)},${chartY(row.unexpected)}`).join(' ');
-  const trendChart = monthlyRows.length ? `<div class="dashboard-trend-legend">
-      <span><i class="scheduled-key"></i>Scheduled Maintenance</span>
-      <span><i class="unexpected-key"></i>Unexpected Faults</span>
-    </div>
-    <svg class="dashboard-trend-svg" viewBox="0 0 600 250" role="img" aria-label="Monthly scheduled and unexpected outage trend">
-      ${[0, 1, 2, 3, 4].map((index) => {
-        const y = 205 - index * 42.5;
-        const value = Math.round(trendMaximum * index / 4);
-        return `<line x1="32" y1="${y}" x2="570" y2="${y}" class="trend-grid-line"></line><text x="25" y="${y + 4}" text-anchor="end" class="trend-axis-label">${value}</text>`;
-      }).join('')}
-      ${scheduledPoints ? `<polyline points="${scheduledPoints}" class="trend-line scheduled"></polyline>` : ''}
-      ${unexpectedPoints ? `<polyline points="${unexpectedPoints}" class="trend-line unexpected"></polyline>` : ''}
-      ${monthlyRows.map((row, index) => `
-        <circle cx="${chartX(index)}" cy="${chartY(row.scheduled)}" r="4.5" class="trend-point scheduled"></circle>
-        <circle cx="${chartX(index)}" cy="${chartY(row.unexpected)}" r="4.5" class="trend-point unexpected"></circle>
-        <text x="${chartX(index)}" y="236" text-anchor="middle" class="trend-month-label">${escapeHtml(String(row.month).split(' ')[0])}</text>
-      `).join('')}
-    </svg>` : emptyState('No monthly outage trend', 'Outage trend appears when incidents have a start date.', '📈');
 
   const nowPst = new Intl.DateTimeFormat('en-PH', {
     timeZone: 'Asia/Manila',
@@ -620,72 +577,6 @@ async function renderAdminDashboard() {
           <span class="scada-card-sub">${escapeHtml(card.sub)}</span>
         </button>
       `).join('')}
-    </div>
-
-    <section class="bi-insights-panel admin-bi-panel" aria-labelledby="admin-bi-title">
-      <header class="bi-insights-header">
-        <div><span class="bi-eyebrow">EXPLAINABLE BUSINESS INTELLIGENCE · ${escapeHtml(insights.scope.name)}</span><h2 id="admin-bi-title">Operational trends &amp; response insights</h2></div>
-        <span class="bi-period">90-day comparison</span>
-      </header>
-      <p class="bi-insight-summary">${escapeHtml(trendCopy)}</p>
-      <div class="bi-insight-grid">
-        <article><span>Unexpected incidents</span><strong>${insights.current.unexpected_incidents}</strong><small>Previous 90 days: ${insights.previous.unexpected_incidents}</small></article>
-        <article><span>Leading current hotspot</span><strong>${escapeHtml(insights.hotspots[0]?.barangay || 'No incidents')}</strong><small>${insights.hotspots[0] ? `${insights.hotspots[0].incidents} unexpected incidents in 90 days` : 'No mapped incident history for this period'}</small></article>
-        <article><span>Median dispatch → arrival</span><strong>${escapeHtml(medianHours(insights.current.median_dispatch_response_hours))}</strong><small>${insights.current.response_sample_size} completed arrival records</small></article>
-        <article><span>Median restoration time</span><strong>${escapeHtml(medianHours(insights.current.median_restoration_hours))}</strong><small>${insights.current.restoration_sample_size} completed restoration records</small></article>
-      </div>
-      <p class="bi-projection ${insights.projection.status === 'available' ? 'available' : 'limited'}">${escapeHtml(forecastCopy)}</p>
-      <small class="bi-data-note">Source: recorded system incidents, open resident reports, and repair assignments. Comparison uses the prior 90 days; medians use completed cases. Estimates are descriptive, not official outage advisories.</small>
-    </section>
-
-    <div class="dashboard-visual-grid scada-visual-grid">
-      <section class="dashboard-visual-panel dashboard-trend-panel">
-        <header>
-          <div>
-            <h3>📈 Monthly Outage Trends</h3>
-            <span style="font-size:0.75rem;color:var(--admin-muted);">Scheduled maintenance vs unexpected faults</span>
-          </div>
-          <button type="button" class="link-button" data-page="analytics" style="font-size:0.78rem;">Analytics &rarr;</button>
-        </header>
-        ${trendChart}
-      </section>
-
-      <!-- PANEL 4: Emergency Response Fleet Status -->
-      <section class="dashboard-visual-panel fleet-status-panel">
-        <header>
-          <div>
-            <h3>🚒 Repair Team Readiness</h3>
-            <span style="font-size:0.75rem;color:var(--admin-muted);">${teams.length} Valencia City utility units</span>
-          </div>
-          <button type="button" class="link-button" data-page="dispatch" style="font-size:0.78rem;font-weight:700;">
-            Manage Fleet &rarr;
-          </button>
-        </header>
-        <div class="fleet-units-list" style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
-          ${teams.length ? teams.map((t) => {
-            const isAvail = t.status === 'Available';
-            const statusColor = isAvail ? '#10b981' : t.status === 'Dispatched' ? '#0284c7' : '#f59e0b';
-            return `
-              <div class="fleet-unit-card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--admin-line);border-radius:10px;background:rgba(255,255,255,0.7);">
-                <div style="display:flex;align-items:center;gap:10px;">
-                  <div style="width:34px;height:34px;border-radius:9px;background:${isAvail ? '#ecfdf5' : '#f0f9ff'};border:1px solid ${isAvail ? '#a7f3d0' : '#bae6fd'};display:grid;place-items:center;font-size:16px;">🚒</div>
-                  <div>
-                    <strong style="font-size:0.86rem;display:block;color:var(--admin-ink);">${escapeHtml(t.name)}</strong>
-                    <span style="font-size:0.74rem;color:#64748b;">${escapeHtml(t.vehicle_type)} · Lead: ${escapeHtml(t.lead_technician)}</span>
-                  </div>
-                </div>
-                <div style="text-align:right;">
-                  <span style="display:inline-flex;align-items:center;gap:5px;font-size:0.74rem;font-weight:700;color:${statusColor};background:${isAvail ? '#ecfdf5' : '#eff6ff'};padding:3px 8px;border-radius:6px;border:1px solid ${isAvail ? '#a7f3d0' : '#bfdbfe'};">
-                    <span style="width:6px;height:6px;border-radius:50%;background:${statusColor};"></span>
-                    ${escapeHtml(t.status)}
-                  </span>
-                  <div style="font-size:0.7rem;color:#94a3b8;margin-top:2px;">${escapeHtml(t.base_station?.split(',')[0] || 'Base')}</div>
-                </div>
-              </div>
-            `;
-          }).join('') : '<p class="muted small">No repair crews registered in database.</p>'}
-        </div>
-      </section>
     </div>
 
   </section>`);
