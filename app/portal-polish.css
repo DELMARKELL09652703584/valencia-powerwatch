@@ -1877,7 +1877,6 @@ body.dark-mode.admin-body .dashboard-stat-card.scada-card {
 
 body.admin-body .dashboard-stat-card.scada-card:hover {
   border-color: rgba(34, 211, 238, .55);
-  background: #12223a !important;
 }
 
 
