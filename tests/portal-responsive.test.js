@@ -71,9 +71,10 @@ test('route guide is draggable, viewport-bounded, collapsible, and remembers its
   assert.match(coreScript, /clampRouteGuidePosition/);
   assert.match(coreScript, /data-route-guide-minimize/);
   assert.match(coreScript, /data-action="sim-crew-dispatch"/);
+  assert.match(coreScript, /<span>🚀 Tracker<\/span>/);
   assert.match(coreScript, /data-action="clear-route-guide"/);
-  assert.match(adminPage, /\/app\/core\.js\?v=22/);
-  assert.match(communityPage, /\/app\/core\.js\?v=22/);
+  assert.match(adminPage, /\/app\/core\.js\?v=23/);
+  assert.match(communityPage, /\/app\/core\.js\?v=23/);
 });
 
 test('route guide card is compact while keeping actions easy to tap', () => {
