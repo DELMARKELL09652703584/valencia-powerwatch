@@ -76,6 +76,13 @@ test('route guide is draggable, viewport-bounded, collapsible, and remembers its
   assert.match(communityPage, /\/app\/core\.js\?v=22/);
 });
 
+test('route guide card is compact while keeping actions easy to tap', () => {
+  const styles = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
+
+  assert.match(styles, /\.map-route-hud\s*\{[^}]*width:\s*min\(380px,\s*calc\(100vw - 16px\)\);[^}]*padding:\s*9px 11px;/s);
+  assert.match(styles, /\.map-route-hud-btn\s*\{[^}]*min-height:\s*38px;[^}]*font-size:\s*0\.76rem;/s);
+});
+
 test('dispatch eligibility offers a direct path to staff access settings', () => {
   const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
 

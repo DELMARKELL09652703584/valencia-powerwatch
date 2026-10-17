@@ -4148,7 +4148,7 @@ body.admin-body {
   position: fixed;
   top: 8px;
   left: 8px;
-  width: min(440px, calc(100vw - 16px));
+  width: min(380px, calc(100vw - 16px));
   max-height: calc(100vh - 16px);
   max-height: calc(100dvh - 16px);
   box-sizing: border-box;
@@ -4159,7 +4159,7 @@ body.admin-body {
   border: 1.5px solid #93c5fd;
   border-radius: 14px;
   box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.28), 0 4px 10px -2px rgba(15, 23, 42, 0.12);
-  padding: 12px 14px;
+  padding: 9px 11px;
   display: flex;
   flex-direction: column;
   font-family: inherit;
@@ -4208,7 +4208,7 @@ body.dark-mode.admin-body .map-route-hud-minimize {
 .map-route-hud-content {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 7px;
   min-height: 0;
 }
 .map-route-hud-content[hidden] {
@@ -4251,7 +4251,7 @@ body.dark-mode.admin-body .map-route-hud-minimize {
   font-size: 0.78rem;
   color: #334155;
   background: #f8fafc;
-  padding: 8px 10px;
+  padding: 6px 8px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
 }
@@ -4270,8 +4270,8 @@ body.dark-mode.admin-body .map-route-hud-minimize {
   background: #eff6ff;
   border: 1px solid #bfdbfe;
   border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 0.82rem;
+  padding: 6px 8px;
+  font-size: 0.76rem;
   color: #1d4ed8;
 }
 .map-route-hud-stat {
@@ -4290,9 +4290,10 @@ body.dark-mode.admin-body .map-route-hud-minimize {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px 12px;
+  min-height: 38px;
+  padding: 7px 10px;
   border-radius: 8px;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 750;
   text-decoration: none;
   cursor: pointer;

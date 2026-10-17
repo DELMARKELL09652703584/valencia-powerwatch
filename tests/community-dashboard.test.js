@@ -20,7 +20,7 @@ test('community dashboard keeps personal notifications out of the home feed', ()
   assert.match(communityPage, /\/app\/community\.js\?v=34/);
   assert.match(communityPage, /\/app\/main\.js\?v=37/);
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=68/);
-  assert.match(communityPage, /\/style\.css\?v=40/);
+  assert.match(communityPage, /\/style\.css\?v=41/);
   assert.match(portalStyles, /body\.community-body \.home-report-action\s*\{/);
   assert.match(portalStyles, /body\.community-body \.home-track-action svg\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;[^}]*fill:\s*none;/s);
   assert.match(portalStyles, /@media \(max-width: 600px\)\s*\{\s*body\.community-body \.mobile-home-header\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
@@ -140,7 +140,7 @@ test('report details activity, ETR, and feedback remain readable in Night Ops mo
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-report-timeline\s*\{[^}]*background:\s*var\(--pw-panel\);/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-etr-badge\.is-restored\s*\{[^}]*background:\s*#0d302b;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.report-feedback-question,\s*body\.dark-mode\.community-body \.report-feedback-rating-label\s*\{[^}]*color:\s*var\(--pw-text\);/s);
-  assert.match(communityPage, /\/style\.css\?v=40/);
+  assert.match(communityPage, /\/style\.css\?v=41/);
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=68/);
 });
 
@@ -294,7 +294,7 @@ test('User Portal PWA is distinct from Staff and preserves its own cache during 
   assert.ok(manifest.icons.every((icon) => !icon.src.includes('powerwatch-field-icon')));
   assert.ok(staffManifest.icons.every((icon) => icon.src.includes('powerwatch-field-icon')));
   assert.match(communityPage, /href="\/manifest\.json"/);
-  assert.match(communityPage, /\/style\.css\?v=40/);
+  assert.match(communityPage, /\/style\.css\?v=41/);
   assert.match(staffPage, /href="\/staff-manifest\.json"/);
   assert.match(staffPage, /rel="icon" type="image\/png" sizes="192x192" href="\/assets\/powerwatch-field-icon-192\.png"/);
   assert.match(staffPage, /rel="apple-touch-icon" sizes="180x180" href="\/assets\/powerwatch-field-icon-180\.png"/);
