@@ -301,6 +301,100 @@ async function fetchRouteWaypoints(startLat, startLng, destLat, destLng) {
 }
 
 let activeRouteGuideLayer = null;
+const ROUTE_GUIDE_POSITION_KEY = 'powerwatch-route-guide-position';
+
+function clampRouteGuidePosition(left, top, hud) {
+  return {
+    left: Math.max(8, Math.min(left, window.innerWidth - hud.offsetWidth - 8)),
+    top: Math.max(8, Math.min(top, window.innerHeight - hud.offsetHeight - 8))
+  };
+}
+
+function setupRouteGuideFloating(hud, map) {
+  const savedPosition = (() => {
+    try {
+      return JSON.parse(localStorage.getItem(ROUTE_GUIDE_POSITION_KEY));
+    } catch {
+      return null;
+    }
+  })();
+  const mapRect = map.getContainer().getBoundingClientRect();
+  const maxLeft = Math.max(8, window.innerWidth - hud.offsetWidth - 8);
+  const maxTop = Math.max(8, window.innerHeight - hud.offsetHeight - 8);
+  const left = Number.isFinite(savedPosition?.x)
+    ? savedPosition.x * maxLeft
+    : mapRect.left + (mapRect.width - hud.offsetWidth) / 2;
+  const top = Number.isFinite(savedPosition?.y)
+    ? savedPosition.y * maxTop
+    : mapRect.top + 10;
+  const place = (x, y) => {
+    const position = clampRouteGuidePosition(x, y, hud);
+    hud.style.left = `${position.left}px`;
+    hud.style.top = `${position.top}px`;
+  };
+  place(left, top);
+
+  const header = hud.querySelector('.map-route-hud-header');
+  let drag = null;
+  hud.addEventListener('pointerdown', (event) => event.stopPropagation());
+  header.addEventListener('pointerdown', (event) => {
+    if (!event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0) ||
+        event.target.closest('button')) return;
+    const rect = hud.getBoundingClientRect();
+    drag = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, left: rect.left, top: rect.top };
+    header.setPointerCapture(event.pointerId);
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  header.addEventListener('pointermove', (event) => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    place(drag.left + event.clientX - drag.startX, drag.top + event.clientY - drag.startY);
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  const finishDragging = (event) => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const rect = hud.getBoundingClientRect();
+    const maxX = Math.max(8, window.innerWidth - hud.offsetWidth - 8);
+    const maxY = Math.max(8, window.innerHeight - hud.offsetHeight - 8);
+    try {
+      localStorage.setItem(ROUTE_GUIDE_POSITION_KEY, JSON.stringify({
+        x: Math.min(1, Math.max(0, rect.left / maxX)),
+        y: Math.min(1, Math.max(0, rect.top / maxY))
+      }));
+    } catch {
+      // The guide remains draggable when browser storage is unavailable.
+    }
+    drag = null;
+    event.stopPropagation();
+  };
+  header.addEventListener('pointerup', finishDragging);
+  header.addEventListener('pointercancel', (event) => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    drag = null;
+    event.stopPropagation();
+  });
+
+  const minimizeButton = hud.querySelector('[data-route-guide-minimize]');
+  const content = hud.querySelector('.map-route-hud-content');
+  minimizeButton.addEventListener('click', () => {
+    const expanded = minimizeButton.getAttribute('aria-expanded') === 'true';
+    minimizeButton.setAttribute('aria-expanded', String(!expanded));
+    minimizeButton.setAttribute('aria-label', expanded ? 'Expand route guide' : 'Minimize route guide');
+    minimizeButton.title = expanded ? 'Expand route guide' : 'Minimize route guide';
+    minimizeButton.textContent = expanded ? '+' : '−';
+    content.hidden = expanded;
+    const rect = hud.getBoundingClientRect();
+    place(rect.left, rect.top);
+  });
+
+  const handleResize = () => {
+    const rect = hud.getBoundingClientRect();
+    place(rect.left, rect.top);
+  };
+  window.addEventListener('resize', handleResize);
+  hud.routeGuideCleanup = () => window.removeEventListener('resize', handleResize);
+}
 
 async function renderRouteGuideOnMap({
   map,
@@ -371,7 +465,9 @@ async function renderRouteGuideOnMap({
   // Floating Navigation HUD
   const targetContainer = container || map.getContainer()?.parentElement;
   if (targetContainer) {
-    targetContainer.querySelector('.map-route-hud')?.remove();
+    const previousHud = document.querySelector('.map-route-hud');
+    previousHud?.routeGuideCleanup?.();
+    previousHud?.remove();
     const hud = document.createElement('aside');
     hud.className = 'map-route-hud';
     hud.setAttribute('role', 'region');
@@ -382,45 +478,51 @@ async function renderRouteGuideOnMap({
           <span>🧭</span>
           <span>Navigation Route Guide</span>
         </div>
-        <button type="button" class="map-route-hud-close" data-action="clear-route-guide" title="Close and clear route" aria-label="Close route guide">✕</button>
-      </div>
-      <div class="map-route-hud-endpoints">
-        <div class="map-route-hud-point">
-          <span>🟢</span>
-          <span><strong>From:</strong> ${escapeHtml(origin.label)}</span>
-        </div>
-        <div class="map-route-hud-point">
-          <span>🔴</span>
-          <span><strong>To:</strong> ${escapeHtml(destLabel)}</span>
+        <div class="map-route-hud-controls">
+          <button type="button" class="map-route-hud-minimize" data-route-guide-minimize aria-expanded="true" aria-label="Minimize route guide" title="Minimize route guide">−</button>
+          <button type="button" class="map-route-hud-close" data-action="clear-route-guide" title="Close and clear route" aria-label="Close route guide">✕</button>
         </div>
       </div>
-      <div class="map-route-hud-details">
-        <div class="map-route-hud-stat">
-          <span>📏</span>
-          <span>${escapeHtml(routeData.distanceKm)} km</span>
+      <div class="map-route-hud-content">
+        <div class="map-route-hud-endpoints">
+          <div class="map-route-hud-point">
+            <span>🟢</span>
+            <span><strong>From:</strong> ${escapeHtml(origin.label)}</span>
+          </div>
+          <div class="map-route-hud-point">
+            <span>🔴</span>
+            <span><strong>To:</strong> ${escapeHtml(destLabel)}</span>
+          </div>
         </div>
-        <div class="map-route-hud-stat">
-          <span>⏱️</span>
-          <span>~${escapeHtml(String(routeData.durationMins))} mins drive</span>
+        <div class="map-route-hud-details">
+          <div class="map-route-hud-stat">
+            <span>📏</span>
+            <span>${escapeHtml(routeData.distanceKm)} km</span>
+          </div>
+          <div class="map-route-hud-stat">
+            <span>⏱️</span>
+            <span>~${escapeHtml(String(routeData.durationMins))} mins drive</span>
+          </div>
+          <div class="map-route-hud-stat">
+            <span>${routeData.isRealRoute ? '🛣️ Road Route' : '📍 Direct'}</span>
+          </div>
         </div>
-        <div class="map-route-hud-stat">
-          <span>${routeData.isRealRoute ? '🛣️ Road Route' : '📍 Direct'}</span>
+        <div class="map-route-hud-actions" style="flex-wrap:wrap;gap:6px;">
+          <button type="button" class="map-route-hud-btn" data-action="sim-crew-dispatch" style="background:#0284c7;color:#fff;box-shadow:0 0 10px rgba(2,132,199,0.5);flex:1 1 100%;">
+            <span>🚀 Simulate Crew Dispatch (2030 Live Tracker)</span>
+          </button>
+          <a href="https://www.google.com/maps/dir/?api=1&origin=${origin.latitude},${origin.longitude}&destination=${destLat},${destLng}&travelmode=driving"
+             target="_blank" rel="noopener noreferrer" class="map-route-hud-btn primary">
+            <span>🗺️ Google Maps</span>
+          </a>
+          <button type="button" class="map-route-hud-btn secondary" data-action="clear-route-guide">
+            <span>Clear Route</span>
+          </button>
         </div>
-      </div>
-      <div class="map-route-hud-actions" style="flex-wrap:wrap;gap:6px;">
-        <button type="button" class="map-route-hud-btn" data-action="sim-crew-dispatch" style="background:#0284c7;color:#fff;box-shadow:0 0 10px rgba(2,132,199,0.5);flex:1 1 100%;">
-          <span>🚀 Simulate Crew Dispatch (2030 Live Tracker)</span>
-        </button>
-        <a href="https://www.google.com/maps/dir/?api=1&origin=${origin.latitude},${origin.longitude}&destination=${destLat},${destLng}&travelmode=driving" 
-           target="_blank" rel="noopener noreferrer" class="map-route-hud-btn primary">
-          <span>🗺️ Google Maps</span>
-        </a>
-        <button type="button" class="map-route-hud-btn secondary" data-action="clear-route-guide">
-          <span>Clear Route</span>
-        </button>
       </div>
     `;
     targetContainer.appendChild(hud);
+    setupRouteGuideFloating(hud, map);
   }
 
   state.activeRouteWaypoints = routeData.waypoints;
@@ -434,8 +536,9 @@ function clearRouteGuideOnMap(map, container) {
     activeRouteGuideLayer = null;
   }
   stopCrewDispatchSimulation(map);
-  const targetContainer = container || map?.getContainer()?.parentElement || document;
-  targetContainer?.querySelector('.map-route-hud')?.remove();
+  const hud = document.querySelector('.map-route-hud');
+  hud?.routeGuideCleanup?.();
+  hud?.remove();
   setToast('Route guide cleared.');
 }
 

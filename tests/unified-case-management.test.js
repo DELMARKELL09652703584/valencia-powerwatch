@@ -54,5 +54,5 @@ test('Admin login does not expose seeded credentials and hides unconfigured OAut
   assert.match(mainSource, /row\.hidden = !hasAvailableProvider/);
   assert.match(mainSource, /app\.innerHTML = `<main class="login-page">[\s\S]*?syncOAuthProviderControls\(\);\s*\}/);
   assert.match(styles, /\.social-row\[hidden\],[\s\S]*?\.social-btn\[hidden\],[\s\S]*?\.auth-divider\[hidden\]\s*\{\s*display:\s*none\s*!important;/);
-  assert.match(communityHtml, /\/style\.css\?v=39/);
+  assert.match(communityHtml, /\/style\.css\?v=40/);
 });

@@ -55,6 +55,27 @@ test('Admin route guide text remains readable in dark mode', () => {
   assert.match(adminPage, /\/app\/portal-polish\.css\?v=38/);
 });
 
+test('route guide is draggable, viewport-bounded, collapsible, and remembers its position', () => {
+  const styles = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
+  const coreScript = fs.readFileSync(path.join(ROOT, 'app', 'core.js'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
+
+  assert.match(styles, /\.map-route-hud\s*\{[^}]*position:\s*fixed;[^}]*max-height:\s*calc\(100dvh - 16px\);/s);
+  assert.match(styles, /\.map-route-hud-header\s*\{[^}]*touch-action:\s*none;/s);
+  assert.match(styles, /\.map-route-hud-content\[hidden\]\s*\{\s*display:\s*none;/s);
+  assert.match(coreScript, /ROUTE_GUIDE_POSITION_KEY\s*=\s*'powerwatch-route-guide-position'/);
+  assert.match(coreScript, /header\.addEventListener\('pointerdown'/);
+  assert.match(coreScript, /header\.addEventListener\('pointermove'/);
+  assert.match(coreScript, /header\.addEventListener\('pointerup'/);
+  assert.match(coreScript, /clampRouteGuidePosition/);
+  assert.match(coreScript, /data-route-guide-minimize/);
+  assert.match(coreScript, /data-action="sim-crew-dispatch"/);
+  assert.match(coreScript, /data-action="clear-route-guide"/);
+  assert.match(adminPage, /\/app\/core\.js\?v=22/);
+  assert.match(communityPage, /\/app\/core\.js\?v=22/);
+});
+
 test('dispatch eligibility offers a direct path to staff access settings', () => {
   const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
 
