@@ -368,16 +368,22 @@ body.admin-body .admin-dashboard-page > [data-report-distribution] {
 .report-distribution-total span { margin-top: 4px; color: var(--admin-muted, #718399); font-size: .66rem; font-weight: 700; }
 .report-distribution-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(270px, .85fr); gap: 14px; }
 .report-distribution-card { min-width: 0; padding: 18px; border: 1px solid var(--admin-line, #dce5ee); border-radius: 14px; background: var(--admin-canvas, #f7f9fc); }
-.report-status-card { background: linear-gradient(145deg, #f8fbff, #f1f6fb); }
+.report-status-card { position: relative; isolation: isolate; overflow: hidden; background: radial-gradient(ellipse at 17% 47%, rgba(24, 166, 223, .11), transparent 43%), linear-gradient(145deg, #f9fcff, #edf5fa); }
+.report-status-card::before { position: absolute; z-index: -1; inset: 0; background-image: linear-gradient(rgba(34, 133, 178, .045) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 133, 178, .045) 1px, transparent 1px); background-size: 24px 24px; content: ""; mask-image: linear-gradient(110deg, #000 0%, transparent 82%); pointer-events: none; }
+.report-status-card::after { position: absolute; z-index: -1; top: 12px; right: 12px; width: 34px; height: 34px; border-top: 1px solid rgba(20, 155, 207, .35); border-right: 1px solid rgba(20, 155, 207, .35); border-radius: 0 8px 0 0; content: ""; pointer-events: none; }
 .report-type-card { display: flex; flex-direction: column; }
 .report-distribution-card > header { margin-bottom: 14px; }
 .report-distribution-card h4 { margin: 0; color: var(--admin-ink, #142c43); font-size: .92rem; }
 .report-distribution-card > header p { font-size: .7rem; }
+.report-status-chip { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid rgba(20, 120, 189, .17); border-radius: 999px; background: rgba(255, 255, 255, .66); color: #34718f; font-size: .57rem; font-weight: 800; letter-spacing: .08em; white-space: nowrap; }
+.report-status-chip i { width: 6px; height: 6px; border-radius: 50%; background: #18a6b8; box-shadow: 0 0 0 3px rgba(24, 166, 184, .13), 0 0 9px rgba(24, 166, 184, .55); animation: report-monitor-pulse 2s ease-in-out infinite; }
 .report-status-chart-layout { display: grid; grid-template-columns: minmax(170px, .65fr) minmax(200px, 1fr); align-items: center; gap: 18px; min-height: 220px; }
 .report-status-pie { display: block; width: min(100%, 224px); height: auto; margin: 0 auto; overflow: visible; filter: drop-shadow(0 8px 16px rgba(18, 44, 70, .12)); }
+.report-status-orbit { fill: none; stroke: rgba(22, 151, 197, .34); stroke-width: 1; stroke-dasharray: 2 7; transform-origin: 120px 120px; animation: report-orbit-spin 32s linear infinite; }
 .report-status-slice { stroke: var(--admin-panel, #fff); stroke-width: 2px; cursor: pointer; transform-origin: 120px 120px; animation: report-chart-appear .45s ease both; transition: filter .16s ease, transform .16s ease; }
 .report-status-slice:hover,
-.report-status-slice:focus-visible { filter: brightness(1.12); outline: none; transform: scale(1.025); }
+.report-status-slice:hover,
+.report-status-slice:focus-visible { filter: brightness(1.12) drop-shadow(0 0 7px rgba(28, 188, 230, .55)); outline: none; transform: scale(1.025); }
 .report-status-hole { fill: var(--admin-canvas, #f7f9fc); stroke: var(--admin-line, #dce5ee); stroke-width: 1px; pointer-events: none; }
 .report-status-center-count { fill: var(--admin-ink, #142c43); font-size: 1.65rem; font-weight: 850; font-variant-numeric: tabular-nums; pointer-events: none; }
 .report-status-center-label { fill: var(--admin-muted, #718399); font-size: .55rem; font-weight: 750; letter-spacing: 0; pointer-events: none; }
@@ -424,9 +430,14 @@ body.admin-body .admin-dashboard-page > [data-report-distribution] {
   to { opacity: 1; transform: scale(1); }
 }
 
+@keyframes report-orbit-spin { to { transform: rotate(360deg); } }
+@keyframes report-monitor-pulse { 50% { opacity: .55; box-shadow: 0 0 0 5px rgba(24, 166, 184, .08), 0 0 12px rgba(24, 166, 184, .72); } }
+
 body.dark-mode.admin-body .report-distribution-panel { border-color: var(--pw-line); background: var(--pw-panel); color: var(--pw-body); box-shadow: 0 10px 28px rgba(0, 0, 0, .16); }
 body.dark-mode.admin-body .report-distribution-card { border-color: var(--pw-line); background: var(--pw-bg); }
-body.dark-mode.admin-body .report-status-card { background: linear-gradient(145deg, #17283a, #121f30); }
+body.dark-mode.admin-body .report-status-card { background: radial-gradient(ellipse at 17% 47%, rgba(23, 158, 207, .13), transparent 43%), linear-gradient(145deg, #17283a, #121f30); }
+body.dark-mode.admin-body .report-status-card::before { background-image: linear-gradient(rgba(84, 177, 217, .055) 1px, transparent 1px), linear-gradient(90deg, rgba(84, 177, 217, .055) 1px, transparent 1px); }
+body.dark-mode.admin-body .report-status-card::after { border-color: rgba(58, 188, 226, .4); }
 body.dark-mode.admin-body .report-distribution-total { border-color: rgba(82, 170, 224, .22); background: linear-gradient(145deg, rgba(20, 120, 189, .2), rgba(14, 165, 233, .08)); }
 body.dark-mode.admin-body .report-distribution-header h3,
 body.dark-mode.admin-body .report-distribution-card h4,
@@ -442,6 +453,8 @@ body.dark-mode.admin-body .report-status-zero-list summary { color: var(--pw-mut
 body.dark-mode.admin-body .report-status-legend-item { border-color: var(--pw-line); background: rgba(255, 255, 255, .035); }
 body.dark-mode.admin-body .report-status-legend-item:hover,
 body.dark-mode.admin-body .report-status-legend-item:focus-visible { border-color: #416682; background: rgba(82, 170, 224, .1); }
+body.dark-mode.admin-body .report-status-chip { border-color: rgba(82, 170, 224, .24); background: rgba(24, 151, 194, .12); color: #9ad9eb; }
+body.dark-mode.admin-body .report-status-orbit { stroke: rgba(78, 202, 234, .55); filter: drop-shadow(0 0 3px rgba(47, 190, 227, .45)); }
 body.dark-mode.admin-body .report-status-detail { border-color: rgba(82, 170, 224, .18); background: rgba(82, 170, 224, .06); color: var(--pw-muted); }
 body.dark-mode.admin-body .report-type-track { background: rgba(180, 202, 222, .15); }
 body.dark-mode.admin-body .report-distribution-footer { border-color: var(--pw-line); }
@@ -473,6 +486,8 @@ body.dark-mode.admin-body .report-distribution-retry { border-color: #416682; co
 
 @media (prefers-reduced-motion: reduce) {
   body.admin-body .report-status-slice,
+  body.admin-body .report-status-orbit,
+  body.admin-body .report-status-chip i,
   body.admin-body .report-type-track span {
     animation: none;
     transition: none;

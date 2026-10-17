@@ -35,7 +35,7 @@ test('Admin login design adapts to mobile and Night Ops themes', () => {
   assert.match(styles, /@media \(max-width: 900px\)\s*\{[\s\S]*?body\.admin-body \.login-page \.login-panel\s*\{[^}]*margin-top:\s*-22px;/);
   assert.match(styles, /@media \(max-width: 600px\)\s*\{[\s\S]*?body\.admin-body \.login-page \.login-panel \.login-content\s*\{[^}]*padding:\s*27px 21px;/);
   assert.match(styles, /body\.admin-body \.login-page \.login-panel \.admin-login-options input\[type="checkbox"\]\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;[^}]*min-height:\s*18px;/s);
-  assert.match(adminPage, /\/app\/admin-theme\.css\?v=10/);
+  assert.match(adminPage, /\/app\/admin-theme\.css\?v=11/);
 });
 
 test('Admin dashboard report charts use live data and remain responsive in both themes', () => {
@@ -50,6 +50,8 @@ test('Admin dashboard report charts use live data and remain responsive in both 
   assert.match(adminScript, /Could not load report analytics/);
   assert.match(adminScript, /No outage reports yet/);
   assert.match(adminScript, /class="report-status-hole"/);
+  assert.match(adminScript, /class="report-status-orbit"/);
+  assert.match(adminScript, /class="report-status-chip"><i><\/i> LIVE MONITOR/);
   assert.match(adminScript, /data-report-center-count/);
   assert.doesNotMatch(adminScript, /report-status-center-label"[^>]*textLength=/);
   assert.match(adminScript, /const zeroStatusList = zeroStatuses\.length \? `<details class="report-status-zero-list">/);
@@ -57,16 +59,22 @@ test('Admin dashboard report charts use live data and remain responsive in both 
   assert.match(styles, /body\.admin-body \.admin-dashboard-page > \[data-report-distribution\]\s*\{\s*order:\s*7;/);
   assert.match(styles, /\.report-status-hole\s*\{[^}]*fill:\s*var\(--admin-canvas/);
   assert.match(styles, /\.report-status-pie\s*\{[^}]*width:\s*min\(100%,\s*224px\)/);
+  assert.match(styles, /\.report-status-card::before\s*\{/);
+  assert.match(styles, /\.report-status-orbit\s*\{[^}]*stroke-dasharray:\s*2 7/);
+  assert.match(styles, /@keyframes report-orbit-spin/);
+  assert.match(styles, /@keyframes report-monitor-pulse/);
   assert.match(styles, /\.report-status-legend-item\s*\{[^}]*border:\s*1px solid/);
   assert.match(styles, /\.report-type-list\s*\{[^}]*align-content:\s*center/);
   assert.match(styles, /\.report-distribution-total strong\s*\{[^}]*font-size:\s*1\.2rem/);
   assert.match(styles, /body\.dark-mode\.admin-body \.report-status-hole\s*\{[^}]*fill:\s*var\(--pw-bg\)/);
   assert.match(styles, /body\.dark-mode\.admin-body \.report-status-legend-item\s*\{/);
+  assert.match(styles, /body\.dark-mode\.admin-body \.report-status-orbit\s*\{/);
+  assert.match(styles, /body\.admin-body \.report-status-orbit,/);
   assert.match(styles, /\.report-status-zero-list summary\s*\{/);
   assert.match(styles, /@media \(max-width: 600px\)\s*\{[\s\S]*?\.report-status-chart-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
   assert.match(styles, /body\.dark-mode\.admin-body \.report-distribution-panel/);
-  assert.match(adminPage, /\/app\/admin-theme\.css\?v=10/);
-  assert.match(adminPage, /\/app\/admin\.js\?v=34/);
+  assert.match(adminPage, /\/app\/admin-theme\.css\?v=11/);
+  assert.match(adminPage, /\/app\/admin\.js\?v=35/);
 });
 
 test('home weather widget stays compact in Light Mode and Night Ops', () => {
@@ -134,7 +142,7 @@ test('Admin map removes the top barangay finder and keeps sidebar map focus', ()
 
   assert.doesNotMatch(adminScript, /Find a barangay|data-map-focus|power-map-focus/);
   assert.match(adminScript, /id="map-fly-select"/);
-  assert.match(adminPage, /\/app\/admin\.js\?v=34/);
+  assert.match(adminPage, /\/app\/admin\.js\?v=35/);
 });
 
 test('Admin notifications use readable theme-specific unread colors', () => {

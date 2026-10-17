@@ -600,9 +600,9 @@ function renderReportDistribution(data) {
     </header>
     <div class="report-distribution-grid">
       <article class="report-distribution-card report-status-card">
-        <header><div><h4>Report status</h4><p>Each report counted once by its current status.</p></div></header>
+        <header><div><h4>Report status</h4><p>Each report counted once by its current status.</p></div><span class="report-status-chip"><i></i> LIVE MONITOR</span></header>
         ${total ? `<div class="report-status-chart-layout">
-          <svg class="report-status-pie" viewBox="0 0 240 240" role="img" aria-label="Donut chart of ${total} reports by status">${slices}
+          <svg class="report-status-pie" viewBox="0 0 240 240" role="img" aria-label="Donut chart of ${total} reports by status"><circle class="report-status-orbit" cx="120" cy="120" r="112"></circle>${slices}
             <circle class="report-status-hole" cx="120" cy="120" r="58"></circle>
             <text class="report-status-center-count" x="120" y="117" text-anchor="middle" data-report-center-count>${leadingCount.toLocaleString()}</text>
             <text class="report-status-center-label" x="120" y="138" text-anchor="middle" data-report-center-label>${escapeHtml(leadingLabel)}</text>
