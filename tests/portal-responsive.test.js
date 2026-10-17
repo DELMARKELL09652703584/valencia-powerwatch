@@ -94,6 +94,17 @@ test('Admin map removes the top barangay finder and keeps sidebar map focus', ()
   assert.match(adminPage, /\/app\/admin\.js\?v=31/);
 });
 
+test('Admin notifications use readable theme-specific unread colors', () => {
+  const styles = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+
+  assert.match(styles, /body\.admin-body:not\(\.dark-mode\) \.admin-notification-panel \.notification-panel-item\.unread\s*\{[^}]*background:\s*#f1f7ff\s*!important;/s);
+  assert.match(styles, /body\.admin-body:not\(\.dark-mode\) \.admin-notification-panel \.notification-panel-open strong\s*\{[^}]*color:\s*#173859\s*!important;/s);
+  assert.match(styles, /body\.admin-body:not\(\.dark-mode\) \.admin-notification-panel \.notification-panel-open > span\s*\{[^}]*color:\s*#425b73\s*!important;/s);
+  assert.match(styles, /body\.dark-mode\.admin-body \.admin-notification-panel \.notification-panel-open strong\s*\{[^}]*color:\s*#f1f5ff\s*!important;/s);
+  assert.match(adminPage, /\/style\.css\?v=44/);
+});
+
 test('dispatch eligibility offers a direct path to staff access settings', () => {
   const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
 

@@ -501,6 +501,28 @@ body.admin-body {
 .notification-panel-read:focus-visible,
 .notification-panel-mark-all:focus-visible,
 .notification-panel-footer button:focus-visible { outline: 3px solid rgba(13, 79, 154, .3); outline-offset: 2px; }
+body.admin-body:not(.dark-mode) .admin-notification-panel .notification-panel-item.unread {
+  background: #f1f7ff !important;
+}
+body.admin-body:not(.dark-mode) .admin-notification-panel .notification-panel-open strong {
+  color: #173859 !important;
+}
+body.admin-body:not(.dark-mode) .admin-notification-panel .notification-panel-open > span {
+  color: #425b73 !important;
+}
+body.admin-body:not(.dark-mode) .admin-notification-panel .notification-panel-open time {
+  color: #64788c !important;
+}
+body.dark-mode.admin-body .admin-notification-panel .notification-panel-item.unread {
+  background: #14243a !important;
+}
+body.dark-mode.admin-body .admin-notification-panel .notification-panel-open strong {
+  color: #f1f5ff !important;
+}
+body.dark-mode.admin-body .admin-notification-panel .notification-panel-open > span,
+body.dark-mode.admin-body .admin-notification-panel .notification-panel-open time {
+  color: #c1d0e4 !important;
+}
 @media (max-width: 600px) {
   .admin-notification-panel { width: min(390px, calc(100vw - 40px)); }
 }
