@@ -35,7 +35,7 @@ test('Admin login design adapts to mobile and Night Ops themes', () => {
   assert.match(styles, /@media \(max-width: 900px\)\s*\{[\s\S]*?body\.admin-body \.login-page \.login-panel\s*\{[^}]*margin-top:\s*-22px;/);
   assert.match(styles, /@media \(max-width: 600px\)\s*\{[\s\S]*?body\.admin-body \.login-page \.login-panel \.login-content\s*\{[^}]*padding:\s*27px 21px;/);
   assert.match(styles, /body\.admin-body \.login-page \.login-panel \.admin-login-options input\[type="checkbox"\]\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;[^}]*min-height:\s*18px;/s);
-  assert.match(adminPage, /\/app\/admin-theme\.css\?v=12/);
+  assert.match(adminPage, /\/app\/admin-theme\.css\?v=13/);
 });
 
 test('Admin dashboard report charts use live data and remain responsive in both themes', () => {
@@ -76,8 +76,21 @@ test('Admin dashboard report charts use live data and remain responsive in both 
   assert.match(styles, /\.report-status-zero-list summary\s*\{/);
   assert.match(styles, /@media \(max-width: 600px\)\s*\{[\s\S]*?\.report-status-chart-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
   assert.match(styles, /body\.dark-mode\.admin-body \.report-distribution-panel/);
-  assert.match(adminPage, /\/app\/admin-theme\.css\?v=12/);
+  assert.match(adminPage, /\/app\/admin-theme\.css\?v=13/);
   assert.match(adminPage, /\/app\/admin\.js\?v=36/);
+});
+
+test('Analytics & Reports charts use matching HUD styling in both themes', () => {
+  const styles = fs.readFileSync(path.join(ROOT, 'app', 'admin-theme.css'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+
+  assert.match(styles, /\.admin-shell\.page-analytics \.analytics-chart-panel\s*\{[^}]*isolation:\s*isolate/s);
+  assert.match(styles, /\.admin-shell\.page-analytics \.analytics-bar-track i\s*\{[^}]*analytics-bar-rise/);
+  assert.match(styles, /\.admin-shell\.page-analytics \.analytics-donut::after\s*\{[^}]*analytics-donut-orbit/);
+  assert.match(styles, /body\.dark-mode\.admin-body \.admin-shell\.page-analytics \.analytics-chart-panel\s*\{/);
+  assert.match(styles, /body\.dark-mode\.admin-body \.admin-shell\.page-analytics \.analytics-donut-legend li\s*\{/);
+  assert.match(styles, /prefers-reduced-motion:\s*reduce[\s\S]*?page-analytics \.analytics-donut::after/);
+  assert.match(adminPage, /\/app\/admin-theme\.css\?v=13/);
 });
 
 test('home weather widget stays compact in Light Mode and Night Ops', () => {
