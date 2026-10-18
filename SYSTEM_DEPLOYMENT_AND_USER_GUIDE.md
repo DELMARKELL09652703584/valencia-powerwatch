@@ -28,8 +28,10 @@ Render is the official, stable online deployment:
 
 The Cloudflare Tunnel started by `start-public-online.bat` is temporary. Its link changes when the tunnel restarts; use the Render links above as the permanent public addresses.
 
-### Render free-plan data limits
-This service is configured for Render's Free plan to avoid monthly charges. Free instances do not support persistent disks, and their filesystem is ephemeral. SQLite accounts, outage records, and uploaded evidence can therefore be lost when Render restarts or redeploys the service. The app's startup migration can seed a new data directory from the bundled `data/powerwatch.db`, but that is not a backup of live changes and cannot recover data already lost from an earlier instance. If persistent account and report storage becomes essential, a paid plan with a persistent disk will be required; otherwise, continue with the Free plan knowing this limitation.
+### Persistent Render data
+The Render service uses a paid Starter instance and a 1 GB persistent disk mounted at `/var/data`. SQLite accounts, sessions, reports, and uploaded files are stored on that disk across restarts and deployments. `POWERWATCH_DATA_DIR` and `POWERWATCH_UPLOAD_DIR` point the application at the mounted disk. On first startup with an empty disk, `POWERWATCH_MIGRATE_LOCAL_DB=true` seeds the database from the bundled `data/powerwatch.db`.
+
+Before changing an existing Free service to this configuration, export and securely back up its current SQLite database from the Render service. Free-instance files are ephemeral, and the bundled database is only the repository snapshot; startup migration cannot recover live changes that were never committed. Attach the persistent disk and configure the paid instance before deploying this configuration. Confirm the disk is mounted at `/var/data` before relying on production writes. Render billing applies to the paid instance and disk.
 
 ### Staff Field App setup
 1. In User Management, create an account with the **System Personnel** role.

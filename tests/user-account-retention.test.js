@@ -7,6 +7,68 @@ const { test } = require('node:test');
 
 const ROOT = path.resolve(__dirname, '..');
 
+test('Render stores SQLite and uploads on a persistent disk', () => {
+  const renderConfig = fs.readFileSync(path.join(ROOT, 'render.yaml'), 'utf8');
+  const deploymentGuide = fs.readFileSync(path.join(ROOT, 'SYSTEM_DEPLOYMENT_AND_USER_GUIDE.md'), 'utf8');
+
+  assert.match(renderConfig, /^\s+plan: starter$/m);
+  assert.match(renderConfig, /name: valencia-powerwatch-data\s*\n\s+mountPath: \/var\/data\s*\n\s+sizeGB: 1/);
+  assert.match(renderConfig, /key: POWERWATCH_DATA_DIR\s*\n\s+value: \/var\/data/);
+  assert.match(renderConfig, /key: POWERWATCH_UPLOAD_DIR\s*\n\s+value: \/var\/data\/uploads/);
+  assert.match(renderConfig, /key: POWERWATCH_MIGRATE_LOCAL_DB\s*\n\s+value: "true"/);
+  assert.match(deploymentGuide, /export and securely back up its current SQLite database/);
+});
+
+test('resident account credentials survive a database process restart', () => {
+  const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'powerwatch-process-retention-'));
+  const email = 'persistent-resident@example.test';
+  const password = 'persistent-resident-password';
+  const writeScript = `
+    const { db, hashPassword, checkpointDb } = require('./server/db');
+    db.prepare(\`
+      INSERT INTO users (full_name, email, password_hash, role, status, created_at)
+      VALUES (?, ?, ?, 'resident', 'Active', ?)
+    \`).run('Persistent Resident', ${JSON.stringify(email)}, hashPassword(${JSON.stringify(password)}), new Date().toISOString());
+    checkpointDb();
+    db.close();
+  `;
+  const verifyScript = `
+    const assert = require('node:assert/strict');
+    const { db } = require('./server/db');
+    const { verifyPassword } = require('./server/auth');
+    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(${JSON.stringify(email)});
+    assert.ok(user);
+    assert.equal(user.role, 'resident');
+    assert.equal(user.status, 'Active');
+    assert.equal(verifyPassword(${JSON.stringify(password)}, user.password_hash), true);
+    db.close();
+  `;
+  const childEnv = {
+    ...process.env,
+    NODE_ENV: 'production',
+    POWERWATCH_DATA_DIR: dataDirectory,
+    POWERWATCH_MIGRATE_LOCAL_DB: 'false',
+  };
+
+  try {
+    const writeResult = spawnSync(process.execPath, ['-e', writeScript], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: childEnv,
+    });
+    assert.equal(writeResult.status, 0, writeResult.stderr || writeResult.stdout);
+
+    const verifyResult = spawnSync(process.execPath, ['-e', verifyScript], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: childEnv,
+    });
+    assert.equal(verifyResult.status, 0, verifyResult.stderr || verifyResult.stdout);
+  } finally {
+    fs.rmSync(dataDirectory, { recursive: true, force: true });
+  }
+});
+
 test('database startup preserves existing accounts and credentials', () => {
   const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'powerwatch-user-retention-'));
   const script = `
