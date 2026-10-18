@@ -1,22 +1,23 @@
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
+const { createResidentStore } = require('../server/resident-store');
 
 const ROOT = path.resolve(__dirname, '..');
 
-test('Render stores SQLite and uploads on a persistent disk', () => {
+test('Render uses Neon for required persistent resident authentication without a paid disk', () => {
   const renderConfig = fs.readFileSync(path.join(ROOT, 'render.yaml'), 'utf8');
   const deploymentGuide = fs.readFileSync(path.join(ROOT, 'SYSTEM_DEPLOYMENT_AND_USER_GUIDE.md'), 'utf8');
 
-  assert.match(renderConfig, /^\s+plan: starter$/m);
-  assert.match(renderConfig, /name: valencia-powerwatch-data\s*\n\s+mountPath: \/var\/data\s*\n\s+sizeGB: 1/);
-  assert.match(renderConfig, /key: POWERWATCH_DATA_DIR\s*\n\s+value: \/var\/data/);
-  assert.match(renderConfig, /key: POWERWATCH_UPLOAD_DIR\s*\n\s+value: \/var\/data\/uploads/);
-  assert.match(renderConfig, /key: POWERWATCH_MIGRATE_LOCAL_DB\s*\n\s+value: "true"/);
-  assert.match(deploymentGuide, /export and securely back up its current SQLite database/);
+  assert.match(renderConfig, /^\s+plan: free$/m);
+  assert.match(renderConfig, /key: PERSISTENT_AUTH_REQUIRED\s*\n\s+value: "true"/);
+  assert.match(renderConfig, /key: NEON_DATABASE_URL\s*\n\s+sync: false/);
+  assert.doesNotMatch(renderConfig, /^\s+disk:/m);
+  assert.match(deploymentGuide, /NEON_DATABASE_URL/);
 });
 
 test('resident account credentials survive a database process restart', () => {
@@ -67,6 +68,84 @@ test('resident account credentials survive a database process restart', () => {
   } finally {
     fs.rmSync(dataDirectory, { recursive: true, force: true });
   }
+});
+
+test('Neon resident account and session records survive store reinitialization', async () => {
+  const accounts = new Map();
+  const sessions = new Map();
+  const pool = {
+    async query(sql, values = []) {
+      if (/^\s*CREATE TABLE|^\s*CREATE INDEX/i.test(sql)) return { rows: [] };
+      if (/INSERT INTO resident_accounts/i.test(sql) && /RETURNING \*/i.test(sql)) {
+        const row = {
+          id: '49a7a08f-7c2c-4a7a-b5c2-d0fb9f2b57d1',
+          full_name: values[0],
+          username: values[1],
+          email: values[2],
+          role: 'resident',
+          contact_number: values[3],
+          address: values[4],
+          barangay: values[5],
+          password_hash: values[6],
+          status: 'Active',
+          profile_photo_path: null,
+          created_at: values[7],
+          last_login: null,
+        };
+        if (accounts.has(row.email.toLowerCase())) {
+          const error = new Error('duplicate key');
+          error.code = '23505';
+          throw error;
+        }
+        accounts.set(row.email.toLowerCase(), row);
+        return { rows: [row] };
+      }
+      if (/SELECT \* FROM resident_accounts WHERE LOWER\(email\)/i.test(sql)) {
+        const row = accounts.get(String(values[0]).toLowerCase());
+        return { rows: row ? [row] : [] };
+      }
+      if (/INSERT INTO resident_sessions/i.test(sql) && /VALUES/i.test(sql)) {
+        sessions.set(values[0], {
+          token: values[0],
+          user_id: values[1],
+          created_at: values[2],
+          expires_at: values[3],
+        });
+        return { rows: [] };
+      }
+      if (/SELECT a\.\* FROM resident_sessions/i.test(sql)) {
+        const session = sessions.get(values[0]);
+        const account = session && new Date(session.expires_at) > new Date(values[1])
+          ? [...accounts.values()].find((row) => row.id === session.user_id)
+          : null;
+        return { rows: account ? [account] : [] };
+      }
+      throw new Error(`Unexpected resident-store query: ${sql}`);
+    },
+  };
+
+  const password = 'persisted-resident-password';
+  const salt = crypto.randomBytes(16).toString('hex');
+  const passwordHash = `${salt}:${crypto.scryptSync(password, salt, 64).toString('hex')}`;
+  const originalStore = createResidentStore(pool);
+  const account = await originalStore.createAccount({
+    full_name: 'Persisted Resident',
+    username: 'persisted-resident',
+    email: 'persisted-resident@example.test',
+    contact_number: null,
+    address: null,
+    barangay: null,
+    password_hash: passwordHash,
+    created_at: new Date().toISOString(),
+  });
+  await originalStore.createSession('persistent-session-token', account.id, new Date().toISOString(), new Date(Date.now() + 60_000).toISOString());
+
+  const restartedStore = createResidentStore(pool);
+  const restored = await restartedStore.findByEmail(account.email);
+  const sessionUser = await restartedStore.findUserByToken('persistent-session-token', new Date().toISOString());
+  assert.equal(restored.id, account.id);
+  assert.equal(restored.password_hash, passwordHash);
+  assert.equal(sessionUser.email, account.email);
 });
 
 test('database startup preserves existing accounts and credentials', () => {
@@ -157,6 +236,7 @@ test('persistent data directory migration retains legacy registered users', () =
         ...process.env,
         POWERWATCH_DATA_DIR: legacyDataDirectory,
         POWERWATCH_MIGRATE_LOCAL_DB: 'false',
+        NODE_PATH: path.join(ROOT, 'node_modules'),
       },
     });
     assert.equal(seedResult.status, 0, seedResult.stderr || seedResult.stdout);
@@ -168,6 +248,7 @@ test('persistent data directory migration retains legacy registered users', () =
         ...process.env,
         POWERWATCH_DATA_DIR: persistentDataDirectory,
         POWERWATCH_MIGRATE_LOCAL_DB: 'true',
+        NODE_PATH: path.join(ROOT, 'node_modules'),
       },
     });
     assert.equal(migrationResult.status, 0, migrationResult.stderr || migrationResult.stdout);

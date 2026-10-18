@@ -5,7 +5,7 @@ const express = require('express');
 const compression = require('compression');
 const { ROOT, UPLOAD_DIR, db } = require('./db');
 const {
-  cleanupExpiredSessions, COOKIE_NAME, getUserByToken, requireAuth, requireRole,
+  cleanupExpiredSessions, cleanupPersistentSessions, COOKIE_NAME, getUserByToken, requireAuth, requireRole,
 } = require('./auth');
 const { staffCanAccessBarangay } = require('./staff-access');
 
@@ -28,7 +28,11 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 cleanupExpiredSessions();
-const sessionCleanupTimer = setInterval(cleanupExpiredSessions, 15 * 60 * 1000);
+cleanupPersistentSessions().catch((error) => console.error('Persistent session cleanup failed:', error));
+const sessionCleanupTimer = setInterval(() => {
+  cleanupExpiredSessions();
+  cleanupPersistentSessions().catch((error) => console.error('Persistent session cleanup failed:', error));
+}, 15 * 60 * 1000);
 sessionCleanupTimer.unref();
 
 app.use(compression());
@@ -67,7 +71,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api', feedbackRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 
-app.get('/uploads/:filename', (req, res, next) => {
+app.get('/uploads/:filename', async (req, res, next) => {
   const filename = req.params.filename;
   if (!filename.startsWith('report_') && !filename.startsWith('photo_')) return next();
 
@@ -75,7 +79,12 @@ app.get('/uploads/:filename', (req, res, next) => {
   const isReportPhoto = /^photo_\d+_\d+\.(?:jpg|png|webp|gif)$/i.test(filename);
   if (!isReportAttachment && !isReportPhoto) return res.sendStatus(404);
 
-  const user = getUserByToken(req.cookies?.[COOKIE_NAME]);
+  let user;
+  try {
+    user = await getUserByToken(req.cookies?.[COOKIE_NAME]);
+  } catch (error) {
+    return next(error);
+  }
   if (!user) return res.status(401).json({ error: 'Authentication required.' });
   if (user.status !== 'Active') return res.status(403).json({ error: 'This account is deactivated.' });
 

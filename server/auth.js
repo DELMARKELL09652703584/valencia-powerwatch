@@ -1,5 +1,10 @@
 const crypto = require('node:crypto');
 const { db, now } = require('./db');
+const {
+  residentStore,
+  persistentAuthConfigured,
+  persistentAuthRequired,
+} = require('./resident-store');
 
 const SESSION_DAYS = 7;
 const COOKIE_NAME = 'pw_session';
@@ -49,21 +54,121 @@ const createSession = (userId, rememberMe = false) => {
   return token;
 };
 
-const destroySession = (token) => {
+const createPersistentSession = async (persistentUserId, rememberMe = false) => {
+  const token = crypto.randomBytes(32).toString('hex');
+  const lifetimeDays = rememberMe ? 30 : SESSION_DAYS;
+  const createdAt = now();
+  const expiresAt = new Date(Date.now() + lifetimeDays * 24 * 60 * 60 * 1000).toISOString();
+  await residentStore.createSession(token, persistentUserId, createdAt, expiresAt);
+  return token;
+};
+
+const destroySession = async (token) => {
   if (token) db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
+  if (token && residentStore) await residentStore.deleteSession(token);
 };
 
 const cleanupExpiredSessions = () => {
   db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(now());
 };
 
-const getUserByToken = (token) => {
+const cleanupPersistentSessions = async () => {
+  if (residentStore) {
+    await residentStore.cleanupExpiredSessions(now());
+  } else if (persistentAuthRequired) {
+    const error = new Error('Persistent resident authentication is not configured.');
+    error.status = 503;
+    throw error;
+  }
+};
+
+let legacyResidentMigration;
+const migrateLegacyResidents = async () => {
+  if (!residentStore) {
+    if (persistentAuthRequired) {
+      const error = new Error('Persistent resident authentication is not configured.');
+      error.status = 503;
+      throw error;
+    }
+    return;
+  }
+  if (!legacyResidentMigration) {
+    legacyResidentMigration = (async () => {
+      const residents = db.prepare("SELECT * FROM users WHERE role = 'resident'").all();
+      for (const resident of residents) await residentStore.saveLegacyAccount(resident);
+
+      const sessions = db.prepare(`
+        SELECT s.token, s.created_at, s.expires_at, u.email
+        FROM sessions s JOIN users u ON u.id = s.user_id
+        WHERE u.role = 'resident' AND s.expires_at > ?
+      `).all(now());
+      for (const session of sessions) await residentStore.saveLegacySession(session);
+    })().catch((error) => {
+      legacyResidentMigration = null;
+      throw error;
+    });
+  }
+  return legacyResidentMigration;
+};
+
+const mirrorPersistentResident = (resident) => {
+  const existing = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(resident.email);
+  if (existing) {
+    db.prepare(`
+      UPDATE users
+      SET full_name = ?, username = ?, contact_number = ?, address = ?, barangay = ?,
+          password_hash = ?, role = ?, status = ?, profile_photo_path = ?, created_at = ?, last_login = ?
+      WHERE id = ?
+    `).run(
+      resident.full_name,
+      resident.username || null,
+      resident.contact_number || null,
+      resident.address || null,
+      resident.barangay || null,
+      resident.password_hash,
+      resident.role || 'resident',
+      resident.status,
+      resident.profile_photo_path || null,
+      resident.created_at,
+      resident.last_login || null,
+      existing.id,
+    );
+    return db.prepare('SELECT * FROM users WHERE id = ?').get(existing.id);
+  }
+  const result = db.prepare(`
+    INSERT INTO users
+      (full_name, username, email, contact_number, address, barangay, password_hash, role, status, profile_photo_path, created_at, last_login)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    resident.full_name,
+    resident.username || null,
+    resident.email,
+    resident.contact_number || null,
+    resident.address || null,
+    resident.barangay || null,
+    resident.password_hash,
+    resident.role || 'resident',
+    resident.status,
+    resident.profile_photo_path || null,
+    resident.created_at,
+    resident.last_login || null,
+  );
+  return db.prepare('SELECT * FROM users WHERE id = ?').get(Number(result.lastInsertRowid));
+};
+
+const getUserByToken = async (token) => {
   if (!token) return null;
   const row = db.prepare(`
     SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id
     WHERE s.token = ? AND s.expires_at > ?
   `).get(token, now());
-  return row || null;
+  if (row) return row;
+  if (!residentStore) return null;
+  await migrateLegacyResidents();
+  const resident = await residentStore.findUserByToken(token, now());
+  if (!resident) return null;
+  const user = mirrorPersistentResident(resident);
+  return { ...user, persistent_account_id: resident.id };
 };
 
 const publicUser = (u) => ({
@@ -96,17 +201,19 @@ const ROLES = {
 
 const roleLabel = (role) => ROLES[role] || role;
 
-const requireAuth = (req, res, next) => {
-  const user = getUserByToken(req.cookies && req.cookies[COOKIE_NAME]);
-  if (!user) {
-    return res.status(401).json({ error: 'Authentication required.' });
+const requireAuth = async (req, res, next) => {
+  try {
+    const user = await getUserByToken(req.cookies && req.cookies[COOKIE_NAME]);
+    if (!user) return res.status(401).json({ error: 'Authentication required.' });
+    if (user.status !== 'Active') {
+      return res.status(403).json({ error: 'This account is deactivated. Contact the administrator.' });
+    }
+    req.user = { ...user, ip_address: req.ip || req.socket.remoteAddress || null };
+    req.token = req.cookies[COOKIE_NAME];
+    return next();
+  } catch (error) {
+    return next(error);
   }
-  if (user.status !== 'Active') {
-    return res.status(403).json({ error: 'This account is deactivated. Contact the administrator.' });
-  }
-  req.user = { ...user, ip_address: req.ip || req.socket.remoteAddress || null };
-  req.token = req.cookies[COOKIE_NAME];
-  return next();
 };
 
 const requireRole = (...roles) => (req, res, next) => {
@@ -156,9 +263,16 @@ module.exports = {
   hashPassword,
   verifyPassword,
   createSession,
+  createPersistentSession,
   destroySession,
   cleanupExpiredSessions,
+  cleanupPersistentSessions,
   getUserByToken,
+  migrateLegacyResidents,
+  mirrorPersistentResident,
+  residentStore,
+  persistentAuthConfigured,
+  persistentAuthRequired,
   publicUser,
   ROLES,
   roleLabel,

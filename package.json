@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "node --test"
+    "test": "node --test",
+    "migrate:resident-accounts": "node scripts/migrate-residents-to-neon.js"
   },
   "engines": {
     "node": ">=22.5.0"
@@ -19,6 +20,7 @@
     "leaflet": "^1.9.4",
     "leaflet.heat": "^0.2.0",
     "multer": "^2.4.0",
-    "nodemailer": "^10.0.12"
+    "nodemailer": "^10.0.12",
+    "pg": "^8.23.1"
   }
 }
