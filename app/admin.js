@@ -600,7 +600,7 @@ function renderReportDistribution(data) {
     </header>
     <div class="report-distribution-grid">
       <article class="report-distribution-card report-status-card">
-        <header><div><h4>Report status</h4><p>Each report counted once by its current status.</p></div><span class="report-status-chip"><i></i> LIVE MONITOR</span></header>
+        <header><div><h4>Report status</h4><p>Each report counted once by its current status.</p></div><span class="report-status-chip"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3.5h6l1 2.3 2.3 1v6.4l-2.3 1-1 2.3H7l-1-2.3-2.3-1V6.8l2.3-1 1-2.3Z"></path><circle cx="10" cy="10" r="2.4"></circle><path d="M1.8 8.2h2M16.2 8.2h2M1.8 11.8h2M16.2 11.8h2"></path></svg><i></i> LIVE MONITOR</span></header>
         ${total ? `<div class="report-status-chart-layout">
           <svg class="report-status-pie" viewBox="0 0 240 240" role="img" aria-label="Donut chart of ${total} reports by status"><circle class="report-status-orbit" cx="120" cy="120" r="112"></circle>${slices}
             <circle class="report-status-hole" cx="120" cy="120" r="58"></circle>

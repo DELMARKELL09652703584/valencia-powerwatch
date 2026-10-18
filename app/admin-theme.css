@@ -376,6 +376,7 @@ body.admin-body .admin-dashboard-page > [data-report-distribution] {
 .report-distribution-card h4 { margin: 0; color: var(--admin-ink, #142c43); font-size: .92rem; }
 .report-distribution-card > header p { font-size: .7rem; }
 .report-status-chip { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid rgba(20, 120, 189, .17); border-radius: 999px; background: rgba(255, 255, 255, .66); color: #34718f; font-size: .57rem; font-weight: 800; letter-spacing: .08em; white-space: nowrap; }
+.report-status-chip svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.35; }
 .report-status-chip i { width: 6px; height: 6px; border-radius: 50%; background: #18a6b8; box-shadow: 0 0 0 3px rgba(24, 166, 184, .13), 0 0 9px rgba(24, 166, 184, .55); animation: report-monitor-pulse 2s ease-in-out infinite; }
 .report-status-chart-layout { display: grid; grid-template-columns: minmax(170px, .65fr) minmax(200px, 1fr); align-items: center; gap: 18px; min-height: 220px; }
 .report-status-pie { display: block; width: min(100%, 224px); height: auto; margin: 0 auto; overflow: visible; filter: drop-shadow(0 8px 16px rgba(18, 44, 70, .12)); }
@@ -407,7 +408,7 @@ body.admin-body .admin-dashboard-page > [data-report-distribution] {
 .report-type-label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .report-type-label strong { flex: 0 0 auto; font-variant-numeric: tabular-nums; }
 .report-type-track { grid-column: 1; height: 8px; overflow: hidden; border-radius: 999px; background: rgba(114, 137, 159, .17); }
-.report-type-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #1679ba, #35b5c7); transition: width .35s ease; }
+.report-type-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #1679ba, #35b5c7); box-shadow: 0 0 10px rgba(41, 174, 208, .28); animation: report-bar-appear .65s cubic-bezier(.2, .7, .2, 1) both; transition: width .35s ease; }
 .report-type-row > small { grid-column: 2; grid-row: 2; color: var(--admin-muted, #718399); font-size: .66rem; font-variant-numeric: tabular-nums; text-align: right; }
 .report-distribution-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; padding-top: 11px; border-top: 1px solid var(--admin-line, #dce5ee); color: var(--admin-muted, #718399); font-size: .66rem; }
 .report-distribution-loading,
@@ -432,6 +433,7 @@ body.admin-body .admin-dashboard-page > [data-report-distribution] {
 
 @keyframes report-orbit-spin { to { transform: rotate(360deg); } }
 @keyframes report-monitor-pulse { 50% { opacity: .55; box-shadow: 0 0 0 5px rgba(24, 166, 184, .08), 0 0 12px rgba(24, 166, 184, .72); } }
+@keyframes report-bar-appear { from { opacity: .45; transform: scaleX(.15); transform-origin: left center; } to { opacity: 1; transform: scaleX(1); transform-origin: left center; } }
 
 body.dark-mode.admin-body .report-distribution-panel { border-color: var(--pw-line); background: var(--pw-panel); color: var(--pw-body); box-shadow: 0 10px 28px rgba(0, 0, 0, .16); }
 body.dark-mode.admin-body .report-distribution-card { border-color: var(--pw-line); background: var(--pw-bg); }
