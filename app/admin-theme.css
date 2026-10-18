@@ -535,29 +535,29 @@ body.dark-mode .staff-account-assignment { border-color: #34475d; }
 body.dark-mode .staff-account-assignment legend { color: #d6e8fa; }
 
 .admin-shell.page-admin-dashboard .command-header-actions {
-  gap: 6px;
-  max-width: 380px;
+  gap: 5px;
+  max-width: 360px;
 }
 
-.admin-shell.page-admin-dashboard .command-header-actions .button {
-  min-height: 36px;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 9px;
-  font-size: .8rem;
+body.admin-body .admin-shell.page-admin-dashboard .admin-dashboard-page .command-header-actions .button {
+  min-height: 32px;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: .72rem;
   white-space: nowrap;
 }
 
-.admin-shell.page-admin-dashboard .command-header-actions .button > span {
-  font-size: .86rem;
+body.admin-body .admin-shell.page-admin-dashboard .admin-dashboard-page .command-header-actions .button > span {
+  font-size: .78rem;
   line-height: 1;
 }
 
 @media (max-width: 760px) {
-  .admin-shell.page-admin-dashboard .command-header-actions .button {
-    min-height: 38px;
-    padding-inline: 7px;
-    font-size: .74rem;
+  body.admin-body .admin-shell.page-admin-dashboard .admin-dashboard-page .command-header-actions .button {
+    min-height: 36px;
+    padding-inline: 6px;
+    font-size: .68rem !important;
   }
 }
 
