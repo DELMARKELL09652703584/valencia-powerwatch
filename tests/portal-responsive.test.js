@@ -35,7 +35,7 @@ test('Admin login design adapts to mobile and Night Ops themes', () => {
   assert.match(styles, /@media \(max-width: 900px\)\s*\{[\s\S]*?body\.admin-body \.login-page \.login-panel\s*\{[^}]*margin-top:\s*-22px;/);
   assert.match(styles, /@media \(max-width: 600px\)\s*\{[\s\S]*?body\.admin-body \.login-page \.login-panel \.login-content\s*\{[^}]*padding:\s*27px 21px;/);
   assert.match(styles, /body\.admin-body \.login-page \.login-panel \.admin-login-options input\[type="checkbox"\]\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;[^}]*min-height:\s*18px;/s);
-  assert.match(adminPage, /\/app\/admin-theme\.css\?v=15/);
+  assert.match(adminPage, /\/app\/admin-theme\.css\?v=16/);
 });
 
 test('Admin dashboard report charts use live data and remain responsive in both themes', () => {
@@ -81,7 +81,7 @@ test('Admin dashboard report charts use live data and remain responsive in both 
   assert.match(styles, /\.report-status-zero-list summary\s*\{/);
   assert.match(styles, /@media \(max-width: 600px\)\s*\{[\s\S]*?\.report-status-chart-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
   assert.match(styles, /body\.dark-mode\.admin-body \.report-distribution-panel/);
-  assert.match(adminPage, /\/app\/admin-theme\.css\?v=15/);
+  assert.match(adminPage, /\/app\/admin-theme\.css\?v=16/);
   assert.match(adminPage, /\/app\/admin\.js\?v=37/);
 });
 
@@ -95,16 +95,16 @@ test('Analytics & Reports charts use matching HUD styling in both themes', () =>
   assert.match(styles, /body\.dark-mode\.admin-body \.admin-shell\.page-analytics \.analytics-chart-panel\s*\{/);
   assert.match(styles, /body\.dark-mode\.admin-body \.admin-shell\.page-analytics \.analytics-donut-legend li\s*\{/);
   assert.match(styles, /prefers-reduced-motion:\s*reduce[\s\S]*?page-analytics \.analytics-donut::after/);
-  assert.match(adminPage, /\/app\/admin-theme\.css\?v=15/);
+  assert.match(adminPage, /\/app\/admin-theme\.css\?v=16/);
 });
 
 test('Admin dashboard right-side command actions stay compact and usable on mobile', () => {
   const styles = fs.readFileSync(path.join(ROOT, 'app', 'admin-theme.css'), 'utf8');
   const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
 
-  assert.match(styles, /body\.admin-body \.admin-shell\.page-admin-dashboard \.admin-dashboard-page \.command-header-actions \.button\s*\{[^}]*min-height:\s*32px;[^}]*padding:\s*4px 8px;[^}]*font-size:\s*\.72rem;/s);
-  assert.match(styles, /@media \(max-width: 760px\)\s*\{[\s\S]*?body\.admin-body \.admin-shell\.page-admin-dashboard \.admin-dashboard-page \.command-header-actions \.button\s*\{[^}]*min-height:\s*36px;[^}]*font-size:\s*\.68rem !important;/);
-  assert.match(adminPage, /\/app\/admin-theme\.css\?v=15/);
+  assert.match(styles, /body\.admin-body \.admin-shell\.page-admin-dashboard \.admin-dashboard-page \.command-header-actions \.button\s*\{[^}]*min-height:\s*38px;[^}]*padding:\s*4px 8px;[^}]*font-size:\s*\.72rem;/s);
+  assert.match(styles, /@media \(max-width: 760px\)\s*\{[\s\S]*?body\.admin-body \.admin-shell\.page-admin-dashboard \.admin-dashboard-page \.command-header-actions \.button\s*\{[^}]*min-height:\s*38px;[^}]*font-size:\s*\.68rem !important;/);
+  assert.match(adminPage, /\/app\/admin-theme\.css\?v=16/);
 });
 
 test('home weather widget stays compact in Light Mode and Night Ops', () => {
