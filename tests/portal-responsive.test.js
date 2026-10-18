@@ -193,3 +193,46 @@ test('dispatch eligibility offers a direct path to staff access settings', () =>
   assert.match(mainScript, /case 'open-staff-access':\s*\{\s*closeDialog\(\);\s*await goToPage\('dispatch'\);/);
   assert.match(mainScript, /staffAccess\.open = true;/);
 });
+
+test('staff logout clears account-scoped notification state and refresh flags', () => {
+  const staffScript = fs.readFileSync(path.join(ROOT, 'app', 'staff.js'), 'utf8');
+  const logout = staffScript.match(/action === 'logout'[\s\S]*?renderLogin\(\);/);
+
+  assert.ok(logout, 'staff logout handler should remain present');
+  assert.match(logout[0], /state\.notifications = \[\];/);
+  assert.match(logout[0], /state\.notificationIds = \[\];/);
+  assert.match(logout[0], /state\.unreadNotifications = 0;/);
+  assert.match(logout[0], /state\.assignmentsLoaded = false;/);
+  assert.match(logout[0], /state\.notificationsLoaded = false;/);
+});
+
+test('staff checkbox accent uses a defined token and refreshed shell assets', () => {
+  const styles = fs.readFileSync(path.join(ROOT, 'app', 'staff.css'), 'utf8');
+  const staffPage = fs.readFileSync(path.join(ROOT, 'staff.html'), 'utf8');
+  const staffWorker = fs.readFileSync(path.join(ROOT, 'staff-sw.js'), 'utf8');
+
+  assert.match(styles, /accent-color:\s*var\(--staff-blue,\s*#1675df\);/);
+  assert.match(staffPage, /\/app\/staff\.css\?v=12/);
+  assert.match(staffPage, /\/app\/staff\.js\?v=16/);
+  assert.match(staffWorker, /\/app\/staff\.css\?v=12/);
+  assert.match(staffWorker, /\/app\/staff\.js\?v=16/);
+});
+
+test('community notification category controls use pressed button semantics', () => {
+  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
+
+  assert.match(communityScript, /class="mobile-segments notification-category-tabs" role="group" aria-label="Notification categories"/);
+  assert.match(communityScript, /class="mobile-segment \$\{category === key \? 'active' : ''\}" aria-pressed="\$\{category === key\}"/);
+  assert.match(communityScript, /data-action="mobile-notification-category" data-value="\$\{key\}"/);
+  assert.doesNotMatch(communityScript, /notification-category-tabs" role="tablist"|role="tab" aria-selected=/);
+});
+
+test('community boot failure provides a safe offline retry state', () => {
+  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+
+  assert.match(mainScript, /const offline = navigator\.onLine === false;/);
+  assert.match(mainScript, /const heading = offline \? 'You are offline' : 'Cannot reach the server';/);
+  assert.match(mainScript, /Account and report data cannot be loaded without an internet connection\./);
+  assert.match(mainScript, /data-action="reload">\$\{retryLabel\}/);
+  assert.match(mainScript, /if \(event\.target\.closest\('\[data-action="reload"\]'\)\) \{\s*window\.location\.reload\(\);/);
+});

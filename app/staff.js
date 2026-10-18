@@ -892,6 +892,11 @@ document.addEventListener('click', async (event) => {
       state.assignments = [];
       state.reports = [];
       state.teams = [];
+      state.notifications = [];
+      state.notificationIds = [];
+      state.unreadNotifications = 0;
+      state.assignmentsLoaded = false;
+      state.notificationsLoaded = false;
       renderLogin();
     } else if (action === 'reload') {
       window.location.reload();

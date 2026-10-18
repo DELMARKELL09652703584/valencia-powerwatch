@@ -2781,11 +2781,20 @@ async function boot() {
       return;
     }
     state.bootError = error.message;
+    const offline = navigator.onLine === false;
+    const heading = offline ? 'You are offline' : 'Cannot reach the server';
+    const message = offline
+      ? 'Account and report data cannot be loaded without an internet connection.'
+      : error.message;
+    const instruction = offline
+      ? 'Reconnect to the internet, then retry.'
+      : 'Make sure the Node.js server is running, then reload this page.';
+    const retryLabel = offline ? 'Retry connection' : 'Reload';
     app.innerHTML = `<main class="login-page"><section class="login-panel"><div class="login-content">
-      <h1>Cannot reach the server</h1>
-      <p class="login-intro">${escapeHtml(error.message)}</p>
-      <p class="muted">Make sure the Node.js server is running, then reload this page.</p>
-      <button class="button primary full" data-action="reload">Reload</button>
+      <h1>${heading}</h1>
+      <p class="login-intro">${escapeHtml(message)}</p>
+      <p class="muted">${instruction}</p>
+      <button class="button primary full" data-action="reload">${retryLabel}</button>
     </div></section></main>`;
   }
 }

@@ -1642,8 +1642,8 @@ async function renderMobileNotifications() {
   state.mobileNotifications = visibleNotifications;
   mobileShell(`
     ${mobileHero('Notifications', 'Announcements and personal system updates in one place.')}
-    <div class="mobile-segments notification-category-tabs" role="tablist" aria-label="Notification categories">
-      ${categories.map(([key, label]) => `<button type="button" class="mobile-segment ${category === key ? 'active' : ''}" role="tab" aria-selected="${category === key}" data-action="mobile-notification-category" data-value="${key}">${label}</button>`).join('')}
+    <div class="mobile-segments notification-category-tabs" role="group" aria-label="Notification categories">
+      ${categories.map(([key, label]) => `<button type="button" class="mobile-segment ${category === key ? 'active' : ''}" aria-pressed="${category === key}" data-action="mobile-notification-category" data-value="${key}">${label}</button>`).join('')}
     </div>
     <div class="mobile-notification-full-wrap">
       ${mobileCard('', items.length ? items.map((item) => {

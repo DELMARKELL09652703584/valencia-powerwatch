@@ -17,8 +17,8 @@ test('community dashboard keeps personal notifications out of the home feed', ()
   assert.ok(homeRendererEnd > homeRendererStart);
   assert.doesNotMatch(homeRenderer, /\/api\/(?:notifications|announcements)/);
   assert.doesNotMatch(communityScript, /class="recent-updates"/);
-  assert.match(communityPage, /\/app\/community\.js\?v=34/);
-  assert.match(communityPage, /\/app\/main\.js\?v=37/);
+  assert.match(communityPage, /\/app\/community\.js\?v=35/);
+  assert.match(communityPage, /\/app\/main\.js\?v=38/);
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=68/);
   assert.match(communityPage, /\/style\.css\?v=46/);
   assert.match(portalStyles, /body\.community-body \.home-report-action\s*\{/);
@@ -202,7 +202,7 @@ test('community bottom navigation shows accessible icon and text labels', () => 
   assert.match(portalStyles, /body\.community-body \.mobile-tab\.active::after\s*\{[^}]*transform:\s*translateX\(50%\) scaleX\(1\);/s);
   assert.match(portalStyles, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*body\.community-body \.mobile-tab,/s);
   assert.match(portalStyles, /body\.community-body \.mobile-tab-icon,\s*body\.community-body \.mobile-tab-icon svg\s*\{[^}]*width:\s*22px;[^}]*height:\s*22px;/s);
-  assert.match(communityPage, /\/app\/community\.js\?v=34/);
+  assert.match(communityPage, /\/app\/community\.js\?v=35/);
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=68/);
 });
 
@@ -264,7 +264,7 @@ test('User Portal provides an accessible PWA install button', () => {
   assert.match(communityScript, /data-action="install-app"[\s\S]*?<span>Install<\/span>/);
   assert.match(mainScript, /case 'install-app':\s*\{[\s\S]*?installPrompt\.prompt\(\)/);
   assert.match(mainScript, /window\.addEventListener\('beforeinstallprompt'/);
-  assert.match(communityPage, /\/app\/community\.js\?v=34/);
+  assert.match(communityPage, /\/app\/community\.js\?v=35/);
   assert.match(communityPage, /\/app\/pwa-update\.js\?v=3/);
 });
 
