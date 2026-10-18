@@ -534,6 +534,33 @@ body.dark-mode.admin-body .report-distribution-retry { border-color: #416682; co
 body.dark-mode .staff-account-assignment { border-color: #34475d; }
 body.dark-mode .staff-account-assignment legend { color: #d6e8fa; }
 
+.admin-shell.page-admin-dashboard .command-header-actions {
+  gap: 6px;
+  max-width: 380px;
+}
+
+.admin-shell.page-admin-dashboard .command-header-actions .button {
+  min-height: 36px;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  font-size: .8rem;
+  white-space: nowrap;
+}
+
+.admin-shell.page-admin-dashboard .command-header-actions .button > span {
+  font-size: .86rem;
+  line-height: 1;
+}
+
+@media (max-width: 760px) {
+  .admin-shell.page-admin-dashboard .command-header-actions .button {
+    min-height: 38px;
+    padding-inline: 7px;
+    font-size: .74rem;
+  }
+}
+
 .admin-shell.page-analytics .analytics-chart-panel {
   position: relative;
   isolation: isolate;
