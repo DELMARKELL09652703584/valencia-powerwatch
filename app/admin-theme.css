@@ -381,8 +381,7 @@ body.admin-body .admin-dashboard-page > [data-report-distribution] {
 .report-status-chart-layout { display: grid; grid-template-columns: minmax(170px, .65fr) minmax(200px, 1fr); align-items: center; gap: 18px; min-height: 220px; }
 .report-status-pie { display: block; width: min(100%, 224px); height: auto; margin: 0 auto; overflow: visible; filter: drop-shadow(0 8px 16px rgba(18, 44, 70, .12)); }
 .report-status-orbit { fill: none; stroke: rgba(22, 151, 197, .34); stroke-width: 1; stroke-dasharray: 2 7; transform-origin: 120px 120px; animation: report-orbit-spin 32s linear infinite; }
-.report-status-slice { stroke: var(--admin-panel, #fff); stroke-width: 2px; cursor: pointer; transform-origin: 120px 120px; animation: report-chart-appear .45s ease both; transition: filter .16s ease, transform .16s ease; }
-.report-status-slice:hover,
+.report-status-slice { stroke: var(--admin-panel, #fff); stroke-width: 2px; cursor: pointer; transform-origin: 120px 120px; animation: report-chart-appear .65s cubic-bezier(.2, .7, .2, 1) both; animation-delay: var(--chart-enter-delay, 0ms); transition: filter .2s ease, transform .2s ease; }
 .report-status-slice:hover,
 .report-status-slice:focus-visible { filter: brightness(1.12) drop-shadow(0 0 7px rgba(28, 188, 230, .55)); outline: none; transform: scale(1.025); }
 .report-status-hole { fill: var(--admin-canvas, #f7f9fc); stroke: var(--admin-line, #dce5ee); stroke-width: 1px; pointer-events: none; }
@@ -408,7 +407,8 @@ body.admin-body .admin-dashboard-page > [data-report-distribution] {
 .report-type-label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .report-type-label strong { flex: 0 0 auto; font-variant-numeric: tabular-nums; }
 .report-type-track { grid-column: 1; height: 8px; overflow: hidden; border-radius: 999px; background: rgba(114, 137, 159, .17); }
-.report-type-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #1679ba, #35b5c7); box-shadow: 0 0 10px rgba(41, 174, 208, .28); animation: report-bar-appear .65s cubic-bezier(.2, .7, .2, 1) both; transition: width .35s ease; }
+.report-type-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #1679ba, #35b5c7); box-shadow: 0 0 10px rgba(41, 174, 208, .28); animation: report-bar-appear .7s cubic-bezier(.2, .7, .2, 1) both; animation-delay: var(--chart-enter-delay, 0ms); transition: width .45s cubic-bezier(.2, .7, .2, 1), filter .2s ease, box-shadow .2s ease; }
+.report-type-row:hover .report-type-track span { filter: brightness(1.13); box-shadow: 0 0 15px rgba(41, 174, 208, .48); }
 .report-type-row > small { grid-column: 2; grid-row: 2; color: var(--admin-muted, #718399); font-size: .66rem; font-variant-numeric: tabular-nums; text-align: right; }
 .report-distribution-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; padding-top: 11px; border-top: 1px solid var(--admin-line, #dce5ee); color: var(--admin-muted, #718399); font-size: .66rem; }
 .report-distribution-loading,
@@ -492,8 +492,9 @@ body.dark-mode.admin-body .report-distribution-retry { border-color: #416682; co
   body.admin-body .report-status-chip i,
   body.admin-body .report-type-track span {
     animation: none;
-    transition: none;
-  }
+      animation-delay: 0ms;
+      transition: none;
+    }
 
   body.admin-body .admin-shell *,
   body.admin-body .admin-shell *::before,

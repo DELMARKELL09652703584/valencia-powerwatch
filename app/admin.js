@@ -555,11 +555,11 @@ function renderReportDistribution(data) {
   const positiveStatuses = statuses.filter((item) => item.count > 0);
   const zeroStatuses = statuses.filter((item) => item.count === 0);
   let angle = -90;
-  const slices = positiveStatuses.map((item) => {
+  const slices = positiveStatuses.map((item, index) => {
     const endAngle = angle + (item.count / total) * 360;
     const color = REPORT_STATUS_COLORS[item.status] || '#64748b';
     const label = REPORT_STATUS_LABELS[item.status] || item.status;
-    const markup = `<path class="report-status-slice" d="${reportPiePath(angle, endAngle)}" fill="${color}" data-report-status="${escapeHtml(item.status)}" data-report-label="${escapeHtml(label)}" data-report-count="${item.count}" data-report-percentage="${percentage(item.count)}" tabindex="0" role="button" aria-label="${escapeHtml(label)}: ${item.count} reports, ${percentage(item.count)}"><title>${escapeHtml(label)}: ${item.count} reports (${percentage(item.count)})</title></path>`;
+    const markup = `<path class="report-status-slice" style="--chart-enter-delay:${index * 65}ms" d="${reportPiePath(angle, endAngle)}" fill="${color}" data-report-status="${escapeHtml(item.status)}" data-report-label="${escapeHtml(label)}" data-report-count="${item.count}" data-report-percentage="${percentage(item.count)}" tabindex="0" role="button" aria-label="${escapeHtml(label)}: ${item.count} reports, ${percentage(item.count)}"><title>${escapeHtml(label)}: ${item.count} reports (${percentage(item.count)})</title></path>`;
     angle = endAngle;
     return markup;
   }).join('');
@@ -583,11 +583,11 @@ function renderReportDistribution(data) {
   const leadingCount = leadingStatus ? leadingStatus.count : 0;
   const leadingPercentage = percentage(leadingCount);
   const categoryMax = Math.max(1, ...data.categories.map((item) => Number(item.count)));
-  const categoryBars = data.categories.map((item) => {
+  const categoryBars = data.categories.map((item, index) => {
     const count = Number(item.count);
     return `<div class="report-type-row" title="${escapeHtml(item.category)}: ${count} reports (${percentage(count)})">
       <div class="report-type-label"><span>${escapeHtml(item.category)}</span><strong>${count.toLocaleString()}</strong></div>
-      <div class="report-type-track"><span style="width:${Math.max(count ? 4 : 0, (count / categoryMax) * 100)}%"></span></div>
+      <div class="report-type-track"><span style="--chart-enter-delay:${index * 75}ms;width:${Math.max(count ? 4 : 0, (count / categoryMax) * 100)}%"></span></div>
       <small>${percentage(count)}</small>
     </div>`;
   }).join('');

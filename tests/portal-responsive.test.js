@@ -50,6 +50,8 @@ test('Admin dashboard report charts use live data and remain responsive in both 
   assert.match(adminScript, /Could not load report analytics/);
   assert.match(adminScript, /No outage reports yet/);
   assert.match(adminScript, /class="report-status-hole"/);
+  assert.match(adminScript, /style="--chart-enter-delay:\$\{index \* 65\}ms"/);
+  assert.match(adminScript, /--chart-enter-delay:\$\{index \* 75\}ms;width:/);
   assert.match(adminScript, /class="report-status-orbit"/);
   assert.match(adminScript, /class="report-status-chip"><svg viewBox="0 0 20 20" aria-hidden="true">/);
   assert.match(adminScript, /<\/svg><i><\/i> LIVE MONITOR/);
@@ -65,6 +67,9 @@ test('Admin dashboard report charts use live data and remain responsive in both 
   assert.match(styles, /@keyframes report-orbit-spin/);
   assert.match(styles, /@keyframes report-monitor-pulse/);
   assert.match(styles, /@keyframes report-bar-appear/);
+  assert.match(styles, /\.report-status-slice\s*\{[^}]*animation-delay:\s*var\(--chart-enter-delay/);
+  assert.match(styles, /\.report-type-track span\s*\{[^}]*animation-delay:\s*var\(--chart-enter-delay/);
+  assert.match(styles, /\.report-type-row:hover \.report-type-track span\s*\{/);
   assert.match(styles, /\.report-status-chip svg\s*\{/);
   assert.match(styles, /\.report-status-legend-item\s*\{[^}]*border:\s*1px solid/);
   assert.match(styles, /\.report-type-list\s*\{[^}]*align-content:\s*center/);
@@ -77,7 +82,7 @@ test('Admin dashboard report charts use live data and remain responsive in both 
   assert.match(styles, /@media \(max-width: 600px\)\s*\{[\s\S]*?\.report-status-chart-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
   assert.match(styles, /body\.dark-mode\.admin-body \.report-distribution-panel/);
   assert.match(adminPage, /\/app\/admin-theme\.css\?v=13/);
-  assert.match(adminPage, /\/app\/admin\.js\?v=36/);
+  assert.match(adminPage, /\/app\/admin\.js\?v=37/);
 });
 
 test('Analytics & Reports charts use matching HUD styling in both themes', () => {
@@ -158,7 +163,7 @@ test('Admin map removes the top barangay finder and keeps sidebar map focus', ()
 
   assert.doesNotMatch(adminScript, /Find a barangay|data-map-focus|power-map-focus/);
   assert.match(adminScript, /id="map-fly-select"/);
-  assert.match(adminPage, /\/app\/admin\.js\?v=36/);
+  assert.match(adminPage, /\/app\/admin\.js\?v=37/);
 });
 
 test('Admin notifications use readable theme-specific unread colors', () => {
