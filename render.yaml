@@ -1,9 +1,9 @@
 services:
   - type: web
-    name: valencia-powerwatch
+    name: valencia-powerwatch-persistent
     runtime: node
     plan: free
-    branch: main
+    branch: valencia-neon-staging
     buildCommand: npm ci && node --test
     startCommand: node server/index.js
     autoDeploy: true
