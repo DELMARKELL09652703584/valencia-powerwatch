@@ -466,7 +466,9 @@ button:disabled {
   min-height: 100vh;
   min-height: 100dvh;
   overflow-x: hidden;
-  background: #eaf0f5;
+  background:
+    radial-gradient(circle at top, rgba(59, 130, 246, 0.18), transparent 28%),
+    linear-gradient(180deg, #eef5fb 0%, #e6edf6 100%);
   color: #172f43;
 }
 
@@ -475,6 +477,109 @@ button:disabled {
   min-height: 100dvh;
   display: flex;
   justify-content: center;
+}
+
+.community-body .mobile-shell,
+.community-body .mobile-welcome,
+.community-body .mobile-auth-page {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 249, 252, 0.96));
+  box-shadow: 0 18px 48px rgba(18, 40, 62, 0.12);
+}
+
+.community-body .mobile-header,
+.community-body .mobile-home-header {
+  background: linear-gradient(135deg, #0d3b66 0%, #0a5d94 55%, #0e7ea0 100%);
+  box-shadow: 0 10px 26px rgba(8, 51, 88, 0.18);
+}
+
+.community-body .mobile-home-header {
+  border-bottom-left-radius: 24px;
+  border-bottom-right-radius: 24px;
+}
+
+.community-body .mobile-content {
+  padding-top: 14px;
+  padding-bottom: calc(98px + env(safe-area-inset-bottom));
+}
+
+.community-body .mobile-card,
+.community-body .mobile-outage-card,
+.community-body .mobile-profile-head,
+.community-body .mobile-settings-list,
+.community-body .barangay-status-hero,
+.community-body .recent-updates,
+.community-body .mobile-weather,
+.community-body .mobile-dashboard-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.community-body .mobile-dashboard-card {
+  border-radius: 18px;
+  padding: 14px 14px 12px;
+}
+
+.community-body .mobile-dashboard-card h3,
+.community-body .mobile-outage-card h3,
+.community-body .mobile-card h3 {
+  color: #14304e;
+}
+
+.community-body .button.primary,
+.community-body .mobile-auth-submit,
+.community-body .mobile-welcome-start {
+  background: linear-gradient(135deg, #0b5cad 0%, #0e7eb0 100%);
+  border: none;
+  box-shadow: 0 10px 22px rgba(11, 92, 173, 0.25);
+}
+
+.community-body .button.primary:hover,
+.community-body .mobile-auth-submit:hover,
+.community-body .mobile-welcome-start:hover {
+  background: linear-gradient(135deg, #0a4f92 0%, #0d719d 100%);
+}
+
+.community-body .mobile-theme-toggle,
+.community-body .mobile-bell,
+.community-body .mobile-install-button,
+.community-body .social-btn {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+body.dark-mode.community-body {
+  background:
+    radial-gradient(circle at top, rgba(34, 211, 238, 0.18), transparent 25%),
+    linear-gradient(180deg, #091521 0%, #0d1725 100%);
+}
+
+body.dark-mode.community-body .mobile-shell,
+body.dark-mode.community-body .mobile-welcome,
+body.dark-mode.community-body .mobile-auth-page {
+  background: linear-gradient(180deg, rgba(11, 18, 32, 0.96), rgba(15, 23, 42, 0.96));
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.18);
+}
+
+body.dark-mode.community-body .mobile-card,
+body.dark-mode.community-body .mobile-dashboard-card,
+body.dark-mode.community-body .mobile-outage-card,
+body.dark-mode.community-body .mobile-profile-head,
+body.dark-mode.community-body .mobile-settings-list,
+body.dark-mode.community-body .barangay-status-hero,
+body.dark-mode.community-body .recent-updates,
+body.dark-mode.community-body .mobile-notification-panel,
+body.dark-mode.community-body .mobile-weather {
+  background: rgba(17, 29, 48, 0.9);
+  border-color: rgba(148, 163, 184, 0.18);
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.24);
+}
+
+body.dark-mode.community-body .button.primary,
+body.dark-mode.community-body .mobile-auth-submit,
+body.dark-mode.community-body .mobile-welcome-start {
+  box-shadow: 0 12px 26px rgba(59, 130, 246, 0.22);
 }
 
 .community-body .mobile-shell,
@@ -1268,6 +1373,17 @@ body.dark-mode.community-body .mobile-content {
   color: #e8f1ff;
 }
 
+body.dark-mode.community-body .report-submit-feedback:not([hidden]) {
+  border-color: #365b83;
+  background: #122744;
+  color: #dbeafe;
+}
+
+body.dark-mode.community-body .report-submit-feedback[data-state="error"] {
+  border-color: #7f343d;
+  background: #351d26;
+  color: #fecdd3;
+}
 
 body.dark-mode.admin-body .admin-sidebar {
   border-color: #1d2b43;

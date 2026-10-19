@@ -36,7 +36,7 @@ test('Report verification updates the authoritative report without creating a du
   assert.doesNotMatch(mainSource, /type === 'verify-create-incident'/);
   assert.match(adminSource, /Verify Report/);
   assert.match(adminHtml, /app\/admin\.js\?v=37/);
-  assert.match(adminHtml, /app\/main\.js\?v=36/);
+  assert.match(adminHtml, /app\/main\.js\?v=37/);
   assert.match(adminHtml, /admin-theme\.css\?v=16/);
 });
 
@@ -54,5 +54,5 @@ test('Admin login does not expose seeded credentials and hides unconfigured OAut
   assert.match(mainSource, /row\.hidden = !hasAvailableProvider/);
   assert.match(mainSource, /app\.innerHTML = `<main class="login-page">[\s\S]*?syncOAuthProviderControls\(\);\s*\}/);
   assert.match(styles, /\.social-row\[hidden\],[\s\S]*?\.social-btn\[hidden\],[\s\S]*?\.auth-divider\[hidden\]\s*\{\s*display:\s*none\s*!important;/);
-  assert.match(communityHtml, /\/style\.css\?v=46/);
+  assert.match(communityHtml, /\/style\.css\?v=47/);
 });
