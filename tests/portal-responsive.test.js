@@ -22,8 +22,31 @@ test('portal layouts remain constrained on narrow mobile screens', () => {
   assert.match(styles, /@media \(max-width: 600px\)\s*\{\s*body\.community-body \.mobile-home-header\s*\{[^}]*gap:\s*4px;[^}]*padding:\s*6px 14px 8px;/s);
   assert.match(styles, /@media \(max-width: 360px\)\s*\{\s*body\.admin-body \.login-page\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
   assert.match(styles, /body\.admin-body \.login-page \.social-row\s*\{\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=68/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=70/);
   assert.match(adminPage, /\/app\/portal-polish\.css\?v=38/);
+});
+
+test('report wizard content can scroll above the fixed bottom navigation', () => {
+  const styles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
+  const mobileContentRule = styles.match(/\.community-body \.mobile-content\s*\{([^}]*)\}/)?.[1] || '';
+
+  assert.match(mobileContentRule, /padding-bottom:\s*calc\(98px \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=70/);
+});
+
+test('Admin dashboard releases its fixed desktop frame for mobile page scrolling', () => {
+  const styles = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
+  const staffStyles = fs.readFileSync(path.join(ROOT, 'app', 'staff.css'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+  const mobileAdminStyles = styles.slice(styles.indexOf('@media (max-width: 900px)', styles.indexOf('/* Admin command-center visual system */')));
+
+  assert.match(mobileAdminStyles, /body\.admin-body\s*\{[^}]*height:\s*auto !important;[^}]*max-height:\s*none !important;[^}]*overflow-y:\s*auto !important;/s);
+  assert.match(mobileAdminStyles, /\.admin-shell\s*\{[^}]*height:\s*auto;[^}]*max-height:\s*none;[^}]*overflow:\s*visible;/s);
+  assert.match(mobileAdminStyles, /\.admin-shell \.admin-main\s*\{[^}]*height:\s*auto;[^}]*max-height:\s*none;[^}]*overflow:\s*visible;/s);
+  assert.match(adminPage, /\/style\.css\?v=45/);
+  assert.match(staffStyles, /\.staff-main\s*\{[^}]*overflow-y:\s*auto;/s);
+  assert.match(staffStyles, /\.staff-bottom-nav\s*\{[^}]*position:\s*static;/s);
 });
 
 test('Admin login design adapts to mobile and Night Ops themes', () => {
@@ -183,7 +206,7 @@ test('Admin notifications use readable theme-specific unread colors', () => {
   assert.match(styles, /body\.admin-body:not\(\.dark-mode\) \.admin-notification-panel \.notification-panel-open strong\s*\{[^}]*color:\s*#173859\s*!important;/s);
   assert.match(styles, /body\.admin-body:not\(\.dark-mode\) \.admin-notification-panel \.notification-panel-open > span\s*\{[^}]*color:\s*#425b73\s*!important;/s);
   assert.match(styles, /body\.dark-mode\.admin-body \.admin-notification-panel \.notification-panel-open strong\s*\{[^}]*color:\s*#f1f5ff\s*!important;/s);
-  assert.match(adminPage, /\/style\.css\?v=44/);
+  assert.match(adminPage, /\/style\.css\?v=45/);
 });
 
 test('dispatch eligibility offers a direct path to staff access settings', () => {

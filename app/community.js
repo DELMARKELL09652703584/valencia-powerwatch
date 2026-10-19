@@ -637,7 +637,8 @@ async function renderMobileReportForm() {
           ? `<video src="${escapeHtml(attachment.data)}" controls aria-label="${escapeHtml(attachment.name)}"></video>`
           : `<img src="${escapeHtml(attachment.data)}" alt="${escapeHtml(attachment.name)}">`).join('')}</div>` : '<p class="muted small">No evidence attached.</p>'}
       </div>
-      <form class="mobile-form" data-form="report">${hidden}<input type="hidden" name="photoData" value="${escapeHtml(draft.photoData || '')}">
+      <form class="mobile-form" data-form="report" aria-busy="false">${hidden}<input type="hidden" name="photoData" value="${escapeHtml(draft.photoData || '')}">
+        <div class="report-submit-feedback" data-form-feedback role="status" aria-live="polite" aria-atomic="true" tabindex="-1" hidden></div>
         <div class="dual-action-row"><button type="button" class="button ghost" data-action="previous-report-step">Back</button><button class="button primary" type="submit">Submit report</button></div>
       </form>
       <p class="muted small">Reports are reviewed by authorized personnel before confirmation.</p>`;
@@ -904,20 +905,34 @@ async function moveMobileReportStep(direction) {
   await render();
 }
 
+function filterMobileIncidentsByBarangay(incidents, barangay, showAll = false) {
+  if (!barangay || showAll) return incidents;
+  const normalizedBarangay = barangay.trim().toLowerCase();
+  return incidents.filter((incident) => (
+    (incident.affected_barangays || [incident.barangay])
+      .some((affectedBarangay) => String(affectedBarangay || '').trim().toLowerCase() === normalizedBarangay)
+  ));
+}
+
 async function renderMobileOutages() {
   const f = state.filters;
-  const { incidents } = await api(`/api/incidents${query({ barangay: f.mobileBarangay, type: f.mobileType })}`);
+  const { incidents } = await api(`/api/incidents${query({ type: f.mobileType })}`);
   const mine = state.user.barangay;
-  const scoped = mine ? incidents.filter((i) => (i.affected_barangays || []).includes(mine)) : incidents;
-  const list = scoped.length ? scoped : incidents;
+  const showingAllBarangays = f.mobileBarangay === 'all';
+  const selectedBarangay = f.mobileBarangay && !['all', 'mine'].includes(f.mobileBarangay)
+    ? f.mobileBarangay
+    : '';
+  const scopeBarangay = showingAllBarangays ? '' : selectedBarangay || mine;
+  const list = filterMobileIncidentsByBarangay(incidents, scopeBarangay, showingAllBarangays);
+  const scopeLabel = selectedBarangay || mine;
 
   mobileShell(`
     ${mobileHero('Active outages', 'Live status of reported and verified interruptions.', 'amber')}
     <div class="mobile-filters">
-      <select class="input" data-filter="mobileBarangay"><option value="">All barangays</option>${state.barangays.map((b) => `<option ${f.mobileBarangay === b ? 'selected' : ''}>${escapeHtml(b)}</option>`).join('')}</select>
+      <select class="input" data-filter="mobileBarangay"><option value="mine" ${!f.mobileBarangay || f.mobileBarangay === 'mine' ? 'selected' : ''}>My barangay</option><option value="all" ${showingAllBarangays ? 'selected' : ''}>All barangays</option>${state.barangays.map((b) => `<option value="${escapeHtml(b)}" ${f.mobileBarangay === b ? 'selected' : ''}>${escapeHtml(b)}</option>`).join('')}</select>
       <select class="input" data-filter="mobileType"><option value="">All types</option><option ${f.mobileType === 'Unexpected' ? 'selected' : ''}>Unexpected</option><option ${f.mobileType === 'Scheduled' ? 'selected' : ''}>Scheduled</option></select>
     </div>
-    ${mine ? `<div class="mobile-scope-note">Showing outages affecting <strong>${escapeHtml(mine)}</strong>. <button class="link-button" data-action="clear-mobile-scope">View all</button></div>` : ''}
+    ${scopeBarangay ? `<div class="mobile-scope-note">Showing outages affecting <strong>${escapeHtml(scopeLabel)}</strong>. <button class="link-button" data-action="clear-mobile-scope">View all</button></div>` : mine ? `<div class="mobile-scope-note">Showing outages across Valencia City. <button class="link-button" data-action="set-mobile-my-scope">My barangay</button></div>` : ''}
     ${list.length ? list.map((i) => `
       <section class="mobile-outage-card">
         <header><div><span class="mono muted small">${escapeHtml(i.incident_code)}</span><h3>${escapeHtml(i.title)}</h3></div>${statusPill(i.status)}</header>

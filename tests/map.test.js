@@ -61,8 +61,13 @@ before(async () => {
   throw new Error(`Test server did not become healthy.\n${serverOutput}`);
 });
 
-after(() => {
-  if (serverProcess && serverProcess.exitCode === null) serverProcess.kill();
+after(async () => {
+  if (serverProcess && serverProcess.exitCode === null) {
+    await new Promise((resolve) => {
+      serverProcess.once('exit', resolve);
+      serverProcess.kill();
+    });
+  }
   if (testDirectory && fs.existsSync(testDirectory)) fs.rmSync(testDirectory, { recursive: true, force: true });
 });
 

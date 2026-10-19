@@ -194,7 +194,7 @@ function showScadaEmergencyBanner(newReports = []) {
         </div>
       </div>
       <div class="scada-banner-actions">
-        <button type="button" class="button small primary scada-banner-cta" data-page="verification" data-action="dismiss-scada-banner">
+        <button type="button" class="button small primary scada-banner-cta" data-action="verify-in-queue">
           🔍 Verify in Queue (${count})
         </button>
         <button type="button" class="scada-banner-close" data-action="dismiss-scada-banner" aria-label="Dismiss alert" title="Dismiss">

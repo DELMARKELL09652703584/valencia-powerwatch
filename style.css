@@ -7720,6 +7720,30 @@ body.community-body #app {
 }
 
 @media (max-width: 900px) {
+  html:has(.admin-shell),
+  body:has(.admin-shell),
+  body.admin-body {
+    height: auto !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  .admin-shell {
+    display: block;
+    height: auto;
+    min-height: 100vh;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .admin-shell .admin-main {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+  }
+
   .admin-shell { display: block; }
   .admin-shell .admin-sidebar {
     position: sticky;
@@ -9087,6 +9111,23 @@ body.dark-mode .mini-stepper-step {
 .community-body .report-step-form[data-form="report"] > [data-action="next-report-step"] { min-height: 48px; }
 .community-body .report-step-form[data-form="report"] [data-gps="status"] { font-size: .8rem; line-height: 1.4; }
 .community-body [data-gps="status"] .button { min-height: 32px; margin-top: 4px; padding: 5px 9px; white-space: normal; }
+
+.community-body .report-submit-feedback:not([hidden]) {
+  padding: 10px 12px;
+  border: 1px solid #93c5fd;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: .9rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.community-body .report-submit-feedback[data-state="error"] {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+}
 
 .community-body .possible-duplicate-notice,
 .community-body .possible-duplicate-clear {

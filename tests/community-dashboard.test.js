@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 const { test } = require('node:test');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -17,13 +18,60 @@ test('community dashboard keeps personal notifications out of the home feed', ()
   assert.ok(homeRendererEnd > homeRendererStart);
   assert.doesNotMatch(homeRenderer, /\/api\/(?:notifications|announcements)/);
   assert.doesNotMatch(communityScript, /class="recent-updates"/);
-  assert.match(communityPage, /\/app\/community\.js\?v=35/);
-  assert.match(communityPage, /\/app\/main\.js\?v=38/);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=68/);
-  assert.match(communityPage, /\/style\.css\?v=46/);
+  assert.match(communityPage, /\/app\/community\.js\?v=36/);
+  assert.match(communityPage, /\/app\/main\.js\?v=39/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=70/);
+  assert.match(communityPage, /\/style\.css\?v=47/);
   assert.match(portalStyles, /body\.community-body \.home-report-action\s*\{/);
   assert.match(portalStyles, /body\.community-body \.home-track-action svg\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;[^}]*fill:\s*none;/s);
   assert.match(portalStyles, /@media \(max-width: 600px\)\s*\{\s*body\.community-body \.mobile-home-header\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
+});
+
+test('community outage list keeps barangay scope and supports an explicit city-wide view', () => {
+  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
+  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+  const helperStart = communityScript.indexOf('function filterMobileIncidentsByBarangay(');
+  const helperEnd = communityScript.indexOf('\nasync function renderMobileOutages()', helperStart);
+  const helperSource = communityScript.slice(helperStart, helperEnd);
+  const filterIncidents = vm.runInNewContext(`${helperSource}; filterMobileIncidentsByBarangay`);
+  const incidents = [
+    { id: 1, barangay: 'Centro', affected_barangays: ['Centro', 'Poblacion'] },
+    { id: 2, barangay: 'Lourdes', affected_barangays: ['Lourdes'] },
+    { id: 3, barangay: 'Poblacion' },
+  ];
+
+  assert.ok(helperStart >= 0);
+  assert.ok(helperEnd > helperStart);
+  assert.deepEqual(Array.from(filterIncidents(incidents, 'poblacion')).map((incident) => incident.id), [1, 3]);
+  assert.deepEqual(Array.from(filterIncidents(incidents, 'No Match')).map((incident) => incident.id), []);
+  assert.deepEqual(Array.from(filterIncidents(incidents, '', true)).map((incident) => incident.id), [1, 2, 3]);
+  assert.match(communityScript, /const list = filterMobileIncidentsByBarangay\(incidents, scopeBarangay, showingAllBarangays\);/);
+  assert.doesNotMatch(communityScript, /scoped\.length \? scoped : incidents/);
+  assert.match(mainScript, /case 'clear-mobile-scope':\s*state\.filters\.mobileBarangay = 'all';/);
+  assert.match(mainScript, /case 'set-mobile-my-scope':\s*state\.filters\.mobileBarangay = 'mine';/);
+});
+
+test('report submission announces progress and errors without discarding the draft', () => {
+  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
+  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+  const submitHandlerStart = mainScript.indexOf("document.addEventListener('submit', async (event) => {");
+  const submitHandlerEnd = mainScript.indexOf("\ndocument.addEventListener('change', async (event) => {", submitHandlerStart);
+  const submitHandler = mainScript.slice(submitHandlerStart, submitHandlerEnd);
+  const reportSubmitStart = mainScript.indexOf("if (type === 'report') {");
+  const reportSubmitEnd = mainScript.indexOf("\n  if (type === 'settings-info')", reportSubmitStart);
+  const reportSubmit = mainScript.slice(reportSubmitStart, reportSubmitEnd);
+
+  assert.match(communityScript, /data-form="report" aria-busy="false"/);
+  assert.match(communityScript, /data-form-feedback role="status" aria-live="polite" aria-atomic="true" tabindex="-1" hidden/);
+  assert.match(communityScript, /<button class="button primary" type="submit">Submit report<\/button>/);
+  assert.match(submitHandler, /if \(form\.dataset\.submitting === 'true'\) return;/);
+  assert.match(submitHandler, /form\.setAttribute\('aria-busy', 'true'\)/);
+  assert.match(submitHandler, /Submitting your report… Please wait\./);
+  assert.match(submitHandler, /feedback\.setAttribute\('role', 'alert'\)/);
+  assert.match(submitHandler, /feedback\.setAttribute\('aria-live', 'assertive'\)/);
+  assert.match(submitHandler, /feedback\.focus\(\)/);
+  assert.match(submitHandler, /Your entered details are still here; please try again\./);
+  assert.ok(reportSubmit.indexOf("await api('/api/reports'") < reportSubmit.indexOf('state.mobileReportDraft = null;'));
 });
 
 test('home report action is icon-only and retains an accessible name', () => {
@@ -74,7 +122,7 @@ test('community report location remains readable in Night Ops mode', () => {
   assert.match(communityScript, /id="report-assigned-barangay-badge"/);
   assert.match(communityScript, /id="assigned-barangay-name"/);
   assert.match(communityScript, /class="mobile-gps"/);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=68/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=70/);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.stepper \.step > span:last-child\s*\{[^}]*color:\s*var\(--pw-body\)\s*!important;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.stepper \.step\.active \.step-number\s*\{[^}]*background:\s*var\(--pw-primary\);/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body #report-assigned-barangay-badge\s*\{[^}]*background:\s*#10352b\s*!important;/s);
@@ -90,7 +138,7 @@ test('community report review notices have readable Night Ops colors', () => {
   assert.match(portalStyles, /body\.dark-mode\.community-body \.possible-duplicate-notice\.is-unavailable\s*\{[^}]*background:\s*#3a211e\s*!important;[^}]*color:\s*#ffd2c8\s*!important;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.possible-duplicate-notice\.is-unavailable p\s*\{[^}]*color:\s*#f0c9c0\s*!important;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.possible-duplicate-notice,\s*body\.dark-mode\.community-body \.possible-duplicate-clear\s*\{[^}]*background:\s*#332a1a\s*!important;/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=68/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=70/);
 });
 
 test('community report review keeps the Back button label visible in both themes', () => {
@@ -102,7 +150,7 @@ test('community report review keeps the Back button label visible in both themes
   assert.match(portalStyles, /body\.community-body \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\),\s*body\.community-body \.mobile-auth-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)\s*\{\s*color:\s*#fff\s*!important;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\),\s*body\.dark-mode\.community-body \.mobile-auth-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)\s*\{/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \:is\(\.button\.primary, \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\), \.mobile-auth-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)\)\s*\{/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=68/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=70/);
 });
 
 test('community report location method buttons retain their theme colors', () => {
@@ -115,7 +163,7 @@ test('community report location method buttons retain their theme colors', () =>
   assert.match(portalStyles, /body\.community-body \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)/);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)/);
   assert.match(portalStyles, /body\.community-body \.mobile-tab\.active,\s*body\.community-body \.mobile-segment\.active\s*\{[^}]*color:\s*var\(--pw-primary\);/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=68/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=70/);
 });
 
 test('community home greeting stays legible over the Night Ops header', () => {
@@ -140,8 +188,8 @@ test('report details activity, ETR, and feedback remain readable in Night Ops mo
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-report-timeline\s*\{[^}]*background:\s*var\(--pw-panel\);/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-etr-badge\.is-restored\s*\{[^}]*background:\s*#0d302b;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.report-feedback-question,\s*body\.dark-mode\.community-body \.report-feedback-rating-label\s*\{[^}]*color:\s*var\(--pw-text\);/s);
-  assert.match(communityPage, /\/style\.css\?v=46/);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=68/);
+  assert.match(communityPage, /\/style\.css\?v=47/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=70/);
 });
 
 test('community notification panel preserves readable text in Light and Night Ops themes', () => {
@@ -172,7 +220,7 @@ test('community theme toggle is an accessible icon-only control', () => {
   assert.match(themeToggle, /<span id="theme-btn-icon" aria-hidden="true">\$\{isDark \? '☀️' : '🌙'\}<\/span>/);
   assert.doesNotMatch(themeToggle, /theme-btn-text|Night Ops<\/span>|Light<\/span>/);
   assert.match(portalStyles, /\.community-body \.mobile-theme-toggle\s*\{[^}]*width:\s*42px;[^}]*min-width:\s*42px;[^}]*min-height:\s*42px;/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=68/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=70/);
 });
 
 test('community bottom navigation shows accessible icon and text labels', () => {
@@ -202,8 +250,8 @@ test('community bottom navigation shows accessible icon and text labels', () => 
   assert.match(portalStyles, /body\.community-body \.mobile-tab\.active::after\s*\{[^}]*transform:\s*translateX\(50%\) scaleX\(1\);/s);
   assert.match(portalStyles, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*body\.community-body \.mobile-tab,/s);
   assert.match(portalStyles, /body\.community-body \.mobile-tab-icon,\s*body\.community-body \.mobile-tab-icon svg\s*\{[^}]*width:\s*22px;[^}]*height:\s*22px;/s);
-  assert.match(communityPage, /\/app\/community\.js\?v=35/);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=68/);
+  assert.match(communityPage, /\/app\/community\.js\?v=36/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=70/);
 });
 
 test('Community login preserves the Valencia panorama backdrop and caches it for offline launch', () => {
@@ -264,7 +312,7 @@ test('User Portal provides an accessible PWA install button', () => {
   assert.match(communityScript, /data-action="install-app"[\s\S]*?<span>Install<\/span>/);
   assert.match(mainScript, /case 'install-app':\s*\{[\s\S]*?installPrompt\.prompt\(\)/);
   assert.match(mainScript, /window\.addEventListener\('beforeinstallprompt'/);
-  assert.match(communityPage, /\/app\/community\.js\?v=35/);
+  assert.match(communityPage, /\/app\/community\.js\?v=36/);
   assert.match(communityPage, /\/app\/pwa-update\.js\?v=3/);
 });
 
@@ -294,7 +342,7 @@ test('User Portal PWA is distinct from Staff and preserves its own cache during 
   assert.ok(manifest.icons.every((icon) => !icon.src.includes('powerwatch-field-icon')));
   assert.ok(staffManifest.icons.every((icon) => icon.src.includes('powerwatch-field-icon')));
   assert.match(communityPage, /href="\/manifest\.json"/);
-  assert.match(communityPage, /\/style\.css\?v=46/);
+  assert.match(communityPage, /\/style\.css\?v=47/);
   assert.match(staffPage, /href="\/staff-manifest\.json"/);
   assert.match(staffPage, /rel="icon" type="image\/png" sizes="192x192" href="\/assets\/powerwatch-field-icon-192\.png"/);
   assert.match(staffPage, /rel="apple-touch-icon" sizes="180x180" href="\/assets\/powerwatch-field-icon-180\.png"/);

@@ -1229,6 +1229,15 @@ async function handleClick(event) {
         setToast(!newMuted ? '🔊 SCADA Audio Alerts Enabled (Telemetry Ping Active)' : '🔇 Audio Alerts Muted');
         return;
       }
+      case 'verify-in-queue': {
+        const banner = document.getElementById('scada-emergency-banner');
+        if (banner) {
+          banner.classList.add('fading');
+          setTimeout(() => banner.remove(), 250);
+        }
+        goToPage('verification');
+        return;
+      }
       case 'dismiss-scada-banner': {
         const banner = document.getElementById('scada-emergency-banner');
         if (banner) {
@@ -1751,8 +1760,12 @@ async function handleClick(event) {
         await render();
         return;
       case 'clear-mobile-scope':
-        state.filters.mobileBarangay = '';
+        state.filters.mobileBarangay = 'all';
         state.filters.mobileType = '';
+        await render();
+        return;
+      case 'set-mobile-my-scope':
+        state.filters.mobileBarangay = 'mine';
         await render();
         return;
       case 'reset-report-filters':
@@ -2878,13 +2891,41 @@ document.addEventListener('submit', async (event) => {
   const form = event.target.closest('form[data-form]');
   if (!form) return;
   event.preventDefault();
+  if (form.dataset.submitting === 'true') return;
+  const isReportSubmission = form.dataset.form === 'report';
   const button = form.querySelector('[type="submit"]');
+  const originalButtonLabel = button?.textContent;
+  form.dataset.submitting = 'true';
+  if (isReportSubmission) {
+    form.setAttribute('aria-busy', 'true');
+    const feedback = form.querySelector('[data-form-feedback]');
+    if (feedback) {
+      feedback.hidden = false;
+      feedback.dataset.state = 'pending';
+      feedback.setAttribute('role', 'status');
+      feedback.setAttribute('aria-live', 'polite');
+      feedback.textContent = 'Submitting your report… Please wait.';
+    }
+    if (button) button.textContent = 'Submitting…';
+  }
   if (button) button.disabled = true;
   document.querySelector('.dialog-error-banner')?.remove();
   try {
     await submitForm(form);
   } catch (error) {
     const formType = form.dataset.form;
+    if (isReportSubmission && error.status !== 401 && form.isConnected) {
+      const feedback = form.querySelector('[data-form-feedback]');
+      if (feedback) {
+        feedback.hidden = false;
+        feedback.dataset.state = 'error';
+        feedback.setAttribute('role', 'alert');
+        feedback.setAttribute('aria-live', 'assertive');
+        feedback.textContent = error.message || 'Your report could not be submitted. Your entered details are still here; please try again.';
+        feedback.focus();
+      }
+      return;
+    }
     if (formType === 'login') {
       renderLogin(
         error.message || 'Invalid email, mobile number, or password.',
@@ -2921,7 +2962,14 @@ document.addEventListener('submit', async (event) => {
       }
     }
   } finally {
-    if (button && button.isConnected) button.disabled = false;
+    if (form.isConnected) {
+      delete form.dataset.submitting;
+      if (isReportSubmission) form.setAttribute('aria-busy', 'false');
+    }
+    if (button && button.isConnected) {
+      button.disabled = false;
+      if (isReportSubmission && originalButtonLabel !== undefined) button.textContent = originalButtonLabel;
+    }
   }
 });
 
