@@ -2,7 +2,11 @@ const crypto = require('node:crypto');
 const express = require('express');
 const nodemailer = require('nodemailer');
 const { db, now } = require('../db');
-const { hashPassword, createSession, publicUser, audit, COOKIE_NAME, isBuiltInAdmin } = require('../auth');
+const {
+  hashPassword, createSession, createPersistentSession, publicUser, audit, COOKIE_NAME,
+  isBuiltInAdmin, residentStore, persistentAuthConfigured, persistentAuthRequired,
+  migrateLegacyResidents, mirrorPersistentResident,
+} = require('../auth');
 
 const router = express.Router();
 const RESET_LIFETIME_MS = 30 * 60 * 1000;
@@ -37,8 +41,15 @@ const emailConfigured = () => Boolean(
 
 const redirectAuthError = (res, error) => res.redirect(`/community?auth_error=${encodeURIComponent(error)}`);
 
-const setSessionCookie = (res, userId) => {
-  const token = createSession(userId);
+const setSessionCookie = async (res, user) => {
+  let token;
+  if (residentStore && user.role === 'resident') {
+    const persistent = await residentStore.saveLegacyAccount(user);
+    if (!persistent) throw new Error('OAuth resident account could not be saved to persistent storage.');
+    token = await createPersistentSession(persistent.id);
+  } else {
+    token = createSession(user.id);
+  }
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -55,10 +66,12 @@ const getPortalDestination = (role) => {
   return '/community';
 };
 
-const signInWithProvider = (provider, profile, req, res) => {
+const signInWithProvider = async (provider, profile, req, res) => {
   if (!profile.id || !profile.email || !profile.emailVerified) {
     return redirectAuthError(res, 'unverified-email');
   }
+  if (persistentAuthRequired && !persistentAuthConfigured) return redirectAuthError(res, 'persistent-storage-unavailable');
+  if (residentStore) await migrateLegacyResidents();
   const linked = db.prepare('SELECT user_id FROM oauth_accounts WHERE provider = ? AND provider_user_id = ?').get(provider, String(profile.id));
   let user = linked ? db.prepare('SELECT * FROM users WHERE id = ?').get(linked.user_id) : null;
 
@@ -78,7 +91,12 @@ const signInWithProvider = (provider, profile, req, res) => {
   }
 
   if (user.status !== 'Active') return redirectAuthError(res, 'inactive-account');
-  setSessionCookie(res, user.id);
+  if (residentStore && user.role === 'resident') {
+    const persistent = await residentStore.saveLegacyAccount(user);
+    if (!persistent) throw new Error('OAuth resident account could not be saved to persistent storage.');
+    user = mirrorPersistentResident(persistent);
+  }
+  await setSessionCookie(res, user);
   audit({ ...user, ip_address: req.ip || req.socket.remoteAddress || null }, 'OAuth login', `${user.full_name} signed in with ${provider}.`);
   return res.redirect(getPortalDestination(user.role));
 };
@@ -162,7 +180,7 @@ router.get('/auth/oauth/:provider/callback', async (req, res) => {
       });
       const profile = await profileResponse.json();
       if (!profileResponse.ok) throw new Error('Google profile could not be loaded.');
-      return signInWithProvider('google', {
+      return await signInWithProvider('google', {
         id: profile.sub,
         email: profile.email,
         emailVerified: profile.email_verified === true,
@@ -186,7 +204,7 @@ router.get('/auth/oauth/:provider/callback', async (req, res) => {
     const profileResponse = await fetch(profileUrl);
     const profile = await profileResponse.json();
     if (!profileResponse.ok) throw new Error('Facebook profile could not be loaded.');
-    return signInWithProvider('facebook', {
+    return await signInWithProvider('facebook', {
       id: profile.id,
       email: profile.email,
       emailVerified: Boolean(profile.email),
@@ -198,13 +216,25 @@ router.get('/auth/oauth/:provider/callback', async (req, res) => {
   }
 });
 
-router.post('/auth/forgot-password', async (req, res) => {
+router.post('/auth/forgot-password', async (req, res, next) => {
   if (!emailConfigured()) return res.status(503).json({ error: 'Password recovery email is not configured on this server.' });
   const email = String(req.body?.email || '').trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid account email address.' });
-  const user = db.prepare('SELECT id, email, full_name FROM users WHERE LOWER(email) = LOWER(?) AND status = ?').get(email, 'Active');
+  let user;
+  try {
+    if (persistentAuthRequired && !persistentAuthConfigured) {
+      return res.status(503).json({ error: 'Persistent account storage is not configured. Please try again later.' });
+    }
+    if (residentStore) await migrateLegacyResidents();
+    const persistent = residentStore ? await residentStore.findByEmail(email) : null;
+    user = persistent ? mirrorPersistentResident(persistent) : null;
+  } catch (error) {
+    return next(error);
+  }
+  user ||= db.prepare('SELECT id, email, full_name FROM users WHERE LOWER(email) = LOWER(?) AND status = ?').get(email, 'Active');
   const message = 'If an active account uses that email, password reset instructions have been sent.';
   if (!user) return res.json({ message });
+  if (user.status !== 'Active') return res.json({ message });
   if (isBuiltInAdmin(user)) return res.json({ message });
 
   const recent = db.prepare('SELECT created_at FROM password_reset_tokens WHERE user_id = ? ORDER BY created_at DESC LIMIT 1').get(user.id);
@@ -240,7 +270,7 @@ router.post('/auth/forgot-password', async (req, res) => {
   }
 });
 
-router.post('/auth/reset-password', (req, res) => {
+router.post('/auth/reset-password', async (req, res, next) => {
   const token = String(req.body?.token || '');
   const password = String(req.body?.password || '');
   if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
@@ -252,11 +282,23 @@ router.post('/auth/reset-password', (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ? AND status = ?').get(reset.user_id, 'Active');
   if (!user) return res.status(400).json({ error: 'This account cannot be reset. Contact an administrator.' });
   if (isBuiltInAdmin(user)) return res.status(403).json({ error: 'The built-in administrator password is managed by system configuration.' });
-  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(password), user.id);
-  db.prepare('DELETE FROM password_reset_tokens WHERE user_id = ?').run(user.id);
-  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
-  audit({ ...user, ip_address: req.ip || req.socket.remoteAddress || null }, 'Password reset', `${user.full_name} reset their password using a recovery link.`);
-  return res.json({ message: 'Password updated. Sign in with your new password.' });
+  try {
+    const passwordHash = hashPassword(password);
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, user.id);
+    if (user.role === 'resident' && residentStore) {
+      const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+      updated.password_hash = passwordHash;
+      await residentStore.updateAccount(updated);
+      const persistent = await residentStore.findByEmail(updated.email);
+      if (persistent) await residentStore.deleteUserSessions(persistent.id);
+    }
+    db.prepare('DELETE FROM password_reset_tokens WHERE user_id = ?').run(user.id);
+    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
+    audit({ ...user, ip_address: req.ip || req.socket.remoteAddress || null }, 'Password reset', `${user.full_name} reset their password using a recovery link.`);
+    return res.json({ message: 'Password updated. Sign in with your new password.' });
+  } catch (error) {
+    return next(error);
+  }
 });
 
 module.exports = router;

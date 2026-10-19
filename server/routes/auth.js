@@ -8,6 +8,8 @@ const {
   COOKIE_NAME, hashPassword, verifyPassword, createSession, destroySession,
   requireAuth, publicUser, roleLabel, audit, notifyRole,
   PORTAL_ROLES, isBuiltInAdmin, hasBuiltInAdminIdentifier,
+  createPersistentSession, migrateLegacyResidents, mirrorPersistentResident,
+  residentStore, persistentAuthConfigured, persistentAuthRequired,
 } = require('../auth');
 
 const router = express.Router();
@@ -107,7 +109,7 @@ router.get('/auth/demo', (req, res) => {
   });
 });
 
-router.post('/auth/register', (req, res) => {
+router.post('/auth/register', async (req, res, next) => {
   const { full_name, email, contact_number, address, barangay, password } = req.body || {};
 
   if (!full_name || !email || !password) {
@@ -127,46 +129,76 @@ router.post('/auth/register', (req, res) => {
     return res.status(409).json({ error: 'That account identifier is reserved.' });
   }
 
-  const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = ?').get(cleanEmail);
-  if (existing) return res.status(409).json({ error: 'An account with this email already exists.' });
-
   const cleanAddress = address ? String(address).trim() : null;
   const cleanBarangay = barangay ? String(barangay).trim() : null;
+  try {
+    if (persistentAuthRequired && !persistentAuthConfigured) {
+      return res.status(503).json({ error: 'Persistent account storage is not configured. Please try again later.' });
+    }
+    if (residentStore) await migrateLegacyResidents();
 
-  const info = db.prepare(`
-    INSERT INTO users (full_name, username, email, contact_number, address, barangay, password_hash, role, status, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'resident', 'Active', ?)
-  `).run(
-    String(full_name).trim(),
-    rawUsername,
-    cleanEmail,
-    cleanContact,
-    cleanAddress,
-    cleanBarangay,
-    hashPassword(password),
-    now()
-  );
+    const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = ?').get(cleanEmail);
+    if (existing || (residentStore && await residentStore.findByEmail(cleanEmail))) {
+      return res.status(409).json({ error: 'An account with this email already exists.' });
+    }
 
-  checkpointDb();
+    const account = {
+      full_name: String(full_name).trim(),
+      username: rawUsername,
+      email: cleanEmail,
+      contact_number: cleanContact,
+      address: cleanAddress,
+      barangay: cleanBarangay,
+      password_hash: hashPassword(password),
+      created_at: now(),
+    };
+    const persistentAccount = residentStore ? await residentStore.createAccount(account) : null;
+    let user;
+    if (persistentAccount) {
+      user = mirrorPersistentResident(persistentAccount);
+    } else {
+      const info = db.prepare(`
+        INSERT INTO users (full_name, username, email, contact_number, address, barangay, password_hash, role, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'resident', 'Active', ?)
+      `).run(
+        account.full_name,
+        account.username,
+        account.email,
+        account.contact_number,
+        account.address,
+        account.barangay,
+        account.password_hash,
+        account.created_at
+      );
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(info.lastInsertRowid));
+    }
 
-  const userId = Number(info.lastInsertRowid);
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
-  const token = createSession(userId, true);
+    checkpointDb();
 
-  audit({ ...user, ip_address: req.ip || req.socket.remoteAddress || null }, 'Registration', `New resident account created for ${user.email}.`);
-  notifyRole('personnel', 'New resident registered', `${user.full_name} registered to Valencia PowerWatch.`, 'system');
-  notifyRole('administrator', 'New resident registered', `${user.full_name} registered to Valencia PowerWatch.`, 'system');
+    const token = persistentAccount
+      ? await createPersistentSession(persistentAccount.id, true)
+      : createSession(user.id, true);
 
-  res.cookie(COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 30 * 24 * 60 * 60 * 1000
-  });
-  res.json({ user: publicUser(user), message: 'Registration successful.' });
+    audit({ ...user, ip_address: req.ip || req.socket.remoteAddress || null }, 'Registration', `New resident account created for ${user.email}.`);
+    notifyRole('personnel', 'New resident registered', `${user.full_name} registered to Valencia PowerWatch.`, 'system');
+    notifyRole('administrator', 'New resident registered', `${user.full_name} registered to Valencia PowerWatch.`, 'system');
+
+    res.cookie(COOKIE_NAME, token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60 * 1000
+    });
+    return res.json({ user: publicUser(user), message: 'Registration successful.' });
+  } catch (error) {
+    if (error.code === '23505') {
+      return res.status(409).json({ error: 'An account with this email already exists.' });
+    }
+    return next(error);
+  }
 });
 
-router.post('/auth/login', (req, res) => {
+router.post('/auth/login', async (req, res, next) => {
   const { email, password, remember, portal } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'Email, mobile number, or username and password are required.' });
   if (portal && !Object.hasOwn(PORTAL_ROLES, portal)) {
@@ -187,44 +219,80 @@ router.post('/auth/login', (req, res) => {
     )
   `).all(raw, raw, raw, raw, cleanPhone);
 
-  if (!candidates.length) {
-    return res.status(401).json({ error: 'No account found with this email, mobile number, or username.' });
-  }
+  try {
+    const isResidentPortal = !portal || portal === 'community';
+    if (isResidentPortal && persistentAuthRequired && !persistentAuthConfigured) {
+      return res.status(503).json({ error: 'Persistent account storage is not configured. Please try again later.' });
+    }
+    if (isResidentPortal && residentStore) await migrateLegacyResidents();
 
-  const user = candidates.find((cand) => verifyPassword(password, cand.password_hash));
-  if (!user) {
-    return res.status(401).json({ error: 'Incorrect password. Please verify and try again.' });
-  }
-  if (user.status !== 'Active') {
-    return res.status(403).json({ error: 'This account is deactivated. Contact the administrator.' });
-  }
-  if (portal && !PORTAL_ROLES[portal].includes(user.role)) {
-    return res.status(403).json({ error: 'This account is not authorized for the selected portal.' });
-  }
+    const persistentCandidates = isResidentPortal && residentStore
+      ? await residentStore.findByIdentifier(raw, cleanPhone)
+      : [];
+    let persistentUser = persistentCandidates.find((candidate) => verifyPassword(password, candidate.password_hash));
+    let user = persistentUser
+      ? mirrorPersistentResident(persistentUser)
+      : candidates.find((candidate) => verifyPassword(password, candidate.password_hash));
 
-  const rememberMe = remember === true;
-  const token = createSession(user.id, rememberMe);
-  db.prepare('UPDATE users SET last_login = ? WHERE id = ?').run(now(), user.id);
-  checkpointDb();
-  const fresh = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+    if (!user) {
+      if (!candidates.length && !persistentCandidates.length) {
+        return res.status(401).json({ error: 'No account found with this email, mobile number, or username.' });
+      }
+      return res.status(401).json({ error: 'Incorrect password. Please verify and try again.' });
+    }
+    if (user.status !== 'Active') {
+      return res.status(403).json({ error: 'This account is deactivated. Contact the administrator.' });
+    }
+    if (portal && !PORTAL_ROLES[portal].includes(user.role)) {
+      return res.status(403).json({ error: 'This account is not authorized for the selected portal.' });
+    }
 
-  audit({ ...fresh, ip_address: req.ip || req.socket.remoteAddress || null }, 'Login', `${user.full_name} (${roleLabel(user.role)}) logged in.`);
+    if (isResidentPortal && residentStore && user.role === 'resident' && !persistentUser) {
+      persistentUser = await residentStore.saveLegacyAccount(user);
+      if (!persistentUser) {
+        return res.status(503).json({ error: 'The resident account could not be synchronized to persistent storage.' });
+      }
+      user = mirrorPersistentResident(persistentUser);
+    }
 
-  res.cookie(COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000
-  });
-  res.json({ user: publicUser(fresh), message: 'Login successful.' });
+    const rememberMe = remember === true;
+    db.prepare('UPDATE users SET last_login = ? WHERE id = ?').run(now(), user.id);
+    let fresh = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+    if (persistentUser && residentStore) {
+      const updated = await residentStore.updateAccount(fresh);
+      if (!updated) throw new Error('Persistent resident account disappeared during login.');
+      fresh = mirrorPersistentResident(updated);
+    }
+    const token = persistentUser
+      ? await createPersistentSession(persistentUser.id, rememberMe)
+      : createSession(user.id, rememberMe);
+
+    checkpointDb();
+
+    audit({ ...fresh, ip_address: req.ip || req.socket.remoteAddress || null }, 'Login', `${fresh.full_name} (${roleLabel(fresh.role)}) logged in.`);
+
+    res.cookie(COOKIE_NAME, token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000
+    });
+    return res.json({ user: publicUser(fresh), message: 'Login successful.' });
+  } catch (error) {
+    return next(error);
+  }
 });
 
-router.post('/auth/logout', requireAuth, (req, res) => {
-  destroySession(req.token);
+router.post('/auth/logout', requireAuth, async (req, res, next) => {
+  try {
+  await destroySession(req.token);
   audit(req.user, 'Logout', `${req.user.full_name} logged out.`);
   res.clearCookie(COOKIE_NAME, { path: '/' });
   checkpointDb();
-  res.json({ message: 'Logged out.' });
+  return res.json({ message: 'Logged out.' });
+  } catch (error) {
+    return next(error);
+  }
 });
 
 router.get('/auth/me', requireAuth, (req, res) => {
@@ -299,11 +367,18 @@ router.put('/profile', requireAuth, async (req, res, next) => {
   `).run(full_name.trim(), contact_number || null, address || null, barangay || null, photoPath, req.user.id);
 
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (user.role === 'resident' && residentStore) {
+    try {
+      await residentStore.updateAccount(user);
+    } catch (error) {
+      return next(error);
+    }
+  }
   audit({ ...user, ip_address: req.ip || req.socket.remoteAddress || null }, 'Profile updated', `${user.full_name} updated their profile.`);
   res.json({ user: publicUser(user), message: 'Profile updated.' });
 });
 
-router.put('/profile/password', requireAuth, (req, res) => {
+router.put('/profile/password', requireAuth, async (req, res, next) => {
   if (isBuiltInAdmin(req.user)) {
     return res.status(403).json({ error: 'The built-in administrator password is managed by system configuration.' });
   }
@@ -315,9 +390,19 @@ router.put('/profile/password', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'Current password is incorrect.' });
   }
 
-  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(new_password), req.user.id);
-  audit(req.user, 'Password changed', `${req.user.full_name} changed their password.`);
-  res.json({ message: 'Password changed successfully.' });
+  try {
+    const passwordHash = hashPassword(new_password);
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, req.user.id);
+    if (req.user.role === 'resident' && residentStore) {
+      const fresh = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+      fresh.password_hash = passwordHash;
+      await residentStore.updateAccount(fresh);
+    }
+    audit(req.user, 'Password changed', `${req.user.full_name} changed their password.`);
+    return res.json({ message: 'Password changed successfully.' });
+  } catch (error) {
+    return next(error);
+  }
 });
 
 module.exports = router;

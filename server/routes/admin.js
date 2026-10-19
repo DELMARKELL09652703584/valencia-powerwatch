@@ -8,6 +8,7 @@ const { db, now, DB_PATH, UPLOAD_DIR, VALENCIA_BARANGAYS } = require('../db');
 const {
   requireAuth, requireRole, audit, hashPassword, roleLabel,
   notifyUsers, notifyRole, isBuiltInAdmin, hasBuiltInAdminIdentifier,
+  residentStore, migrateLegacyResidents,
 } = require('../auth');
 const { staffBarangaysFor } = require('../staff-access');
 
@@ -24,6 +25,18 @@ const ROLES = {
   personnel: 'System Personnel',
   administrator: 'Administrator',
   utility: 'Authorized Utility Personnel',
+};
+
+const syncPersistentAccount = async (user, previousEmail = user.email) => {
+  if (!residentStore) return;
+  await migrateLegacyResidents();
+  const existing = await residentStore.findByEmail(previousEmail);
+  if (!existing) return;
+  const updated = await residentStore.updateAccount({ ...user, persistent_email: previousEmail });
+  if (!updated) throw new Error('Persistent account could not be synchronized.');
+  if (updated.status !== 'Active' || updated.role !== existing.role) {
+    await residentStore.deleteUserSessions(updated.id);
+  }
 };
 
 const staffAccountLimit = () => {
@@ -215,7 +228,7 @@ router.post('/users', requireAuth, requireRole('administrator'), (req, res) => {
   });
 });
 
-router.put('/users/:id', requireAuth, requireRole('administrator'), (req, res) => {
+router.put('/users/:id', requireAuth, requireRole('administrator'), async (req, res, next) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(req.params.id));
   if (!user) return res.status(404).json({ error: 'User not found.' });
   if (isBuiltInAdmin(user)) return res.status(403).json({ error: 'The built-in administrator account cannot be changed.' });
@@ -231,6 +244,7 @@ router.put('/users/:id', requireAuth, requireRole('administrator'), (req, res) =
     const dup = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?) AND id != ?').get(cleanEmail, user.id);
     if (dup) return res.status(409).json({ error: 'Another account uses this email.' });
   }
+  try {
   db.prepare(`
     UPDATE users SET full_name = COALESCE(?, full_name), email = COALESCE(?, email),
       contact_number = COALESCE(?, contact_number), address = COALESCE(?, address),
@@ -238,38 +252,55 @@ router.put('/users/:id', requireAuth, requireRole('administrator'), (req, res) =
   `).run(full_name || null, email === undefined ? null : cleanEmail, contact_number || null, address || null, barangay || null, user.id);
   audit(req.user, 'User edited', `${req.user.full_name} edited account of ${user.email}.`);
   const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+  await syncPersistentAccount(updated, user.email);
   res.json({ user: userPublic(updated), message: 'User updated.' });
+  } catch (error) {
+    if (error.code === '23505') return res.status(409).json({ error: 'Another account uses this email.' });
+    return next(error);
+  }
 });
 
-router.put('/users/:id/status', requireAuth, requireRole('administrator'), (req, res) => {
+router.put('/users/:id/status', requireAuth, requireRole('administrator'), async (req, res, next) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(req.params.id));
   if (!user) return res.status(404).json({ error: 'User not found.' });
   if (isBuiltInAdmin(user)) return res.status(403).json({ error: 'The built-in administrator account cannot be deactivated.' });
   if (user.id === req.user.id) return res.status(400).json({ error: 'You cannot deactivate your own account.' });
   const { status } = req.body || {};
   if (!['Active', 'Inactive'].includes(status)) return res.status(400).json({ error: 'Invalid status.' });
+  try {
   db.prepare('UPDATE users SET status = ? WHERE id = ?').run(status, user.id);
+  const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+  await syncPersistentAccount(updated);
   audit(req.user, 'Account status changed', `Account of ${user.email} set to ${status}.`);
   notifyUsers([user.id], 'Account status', `Your account has been ${status === 'Active' ? 'activated' : 'deactivated'}.`, 'system');
-  res.json({ user: userPublic(db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)), message: `Account ${status === 'Active' ? 'activated' : 'deactivated'}.` });
+  return res.json({ user: userPublic(updated), message: `Account ${status === 'Active' ? 'activated' : 'deactivated'}.` });
+  } catch (error) {
+    return next(error);
+  }
 });
 
-router.delete('/users/:id', requireAuth, requireRole('administrator'), (req, res) => {
+router.delete('/users/:id', requireAuth, requireRole('administrator'), async (req, res, next) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(req.params.id));
   if (!user) return res.status(404).json({ error: 'User not found.' });
   if (isBuiltInAdmin(user)) return res.status(403).json({ error: 'The built-in administrator account cannot be deleted.' });
   if (user.id === req.user.id) return res.status(400).json({ error: 'You cannot delete your own administrator account.' });
 
+  try {
   db.prepare("UPDATE users SET status = 'Deleted' WHERE id = ?").run(user.id);
+  const deleted = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+  await syncPersistentAccount(deleted);
   db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
   db.prepare('DELETE FROM notifications WHERE user_id = ?').run(user.id);
   db.prepare('DELETE FROM staff_team_members WHERE user_id = ?').run(user.id);
   db.prepare('DELETE FROM staff_barangay_assignments WHERE user_id = ?').run(user.id);
   audit(req.user, 'User deleted', `${req.user.full_name} deleted account ${user.email}; historical reports were retained.`);
-  res.json({ message: 'Account deleted. Historical report attribution was preserved.' });
+  return res.json({ message: 'Account deleted. Historical report attribution was preserved.' });
+  } catch (error) {
+    return next(error);
+  }
 });
 
-router.put('/users/:id/role', requireAuth, requireRole('administrator'), (req, res) => {
+router.put('/users/:id/role', requireAuth, requireRole('administrator'), async (req, res, next) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(req.params.id));
   if (!user) return res.status(404).json({ error: 'User not found.' });
   if (isBuiltInAdmin(user)) return res.status(403).json({ error: 'The built-in administrator role cannot be altered.' });
@@ -279,27 +310,43 @@ router.put('/users/:id/role', requireAuth, requireRole('administrator'), (req, r
   if (role === 'personnel' && user.role !== 'personnel') {
     return res.status(409).json({ error: 'Create a staff account through Add Staff so team and barangay access are configured at the same time.' });
   }
+  try {
   db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, user.id);
+  const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+  await syncPersistentAccount(updated);
   if (role !== 'personnel') {
     db.prepare('DELETE FROM staff_team_members WHERE user_id = ?').run(user.id);
     db.prepare('DELETE FROM staff_barangay_assignments WHERE user_id = ?').run(user.id);
   }
   audit(req.user, 'Role changed', `Role of ${user.email} changed to ${roleLabel(role)}.`);
   notifyUsers([user.id], 'Role updated', `Your role is now ${roleLabel(role)}.`, 'system');
-  res.json({ user: userPublic(db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)), message: 'Role updated.' });
+  return res.json({ user: userPublic(updated), message: 'Role updated.' });
+  } catch (error) {
+    return next(error);
+  }
 });
 
 // Reset account password
-router.put('/users/:id/reset', requireAuth, requireRole('administrator'), (req, res) => {
+router.put('/users/:id/reset', requireAuth, requireRole('administrator'), async (req, res, next) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(req.params.id));
   if (!user) return res.status(404).json({ error: 'User not found.' });
   if (isBuiltInAdmin(user)) return res.status(403).json({ error: 'The built-in administrator password cannot be reset here.' });
   const { new_password } = req.body || {};
   if (!new_password || String(new_password).length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+  try {
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(new_password), user.id);
+  const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+  await syncPersistentAccount(updated);
+  if (residentStore) {
+    const persistentUser = await residentStore.findByEmail(updated.email);
+    if (persistentUser) await residentStore.deleteUserSessions(persistentUser.id);
+  }
   db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
   audit(req.user, 'Account reset', `Password reset for ${user.email}.`);
-  res.json({ message: 'Password reset successfully.' });
+  return res.json({ message: 'Password reset successfully.' });
+  } catch (error) {
+    return next(error);
+  }
 });
 
 // ---------------- Barangays / Locations ----------------
