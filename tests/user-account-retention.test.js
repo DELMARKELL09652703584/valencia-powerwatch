@@ -9,15 +9,17 @@ const { createResidentStore } = require('../server/resident-store');
 
 const ROOT = path.resolve(__dirname, '..');
 
-test('Render uses Neon for required persistent resident authentication without a paid disk', () => {
+test('Render keeps the production data configuration while allowing optional Neon auth', () => {
   const renderConfig = fs.readFileSync(path.join(ROOT, 'render.yaml'), 'utf8');
   const deploymentGuide = fs.readFileSync(path.join(ROOT, 'SYSTEM_DEPLOYMENT_AND_USER_GUIDE.md'), 'utf8');
 
-  assert.match(renderConfig, /^\s+plan: free$/m);
-  assert.match(renderConfig, /key: PERSISTENT_AUTH_REQUIRED\s*\n\s+value: "true"/);
-  assert.match(renderConfig, /key: NEON_DATABASE_URL\s*\n\s+sync: false/);
-  assert.doesNotMatch(renderConfig, /^\s+disk:/m);
-  assert.match(deploymentGuide, /NEON_DATABASE_URL/);
+  assert.match(renderConfig, /^\s+branch: main$/m);
+  assert.match(renderConfig, /^\s+disk:\s*$/m);
+  assert.match(renderConfig, /key: POWERWATCH_DATA_DIR\s*\n\s+value: \/var\/data/);
+  assert.match(renderConfig, /key: POWERWATCH_UPLOAD_DIR\s*\n\s+value: \/var\/data\/uploads/);
+  assert.doesNotMatch(renderConfig, /^\s+key: PERSISTENT_AUTH_REQUIRED$/m);
+  assert.doesNotMatch(renderConfig, /^\s+key: NEON_DATABASE_URL$/m);
+  assert.match(deploymentGuide, /Neon PostgreSQL integration is available in the application but is not enabled by this production configuration/);
 });
 
 test('resident account credentials survive a database process restart', () => {
