@@ -144,9 +144,10 @@ If the computer is restarted or turned off, follow these simple steps:
 
 - The live root static mount was removed; `/data`, `/server`, `/package.json`, and `/render.yaml` must return 404. `GET /data/powerwatch.db` returning 200 is a data breach.
 - Do not commit `data/powerwatch.db`, `.env`, or any database backup. `data/*.db` is ignored. The GitHub repository is private; old commits and branches still contain the database, so purge them before making the repository public again.
-- The database was publicly downloadable before the static fix. Rotate the real admin and resident passwords and share the new credentials privately.
+- The database was publicly downloadable before the static fix. The real admin and resident passwords were rotated, sessions were invalidated, and both the latest and rolling backup snapshots verify only the new hashes. Share new credentials privately and change them after login.
 - Evidence photos and profile photos are protected by the authenticated `/uploads/:filename` route. Profile photos are limited to the owner, administrators, and utility users. Only announcement images remain public.
 - Session cookies are `HttpOnly` and `SameSite=Lax`, with `Secure` set on HTTPS. Raw session tokens are never stored in SQLite or Neon; only SHA-256 hashes are stored.
-- Least-privilege Neon credentials are still pending. The app currently connects as `neondb_owner`; replace this with a dedicated app role before treating the deployment as fully hardened.
+- Production uses the least-privilege Neon role `powerwatch_app_mvjwen4u`: it can connect and read/write the five application tables, but cannot create databases, roles, or tables. Use `neondb_owner` only for controlled schema provisioning or snapshot recovery. Runtime DDL is skipped when the tables already exist.
+- The built-in administrator can change their own password from the authenticated profile screen. Staff-side reset, role, status, delete, admin recovery, and forgot-password flows remain blocked for that account.
 - `server/auth.js` contains built-in admin identifiers. Keep the repository private, or move those identifiers to Render environment variables.
-- See [DATABASE_ARCHITECTURE.md](DATABASE_ARCHITECTURE.md) for the current Neon table list, the 22-table gap, verification commands, and the development-branch plan.
+- See [DATABASE_ARCHITECTURE.md](DATABASE_ARCHITECTURE.md) for the current Neon table list, the 22-table gap, the credential-rotation procedure, verification commands, and the development-branch plan.

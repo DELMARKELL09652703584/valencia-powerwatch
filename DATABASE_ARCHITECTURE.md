@@ -41,9 +41,12 @@ Resident / Staff / Admin browser
 | Database | `neondb` |
 | PostgreSQL | 18.6 |
 | Approximate size | 8 MB |
-| App database user | `neondb_owner` |
+| App database user | `powerwatch_app_mvjwen4u` (least privilege) |
+| Schema owner | `neondb_owner` (maintenance only) |
 
 The connection string is stored only in the Render environment variable `NEON_DATABASE_URL` (and in the local, untracked `.env`). It is not in the repository and must never be committed.
+
+Production uses the dedicated role `powerwatch_app_mvjwen4u` with `NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`. It has `CONNECT`, schema `USAGE`, and `SELECT`/`INSERT`/`UPDATE`/`DELETE` on the five application tables. It cannot create tables, roles, or databases. The `neondb_owner` connection remains only for schema provisioning, snapshot recovery, and other deliberate maintenance. The local `.env` may still use the owner for those tasks; Render must use the app role.
 
 ---
 
@@ -193,21 +196,36 @@ There is no `NEON_API_KEY` in this workspace, so branch creation/listing must be
   - the reporting resident can view their own evidence.
 - Profile photos under `/uploads/profile_*` require authentication and are limited to the owner, administrators, and utility users. Unknown upload names return 404; only announcement images remain public.
 - Session tokens are stored as SHA-256 hashes, and cookies set `Secure` on HTTPS.
+- Production Neon uses the least-privilege role `powerwatch_app_mvjwen4u`; runtime DDL is skipped when the five tables exist (`to_regclass` checks). A fresh database or schema change requires the owner role.
+- The real admin and resident passwords were rotated after the public-exposure window. Session rows were invalidated, and both the latest and rolling backup snapshots now verify only the new password hashes.
+- The built-in administrator can change their own password through the authenticated profile route after confirming the current password. Staff-side reset, role, status, delete, and forgot-password flows remain blocked for that account.
 - Authenticated community map payloads use report codes, statuses, types, timestamps, and coordinates; they do not include resident names or contact details.
 - `.env` is ignored by Git and is not served by the application.
 - `data/powerwatch.db` is ignored and is no longer tracked on the current `main` tree.
 - The GitHub repository is private. Anonymous raw URLs for the current tree and old commits return 404.
 - Secrets are configured in Render environment variables, not in the repository.
 
+### Credential rotation procedure (production)
+
+A Render suspend triggers an asynchronous final snapshot. If a new snapshot is uploaded before that final write finishes, the final snapshot can overwrite the upload. Do not skip the stabilization wait.
+
+1. Confirm the latest Render deploy is live and `/api/health` is healthy.
+2. Suspend the service and wait until Render reports `suspended`.
+3. Poll `app_snapshots` for the `main` row until both `checksum` and `created_at` have remained unchanged for at least 15 seconds. Read the snapshot only after that stabilization window.
+4. Read the latest verified snapshot and the current `resident_accounts.password_hash`. Keep both in memory for rollback; never write them to a tracked file.
+5. Update both SQLite `users` password hashes and the Neon resident hash as one coordinated change. Delete `sessions`, `resident_sessions`, and `password_reset_tokens`; upload the new snapshot.
+6. Wait at least 5 seconds and verify the latest `app_snapshots` checksum is still the new one. Resume the service.
+7. Wait for health to report `restoredAt` at or after the new snapshot's `created_at`, then verify both admin and resident logins and log out.
+8. If verification fails, suspend again, wait for snapshot stabilization, restore the original snapshot and resident hash, and resume. Never reset production data.
+9. After a successful rotation, replace `app_snapshots_backup` with the new snapshot as well, so the old password hashes cannot be restored from the rolling backup.
+
 ### Open items
 
-- **Rotate the real admin and resident passwords.** The database was publicly downloadable before the static fix, and old Git history still contains it. Assume the scrypt password hashes and account PII were copied. Rotate both accounts and communicate new credentials privately.
-- **Least privilege:** the app still connects as `neondb_owner`, which has `CREATEROLE` and `CREATEDB`. A dedicated app role with only the required table privileges is recommended.
 - **Repository history:** old commits and branches still contain `data/powerwatch.db`. They are not anonymously accessible while the repository is private, but purge them before making the repository public again.
 - **Hard-coded admin identifiers:** `server/auth.js` contains built-in admin identifiers. The private repository is no longer a public exposure, but moving them to Render environment variables is still preferable.
-- **Password change after recovery:** there is no forced password-change flow; rotated credentials should be changed through the normal profile/recovery flow where available.
+- **Forced password change:** there is no forced first-login password-change flow. Rotated credentials are delivered privately and should be changed after login; the built-in admin and residents can now change their own passwords from the authenticated profile screen.
 - **Object storage:** evidence is stored locally and in `app_snapshot_files` as `bytea`, not in Neon Object Storage or an S3-compatible service. This works for the current small volume but is not the reference's object-storage design.
-- **No migration framework:** the Neon tables are created with `CREATE TABLE IF NOT EXISTS` at runtime. A normalized schema would need versioned migrations.
+- **No migration framework:** the app provisions the Neon tables only when run with the owner role; the production app role detects existing tables and skips DDL. A normalized schema would need versioned owner-run migrations.
 - **No Realtime, Functions, or AI Gateway integration.** These are optional under the reference.
 - **`notification_preferences` is not implemented.**
 
