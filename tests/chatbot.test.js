@@ -94,6 +94,9 @@ before(async () => {
   serverProcess.stdout.on('data', (chunk) => { serverOutput += chunk.toString(); });
   serverProcess.stderr.on('data', (chunk) => { serverOutput += chunk.toString(); });
   await waitForHealth();
+  const health = await (await fetch(`${baseUrl}/api/health`)).json();
+  assert.equal(health.storage, 'sqlite');
+  assert.equal(health.persistence?.enabled, false);
 });
 
 after(async () => {

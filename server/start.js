@@ -28,6 +28,7 @@ async function main() {
     shuttingDown = true;
     console.log(`[persist] ${signal} received; saving final snapshot...`);
     try {
+      await store.stop();
       const result = await Promise.race([
         store.snapshotNow({ force: true }),
         new Promise((resolve) => setTimeout(() => resolve({ saved: false, reason: 'timeout' }), 12000)),

@@ -9,6 +9,7 @@ const {
   residentStore, persistentAuthConfigured,
 } = require('./auth');
 const { staffCanAccessBarangay } = require('./staff-access');
+const { getStatus: getPersistenceStatus } = require('./persistence');
 
 const authRoutes = require('./routes/auth');
 const identityRoutes = require('./routes/identity');
@@ -57,6 +58,7 @@ app.get('/api/health', (req, res) => res.json({
   status: 'ok',
   service: 'Valencia PowerWatch',
   storage: persistentAuthConfigured ? 'neon+sqlite' : 'sqlite',
+  persistence: getPersistenceStatus(),
 }));
 
 app.use('/api', authRoutes);

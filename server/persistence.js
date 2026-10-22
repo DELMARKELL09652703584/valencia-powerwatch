@@ -5,14 +5,25 @@ const crypto = require('node:crypto');
 const { promisify } = require('node:util');
 
 const gzip = promisify(zlib.gzip);
-const gunzip = promisify(zlib.gunzip);
 
-const DEFAULT_INTERVAL_MS = 15000;
+const DEFAULT_INTERVAL_MS = 5000;
+const DEFAULT_BACKUP_MINUTES = 5;
 const DEFAULT_MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
 const DEFAULT_RESTORE_TIMEOUT_MS = 20000;
 
 let pool = null;
 let tablesReady = false;
+
+const state = {
+  enabled: false,
+  targetId: 'main',
+  intervalSeconds: DEFAULT_INTERVAL_MS / 1000,
+  restoredAt: null,
+  restoreSource: null,
+  lastSnapshotAt: null,
+  lastSizeBytes: 0,
+  lastError: null,
+};
 
 const log = (...args) => console.log('[persist]', ...args);
 const warn = (...args) => console.warn('[persist]', ...args);
@@ -23,7 +34,25 @@ function config() {
     connectionString: process.env.NEON_DATABASE_URL || '',
     id: process.env.POWERWATCH_SNAPSHOT_ID || 'main',
     intervalMs: Number(process.env.POWERWATCH_SNAPSHOT_INTERVAL_MS || DEFAULT_INTERVAL_MS),
+    backupMinutes: Number(process.env.POWERWATCH_SNAPSHOT_BACKUP_MINUTES || DEFAULT_BACKUP_MINUTES),
   };
+}
+
+function getStatus() {
+  return {
+    enabled: state.enabled,
+    target: state.targetId,
+    intervalSeconds: state.intervalSeconds,
+    restoredAt: state.restoredAt,
+    restoreSource: state.restoreSource,
+    lastSnapshotAt: state.lastSnapshotAt,
+    lastSizeBytes: state.lastSizeBytes,
+    lastError: state.lastError,
+  };
+}
+
+function setStatus(patch) {
+  Object.assign(state, patch);
 }
 
 function maxUploadBytes() {
@@ -50,6 +79,14 @@ async function ensureTables(client) {
   if (tablesReady) return;
   await client.query(`
     CREATE TABLE IF NOT EXISTS app_snapshots (
+      id TEXT PRIMARY KEY,
+      checksum TEXT NOT NULL,
+      size BIGINT NOT NULL,
+      data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS app_snapshots_backup (
       id TEXT PRIMARY KEY,
       checksum TEXT NOT NULL,
       size BIGINT NOT NULL,
@@ -101,13 +138,58 @@ function walkFiles(dir, base = dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) walkFiles(full, base, out);
-    else if (entry.isFile()) out.push({ full, name: path.relative(base, full).split(path.sep).join('/') });
+    else if (entry.isFile() && !entry.name.startsWith('.')) {
+      out.push({ full, name: path.relative(base, full).split(path.sep).join('/') });
+    }
   }
   return out;
 }
 
+function decodeSnapshot(row, source) {
+  const raw = zlib.gunzipSync(row.data);
+  const checksum = sha256(raw);
+  if (checksum !== row.checksum) {
+    throw new Error(`${source} snapshot checksum mismatch (expected ${row.checksum.slice(0, 12)}, got ${checksum.slice(0, 12)})`);
+  }
+  return raw;
+}
+
+async function findSnapshot(client, targetId) {
+  const latest = await client.query(
+    'SELECT checksum, size, data, created_at FROM app_snapshots WHERE id = $1',
+    [targetId]
+  );
+  if (latest.rowCount) {
+    try {
+      return { source: 'latest', row: latest.rows[0], raw: decodeSnapshot(latest.rows[0], 'latest') };
+    } catch (error) {
+      warn(error.message);
+    }
+  }
+
+  const backup = await client.query(
+    'SELECT checksum, size, data, created_at FROM app_snapshots_backup WHERE id = $1',
+    [targetId]
+  );
+  if (backup.rowCount) {
+    try {
+      return { source: 'backup', row: backup.rows[0], raw: decodeSnapshot(backup.rows[0], 'backup') };
+    } catch (error) {
+      warn(error.message);
+    }
+  }
+
+  return null;
+}
+
 async function restoreFromNeon({ dbPath, uploadDir, snapshotId } = {}) {
   const settings = config();
+  setStatus({
+    enabled: settings.enabled,
+    targetId: snapshotId || settings.id,
+    intervalSeconds: Math.max(3, Math.round(settings.intervalMs / 1000)),
+  });
+
   if (!settings.enabled) return { restored: false, reason: 'disabled' };
   if (!settings.connectionString) {
     warn('NEON_DATABASE_URL is missing; snapshot restore skipped.');
@@ -124,15 +206,11 @@ async function restoreFromNeon({ dbPath, uploadDir, snapshotId } = {}) {
       const client = await getPool().connect();
       try {
         await ensureTables(client);
-        const snapshot = await client.query(
-          'SELECT checksum, size, data, created_at FROM app_snapshots WHERE id = $1',
-          [targetId]
-        );
-        if (!snapshot.rowCount) return { restored: false, reason: 'empty' };
+        const found = await findSnapshot(client, targetId);
+        if (!found) return { restored: false, reason: 'no snapshot or backup found' };
 
-        const raw = await gunzip(snapshot.rows[0].data);
         const tempPath = `${dbPath}.restore-${process.pid}-${Date.now()}`;
-        fs.writeFileSync(tempPath, raw);
+        fs.writeFileSync(tempPath, found.raw);
         for (const suffix of ['-wal', '-shm']) {
           try { fs.unlinkSync(`${dbPath}${suffix}`); } catch (err) {}
         }
@@ -156,8 +234,9 @@ async function restoreFromNeon({ dbPath, uploadDir, snapshotId } = {}) {
         }
         return {
           restored: true,
-          bytes: raw.length,
-          createdAt: snapshot.rows[0].created_at,
+          source: found.source,
+          bytes: found.raw.length,
+          createdAt: found.row.created_at,
           files: restoredFiles,
         };
       } finally {
@@ -170,7 +249,8 @@ async function restoreFromNeon({ dbPath, uploadDir, snapshotId } = {}) {
       return result;
     }
     const when = result.createdAt instanceof Date ? result.createdAt.toISOString() : String(result.createdAt);
-    log(`restored "${targetId}" from Neon: db ${formatBytes(result.bytes)}, ${result.files} upload file(s), saved ${when}.`);
+    setStatus({ restoredAt: when, restoreSource: result.source });
+    log(`restored "${targetId}" from Neon (${result.source}): db ${formatBytes(result.bytes)}, ${result.files} upload file(s), saved ${when}.`);
     return result;
   } catch (error) {
     warn(`restore skipped: ${error.message}`);
@@ -178,16 +258,41 @@ async function restoreFromNeon({ dbPath, uploadDir, snapshotId } = {}) {
   }
 }
 
+async function rotateBackup(client, targetId, backupMinutes) {
+  await client.query(
+    `INSERT INTO app_snapshots_backup (id, checksum, size, data, created_at)
+     SELECT id, checksum, size, data, created_at
+     FROM app_snapshots
+     WHERE id = $1 AND created_at < now() - make_interval(mins => $2::int)
+     ON CONFLICT (id) DO UPDATE
+     SET checksum = EXCLUDED.checksum, size = EXCLUDED.size, data = EXCLUDED.data, created_at = EXCLUDED.created_at
+     WHERE app_snapshots_backup.created_at < EXCLUDED.created_at`,
+    [targetId, backupMinutes]
+  );
+}
+
 function createSnapshotStore({ db, dbPath, uploadDir, snapshotId } = {}) {
   const settings = config();
   const targetId = snapshotId || settings.id;
   let timer = null;
+  let firstTimer = null;
   let running = false;
   let stopped = false;
   let lastSignature = null;
   let fileChecksums = null;
   let lastError = '';
   let uploadLimitWarned = false;
+  let lastKnownUserCount = 0;
+
+  try {
+    lastKnownUserCount = db.prepare('SELECT COUNT(*) AS c FROM users').get()?.c || 0;
+  } catch (error) {}
+
+  setStatus({
+    enabled: settings.enabled,
+    targetId,
+    intervalSeconds: Math.max(3, Math.round(settings.intervalMs / 1000)),
+  });
 
   const signature = () => {
     const parts = [];
@@ -287,6 +392,22 @@ function createSnapshotStore({ db, dbPath, uploadDir, snapshotId } = {}) {
     const before = signature();
     if (!force && before === lastSignature) return { saved: false, reason: 'unchanged' };
 
+    let userCount = 0;
+    try {
+      userCount = db.prepare('SELECT COUNT(*) AS c FROM users').get()?.c || 0;
+    } catch (error) {
+      userCount = 0;
+    }
+    if (userCount === 0 && lastKnownUserCount > 0) {
+      if (lastError !== 'empty-db') {
+        warn('refusing to snapshot because the users table went empty.');
+        lastError = 'empty-db';
+        setStatus({ lastError: 'users table is empty' });
+      }
+      return { saved: false, reason: 'empty-db' };
+    }
+    if (userCount > 0) lastKnownUserCount = userCount;
+
     running = true;
     const startedAt = Date.now();
     const tempPath = path.join(
@@ -306,6 +427,7 @@ function createSnapshotStore({ db, dbPath, uploadDir, snapshotId } = {}) {
       let fileResult = { saved: 0, names: [] };
       try {
         await ensureTables(client);
+        await rotateBackup(client, targetId, settings.backupMinutes);
         fileResult = await uploadChangedFiles(client);
         const result = await client.query(
           `INSERT INTO app_snapshots (id, checksum, size, data)
@@ -325,11 +447,15 @@ function createSnapshotStore({ db, dbPath, uploadDir, snapshotId } = {}) {
       lastSignature = before;
       if (lastError && lastError !== 'no-connection') log('Neon snapshot recovered.');
       lastError = '';
+      setStatus({ lastError: null });
       if (dbSaved || fileResult.saved > 0) {
         const dbNote = dbSaved
           ? `db ${formatBytes(raw.length)} (${formatBytes(compressed.length)} gzip)`
           : 'db unchanged';
         log(`snapshot saved: ${dbNote}, ${fileResult.saved} upload file(s), ${Date.now() - startedAt}ms.`);
+      }
+      if (dbSaved) {
+        setStatus({ lastSnapshotAt: new Date().toISOString(), lastSizeBytes: raw.length, lastError: null });
       }
       return {
         saved: dbSaved || fileResult.saved > 0,
@@ -341,6 +467,7 @@ function createSnapshotStore({ db, dbPath, uploadDir, snapshotId } = {}) {
       if (lastError !== error.message) {
         warn(`snapshot failed: ${error.message}`);
         lastError = error.message;
+        setStatus({ lastError: error.message });
       }
       return { saved: false, reason: error.message };
     } finally {
@@ -351,19 +478,25 @@ function createSnapshotStore({ db, dbPath, uploadDir, snapshotId } = {}) {
 
   function start() {
     if (!settings.enabled || timer) return;
-    const seconds = Math.max(5, Math.round(settings.intervalMs / 1000));
-    log(`auto-snapshot "${targetId}" to Neon every ${seconds}s.`);
+    const seconds = Math.max(3, Math.round(settings.intervalMs / 1000));
+    log(`auto-snapshot "${targetId}" to Neon every ${seconds}s (backup every ${settings.backupMinutes} min).`);
     const tick = () => { snapshotNow().catch((error) => warn(error.message)); };
-    timer = setInterval(tick, Math.max(5000, settings.intervalMs));
+    timer = setInterval(tick, Math.max(3000, settings.intervalMs));
     if (typeof timer.unref === 'function') timer.unref();
-    const first = setTimeout(tick, 3000);
-    if (typeof first.unref === 'function') first.unref();
+    firstTimer = setTimeout(tick, 3000);
+    if (typeof firstTimer.unref === 'function') firstTimer.unref();
   }
 
   async function stop() {
     stopped = true;
     if (timer) clearInterval(timer);
+    if (firstTimer) clearTimeout(firstTimer);
     timer = null;
+    firstTimer = null;
+    const started = Date.now();
+    while (running && Date.now() - started < 15000) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
   }
 
   return {
@@ -391,5 +524,6 @@ module.exports = {
   config,
   createSnapshotStore,
   endPool,
+  getStatus,
   restoreFromNeon,
 };
