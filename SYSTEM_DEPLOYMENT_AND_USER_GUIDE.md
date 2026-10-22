@@ -28,10 +28,12 @@ Render is the official, stable online deployment:
 
 The Cloudflare Tunnel started by `start-public-online.bat` is temporary. Its link changes when the tunnel restarts; use the Render links above as the permanent public addresses.
 
-### Resident account persistence and Neon storage
-Production runs on the Render free plan without a persistent disk. SQLite remains the working store for day-to-day operations, while Neon PostgreSQL stores compressed snapshots of the SQLite database and uploaded files. Snapshots are uploaded about every 5 seconds when data changes, with a rolling backup copy. On startup, the latest verified snapshot is restored before SQLite opens, so resident accounts, reports, and uploads survive Render restarts and free-plan sleep.
+### Database, Neon persistence, and the 22-table note
+Production runs on the Render free plan without a persistent disk. SQLite remains the operational database for reports, incidents, users, barangays, audit logs, and settings. Neon PostgreSQL stores compressed SQLite snapshots and uploaded files, and also stores resident accounts and resident sessions. Snapshots are uploaded about every 5 seconds when data changes, with a rolling backup copy. On startup, the latest verified snapshot is restored before SQLite opens.
 
-Configure `NEON_DATABASE_URL` as a Render secret and set `POWERWATCH_SNAPSHOT_ENABLED=true`. Never commit or share the connection string. When Neon is reachable, resident credentials and login sessions are also stored in Neon (`/api/health` reports `storage: neon+sqlite`), and the snapshot status is exposed under `persistence`. If Neon is temporarily unreachable, the app continues with local SQLite and retries on the next snapshot. To migrate an exported SQLite backup into Neon resident accounts, run `npm run migrate:resident-accounts -- <path-to-backup.db>` in an environment with `NEON_DATABASE_URL` configured securely. The importer reads the backup read-only and never prints account details or password hashes.
+The proposed 22 PostgreSQL domain tables (`reports`, `incidents`, `barangays`, etc.) are **not currently created in Neon**. Their functionality is implemented in SQLite. This is intentional for the current hybrid deployment; do not describe Neon as the normalized domain schema. See [DATABASE_ARCHITECTURE.md](DATABASE_ARCHITECTURE.md) for the full table mapping, data flow, security limits, and the option to add a development-branch mirror later.
+
+Configure `NEON_DATABASE_URL` as a Render secret and set `POWERWATCH_SNAPSHOT_ENABLED=true`. Never commit or share the connection string. When Neon is reachable, `/api/health` reports `storage: neon+sqlite` and exposes snapshot status under `persistence`. If Neon is temporarily unreachable, the app continues with local SQLite and retries snapshot uploads; resident login may be unavailable until Neon returns because resident authentication lives there. Admin/staff SQLite logins continue to work. To migrate an exported SQLite backup into Neon resident accounts, run `npm run migrate:resident-accounts -- <path-to-backup.db>` in an environment with `NEON_DATABASE_URL` configured securely. The importer reads the backup read-only and never prints account details or password hashes.
 
 ### Staff Field App setup
 1. In User Management, create an account with the **System Personnel** role.
@@ -42,13 +44,13 @@ Configure `NEON_DATABASE_URL` as a Render secret and set `POWERWATCH_SNAPSHOT_EN
 
 ---
 
-## 2. Test Credentials
+## 2. Test Accounts
 
-| Role | Portal URL | Email | Password | Access Level |
-| :--- | :--- | :--- | :--- | :--- |
-| **Residente (Community)** | `/community` | `resident@test.com` *(or Register new)* | `password123` | Report power outages, view map & announcements |
-| **System Administrator** | `/admin` | `admin@valencia.gov.ph` | `Admin@123` | Full control: verify reports, GIS heatmaps, manage incidents |
-| **Utility Engineer** | `/admin` | `engineer@valencia.gov.ph` | `Engineer@123` | Outage clustering, technical verification |
+The earlier demo accounts were removed from production. Do not use credentials from older drafts.
+
+- **Residents:** create an account through `/community` → Register.
+- **Staff / Utility / Administrator:** accounts are provisioned by an administrator; production credentials are not documented in this repository.
+- Never commit real account passwords, `data/powerwatch.db`, or `.env`.
 
 ---
 
@@ -56,38 +58,38 @@ Configure `NEON_DATABASE_URL` as a Render secret and set `POWERWATCH_SNAPSHOT_EN
 
 ```mermaid
 flowchart TD
-    subgraph Public_Internet["PUBLIC INTERNET (Any Device / Any Network)"]
-        UserPhone["📱 Resident Smartphone / Laptop (Globe, Smart, DITO, Wi-Fi)"]
-        StaffPhone["🦺 Field Staff Smartphone (Staff PWA)"]
+    subgraph Public_Internet["Public Internet (HTTPS)"]
+        Resident["📱 Resident / Community Portal"]
+        Staff["🦺 Staff Field App"]
+        Admin["🖥️ Administrator Portal"]
     end
 
-    subgraph Cloudflare_Edge["CLOUDFLARE SECURE EDGE"]
-        CF["Cloudflare Global Network (HTTPS / SSL Encryption)"]
+    subgraph Render["Render Node.js Service"]
+        Express["Express Application"]
+        SQLite[("SQLite\ndata/powerwatch.db")]
     end
 
-    subgraph Host_Machine["LOCAL HOST SERVER (Valencia City Server)"]
-        Tunnel["Cloudflare Tunnel (cloudflared.exe)"]
-        Express["Node.js Express Backend (Port 4000)"]
-        DB[("Central SQLite Database\ndata/powerwatch.db")]
-        AdminWeb["🖥️ Administrator Portal (/admin)"]
-        StaffWeb["🦺 Staff Field App (/staff)"]
+    subgraph Neon["Neon PostgreSQL"]
+        Snapshots[("app_snapshots\napp_snapshots_backup\napp_snapshot_files")]
+        ResidentAuth[("resident_accounts\nresident_sessions")]
     end
 
-    UserPhone -->|HTTPS POST Report / Login| CF
-    CF --> Tunnel
-    Tunnel --> Express
-    Express --> DB
-    DB --> Express
-    Express --> AdminWeb
-    Express --> StaffWeb
-    StaffPhone -->|HTTPS Login / Field Updates| CF
-    StaffWeb -->|Role-scoped API| Express
+    Resident -->|HTTPS| Express
+    Staff -->|HTTPS| Express
+    Admin -->|HTTPS| Express
+    Express <--> SQLite
+    Express -->|5-second verified snapshots| Snapshots
+    Snapshots -->|restore on startup| Express
+    Express <-->|resident login| ResidentAuth
 ```
 
+The optional Cloudflare Tunnel/local host workflow is for local demonstrations; Render is the official public deployment.
+
 ### Key Integration Principles:
-1. **Centralized Database Synchronization:** Every account created and every power outage reported from any smartphone immediately writes to the central SQLite database (`data/powerwatch.db`).
-2. **Instant Admin Visibility:** When an administrator opens the Admin Portal, all community reports appear instantly with timestamps, barangay locations, and map coordinates.
-3. **Role-Based Security:** Resident accounts trying to access the `/admin` route are automatically rejected with `"Access restricted. Resident accounts cannot access the Administrator Portal"` and redirected back to `/community`.
+1. **SQLite is operational; Neon is durable:** every report, verification, incident update, notification, and audit log writes to SQLite. Neon receives a compressed snapshot of the whole SQLite database and the uploaded files.
+2. **Instant Admin Visibility:** reports and incident updates appear in the Admin Portal from the same SQLite data used by the community portal.
+3. **Role-Based Security:** resident, personnel, administrator, and utility roles are enforced by `requireRole`; residents cannot use the Admin Portal.
+4. **Resident authentication is mirrored:** resident login records live in Neon and are mirrored into SQLite for report ownership and admin pages.
 
 ---
 
@@ -97,7 +99,7 @@ flowchart TD
 1. **Open Portal:** Navigate to `/community` on any phone browser.
 2. **Account Registration / Login:**
    - Click **Register** to create a personal account (Name, Contact Number, Barangay, Email, Password).
-   - Or log in with `resident@test.com` / `password123`.
+   - Or log in with an existing resident account you created.
 3. **Submitting a Power Outage Report:**
    - Tap **"Report Outage"**.
    - Review your Barangay (the GPS lookup may suggest one when OpenStreetMap can match the point to an active Valencia barangay).
@@ -135,3 +137,14 @@ If the computer is restarted or turned off, follow these simple steps:
 2. Double-click **`start-public-online.bat`**.
 3. A console window will open, verify the local backend, connect to Cloudflare, print the new public HTTPS link, copy it to your clipboard, and automatically launch Google Chrome!
 4. Keep the black console window open while using or demonstrating the system.
+
+---
+
+## 6. Security notes
+
+- The live root static mount was removed; `/data`, `/server`, `/package.json`, and `/render.yaml` must return 404. `GET /data/powerwatch.db` returning 200 is a data breach.
+- Do not commit `data/powerwatch.db`, `.env`, or any database backup. `data/*.db` is ignored, but old Git history and other branches may still contain the database. Make the repository private or purge it from history.
+- Rotate the real admin and resident passwords if the database was ever exposed.
+- Evidence photos are protected by an authenticated `/uploads/:filename` route. Announcement images use the public upload route. Profile photos also currently fall through to the public upload route; review whether that is intended.
+- Apply least-privilege Neon credentials, hash session tokens, and set `Secure` cookies before treating the deployment as production-hardened.
+- See [DATABASE_ARCHITECTURE.md](DATABASE_ARCHITECTURE.md) for the current Neon table list, the 22-table gap, verification commands, and the development-branch plan.
