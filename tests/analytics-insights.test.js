@@ -77,7 +77,7 @@ before(async () => {
   `;
   const seeded = spawnSync(process.execPath, ['-e', seedScript], {
     cwd: runtimeRoot,
-    env: { ...process.env, NODE_PATH: process.env.NODE_PATH || path.join(ROOT, 'node_modules') },
+    env: { ...process.env, NODE_PATH: process.env.NODE_PATH || path.join(ROOT, 'node_modules'), NEON_DATABASE_URL: '' },
     encoding: 'utf8',
     timeout: TEST_TIMEOUT_MS,
   });
@@ -87,7 +87,7 @@ before(async () => {
   baseUrl = `http://127.0.0.1:${port}`;
   serverProcess = spawn(process.execPath, ['server/index.js'], {
     cwd: runtimeRoot,
-    env: { ...process.env, PORT: String(port), NODE_PATH: process.env.NODE_PATH || path.join(ROOT, 'node_modules') },
+    env: { ...process.env, PORT: String(port), NODE_PATH: process.env.NODE_PATH || path.join(ROOT, 'node_modules'), NEON_DATABASE_URL: '' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   serverProcess.stdout.setEncoding('utf8').on('data', (chunk) => { serverOutput += chunk; });

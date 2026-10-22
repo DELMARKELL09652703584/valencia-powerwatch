@@ -49,6 +49,7 @@ test('resident account credentials survive a database process restart', () => {
   const childEnv = {
     ...process.env,
     NODE_ENV: 'production',
+    NEON_DATABASE_URL: '',
     POWERWATCH_DATA_DIR: dataDirectory,
     POWERWATCH_MIGRATE_LOCAL_DB: 'false',
   };
@@ -197,6 +198,7 @@ test('database startup preserves existing accounts and credentials', () => {
       env: {
         ...process.env,
         NODE_ENV: 'test',
+        NEON_DATABASE_URL: '',
         POWERWATCH_DATA_DIR: dataDirectory,
       },
     });
@@ -236,6 +238,7 @@ test('persistent data directory migration retains legacy registered users', () =
       encoding: 'utf8',
       env: {
         ...process.env,
+        NEON_DATABASE_URL: '',
         POWERWATCH_DATA_DIR: legacyDataDirectory,
         POWERWATCH_MIGRATE_LOCAL_DB: 'false',
         NODE_PATH: path.join(ROOT, 'node_modules'),
@@ -248,6 +251,7 @@ test('persistent data directory migration retains legacy registered users', () =
       encoding: 'utf8',
       env: {
         ...process.env,
+        NEON_DATABASE_URL: '',
         POWERWATCH_DATA_DIR: persistentDataDirectory,
         POWERWATCH_MIGRATE_LOCAL_DB: 'true',
         NODE_PATH: path.join(ROOT, 'node_modules'),

@@ -186,6 +186,7 @@ before(async () => {
     env: {
       ...process.env,
       NODE_ENV: 'test',
+      NEON_DATABASE_URL: '',
       PORT: String(port),
       POWERWATCH_DATA_DIR: path.join(runtimeRoot, 'data'),
       POWERWATCH_ADMIN_EMAIL: testAdminEmail,
@@ -1080,6 +1081,7 @@ test('clean reset requires a verified backup, keeps only the selected admin, and
     env: {
       ...process.env,
       NODE_ENV: 'test',
+      NEON_DATABASE_URL: '',
       POWERWATCH_DATA_DIR: path.join(testDirectory, 'runtime', 'data'),
       POWERWATCH_ADMIN_EMAIL: testAdminEmail,
       POWERWATCH_ADMIN_PASSWORD: testAdminPassword,

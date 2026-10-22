@@ -76,6 +76,7 @@ before(async () => {
     env: {
       ...process.env,
       NODE_ENV: 'test',
+      NEON_DATABASE_URL: '',
       PORT: String(port),
       POWERWATCH_DATA_DIR: path.join(runtimeRoot, 'data'),
       POWERWATCH_ADMIN_EMAIL: testAdminEmail,

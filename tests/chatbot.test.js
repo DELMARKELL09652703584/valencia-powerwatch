@@ -88,7 +88,7 @@ before(async () => {
   baseUrl = `http://127.0.0.1:${port}`;
   serverProcess = spawn(process.execPath, ['server/index.js'], {
     cwd: ROOT,
-    env: { ...process.env, PORT: String(port), POWERWATCH_DATA_DIR: testDirectory },
+    env: { ...process.env, PORT: String(port), POWERWATCH_DATA_DIR: testDirectory, NEON_DATABASE_URL: '' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   serverProcess.stdout.on('data', (chunk) => { serverOutput += chunk.toString(); });

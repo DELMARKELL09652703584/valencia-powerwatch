@@ -42,6 +42,7 @@ before(async () => {
       ...process.env,
       PORT: String(port),
       NODE_PATH: process.env.NODE_PATH || path.join(ROOT, 'node_modules'),
+      NEON_DATABASE_URL: '',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
