@@ -1501,7 +1501,7 @@ body.admin-body .admin-content :is(table, .data-table) tbody tr:hover {
 
 body.dark-mode.admin-body .button.primary,
 body.dark-mode.community-body .button.primary,
-body.dark-mode.community-body .mobile-form button:not(.button.ghost):not(.button.secondary):not(.mobile-segment),
+body.dark-mode.community-body .mobile-form button:not(.button.ghost):not(.button.secondary):not(.mobile-segment):not(.report-evidence-picker),
 body.dark-mode.community-body .mobile-auth-form button:not(.button.ghost):not(.button.secondary):not(.mobile-segment) {
   border-color: rgba(147, 197, 253, .24);
   background: linear-gradient(115deg, #2563eb, #087ea4);
@@ -2681,7 +2681,7 @@ body.dark-mode.community-body .powerwatch-chat-panel :where(strong, .powerwatch-
 
 body.community-body .powerwatch-chat-form button,
 body.community-body .button.primary,
-body.community-body .mobile-form button:not(.button.ghost):not(.button.secondary):not(.mobile-segment),
+body.community-body .mobile-form button:not(.button.ghost):not(.button.secondary):not(.mobile-segment):not(.report-evidence-picker),
 body.community-body .mobile-auth-form button:not(.button.ghost):not(.button.secondary):not(.mobile-segment) {
   color: #fff !important;
 }
@@ -2937,7 +2937,7 @@ body.dark-mode.community-body :is(.mobile-card, .mobile-outage-card, .mobile-das
 
 
 body.dark-mode.admin-body :is(.button.primary, .analytics-export-button),
-body.dark-mode.community-body :is(.button.primary, .mobile-form button:not(.button.ghost):not(.button.secondary):not(.mobile-segment), .mobile-auth-form button:not(.button.ghost):not(.button.secondary):not(.mobile-segment)) {
+body.dark-mode.community-body :is(.button.primary, .mobile-form button:not(.button.ghost):not(.button.secondary):not(.mobile-segment):not(.report-evidence-picker), .mobile-auth-form button:not(.button.ghost):not(.button.secondary):not(.mobile-segment)) {
   border-color: rgba(159, 213, 255, .36);
   background: linear-gradient(115deg, var(--pw-primary), #087ea4);
   color: #fff;
@@ -6677,4 +6677,32 @@ body.dark-mode.community-body .community-login-card .auth-options-row input[type
     gap: 6px;
     font-size: .92rem;
   }
+}
+
+body.community-body .mobile-subpage-header {
+  gap: 8px;
+}
+
+body.community-body .mobile-subpage-header .mobile-header-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: clamp(1rem, 4.5vw, 1.15rem);
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.community-body .mobile-subpage-header .mobile-header-right {
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+body.community-body .report-evidence-step .report-evidence-picker {
+  color: #1265ad !important;
+}
+
+body.dark-mode.community-body .report-evidence-step .report-evidence-picker {
+  border-color: var(--pw-line);
+  background: var(--pw-raised) !important;
+  color: #9dd6ff !important;
 }

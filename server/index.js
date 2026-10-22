@@ -6,6 +6,7 @@ const compression = require('compression');
 const { ROOT, UPLOAD_DIR, db } = require('./db');
 const {
   cleanupExpiredSessions, cleanupPersistentSessions, COOKIE_NAME, getUserByToken, requireAuth, requireRole,
+  residentStore, persistentAuthConfigured,
 } = require('./auth');
 const { staffCanAccessBarangay } = require('./staff-access');
 
@@ -52,7 +53,11 @@ app.use((req, res, next) => {
 
 app.use('/api/chatbot', express.json({ limit: '2kb' }));
 app.use(express.json({ limit: '8mb' }));
-app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'Valencia PowerWatch' }));
+app.get('/api/health', (req, res) => res.json({
+  status: 'ok',
+  service: 'Valencia PowerWatch',
+  storage: persistentAuthConfigured ? 'neon+sqlite' : 'sqlite',
+}));
 
 app.use('/api', authRoutes);
 app.use('/api', identityRoutes);
@@ -187,4 +192,10 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Valencia PowerWatch running at http://localhost:${PORT}`);
+  console.log(`Resident auth storage: ${persistentAuthConfigured ? 'Neon + SQLite mirror' : 'SQLite only'}`);
+  if (residentStore) {
+    residentStore.ping()
+      .then(() => console.log('Neon connection verified.'))
+      .catch((error) => console.error('Neon connection check failed:', error.code || 'unknown error'));
+  }
 });

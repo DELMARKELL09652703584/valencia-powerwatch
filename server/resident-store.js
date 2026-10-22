@@ -42,6 +42,11 @@ const createResidentStore = (pool) => {
   };
 
   return {
+    async ping() {
+      const result = await pool.query('SELECT 1 AS ok');
+      return Number(result.rows[0]?.ok) === 1;
+    },
+
     async createAccount(account) {
       const result = await query(`
         INSERT INTO resident_accounts

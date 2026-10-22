@@ -22,7 +22,7 @@ test('portal layouts remain constrained on narrow mobile screens', () => {
   assert.match(styles, /@media \(max-width: 600px\)\s*\{\s*body\.community-body \.mobile-home-header\s*\{[^}]*gap:\s*4px;[^}]*padding:\s*6px 14px 8px;/s);
   assert.match(styles, /@media \(max-width: 360px\)\s*\{\s*body\.admin-body \.login-page\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
   assert.match(styles, /body\.admin-body \.login-page \.social-row\s*\{\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=70/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=71/);
   assert.match(adminPage, /\/app\/portal-polish\.css\?v=38/);
 });
 
@@ -32,7 +32,17 @@ test('report wizard content can scroll above the fixed bottom navigation', () =>
   const mobileContentRule = styles.match(/\.community-body \.mobile-content\s*\{([^}]*)\}/)?.[1] || '';
 
   assert.match(mobileContentRule, /padding-bottom:\s*calc\(98px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=70/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=71/);
+});
+
+test('report evidence buttons and subpage title remain legible on mobile', () => {
+  const styles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
+
+  assert.match(styles, /body\.community-body \.mobile-subpage-header \.mobile-header-title\s*\{[^}]*min-width:\s*0;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;[^}]*white-space:\s*nowrap;/s);
+  assert.match(styles, /body\.community-body \.report-evidence-step \.report-evidence-picker\s*\{[^}]*color:\s*#1265ad !important;/s);
+  assert.match(styles, /body\.dark-mode\.community-body \.report-evidence-step \.report-evidence-picker\s*\{[^}]*background:\s*var\(--pw-raised\) !important;[^}]*color:\s*#9dd6ff !important;/s);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=71/);
 });
 
 test('Admin dashboard releases its fixed desktop frame for mobile page scrolling', () => {
