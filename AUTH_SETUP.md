@@ -20,7 +20,7 @@ After changing `.env`, restart the Node server. The login screen reads configure
 
 ## Account storage
 
-Resident accounts and resident sessions are stored in Neon (`resident_accounts`, `resident_sessions`) and mirrored into SQLite. Administrator, staff, and utility accounts/sessions use SQLite. This is the existing custom Node.js authentication, not Neon Better Auth.
+Resident accounts and resident sessions are stored in Neon (`resident_accounts`, `resident_sessions`) and mirrored into SQLite. Administrator, staff, and utility accounts/sessions use SQLite. Session values in both stores are SHA-256 hashes; the raw token exists only in the browser cookie. This is the existing custom Node.js authentication, not Neon Better Auth.
 
 If `NEON_DATABASE_URL` is absent, resident auth uses the SQLite fallback unless `PERSISTENT_AUTH_REQUIRED=true`. If Neon is configured but unreachable, resident login and session checks can fail until Neon returns; admin/staff SQLite sessions are unaffected.
 
@@ -42,7 +42,9 @@ After changing Render environment variables, redeploy or restart the service.
 
 ## Security
 
-- Never commit `.env`, `data/powerwatch.db`, or database backups.
-- Rotate real account passwords if a database copy was exposed.
-- Session tokens are currently stored raw; hash them before treating the deployment as fully hardened.
-- Cookies are `httpOnly` and `SameSite=Lax`; `Secure` is not currently set by the auth routes.
+- Never commit `.env`, `data/powerwatch.db`, or database backups. The GitHub repository is private, but old history still contains the database; purge it before making the repository public again.
+- Rotate real account passwords. The database was publicly downloadable before the static fix.
+- Session tokens are stored as SHA-256 hashes. Pre-hardening plaintext sessions are invalidated; production had 0 sessions when this changed.
+- Cookies are `httpOnly` and `SameSite=Lax`; `Secure` is set whenever the request is HTTPS. The app trusts one Render proxy hop for `req.secure`.
+- Profile photos under `/uploads/profile_*` require authentication and are limited to the owner, administrators, and utility users. Only announcement images are public.
+- The app still connects as `neondb_owner`, which can create roles and databases. Replace it with a least-privilege Neon role.

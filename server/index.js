@@ -29,6 +29,9 @@ const chatbotRoutes = require('./routes/chatbot');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Render terminates TLS at its proxy; trust exactly one hop so req.secure is accurate.
+app.set('trust proxy', 1);
+
 cleanupExpiredSessions();
 cleanupPersistentSessions().catch((error) => console.error('Persistent session cleanup failed:', error));
 const sessionCleanupTimer = setInterval(() => {
@@ -80,11 +83,12 @@ app.use('/api/chatbot', chatbotRoutes);
 
 app.get('/uploads/:filename', async (req, res, next) => {
   const filename = req.params.filename;
-  if (!filename.startsWith('report_') && !filename.startsWith('photo_')) return next();
+  if (filename.startsWith('announcement_')) return next();
 
   const isReportAttachment = /^report_\d+_[\da-f-]+\.(?:jpg|png|webp|mp4|mov)$/i.test(filename);
   const isReportPhoto = /^photo_\d+_\d+\.(?:jpg|png|webp|gif)$/i.test(filename);
-  if (!isReportAttachment && !isReportPhoto) return res.sendStatus(404);
+  const isProfilePhoto = /^profile_\d+_\d+\.(?:jpe?g|png|webp|gif)$/i.test(filename);
+  if (!isReportAttachment && !isReportPhoto && !isProfilePhoto) return res.sendStatus(404);
 
   let user;
   try {
@@ -95,24 +99,32 @@ app.get('/uploads/:filename', async (req, res, next) => {
   if (!user) return res.status(401).json({ error: 'Authentication required.' });
   if (user.status !== 'Active') return res.status(403).json({ error: 'This account is deactivated.' });
 
-  const evidencePath = `/uploads/${filename}`;
-  const report = isReportAttachment
-    ? db.prepare(`
-      SELECT r.id AS report_id, r.reporter_id, r.barangay FROM report_attachments a
-      JOIN outage_reports r ON r.id = a.report_id
-      WHERE a.file_path = ?
-    `).get(evidencePath)
-    : db.prepare('SELECT id AS report_id, reporter_id, barangay FROM outage_reports WHERE photo_path = ?').get(evidencePath);
+  const uploadPath = `/uploads/${filename}`;
+  if (isProfilePhoto) {
+    const owner = db.prepare('SELECT id FROM users WHERE profile_photo_path = ?').get(uploadPath);
+    if (!owner) return res.sendStatus(404);
+    const canView = ['administrator', 'utility'].includes(user.role)
+      || Number(owner.id) === Number(user.id);
+    if (!canView) return res.status(403).json({ error: 'You do not have permission to view this profile photo.' });
+  } else {
+    const report = isReportAttachment
+      ? db.prepare(`
+        SELECT r.id AS report_id, r.reporter_id, r.barangay FROM report_attachments a
+        JOIN outage_reports r ON r.id = a.report_id
+        WHERE a.file_path = ?
+      `).get(uploadPath)
+      : db.prepare('SELECT id AS report_id, reporter_id, barangay FROM outage_reports WHERE photo_path = ?').get(uploadPath);
 
-  if (!report) return res.sendStatus(404);
-  const isAdministrativeStaff = ['administrator', 'utility'].includes(user.role);
-  const isAssignedPersonnel = user.role === 'personnel' && (staffCanAccessBarangay(user, report.barangay) || db.prepare(`
-    SELECT 1 FROM repair_assignments a
-    JOIN staff_team_members m ON m.team_id = a.team_id
-    WHERE a.report_id = ? AND m.user_id = ? LIMIT 1
-  `).get(report.report_id, user.id));
-  if (!isAdministrativeStaff && !isAssignedPersonnel && Number(report.reporter_id) !== Number(user.id)) {
-    return res.status(403).json({ error: 'You do not have permission to view this report evidence.' });
+    if (!report) return res.sendStatus(404);
+    const isAdministrativeStaff = ['administrator', 'utility'].includes(user.role);
+    const isAssignedPersonnel = user.role === 'personnel' && (staffCanAccessBarangay(user, report.barangay) || db.prepare(`
+      SELECT 1 FROM repair_assignments a
+      JOIN staff_team_members m ON m.team_id = a.team_id
+      WHERE a.report_id = ? AND m.user_id = ? LIMIT 1
+    `).get(report.report_id, user.id));
+    if (!isAdministrativeStaff && !isAssignedPersonnel && Number(report.reporter_id) !== Number(user.id)) {
+      return res.status(403).json({ error: 'You do not have permission to view this report evidence.' });
+    }
   }
 
   res.setHeader('Cache-Control', 'private, no-store');

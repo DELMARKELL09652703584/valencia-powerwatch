@@ -20,7 +20,7 @@ test('Render uses free Neon snapshot persistence for production data', () => {
   assert.match(renderConfig, /key: POWERWATCH_SNAPSHOT_ENABLED\s*\n\s+value: "true"/);
   assert.match(renderConfig, /key: NEON_DATABASE_URL\s*\n\s+sync: false/);
   assert.doesNotMatch(renderConfig, /^\s+key: PERSISTENT_AUTH_REQUIRED$/m);
-  assert.match(deploymentGuide, /Neon PostgreSQL stores compressed snapshots/);
+  assert.match(deploymentGuide, /Neon PostgreSQL stores compressed (?:SQLite )?snapshots/);
 });
 
 test('resident account credentials survive a database process restart', () => {

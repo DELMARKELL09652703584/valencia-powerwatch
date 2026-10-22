@@ -159,11 +159,10 @@ The reference allows a custom Node.js authentication implementation. The project
 ### Session behavior
 
 - Cookies are `httpOnly` and `SameSite=Lax`.
-- `Secure` is not currently set by the login/registration cookie code.
-- Session tokens are currently stored as plaintext values in SQLite `sessions.token` and Neon `resident_sessions.token`.
+- `Secure` is set whenever the request is HTTPS. The app trusts one Render proxy hop (`app.set('trust proxy', 1)`), so `req.secure` reflects `X-Forwarded-Proto`; local HTTP development still works without `Secure`.
+- Session tokens are 256-bit random values. Only the browser cookie contains the raw token; SQLite `sessions.token` and Neon `resident_sessions.token` store its SHA-256 hash. Session lookup hashes the presented cookie value before querying.
+- The hardening deployment invalidates any pre-existing plaintext session rows. The production session count was 0 before this change, so no live user was signed out. If plaintext sessions ever need to be preserved, hash them before deploying this code.
 - `PERSISTENT_AUTH_REQUIRED` is not set in Render. When `NEON_DATABASE_URL` is absent, resident auth can fall back to SQLite; when Neon is configured but unreachable, resident login and session checks can fail until Neon returns. Admin/staff SQLite sessions continue to work. Setting `PERSISTENT_AUTH_REQUIRED=true` makes the missing-configuration case fail closed; it is not an automatic failover switch.
-
-These are known hardening items, not changes made in this documentation pass.
 
 ---
 
@@ -192,19 +191,21 @@ There is no `NEON_API_KEY` in this workspace, so branch creation/listing must be
   - administrators and utility users can view it;
   - assigned personnel can view it when they can access the report's barangay or are on the assigned team;
   - the reporting resident can view their own evidence.
+- Profile photos under `/uploads/profile_*` require authentication and are limited to the owner, administrators, and utility users. Unknown upload names return 404; only announcement images remain public.
+- Session tokens are stored as SHA-256 hashes, and cookies set `Secure` on HTTPS.
 - Authenticated community map payloads use report codes, statuses, types, timestamps, and coordinates; they do not include resident names or contact details.
 - `.env` is ignored by Git and is not served by the application.
 - `data/powerwatch.db` is ignored and is no longer tracked on the current `main` tree.
+- The GitHub repository is private. Anonymous raw URLs for the current tree and old commits return 404.
 - Secrets are configured in Render environment variables, not in the repository.
 
 ### Open items
 
-- **Public Git history still exposes the old database.** Old commits and several remote branches still contain `data/powerwatch.db`; raw URLs return HTTP 200. Make the repository private or purge the database from all history and branches. Untracking the file from the current tree does not remove the old copies.
-- **Rotate the real admin and resident passwords.** The exposed database contained scrypt password hashes and account PII. Assume it was downloaded before the static fix.
-- **Least privilege:** the app connects as `neondb_owner`, which has `CREATEROLE` and `CREATEDB`. A dedicated app role with only the required table privileges is recommended.
-- **Session hardening:** hash session tokens before storage and set `Secure` on cookies in production.
-- **Profile photos:** files named `profile_*` currently fall through to the public `/uploads` static route. Decide whether profile photos should require authentication and add a protected route if so.
-- **Hard-coded admin identifiers:** `server/auth.js` contains built-in admin identifiers. Treat them as exposed while the repository is public; moving them to Render environment variables or keeping the repository private is recommended.
+- **Rotate the real admin and resident passwords.** The database was publicly downloadable before the static fix, and old Git history still contains it. Assume the scrypt password hashes and account PII were copied. Rotate both accounts and communicate new credentials privately.
+- **Least privilege:** the app still connects as `neondb_owner`, which has `CREATEROLE` and `CREATEDB`. A dedicated app role with only the required table privileges is recommended.
+- **Repository history:** old commits and branches still contain `data/powerwatch.db`. They are not anonymously accessible while the repository is private, but purge them before making the repository public again.
+- **Hard-coded admin identifiers:** `server/auth.js` contains built-in admin identifiers. The private repository is no longer a public exposure, but moving them to Render environment variables is still preferable.
+- **Password change after recovery:** there is no forced password-change flow; rotated credentials should be changed through the normal profile/recovery flow where available.
 - **Object storage:** evidence is stored locally and in `app_snapshot_files` as `bytea`, not in Neon Object Storage or an S3-compatible service. This works for the current small volume but is not the reference's object-storage design.
 - **No migration framework:** the Neon tables are created with `CREATE TABLE IF NOT EXISTS` at runtime. A normalized schema would need versioned migrations.
 - **No Realtime, Functions, or AI Gateway integration.** These are optional under the reference.
@@ -228,10 +229,21 @@ GET /community               → 200
 GET /style.css               → 200
 GET /app/core.js             → 200
 GET /assets/*                → 200
+GET /uploads/profile_*       → 401 without a valid session
+GET /uploads/private.txt     → 404
 GET /api/health              → 200
 ```
 
-`npm test` passes **78/78** after the change.
+`npm test` passes **79/79** after the hardening changes.
+
+Repository verification:
+
+```
+GitHub API /repos/DELMARKELL09652703584/valencia-powerwatch → 404 anonymously (private)
+raw.githubusercontent.com/.../data/powerwatch.db             → 404 anonymously
+```
+
+Session verification: set `NODE_ENV` aside and check an HTTPS login response for `Set-Cookie: pw_session=...; Secure; HttpOnly; SameSite=Lax`, then confirm the value stored in `sessions.token` is a 64-character SHA-256 digest, not the cookie value.
 
 ---
 

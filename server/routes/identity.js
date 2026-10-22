@@ -41,7 +41,7 @@ const emailConfigured = () => Boolean(
 
 const redirectAuthError = (res, error) => res.redirect(`/community?auth_error=${encodeURIComponent(error)}`);
 
-const setSessionCookie = async (res, user) => {
+const setSessionCookie = async (req, res, user) => {
   let token;
   if (residentStore && user.role === 'resident') {
     const persistent = await residentStore.saveLegacyAccount(user);
@@ -54,7 +54,7 @@ const setSessionCookie = async (res, user) => {
     httpOnly: true,
     sameSite: 'lax',
     path: '/',
-    secure: process.env.NODE_ENV === 'production',
+    secure: Boolean(req.secure),
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };
@@ -96,7 +96,7 @@ const signInWithProvider = async (provider, profile, req, res) => {
     if (!persistent) throw new Error('OAuth resident account could not be saved to persistent storage.');
     user = mirrorPersistentResident(persistent);
   }
-  await setSessionCookie(res, user);
+  await setSessionCookie(req, res, user);
   audit({ ...user, ip_address: req.ip || req.socket.remoteAddress || null }, 'OAuth login', `${user.full_name} signed in with ${provider}.`);
   return res.redirect(getPortalDestination(user.role));
 };
@@ -121,7 +121,8 @@ router.get('/auth/oauth/:provider', (req, res) => {
   res.cookie('pw_oauth_state', stateHash, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    secure: Boolean(req.secure),
     maxAge: OAUTH_LIFETIME_MS,
   });
 
@@ -152,7 +153,7 @@ router.get('/auth/oauth/:provider/callback', async (req, res) => {
     ? db.prepare('SELECT provider, expires_at FROM oauth_states WHERE state_hash = ?').get(hashToken(state))
     : null;
   const stateCookie = req.cookies?.pw_oauth_state;
-  res.clearCookie('pw_oauth_state', { sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+  res.clearCookie('pw_oauth_state', { path: '/', sameSite: 'lax', secure: Boolean(req.secure) });
   if (!config || !providerConfigured(provider)) return redirectAuthError(res, 'provider-not-configured');
   if (!savedState || stateCookie !== hashToken(state) || savedState.provider !== provider || savedState.expires_at <= now()) return redirectAuthError(res, 'invalid-oauth-state');
   db.prepare('DELETE FROM oauth_states WHERE state_hash = ?').run(hashToken(state));

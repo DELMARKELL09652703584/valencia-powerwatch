@@ -143,6 +143,13 @@ test('private data and server source are not exposed as static files', { timeout
   }
 });
 
+test('profile photos and unknown uploads are not publicly served', { timeout: TEST_TIMEOUT_MS }, async () => {
+  const profile = await fetch(`${baseUrl}/uploads/profile_1_1.jpg`);
+  assert.equal(profile.status, 401);
+  const unknown = await fetch(`${baseUrl}/uploads/private.txt`);
+  assert.equal(unknown.status, 404);
+});
+
 test('resident credentials still work after logout terminates the session', { timeout: TEST_TIMEOUT_MS }, async () => {
   const email = `returning-resident-${Date.now()}@example.test`;
   const password = 'returning-resident-password';

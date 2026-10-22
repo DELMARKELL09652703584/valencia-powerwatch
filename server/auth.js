@@ -1,5 +1,6 @@
 const crypto = require('node:crypto');
 const { db, now } = require('./db');
+const { hashSessionToken } = require('./session-token');
 const {
   residentStore,
   persistentAuthConfigured,
@@ -50,7 +51,7 @@ const createSession = (userId, rememberMe = false) => {
   const lifetimeDays = rememberMe ? 30 : SESSION_DAYS;
   const expiresAt = new Date(Date.now() + lifetimeDays * 24 * 60 * 60 * 1000).toISOString();
   db.prepare('INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)')
-    .run(token, userId, now(), expiresAt);
+    .run(hashSessionToken(token), userId, now(), expiresAt);
   return token;
 };
 
@@ -59,13 +60,14 @@ const createPersistentSession = async (persistentUserId, rememberMe = false) => 
   const lifetimeDays = rememberMe ? 30 : SESSION_DAYS;
   const createdAt = now();
   const expiresAt = new Date(Date.now() + lifetimeDays * 24 * 60 * 60 * 1000).toISOString();
-  await residentStore.createSession(token, persistentUserId, createdAt, expiresAt);
+  await residentStore.createSession(hashSessionToken(token), persistentUserId, createdAt, expiresAt);
   return token;
 };
 
 const destroySession = async (token) => {
-  if (token) db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
-  if (token && residentStore) await residentStore.deleteSession(token);
+  const tokenHash = hashSessionToken(token);
+  if (token) db.prepare('DELETE FROM sessions WHERE token = ?').run(tokenHash);
+  if (token && residentStore) await residentStore.deleteSession(tokenHash);
 };
 
 const cleanupExpiredSessions = () => {
@@ -158,14 +160,15 @@ const mirrorPersistentResident = (resident) => {
 
 const getUserByToken = async (token) => {
   if (!token) return null;
+  const tokenHash = hashSessionToken(token);
   const row = db.prepare(`
     SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id
     WHERE s.token = ? AND s.expires_at > ?
-  `).get(token, now());
+  `).get(tokenHash, now());
   if (row) return row;
   if (!residentStore) return null;
   await migrateLegacyResidents();
-  const resident = await residentStore.findUserByToken(token, now());
+  const resident = await residentStore.findUserByToken(tokenHash, now());
   if (!resident) return null;
   const user = mirrorPersistentResident(resident);
   return { ...user, persistent_account_id: resident.id };

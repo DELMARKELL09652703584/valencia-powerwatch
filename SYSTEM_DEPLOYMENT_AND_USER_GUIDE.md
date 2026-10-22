@@ -143,8 +143,10 @@ If the computer is restarted or turned off, follow these simple steps:
 ## 6. Security notes
 
 - The live root static mount was removed; `/data`, `/server`, `/package.json`, and `/render.yaml` must return 404. `GET /data/powerwatch.db` returning 200 is a data breach.
-- Do not commit `data/powerwatch.db`, `.env`, or any database backup. `data/*.db` is ignored, but old Git history and other branches may still contain the database. Make the repository private or purge it from history.
-- Rotate the real admin and resident passwords if the database was ever exposed.
-- Evidence photos are protected by an authenticated `/uploads/:filename` route. Announcement images use the public upload route. Profile photos also currently fall through to the public upload route; review whether that is intended.
-- Apply least-privilege Neon credentials, hash session tokens, and set `Secure` cookies before treating the deployment as production-hardened.
+- Do not commit `data/powerwatch.db`, `.env`, or any database backup. `data/*.db` is ignored. The GitHub repository is private; old commits and branches still contain the database, so purge them before making the repository public again.
+- The database was publicly downloadable before the static fix. Rotate the real admin and resident passwords and share the new credentials privately.
+- Evidence photos and profile photos are protected by the authenticated `/uploads/:filename` route. Profile photos are limited to the owner, administrators, and utility users. Only announcement images remain public.
+- Session cookies are `HttpOnly` and `SameSite=Lax`, with `Secure` set on HTTPS. Raw session tokens are never stored in SQLite or Neon; only SHA-256 hashes are stored.
+- Least-privilege Neon credentials are still pending. The app currently connects as `neondb_owner`; replace this with a dedicated app role before treating the deployment as fully hardened.
+- `server/auth.js` contains built-in admin identifiers. Keep the repository private, or move those identifiers to Render environment variables.
 - See [DATABASE_ARCHITECTURE.md](DATABASE_ARCHITECTURE.md) for the current Neon table list, the 22-table gap, verification commands, and the development-branch plan.

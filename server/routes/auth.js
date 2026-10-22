@@ -14,6 +14,14 @@ const {
 
 const router = express.Router();
 
+const sessionCookieOptions = (req, maxAge) => ({
+  httpOnly: true,
+  sameSite: 'lax',
+  path: '/',
+  secure: Boolean(req.secure),
+  maxAge,
+});
+
 const saveProfilePhoto = async (photoData, userId) => {
   if (!photoData) return null;
   const match = /^data:(image\/(?:png|jpe?g|webp));base64,([A-Za-z0-9+/=]+)$/.exec(photoData);
@@ -183,12 +191,7 @@ router.post('/auth/register', async (req, res, next) => {
     notifyRole('personnel', 'New resident registered', `${user.full_name} registered to Valencia PowerWatch.`, 'system');
     notifyRole('administrator', 'New resident registered', `${user.full_name} registered to Valencia PowerWatch.`, 'system');
 
-    res.cookie(COOKIE_NAME, token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 30 * 24 * 60 * 60 * 1000
-    });
+    res.cookie(COOKIE_NAME, token, sessionCookieOptions(req, 30 * 24 * 60 * 60 * 1000));
     return res.json({ user: publicUser(user), message: 'Registration successful.' });
   } catch (error) {
     if (error.code === '23505') {
@@ -271,12 +274,7 @@ router.post('/auth/login', async (req, res, next) => {
 
     audit({ ...fresh, ip_address: req.ip || req.socket.remoteAddress || null }, 'Login', `${fresh.full_name} (${roleLabel(fresh.role)}) logged in.`);
 
-    res.cookie(COOKIE_NAME, token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000
-    });
+    res.cookie(COOKIE_NAME, token, sessionCookieOptions(req, (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000));
     return res.json({ user: publicUser(fresh), message: 'Login successful.' });
   } catch (error) {
     return next(error);
@@ -287,7 +285,7 @@ router.post('/auth/logout', requireAuth, async (req, res, next) => {
   try {
   await destroySession(req.token);
   audit(req.user, 'Logout', `${req.user.full_name} logged out.`);
-  res.clearCookie(COOKIE_NAME, { path: '/' });
+  res.clearCookie(COOKIE_NAME, { path: '/', httpOnly: true, sameSite: 'lax', secure: Boolean(req.secure) });
   checkpointDb();
   return res.json({ message: 'Logged out.' });
   } catch (error) {

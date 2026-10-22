@@ -34,14 +34,16 @@ before(async () => {
   fs.cpSync(path.join(ROOT, 'server'), path.join(runtimeRoot, 'server'), { recursive: true });
 
   const seedScript = `
+    const crypto = require('node:crypto');
     const { db } = require('./server/db');
     const now = new Date();
     const timestamp = (date) => date.toISOString();
+    const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
     const adminId = Number(db.prepare("INSERT INTO users (full_name, email, password_hash, role, status, barangay, created_at) VALUES ('Analytics Admin', 'analytics-admin@example.test', 'test', 'administrator', 'Active', 'Poblacion', ?)").run(timestamp(now)).lastInsertRowid);
     const residentId = Number(db.prepare("INSERT INTO users (full_name, email, password_hash, role, status, barangay, created_at) VALUES ('Poblacion Resident', 'poblacion@example.test', 'test', 'resident', 'Active', 'Poblacion', ?)").run(timestamp(now)).lastInsertRowid);
     const otherResidentId = Number(db.prepare("INSERT INTO users (full_name, email, password_hash, role, status, barangay, created_at) VALUES ('Banlag Resident', 'banlag@example.test', 'test', 'resident', 'Active', 'Banlag', ?)").run(timestamp(now)).lastInsertRowid);
-    db.prepare('INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').run('resident-test-token', residentId, timestamp(now), timestamp(new Date(now.getTime() + 86400000)));
-    db.prepare('INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').run('admin-test-token', adminId, timestamp(now), timestamp(new Date(now.getTime() + 86400000)));
+    db.prepare('INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').run(hashToken('resident-test-token'), residentId, timestamp(now), timestamp(new Date(now.getTime() + 86400000)));
+    db.prepare('INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').run(hashToken('admin-test-token'), adminId, timestamp(now), timestamp(new Date(now.getTime() + 86400000)));
     const insertIncident = db.prepare('INSERT INTO outage_incidents (incident_code, title, barangay, incident_type, status, start_time, end_time, created_by, created_at, updated_at, closed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     const monthDate = new Date(now.getTime() + 8 * 3600000);
     for (let offset = 6; offset >= 4; offset -= 1) {

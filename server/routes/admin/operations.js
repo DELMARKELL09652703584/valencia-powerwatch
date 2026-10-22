@@ -6,6 +6,7 @@ const crypto = require('node:crypto');
 const { DatabaseSync } = require('node:sqlite');
 const { db, now, DB_PATH, UPLOAD_DIR, VALENCIA_BARANGAYS } = require('../../db');
 const { requireAuth, requireRole, audit, isBuiltInAdmin } = require('../../auth');
+const { hashSessionToken } = require('../../session-token');
 
 const router = express.Router();
 
@@ -177,7 +178,7 @@ router.post('/maintenance/clean-reset', requireAuth, requireRole('administrator'
       DELETE FROM audit_logs;
     `);
     db.prepare('DELETE FROM oauth_accounts WHERE user_id != ?').run(adminId);
-    db.prepare('DELETE FROM sessions WHERE token != ?').run(req.token);
+    db.prepare('DELETE FROM sessions WHERE token != ?').run(hashSessionToken(req.token));
     db.prepare('DELETE FROM users WHERE id != ?').run(adminId);
     db.prepare("DELETE FROM settings WHERE key = 'barangay_seed_disabled'").run();
     db.exec(`
