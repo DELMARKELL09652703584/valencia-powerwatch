@@ -4,7 +4,8 @@
   "description": "Valencia PowerWatch - Community Power Interruption Reporting, Verification, and Information Management System for Valencia City, Bukidnon",
   "main": "server/index.js",
   "scripts": {
-    "start": "node server/index.js",
+    "start": "node server/start.js",
+    "start:local": "node server/index.js",
     "dev": "node --watch server/index.js",
     "test": "node --test",
     "migrate:resident-accounts": "node scripts/migrate-residents-to-neon.js"

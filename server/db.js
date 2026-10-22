@@ -3,18 +3,10 @@ const fs = require('node:fs');
 const { DatabaseSync } = require('node:sqlite');
 const crypto = require('node:crypto');
 
-const ROOT = path.resolve(__dirname, '..');
-const DATA_DIR = process.env.POWERWATCH_DATA_DIR
-  ? path.resolve(process.env.POWERWATCH_DATA_DIR)
-  : path.join(ROOT, 'data');
-const UPLOAD_DIR = process.env.POWERWATCH_UPLOAD_DIR
-  ? path.resolve(process.env.POWERWATCH_UPLOAD_DIR)
-  : path.join(ROOT, 'uploads');
+const { ROOT, DATA_DIR, UPLOAD_DIR, DB_PATH } = require('./paths');
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-const DB_PATH = path.join(DATA_DIR, 'powerwatch.db');
 const LEGACY_DB_PATH = path.join(ROOT, 'data', 'powerwatch.db');
 if (
   process.env.POWERWATCH_MIGRATE_LOCAL_DB === 'true'
