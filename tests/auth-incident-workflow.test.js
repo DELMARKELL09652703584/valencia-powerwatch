@@ -136,6 +136,13 @@ after(async () => {
   if (testDirectory && fs.existsSync(testDirectory)) fs.rmSync(testDirectory, { recursive: true, force: true });
 });
 
+test('private data and server source are not exposed as static files', { timeout: TEST_TIMEOUT_MS }, async () => {
+  for (const pathname of ['/data/powerwatch.db', '/data/powerwatch.db-wal', '/server/auth.js', '/package.json', '/render.yaml']) {
+    const response = await fetch(`${baseUrl}${pathname}`);
+    assert.equal(response.status, 404, `${pathname} must not be publicly accessible`);
+  }
+});
+
 test('resident credentials still work after logout terminates the session', { timeout: TEST_TIMEOUT_MS }, async () => {
   const email = `returning-resident-${Date.now()}@example.test`;
   const password = 'returning-resident-password';

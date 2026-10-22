@@ -181,7 +181,13 @@ app.use(['/app', '/community/app', '/admin/app', '/install/app'], express.static
   setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache, must-revalidate')
 }));
 app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(ROOT, 'community.html')));
-app.use(express.static(ROOT));
+
+// Never serve the repository root. It contains the live SQLite database, server
+// source, deployment configuration, and project documents.
+app.use(
+  ['/data', '/server', '/scripts', '/tests', '/node_modules', '/package.json', '/package-lock.json', '/render.yaml'],
+  (req, res) => res.sendStatus(404),
+);
 
 // Error handler
 app.use((err, req, res, next) => {
