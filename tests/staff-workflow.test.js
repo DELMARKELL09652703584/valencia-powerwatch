@@ -639,6 +639,18 @@ test('built-in administrator account remains active and protected from account c
   ]);
   assert.ok(protectedAccountChanges.every((response) => response.status === 403));
 
+  const temporaryAdminPassword = `${crypto.randomUUID()}Bb2!`;
+  const selfPasswordChange = await jsonRequest('/api/profile/password', adminCookie, 'PUT', {
+    current_password: testAdminPassword,
+    new_password: temporaryAdminPassword,
+  });
+  assert.equal(selfPasswordChange.status, 200);
+  const selfPasswordRestore = await jsonRequest('/api/profile/password', adminCookie, 'PUT', {
+    current_password: temporaryAdminPassword,
+    new_password: testAdminPassword,
+  });
+  assert.equal(selfPasswordRestore.status, 200);
+
   assert.equal(builtInUser.role, 'administrator');
   assert.equal(builtInUser.status, 'Active');
 

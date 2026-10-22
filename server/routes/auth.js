@@ -377,9 +377,6 @@ router.put('/profile', requireAuth, async (req, res, next) => {
 });
 
 router.put('/profile/password', requireAuth, async (req, res, next) => {
-  if (isBuiltInAdmin(req.user)) {
-    return res.status(403).json({ error: 'The built-in administrator password is managed by system configuration.' });
-  }
   const { current_password, new_password } = req.body || {};
   if (!current_password || !new_password) return res.status(400).json({ error: 'Both passwords are required.' });
   if (String(new_password).length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters.' });
