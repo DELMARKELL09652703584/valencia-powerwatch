@@ -77,6 +77,16 @@ function getPool() {
 
 async function ensureTables(client) {
   if (tablesReady) return;
+  const existing = await client.query(`
+    SELECT to_regclass('public.app_snapshots') AS snapshots,
+           to_regclass('public.app_snapshots_backup') AS backups,
+           to_regclass('public.app_snapshot_files') AS files
+  `);
+  const row = existing.rows[0] || {};
+  if (row.snapshots && row.backups && row.files) {
+    tablesReady = true;
+    return;
+  }
   await client.query(`
     CREATE TABLE IF NOT EXISTS app_snapshots (
       id TEXT PRIMARY KEY,

@@ -18,6 +18,9 @@ const writeState = (state) => {
 
 class Pool {
   async query(sql, values = []) {
+    if (/to_regclass\('public\.resident_accounts'\)/i.test(sql)) {
+      return { rows: [{ accounts: 'resident_accounts', sessions: 'resident_sessions' }] };
+    }
     if (/^\s*(CREATE TABLE|CREATE INDEX)/i.test(sql)) return { rows: [] };
 
     const state = readState();

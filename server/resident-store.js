@@ -5,30 +5,38 @@ const createResidentStore = (pool) => {
 
   const ensureReady = () => {
     if (!ready) {
-      ready = pool.query(`
-        CREATE TABLE IF NOT EXISTS resident_accounts (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          full_name TEXT NOT NULL,
-          username TEXT,
-          email TEXT NOT NULL UNIQUE,
-          role TEXT NOT NULL DEFAULT 'resident',
-          contact_number TEXT,
-          address TEXT,
-          barangay TEXT,
-          password_hash TEXT NOT NULL,
-          status TEXT NOT NULL DEFAULT 'Active',
-          profile_photo_path TEXT,
-          created_at TEXT NOT NULL,
-          last_login TEXT
-        );
-        CREATE TABLE IF NOT EXISTS resident_sessions (
-          token TEXT PRIMARY KEY,
-          user_id UUID NOT NULL REFERENCES resident_accounts(id) ON DELETE CASCADE,
-          created_at TEXT NOT NULL,
-          expires_at TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS resident_sessions_expiry_idx ON resident_sessions(expires_at);
-      `).catch((error) => {
+      ready = (async () => {
+        const existing = await pool.query(`
+          SELECT to_regclass('public.resident_accounts') AS accounts,
+                 to_regclass('public.resident_sessions') AS sessions
+        `);
+        const row = existing.rows[0] || {};
+        if (row.accounts && row.sessions) return;
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS resident_accounts (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            full_name TEXT NOT NULL,
+            username TEXT,
+            email TEXT NOT NULL UNIQUE,
+            role TEXT NOT NULL DEFAULT 'resident',
+            contact_number TEXT,
+            address TEXT,
+            barangay TEXT,
+            password_hash TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'Active',
+            profile_photo_path TEXT,
+            created_at TEXT NOT NULL,
+            last_login TEXT
+          );
+          CREATE TABLE IF NOT EXISTS resident_sessions (
+            token TEXT PRIMARY KEY,
+            user_id UUID NOT NULL REFERENCES resident_accounts(id) ON DELETE CASCADE,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL
+          );
+          CREATE INDEX IF NOT EXISTS resident_sessions_expiry_idx ON resident_sessions(expires_at);
+        `);
+      })().catch((error) => {
         ready = null;
         throw error;
       });

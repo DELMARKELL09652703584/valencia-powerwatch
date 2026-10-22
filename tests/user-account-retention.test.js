@@ -79,6 +79,9 @@ test('Neon resident account and session records survive store reinitialization',
   const sessions = new Map();
   const pool = {
     async query(sql, values = []) {
+      if (/to_regclass\('public\.resident_accounts'\)/i.test(sql)) {
+        return { rows: [{ accounts: 'resident_accounts', sessions: 'resident_sessions' }] };
+      }
       if (/^\s*CREATE TABLE|^\s*CREATE INDEX/i.test(sql)) return { rows: [] };
       if (/INSERT INTO resident_accounts/i.test(sql) && /RETURNING \*/i.test(sql)) {
         const row = {
