@@ -8,7 +8,7 @@ This document maps the proposed 24-table domain model to the current Valencia Po
 
 - SQLite is the operational database for reports, incidents, staff, announcements, audit logs, and settings.
 - Neon stores compressed SQLite snapshots, uploaded files, resident accounts, and resident sessions.
-- Neon currently has five application tables: `app_snapshots`, `app_snapshots_backup`, `app_snapshot_files`, `resident_accounts`, and `resident_sessions`. A separate `playing_with_neon` sample table also exists and is not part of the application.
+- Neon currently has five pre-existing application tables: `app_snapshots`, `app_snapshots_backup`, `app_snapshot_files`, `resident_accounts`, and `resident_sessions`, plus the 35-table normalized schema deployed on 2026-10-23 (see `DATABASE_RELATIONSHIPS.md`). The `playing_with_neon` sample table was dropped on 2026-10-23.
 
 ---
 
@@ -17,7 +17,7 @@ This document maps the proposed 24-table domain model to the current Valencia Po
 Read-only inspection of the local SQLite database and the production Neon database found:
 
 - **26 SQLite tables**
-- **5 Neon application tables** plus the unrelated `playing_with_neon` sample table
+- **5 pre-existing Neon application tables** plus the 35-table normalized schema (deployed 2026-10-23); the `playing_with_neon` sample table was dropped
 - **2 users** (one administrator and one resident)
 - **31 official barangays**
 - **1 outage report**, **1 outage incident**, **1 incident/report link**, and **1 affected area**
@@ -277,3 +277,33 @@ Before cutover, verify:
 Do not delete, rename, or replace `resident_accounts`, `resident_sessions`, `app_snapshots`, `app_snapshots_backup`, or any current SQLite table yet.
 
 The next safe step is to approve the decisions in section 5, then build the target schema and backfill scripts on a Neon development branch. Production must stay on the current hybrid until the mapping and shadow-read validation are complete.
+
+---
+
+## 9. Implemented staging artifacts
+
+The normalized schema and its guarded staging tooling are now under source
+control. The schema was deployed additively to the production Neon branch on
+2026-10-23 (see `DATABASE_RELATIONSHIPS.md`); the table lists the artifacts.
+
+| Artifact | Purpose |
+|---|---|
+| `db/migrations/001_reference_accounts.sql` | Roles, permissions, barangays, users, profiles, role assignments, sessions, and repair teams |
+| `db/migrations/002_operations.sql` | Reports, evidence, verification, history, incidents, links, assignments, updates, announcements, notifications, feedback, and audit |
+| `db/migrations/003_supporting.sql` | OAuth, password reset, settings, SMS, assignment evidence/location, and staff scope tables |
+| `db/migrations/004_permissions.sql` | 24 permissions and the initial 53 role-permission grants |
+| `scripts/create-neon-dev-branch.js` | Creates/reuses the isolated `development` branch through the Neon API |
+| `scripts/neon-migrate.js` | Checksum-tracked migration runner and expected-table verifier |
+| `scripts/neon-backfill.js` | Idempotent SQLite/Neon-to-staging backfill |
+| `scripts/neon-validate.js` | Count, FK, role, barangay, evidence, and session-hash validation |
+| `scripts/neon-deploy-schema.js` | Guarded, dry-run-first, atomic deployment to the branch Render uses |
+| `scripts/neon-seed-reference.js` | Idempotent seed of 31 barangays and configuration settings |
+| `db/migrations/005_integrity_hardening.sql` | Missing foreign key and 19 validated value checks |
+| `db/migrations/006_relationship_indexes.sql` | 28 foreign-key indexes and feedback history preservation |
+| `DATABASE_RELATIONSHIPS.md` | Generated table-by-table relationship reference |
+
+The migration preflight passed on a local PostgreSQL-compatible engine, and the
+real Neon deployment followed on 2026-10-23: all six migrations committed in a
+single transaction, all 35 application tables plus the migration ledger were
+created next to the untouched snapshot/resident tables, and a rolled-back
+functional test exercised a full report-to-audit insert chain.

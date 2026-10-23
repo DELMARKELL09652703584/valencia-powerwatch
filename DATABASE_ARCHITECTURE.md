@@ -70,7 +70,8 @@ resident_sessions.user_id → resident_accounts.id
 
 ### Proposed 24-table schema
 
-**None of the 24 proposed PostgreSQL domain tables exist.** They have not been created or altered. The full mapping, gaps, and migration plan are in [DATABASE_DESIGN_MAPPING.md](DATABASE_DESIGN_MAPPING.md).
+**The normalized schema is now deployed in production.** As of 2026-10-23, 35 PostgreSQL domain tables (the 24 core tables plus 11 supporting tables), 68 foreign keys, 19 value checks, and full foreign-key indexing exist in Neon next to the pre-existing snapshot/resident tables. The application still reads SQLite plus the Neon snapshot, so runtime behavior is unchanged; the schema is not yet the application's source of truth. The full mapping, gaps, and migration plan are in [DATABASE_DESIGN_MAPPING.md](DATABASE_DESIGN_MAPPING.md). Table-by-table relationships are in [DATABASE_RELATIONSHIPS.md](DATABASE_RELATIONSHIPS.md), and the guarded deploy, seed, backfill, and validation scripts are documented in [db/README.md](db/README.md).
+
 
 The proposed tables are currently represented by SQLite tables and application logic:
 
@@ -103,7 +104,7 @@ The proposed tables are currently represented by SQLite tables and application l
 
 SQLite currently has 26 tables in total. Eleven supporting tables must be preserved in the target because the 24-table list does not represent them: `oauth_accounts`, `oauth_states`, `password_reset_tokens`, `settings`, `sms_logs`, `repair_teams`, `repair_assignments`, `repair_assignment_evidence`, `repair_assignment_location_confirmations`, `staff_team_members`, and `staff_barangay_assignments`. `repair_assignment_updates` is mapped into `outage_updates`; `report_attachments`, `incident_links`, `incident_areas`, `citizen_feedback`, `sessions`, and `resident_sessions` map into their corresponding core tables.
 
-`playing_with_neon` is a Neon sample table unrelated to the application. It is not part of the domain schema.
+`playing_with_neon` was a Neon sample table unrelated to the application. It held 10 rows of tutorial data, had no foreign keys, and was dropped on 2026-10-23; it was never part of the domain schema.
 
 ---
 
