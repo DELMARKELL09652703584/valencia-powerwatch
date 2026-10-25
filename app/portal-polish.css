@@ -6495,12 +6495,12 @@ body.community-body .community-login-card .mobile-auth-submit {
 }
 
 body.community-body #app .mobile-auth-page .community-login-card .mobile-auth-form .mobile-auth-submit {
-  width: min(100%, 260px);
-  min-height: 48px;
+  width: 100%;
+  min-height: 52px;
   margin-inline: auto;
   padding: 0 16px;
   border: 1px solid #0864c4 !important;
-  border-radius: 12px;
+  border-radius: 14px;
   background: linear-gradient(135deg, #1688ed, #0864c4) !important;
   box-shadow: 0 4px 12px rgba(3, 37, 76, .22);
   font-size: 1rem;
@@ -6560,36 +6560,33 @@ body.community-body .community-login-register {
   gap: 8px;
   margin: 14px 0 0;
   padding: 0 6px;
-  color: #fff;
+  color: #102b45;
   font-size: .98rem;
   text-align: center;
-  text-shadow: 0 1px 5px rgba(4, 21, 35, .72);
 }
 
 body.community-body #app .community-login-register > button {
   display: inline-flex;
-  min-width: 96px;
+  min-width: 0;
   min-height: 44px;
   align-items: center;
   justify-content: center;
-  padding: 0 18px;
-  border: 1px solid rgba(255, 255, 255, .8) !important;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #1688ed, #0864c4) !important;
-  box-shadow: 0 6px 16px rgba(3, 37, 76, .3) !important;
-  color: #fff !important;
+  padding: 0 2px;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #0879e5 !important;
   font-size: .96rem;
-  font-weight: 750;
+  font-weight: 650;
   line-height: 1.2;
   text-decoration: none;
-  text-shadow: none;
-  transition: background-color .16s ease, box-shadow .16s ease, transform .16s ease;
+  transition: color .16s ease, transform .16s ease;
 }
 
 body.community-body #app .community-login-register > button:hover {
-  background: linear-gradient(135deg, #0877d7, #0758ae);
-  box-shadow: 0 8px 20px rgba(3, 37, 76, .38);
-  transform: translateY(-1px);
+  color: #0758ae !important;
+  text-decoration: underline;
 }
 
 body.community-body #app .community-login-register > button:active {
@@ -6597,14 +6594,20 @@ body.community-body #app .community-login-register > button:active {
 }
 
 body.community-body #app .community-login-register > button:focus-visible {
-  outline: 3px solid #fff;
-  outline-offset: 3px;
+  outline: 2px solid #0879e5;
+  outline-offset: 2px;
 }
 
 body.dark-mode.community-body #app .community-login-register > button {
-  border-color: #a5d9ff !important;
-  background: linear-gradient(135deg, #2563eb, #087eac) !important;
-  color: #fff !important;
+  color: #67e8f9 !important;
+}
+
+body.dark-mode.community-body .community-login-register {
+  color: #d2deee;
+}
+
+body.dark-mode.community-body #app .community-login-register > button:focus-visible {
+  outline-color: #67e8f9;
 }
 
 body.dark-mode.community-body .community-login-card,
