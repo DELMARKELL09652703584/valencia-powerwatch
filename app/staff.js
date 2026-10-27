@@ -370,8 +370,10 @@ const renderAreaReports = () => {
       ${nextStatus ? `<button class="staff-btn staff-btn-primary" type="button" data-action="update-report-status" data-id="${report.id}" data-status="${nextStatus}">${nextStatus === 'Verified' ? 'Verify report' : 'Start review'}</button>` : ''}
     </article>`;
   }).join('');
-  return `<div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Assigned barangays</span><h2>Resident reports</h2></div></div>
-    ${cards ? `<div class="staff-assignment-list">${cards}</div>` : '<div class="staff-card staff-empty"><strong>No open area reports</strong>Reports submitted from your authorized barangays will appear here.</div>'}`;
+  return `<section class="staff-area-reports" id="staff-area-reports">
+    <div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Assigned barangays</span><h2>Resident reports</h2></div></div>
+    ${cards ? `<div class="staff-assignment-list">${cards}</div>` : '<div class="staff-card staff-empty"><strong>No open area reports</strong>Reports submitted from your authorized barangays will appear here.</div>'}
+  </section>`;
 };
 
 const getCurrentAssignments = () => state.assignments.find((assignment) => String(assignment.id) === String(state.selectedId));
@@ -390,17 +392,21 @@ const renderHome = () => {
     </div>
   </header>
   <div class="staff-quick-nav" aria-label="Quick Navigation">
-    <button class="staff-quick-pill" type="button" data-action="navigate" data-page="tasks">
+    <button class="staff-quick-pill" type="button" data-action="show-area-reports">
       <span class="staff-quick-icon">${icon('clipboard')}</span>
-      <span class="staff-quick-text"><strong>My Tasks</strong><small>${active.length} Active</small></span>
+      <span class="staff-quick-text"><strong>Reports</strong><small>Resident reports</small></span>
+    </button>
+    <button class="staff-quick-pill" type="button" data-action="navigate" data-page="tasks">
+      <span class="staff-quick-icon">${icon('alert')}</span>
+      <span class="staff-quick-text"><strong>Incidents</strong><small>${active.length} active cases</small></span>
     </button>
     <button class="staff-quick-pill" type="button" data-action="navigate" data-page="map">
       <span class="staff-quick-icon">${icon('map')}</span>
-      <span class="staff-quick-text"><strong>Field Map</strong><small>GPS Route</small></span>
+      <span class="staff-quick-text"><strong>Map</strong><small>Navigate to a site</small></span>
     </button>
     <button class="staff-quick-pill" type="button" data-action="navigate" data-page="alerts">
       <span class="staff-quick-icon">${icon('bell')}${state.unreadNotifications ? `<span class="staff-pill-badge">${state.unreadNotifications}</span>` : ''}</span>
-      <span class="staff-quick-text"><strong>Alerts</strong><small>${state.unreadNotifications ? `${state.unreadNotifications} unread` : 'All caught up'}</small></span>
+      <span class="staff-quick-text"><strong>Updates</strong><small>${state.unreadNotifications ? `${state.unreadNotifications} unread` : 'All caught up'}</small></span>
     </button>
   </div>
   ${renderStats()}
@@ -824,6 +830,12 @@ document.addEventListener('click', async (event) => {
     if (action === 'navigate') {
       state.page = button.dataset.page;
       renderShell();
+    } else if (action === 'show-area-reports') {
+      if (state.page !== 'home') {
+        state.page = 'home';
+        renderShell();
+      }
+      root.querySelector('#staff-area-reports')?.scrollIntoView({ block: 'start' });
     } else if (action === 'refresh') {
       button.disabled = true;
       await refreshAssignments();

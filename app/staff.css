@@ -517,6 +517,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 
 /* ─── Assignment Cards ─── */
 .staff-assignment-list { display: grid; gap: 12px; }
+.staff-area-reports { scroll-margin-top: 12px; }
 .staff-assignment {
   position: relative;
   display: grid;

@@ -80,7 +80,7 @@ function renderLogin(message = '', loginIdentifier = null, rememberIdentifier = 
           </span></label>
           <label class="community-login-password-label"><span class="community-login-password-heading"><span>Password</span><button type="button" data-action="forgot-password">Forgot Password?</button></span><span class="mobile-password-field community-login-input-wrap">
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1"/></svg>
-            <input name="password" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" required><button type="button" data-action="toggle-password" aria-label="Show password"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
+            <input name="password" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="current-password" required><button type="button" data-action="toggle-password" aria-label="Show password"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
           </span></label>
           <div class="auth-options-row"><label><input type="checkbox" name="remember" ${shouldRememberIdentifier ? 'checked' : ''}> Remember me</label></div>
           <button class="button primary mobile-auth-submit" type="submit">Login</button>
@@ -391,12 +391,25 @@ async function goToPage(page) {
 async function goToTab(tab) {
   if (!MOBILE_PAGES[tab]) return;
   if (state.mobileTab !== tab) window.scrollTo(0, 0);
+  if (state.mobileTab === 'report') {
+    const form = document.querySelector('form[data-form="report"]');
+    if (form) {
+      const values = Object.fromEntries([...new FormData(form).entries()]
+        .filter(([name, value]) => name !== 'attachments' && !(value instanceof File)));
+      state.mobileReportDraft = { ...(state.mobileReportDraft || {}), ...values };
+    }
+  }
   state.mobileTab = tab;
   try {
     await render();
   } catch (error) {
     if (error.status === 401) return renderLogin('Your session expired. Sign in again to continue.');
-    mobileShell(`<div class="mobile-card">${emptyState('Could not load this section', error.message, 'âš ï¸')}</div>`);
+    const activeTab = ['home', 'report', 'reports', 'map', 'profile'].includes(tab) ? tab : 'home';
+    mobileShell(`<section class="mobile-card mobile-load-error" role="alert">
+      <h2>Could not load this section</h2>
+      <p>${escapeHtml(error.message || 'Check your connection and try again.')}</p>
+      <button class="button primary" type="button" data-action="retry-current-tab">Try again</button>
+    </section>`, { activeTab });
     return undefined;
   }
   return undefined;
@@ -595,6 +608,7 @@ async function submitForm(form) {
     state.mobileTab = 'reports';
     state.mobileReportDraft = null;
     state.mobileReportStep = 1;
+    state.mobileLocationMode = 'address';
     await render();
     setToast(`Report ${result.report.report_code} submitted. It is pending review.`);
     return;
@@ -942,6 +956,13 @@ async function handleClick(event) {
         state.mobileAuthScreen = 'login';
         renderLogin();
         return;
+      case 'open-announcements':
+        state.mobileNotificationCategory = 'announcements';
+        await goToTab('notifications');
+        return;
+      case 'retry-current-tab':
+        await goToTab(state.mobileTab);
+        return;
       case 'close-dialog':
         closeDialog();
         return;
@@ -1148,7 +1169,7 @@ async function handleClick(event) {
           if (state.mobileReportDraft) state.mobileReportDraft.location = locationInput.value;
         }
         const status = form.querySelector('[data-gps="status"]');
-        if (status) status.textContent = `You confirmed Brgy. ${selected} manually. The map pin coordinates will be saved as shown.`;
+        if (status) status.textContent = `Brgy. ${selected} confirmed. The coordinates shown above will be included with your location description.`;
         return;
       }
       case 'mark-all-read':
@@ -1587,6 +1608,7 @@ async function handleClick(event) {
       case 'compose-report':
         state.mobileReportStep = 1;
         state.mobileReportDraft = {};
+        state.mobileLocationMode = 'address';
         state.mobileTab = 'report';
         await render();
         return;
@@ -1631,8 +1653,12 @@ async function handleClick(event) {
         await render();
         return;
       case 'open-notification-settings':
+        state.mobileNotificationSettingsReturnTab = state.mobileTab;
         state.mobileTab = 'notification-settings';
         await render();
+        return;
+      case 'back-from-notification-settings':
+        await goToTab(state.mobileNotificationSettingsReturnTab || 'settings');
         return;
       case 'back-to-settings':
         await goToTab('settings');

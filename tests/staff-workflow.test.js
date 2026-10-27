@@ -58,10 +58,15 @@ test('Staff portal shows report times, recent field updates, and accurate assign
   assert.match(staffApp, /No active assignment has an exact GPS point/);
   assert.match(staffApp, /No assignments have been dispatched/);
   assert.match(staffApp, /No assignments match this filter/);
-  assert.match(staffPage, /\/app\/staff\.js\?v=16/);
-  assert.match(staffPage, /\/app\/staff\.css\?v=12/);
-  assert.match(serviceWorker, /\/app\/staff\.js\?v=16/);
-  assert.match(serviceWorker, /\/app\/staff\.css\?v=12/);
+  assert.match(staffApp, /data-action="show-area-reports"/);
+  assert.match(staffApp, /id="staff-area-reports"/);
+  assert.match(staffApp, /scrollIntoView\(\{ block: 'start' \}\)/);
+  assert.match(staffStyles, /\.staff-quick-nav\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/s);
+  assert.match(staffStyles, /\.staff-stats\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/s);
+  assert.match(staffPage, /\/app\/staff\.js\?v=17/);
+  assert.match(staffPage, /\/app\/staff\.css\?v=14/);
+  assert.match(serviceWorker, /\/app\/staff\.js\?v=17/);
+  assert.match(serviceWorker, /\/app\/staff\.css\?v=14/);
   assert.match(staffStyles, /\.staff-login-page\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*100vh;[^}]*min-height:\s*100svh;[^}]*min-height:\s*100dvh;[^}]*align-content:\s*safe center;[^}]*env\(safe-area-inset-top\)/s);
   assert.match(staffStyles, /@media \(max-height:\s*760px\)\s*\{\s*\.staff-login-page\s*\{[^}]*align-content:\s*start;/s);
   assert.match(staffStyles, /@media \(max-width:\s*380px\)\s*\{\s*\.staff-login-page\s*\{/s);
@@ -374,8 +379,8 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
     fetch(`${baseUrl}/community`),
     fetch(`${baseUrl}/manifest.json`),
     fetch(`${baseUrl}/sw.js`),
-    fetch(`${baseUrl}/app/staff.css?v=12`),
-    fetch(`${baseUrl}/app/staff.js?v=16`),
+    fetch(`${baseUrl}/app/staff.css?v=14`),
+    fetch(`${baseUrl}/app/staff.js?v=17`),
     fetch(`${baseUrl}/app/staff-pwa-update.js?v=1`),
     Promise.all([
       'powerwatch-field-icon-180.png',
@@ -443,17 +448,17 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
   assert.match(staffStyles, /@media \(max-height:\s*760px\)/);
   assert.match(staffStyles, /@media \(min-width: 560px\)/);
   assert.match(staffStyles, /place-items: center/);
-  assert.match(staffStyles, /grid-template-columns: repeat\(2, minmax\(0,1fr\)\)/);
-  assert.doesNotMatch(staffStyles, /grid-template-columns: repeat\(4, minmax\(0,1fr\)\)/);
+  assert.match(staffStyles, /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.doesNotMatch(staffStyles, /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
   assert.match(staffStyles, /staff-stage-progress/);
-  assert.match(staffStyles, /staff-progress-scroll \.staff-stage-progress/);
+  assert.match(staffStyles, /\.staff-progress-scroll\s*\{/);
   assert.match(staffStyles, /staff-evidence-preview/);
   assert.match(staffStyles, /staff-upload-drop/);
   const workerSource = await workerResponse.text();
   const shellAssets = workerSource.match(/const STAFF_SHELL = \[[\s\S]*?\];/)?.[0] || '';
   assert.doesNotMatch(shellAssets, /\/api\/|\/admin/);
-  assert.match(shellAssets, /staff\.css\?v=12/);
-  assert.match(shellAssets, /staff\.js\?v=16/);
+  assert.match(shellAssets, /staff\.css\?v=14/);
+  assert.match(shellAssets, /staff\.js\?v=17/);
   assert.match(shellAssets, /staff-pwa-update\.js\?v=1/);
   const communityWorkerSource = await communityWorkerResponse.text();
   assert.match(communityWorkerSource, /powerwatch-community-/);
