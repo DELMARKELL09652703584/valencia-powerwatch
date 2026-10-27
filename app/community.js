@@ -440,10 +440,10 @@ async function renderMobileHome() {
     { label: 'Pending reports', value: stats.reports_pending, icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><path d="m9 14 2 2 4-4"/></svg>', tone: 'warning', action: 'dashboard-pending-reports' },
   ];
   const shortcuts = [
-    { label: 'Current Outages', icon: '<path d="M13 2 4 14h7l-1 8 10-12h-7z"/>', action: 'open-current-outages' },
-    { label: 'Scheduled Outages', icon: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>', action: 'open-scheduled-outages' },
+    { label: 'Current outages', icon: '<path d="M13 2 4 14h7l-1 8 10-12h-7z"/>', action: 'open-current-outages' },
+    { label: 'Scheduled outages', icon: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>', action: 'open-scheduled-outages' },
     { label: 'Announcements', icon: '<path d="M3 11v3a2 2 0 0 0 2 2h2l3 5h3l-2-7 8 3V7l-8 3H5a2 2 0 0 0-2 1z"/>', action: 'open-announcements' },
-    { label: 'Outage History', icon: '<path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"/><path d="M3 3v5h5m4-1v5l3 2"/>', tab: 'history' },
+    { label: 'Outage history', icon: '<path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"/><path d="M3 3v5h5m4-1v5l3 2"/>', tab: 'history' },
   ];
   const monthlyMaximum = Math.max(1, ...outageInsights.monthly.map((item) => Number(item.count) || 0));
   const trendCopy = outageInsights.trend.direction === 'up'
@@ -467,9 +467,9 @@ async function renderMobileHome() {
       </div>
       ${barangayHeroMarkup}
       <section class="home-primary-actions" aria-label="Quick actions">
-        <button type="button" class="home-report-action primary" data-mobile-tab="report" aria-label="Report a power interruption">
+        <button type="button" class="home-report-action primary" data-mobile-tab="report" aria-label="Report a power interruption" title="Report a power interruption">
           <svg class="home-report-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-          <span class="home-report-label">Report Power Outage</span>
+          <span class="home-report-label">Report outage</span>
         </button>
         <button type="button" class="home-track-action" data-mobile-tab="reports" aria-label="Track my submitted reports">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><path d="m9 14 2 2 4-4"/></svg>
