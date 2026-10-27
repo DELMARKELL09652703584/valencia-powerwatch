@@ -251,6 +251,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   display: flex;
   flex-direction: column;
   gap: 16px;
+  scroll-behavior: smooth;
+}
+.staff-area-reports {
+  scroll-margin-top: 90px;
 }
 
 /* ─── Page Headings ─── */

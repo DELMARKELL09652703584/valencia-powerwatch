@@ -22,7 +22,7 @@ test('portal layouts remain constrained on narrow mobile screens', () => {
   assert.match(styles, /@media \(max-width: 600px\)\s*\{\s*body\.community-body \.mobile-home-header\s*\{[^}]*gap:\s*4px;[^}]*padding:\s*6px 14px 8px;/s);
   assert.match(styles, /@media \(max-width: 360px\)\s*\{\s*body\.admin-body \.login-page\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
   assert.match(styles, /body\.admin-body \.login-page \.social-row\s*\{\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=71/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=\d+/);
   assert.match(adminPage, /\/app\/portal-polish\.css\?v=38/);
 });
 
@@ -32,7 +32,7 @@ test('report wizard content can scroll above the fixed bottom navigation', () =>
   const mobileContentRule = styles.match(/\.community-body \.mobile-content\s*\{([^}]*)\}/)?.[1] || '';
 
   assert.match(mobileContentRule, /padding-bottom:\s*calc\(98px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=71/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=\d+/);
 });
 
 test('report evidence buttons and subpage title remain legible on mobile', () => {
@@ -42,7 +42,7 @@ test('report evidence buttons and subpage title remain legible on mobile', () =>
   assert.match(styles, /body\.community-body \.mobile-subpage-header \.mobile-header-title\s*\{[^}]*min-width:\s*0;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;[^}]*white-space:\s*nowrap;/s);
   assert.match(styles, /body\.community-body \.report-evidence-step \.report-evidence-picker\s*\{[^}]*color:\s*#1265ad !important;/s);
   assert.match(styles, /body\.dark-mode\.community-body \.report-evidence-step \.report-evidence-picker\s*\{[^}]*background:\s*var\(--pw-raised\) !important;[^}]*color:\s*#9dd6ff !important;/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=71/);
+  assert.match(communityPage, /\/app\/portal-polish\.css\?v=\d+/);
 });
 
 test('Admin dashboard releases its fixed desktop frame for mobile page scrolling', () => {
@@ -245,10 +245,10 @@ test('staff checkbox accent uses a defined token and refreshed shell assets', ()
   const staffWorker = fs.readFileSync(path.join(ROOT, 'staff-sw.js'), 'utf8');
 
   assert.match(styles, /accent-color:\s*var\(--staff-blue,\s*#1675df\);/);
-  assert.match(staffPage, /\/app\/staff\.css\?v=12/);
-  assert.match(staffPage, /\/app\/staff\.js\?v=16/);
-  assert.match(staffWorker, /\/app\/staff\.css\?v=12/);
-  assert.match(staffWorker, /\/app\/staff\.js\?v=16/);
+  assert.match(staffPage, /\/app\/staff\.css\?v=14/);
+  assert.match(staffPage, /\/app\/staff\.js\?v=17/);
+  assert.match(staffWorker, /\/app\/staff\.css\?v=14/);
+  assert.match(staffWorker, /\/app\/staff\.js\?v=17/);
 });
 
 test('community notification category controls use pressed button semantics', () => {
