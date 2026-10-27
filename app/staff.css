@@ -582,6 +582,136 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   color: var(--staff-blue);
 }
 
+/* ─── Quick Actions ─── */
+
+.staff-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 10px 0 4px;
+}
+
+.staff-quick-action {
+  min-height: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 10px;
+  border: 1px solid var(--staff-line);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+  box-shadow: var(--staff-shadow-sm);
+  cursor: pointer;
+  transition: transform .12s ease, border-color .15s ease, box-shadow .15s ease;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.staff-quick-action:active { transform: scale(.98); }
+.staff-quick-action:hover:not(:disabled) {
+  border-color: #c7d7eb;
+  box-shadow: 0 4px 14px rgba(11, 92, 173, 0.06);
+}
+
+.staff-quick-icon {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--staff-blue-light);
+  color: var(--staff-blue);
+}
+
+.staff-quick-icon .staff-icon { width: 18px; height: 18px; }
+
+.staff-quick-label {
+  font-size: .78rem;
+  font-weight: 800;
+  color: #09233f;
+  line-height: 1.1;
+}
+
+.staff-quick-count {
+  font-size: .67rem;
+  font-weight: 700;
+  color: var(--staff-muted);
+  margin-top: 1px;
+}
+
+/* ─── Assignment Cards - Simplified ─── */
+
+.staff-assignment {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--staff-radius);
+  box-shadow: var(--staff-shadow);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: var(--staff-panel);
+}
+
+.staff-assignment-compact {
+  gap: 10px;
+  padding: 14px;
+}
+
+.staff-assignment-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.staff-assignment-code {
+  color: #5b768e;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.staff-assignment h2 {
+  margin: 4px 0 0;
+  font-size: .98rem;
+  font-weight: 800;
+  color: #09233f;
+  line-height: 1.3;
+}
+
+.staff-assignment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+}
+
+.staff-place {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f0f7fc;
+  color: #1b4b6f;
+  font-size: .85rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.staff-place > .staff-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--staff-blue);
+}
+
 /* ─── Section Dividers ─── */
 .staff-section-divider {
   height: 1px;
@@ -749,6 +879,37 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   background: #f0fafd;
 }
 .staff-latest-update p { margin: 5px 0 0; color: #234f66; font-size: .82rem; line-height: 1.45; }
+
+/* ─── Detail View Components ─── */
+
+.staff-detail-heading {
+  margin-bottom: 4px;
+}
+
+.staff-back-btn {
+  min-height: 40px;
+  padding: 8px 14px;
+  font-size: .82rem;
+  border-radius: 999px;
+}
+
+/* ─── Assignment Actions ─── */
+
+.staff-assignment-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.staff-assignment-actions .staff-btn { min-height: 46px; font-size: .84rem; border-radius: 999px; }
+.staff-assignment-actions .staff-btn-primary { grid-column: 1 / -1; min-height: 50px; font-size: .88rem; font-weight: 800; }
+.staff-no-pin {
+  grid-column: 1 / -1;
+  padding: 4px 0;
+  color: var(--staff-muted);
+  font-size: .78rem;
+}
 
 /* ─── Stage Stepper ─── */
 .staff-stage-wrapper {
@@ -1249,9 +1410,19 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .staff-offline-banner strong { font-size: .86rem; font-weight: 800; }
 .staff-empty {
-  padding: 28px 16px;
+  padding: 32px 16px;
   color: var(--staff-muted);
   text-align: center;
+  border: 1px dashed var(--staff-line);
+  border-radius: var(--staff-radius);
+  background: #f8fafc;
+}
+
+.staff-empty::before {
+  content: '⚡';
+  display: block;
+  font-size: 2.5rem;
+  margin-bottom: 10px;
 }
 .staff-empty strong {
   display: block;

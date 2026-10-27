@@ -8,7 +8,7 @@ const pages = [
   ['home', 'home', 'Today'],
   ['tasks', 'clipboard', 'Tasks'],
   ['map', 'map', 'Map'],
-  ['alerts', 'bell', 'Alerts'],
+  ['alerts', 'bell', 'Updates'],
   ['profile', 'user', 'Profile'],
 ];
 const state = {
@@ -162,7 +162,10 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
   const title = assignment.incident_title || assignment.report_code || assignment.incident_code || assignment.assignment_code;
   const stage = assignment.latest_stage || 'Assigned';
   const priorityTone = String(assignment.priority).toLowerCase() === 'critical' ? 'staff-assignment-critical' : '';
-  return `<article class="staff-card staff-assignment ${priorityTone}">
+  const barangay = assignment.target_barangay || 'Valencia City';
+  const purok = assignment.target_purok ? `Purok ${assignment.target_purok}` : '';
+  const locationText = [purok, barangay].filter(Boolean).join(', ');
+  return `<article class="staff-card staff-assignment ${compact ? 'staff-assignment-compact' : ''} ${priorityTone}">
     <div class="staff-assignment-top">
       <div>
         <div class="staff-assignment-code">${escapeHtml(assignment.assignment_code || 'FIELD ASSIGNMENT')}</div>
@@ -174,25 +177,25 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
       <span class="staff-status ${statusClass(assignment.status)}">${icon('clock')}${escapeHtml(stageLabel(stage))}</span>
       <span class="staff-status staff-team-pill">${icon('user')}${escapeHtml(assignment.team_name || 'Assigned crew')}</span>
     </div>
-    <div class="staff-place">${icon('pin')}<span>${escapeHtml(displayLocation(assignment))}</span></div>
-    <hr class="staff-section-divider">
+    <div class="staff-place">${icon('pin')}<span>${escapeHtml(locationText || 'Location details not supplied')}</span></div>
+    ${!compact ? `<hr class="staff-section-divider">` : ''}
     ${!compact ? `<section class="staff-incident-summary">
       <div class="staff-detail-grid">
-        <div><dt>Incident</dt><dd>${escapeHtml(assignment.report_code || assignment.incident_code || 'Linked outage')}</dd></div>
-        <div><dt>Reported problem</dt><dd>${escapeHtml(assignment.possible_outage_type || assignment.outage_type || assignment.incident_type || 'Power interruption')}</dd></div>
+        <div><dt>Reference</dt><dd>${escapeHtml(assignment.report_code || assignment.incident_code || 'Linked outage')}</dd></div>
+        <div><dt>Problem type</dt><dd>${escapeHtml(assignment.possible_outage_type || assignment.outage_type || assignment.incident_type || 'Power interruption')}</dd></div>
         <div><dt>Barangay</dt><dd>${escapeHtml(assignment.target_barangay || 'Not specified')}</dd></div>
-        <div><dt>${confirmedLocation ? 'Field-confirmed purok' : 'Reported purok'}</dt><dd>${escapeHtml(confirmedLocation?.confirmed_purok || assignment.target_purok || 'Not specified')}</dd></div>
+        <div><dt>Purok / Sitio</dt><dd>${escapeHtml(confirmedLocation?.confirmed_purok || assignment.target_purok || 'Not specified')}</dd></div>
         ${hasCoordinates
           ? `<div><dt>GPS coordinates</dt><dd>${Number(coordinates.latitude).toFixed(5)}, ${Number(coordinates.longitude).toFixed(5)} · ${assignment.incident_id ? 'Incident location' : assignment.report_location_confirmed ? 'Resident-confirmed pin' : 'Resident-reported, unconfirmed'}</dd></div>` : '<div><dt>GPS coordinates</dt><dd>No exact coordinates supplied; confirm the site with dispatch before travel.</dd></div>'}
         ${assignment.report_location_accuracy_m !== null && assignment.report_location_accuracy_m !== undefined
-          ? `<div><dt>Reported GPS accuracy</dt><dd>About ${Math.round(Number(assignment.report_location_accuracy_m))} m</dd></div>` : ''}
+          ? `<div><dt>GPS accuracy</dt><dd>About ${Math.round(Number(assignment.report_location_accuracy_m))} m</dd></div>` : ''}
       </div>
       <div class="staff-detail-copy">
         <div><dt>Report details</dt><dd>${escapeHtml(assignment.report_description || assignment.incident_description || 'No description supplied.')}</dd></div>
         ${confirmedLocation?.confirmed_location
           ? `<div><dt>Field-confirmed directions</dt><dd>${escapeHtml(confirmedLocation.confirmed_location)}</dd></div>`
           : assignment.report_affected_area && assignment.report_affected_area !== assignment.report_purok
-          ? `<div><dt>Additional location directions</dt><dd>${escapeHtml(assignment.report_affected_area)}</dd></div>` : ''}
+          ? `<div><dt>Additional directions</dt><dd>${escapeHtml(assignment.report_affected_area)}</dd></div>` : ''}
         ${assignment.reporter_name ? `<div><dt>Reported by</dt><dd>${escapeHtml(assignment.reporter_name)}</dd></div>` : ''}
         ${assignment.reporter_contact ? `<div><dt>Authorized contact</dt><dd><a class="staff-contact-link" href="tel:${escapeHtml(assignment.reporter_contact)}">${icon('phone')}${escapeHtml(assignment.reporter_contact)}</a></dd></div>` : ''}
         <div><dt>Dispatch instructions</dt><dd>${escapeHtml(assignment.dispatch_notes || 'No additional instructions.')}</dd></div>
@@ -200,10 +203,10 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
         ${(assignment.reported_at || assignment.incident_start_time) ? `<div><dt>${assignment.reported_at ? 'Report submitted' : 'Incident started'}</dt><dd>${escapeHtml(new Date(assignment.reported_at || assignment.incident_start_time).toLocaleString())}</dd></div>` : ''}
       </div>
       ${confirmedLocation
-        ? `<p class="staff-muted staff-confirmed-note" role="status">${icon('check')} Location text confirmed by ${escapeHtml(confirmedLocation.staff_name)} · ${escapeHtml(new Date(confirmedLocation.created_at).toLocaleString())}. GPS coordinates remain unchanged.</p>`
+        ? `<p class="staff-muted staff-confirmed-note" role="status">${icon('check')} Location confirmed by ${escapeHtml(confirmedLocation.staff_name)} · ${escapeHtml(new Date(confirmedLocation.created_at).toLocaleString())}</p>`
         : '<p class="staff-muted staff-unconfirmed-note">Purok and location are resident-reported and have not been field-confirmed.</p>'}
       ${!isTerminal ? `<form class="staff-note-form staff-confirm-form" data-form="confirm-location" data-id="${assignment.id}">
-        <h3 class="staff-section-title">Confirm purok and location details</h3>
+        <h3 class="staff-section-title">Confirm location details</h3>
         <label class="staff-field">Confirmed purok or sitio
           <input name="purok" minlength="2" maxlength="120" value="${escapeHtml(confirmedLocation?.confirmed_purok || assignment.target_purok || '')}" required>
         </label>
@@ -211,21 +214,21 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
           <textarea name="location" minlength="2" maxlength="300" required>${escapeHtml(confirmedLocation?.confirmed_location || assignment.target_location || assignment.report_location || '')}</textarea>
         </label>
         <label class="staff-checkbox"><input type="checkbox" name="confirmed" required>
-          <span>I checked these text location details with the resident or at the incident site. This does not confirm or change the GPS pin.</span>
+          <span>I verified these details with the resident or at the site. This does not change the GPS pin.</span>
         </label>
-        <button class="staff-btn staff-btn-quiet" type="submit">Save confirmed location details</button>
+        <button class="staff-btn staff-btn-quiet" type="submit">Save confirmed details</button>
       </form>` : ''}
       ${!compact && assignment.report_id && !['Verified', 'Officially Confirmed'].includes(assignment.verification_status) && !assignment.incident_id
         && !isTerminal
         && !['Resolved', 'Rejected', 'Duplicate'].includes(assignment.report_status)
-        ? `<div class="staff-case-verification"><div><strong>Report verification</strong><span>Verify this report in place; no separate incident record will be created.</span></div><button class="staff-btn staff-btn-primary" type="button" data-action="verify-assigned-report" data-id="${assignment.id}">Verify report</button></div>`
+        ? `<div class="staff-case-verification"><div><strong>Verify this report</strong><span>Confirm this resident report on site; no separate incident record will be created.</span></div><button class="staff-btn staff-btn-primary" type="button" data-action="verify-assigned-report" data-id="${assignment.id}">Verify report</button></div>`
         : assignment.incident_code ? `<div class="staff-case-linked"><strong>Verified incident</strong><span>${escapeHtml(assignment.incident_code)} · ${escapeHtml(assignment.incident_title || '')}</span></div>` : ''}
       ${renderStageProgress(assignment)}
       ${assignment.updates?.[0] ? `<div class="staff-latest-update"><span>Latest update · ${escapeHtml(assignment.updates[0].stage)}</span><p>${escapeHtml(assignment.updates[0].notes || 'No field note attached.')}</p></div>` : ''}
     </section>` : ''}
     <div class="staff-assignment-actions">
-      ${compact ? `<button class="staff-btn staff-btn-quiet" type="button" data-action="view-assignment" data-id="${assignment.id}">Details</button>` : ''}
-      ${destination ? `<a class="staff-btn staff-btn-route" href="${escapeHtml(destination)}" target="_blank" rel="noopener">${icon('route')}Navigate to Incident</a>` : '<span class="staff-muted staff-no-pin">No GPS pin was provided.</span>'}
+      ${compact ? `<button class="staff-btn staff-btn-quiet" type="button" data-action="view-assignment" data-id="${assignment.id}">View details</button>` : ''}
+      ${destination ? `<a class="staff-btn staff-btn-route" href="${escapeHtml(destination)}" target="_blank" rel="noopener">${icon('route')}Navigate to site</a>` : '<span class="staff-muted staff-no-pin">No GPS pin provided.</span>'}
       ${isTerminal ? '' : stageButtons(assignment)}
     </div>
     ${compact ? '' : renderEvidence(assignment, { readOnly: isTerminal })}
@@ -324,7 +327,7 @@ const renderStats = () => {
     <div class="staff-stat staff-stat-repair"><span>Repairing</span><strong>${repairing}</strong></div>
     <div class="staff-stat staff-stat-critical"><span>Critical</span><strong>${critical}</strong></div>
     <div class="staff-stat staff-stat-done"><span>Resolved reports</span><strong>${resolvedReports}</strong></div>
-  </div><button class="staff-completed-summary" type="button" data-action="open-history">
+  </div><button class="staff-completed-summary" type="button" data-action="open-history" aria-label="View completed assignments">
     <span>${icon('check')} Completed assignments</span><strong>${completed}<span aria-hidden="true">›</span></strong>
   </button>`;
 };
@@ -384,55 +387,43 @@ const renderHome = () => {
     const rank = (value) => String(value).toLowerCase() === 'critical' ? 0 : String(value).toLowerCase() === 'high' ? 1 : 2;
     return rank(a.priority) - rank(b.priority) || stageIndex(a) - stageIndex(b);
   });
+  const awaitingCount = state.assignments.filter((assignment) => assignment.latest_stage === 'Assigned').length;
   return `<header class="staff-page-heading staff-home-hero">
     <div>
-      <div class="staff-duty-pill"><span class="staff-pulse-dot"></span> Field Operations Active</div>
+      <div class="staff-duty-pill"><span class="staff-pulse-dot"></span> Field Operations Active</div>Active</div>
       <h1>Good day, ${escapeHtml((state.user.full_name || 'Team').split(' ')[0])}</h1>
-      <p>${active.length ? `${active.length} active field task${active.length === 1 ? '' : 's'} · highest priority first.` : 'Your field response overview and next steps.'}</p>
+      <p>${active.length ? `${active.length} active assignment${active.length === 1 ? '' : 's'} · ${awaitingCount} awaiting your acknowledgment.` : 'No active assignments. New dispatches will appear here.'}</p>
     </div>
   </header>
-  <div class="staff-quick-nav" aria-label="Quick Navigation">
-    <button class="staff-quick-pill" type="button" data-action="show-area-reports">
+  <div class="staff-quick-actions" aria-label="Quick actions">
+    <button class="staff-quick-action" type="button" data-action="navigate" data-page="tasks">
       <span class="staff-quick-icon">${icon('clipboard')}</span>
-      <span class="staff-quick-text"><strong>Reports</strong><small>Resident reports</small></span>
+      <span class="staff-quick-label">My assignments</span>
+      <span class="staff-quick-count">${active.length}</span>
     </button>
-    <button class="staff-quick-pill" type="button" data-action="navigate" data-page="tasks">
-      <span class="staff-quick-icon">${icon('alert')}</span>
-      <span class="staff-quick-text"><strong>Incidents</strong><small>${active.length} active cases</small></span>
-    </button>
-    <button class="staff-quick-pill" type="button" data-action="navigate" data-page="map">
+    <button class="staff-quick-action" type="button" data-action="navigate" data-page="map">
       <span class="staff-quick-icon">${icon('map')}</span>
-      <span class="staff-quick-text"><strong>Map</strong><small>Navigate to a site</small></span>
+      <span class="staff-quick-label">Navigate to site</span>
+      <span class="staff-quick-count">${active.filter((a) => routeUrl(a)).length}</span>
     </button>
-    <button class="staff-quick-pill" type="button" data-action="navigate" data-page="alerts">
+    <button class="staff-quick-action" type="button" data-action="navigate" data-page="alerts">
       <span class="staff-quick-icon">${icon('bell')}${state.unreadNotifications ? `<span class="staff-pill-badge">${state.unreadNotifications}</span>` : ''}</span>
-      <span class="staff-quick-text"><strong>Updates</strong><small>${state.unreadNotifications ? `${state.unreadNotifications} unread` : 'All caught up'}</small></span>
+      <span class="staff-quick-label">Updates</span>
+      <span class="staff-quick-count">${state.unreadNotifications || '0'}</span>
+    </button>
+    <button class="staff-quick-action" type="button" data-action="navigate" data-page="profile">
+      <span class="staff-quick-icon">${icon('user')}</span>
+      <span class="staff-quick-label">Profile</span>
+      <span class="staff-quick-count">${state.teams.length}</span>
     </button>
   </div>
-  ${renderStats()}
-  <div class="staff-section-heading staff-priority-heading">
-    <div><span class="staff-section-kicker">Needs attention</span><h2>Priority assignments</h2></div>
-    <button class="staff-text-action" type="button" data-action="navigate" data-page="tasks">All tasks <span aria-hidden="true">›</span></button>
-  </div>
-  ${prioritySorted.length ? `<section class="staff-next-task">
-      <div class="staff-next-task-heading"><span class="staff-next-task-label">Next field action</span><span>${prioritySorted.length} task${prioritySorted.length === 1 ? '' : 's'} active</span></div>
-      ${assignmentCard(prioritySorted[0], { compact: true })}
-    </section>
-    ${prioritySorted.length > 1 ? `<details class="staff-other-tasks">
-      <summary>Other active tasks <span>${prioritySorted.length - 1}</span></summary>
-      <div class="staff-assignment-list">${prioritySorted.slice(1, 5).map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div>
-    </details>` : ''}`
-    : '<div class="staff-card staff-empty"><strong>No active response tasks</strong>New incidents assigned to your team will appear here.</div>'}
+  ${awaitingCount > 0 ? `<div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Needs your attention</span><h2>New assignments</h2></div></div>
+  <div class="staff-assignment-list">${active.slice(0, 4).map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div>` : ''}
+  ${prioritySorted.length > 0 ? `<div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">In progress</span><h2>Active assignments</h2></div></div>
+  <div class="staff-assignment-list">${prioritySorted.slice(0, 4).map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div>` : ''}
   ${renderRecentUpdates()}
-  ${renderAreaReports()}
-  <div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Dispatch</span><h2>Assigned crews</h2></div></div>
-  ${state.teams.length ? `<div class="staff-assignment-list">${state.teams.map((team) => `<article class="staff-card staff-team-card">
-    <div class="staff-assignment-top"><div><div class="staff-assignment-code">${escapeHtml(team.name)}</div><h2>${escapeHtml(team.lead_technician || 'Field team')}</h2></div>
-    <span class="staff-status ${team.status === 'Available' ? 'staff-status-done' : 'staff-status-active'}">${escapeHtml(team.status || 'Available')}</span></div>
-    <p class="staff-muted">${escapeHtml(team.vehicle_type || 'Response crew')}${team.base_station ? ` · Base: ${escapeHtml(team.base_station)}` : ''}</p>
-    ${team.location_updated_at ? `<p class="staff-location">${icon('pin')} GPS updated ${escapeHtml(new Date(team.location_updated_at).toLocaleString())}</p>` : ''}
-    <button class="staff-btn staff-btn-quiet" type="button" data-action="share-location" data-team-id="${team.id}">${icon('pin')} Share GPS with dispatch</button>
-  </article>`).join('')}</div>` : '<div class="staff-card staff-empty"><strong>Waiting for team access</strong>Ask an administrator to assign your personnel account to a field team.</div>'}`;
+  <div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Resident reports</span><h2>Reports from your barangays</h2></div></div>
+  ${renderAreaReports()}`;
 };
 
 const filterAssignments = () => {
