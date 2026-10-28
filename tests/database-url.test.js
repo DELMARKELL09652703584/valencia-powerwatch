@@ -24,8 +24,9 @@ test('database URL resolver returns empty when no database URL is configured', (
   assert.equal(getDatabaseUrl({}), '');
 });
 
-test('Render requires persistent resident authentication storage', () => {
+test('Render uses NEON_DATABASE_URL and requires persistent resident authentication storage', () => {
   const renderConfig = fs.readFileSync(path.join(ROOT, 'render.yaml'), 'utf8');
 
+  assert.match(renderConfig, /key: NEON_DATABASE_URL\s*\n\s+sync: false/);
   assert.match(renderConfig, /key: PERSISTENT_AUTH_REQUIRED\s*\n\s*value: "true"/);
 });

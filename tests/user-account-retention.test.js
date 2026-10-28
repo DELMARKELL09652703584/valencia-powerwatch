@@ -18,8 +18,8 @@ test('Render uses free Neon snapshot persistence for production data', () => {
   assert.doesNotMatch(renderConfig, /^\s+disk:\s*$/m);
   assert.match(renderConfig, /^\s+startCommand: node server\/start\.js$/m);
   assert.match(renderConfig, /key: POWERWATCH_SNAPSHOT_ENABLED\s*\n\s+value: "true"/);
-  assert.match(renderConfig, /key: DATABASE_URL\s*\n\s+sync: false/);
-  assert.doesNotMatch(renderConfig, /^\s+key: PERSISTENT_AUTH_REQUIRED$/m);
+  assert.match(renderConfig, /key: NEON_DATABASE_URL\s*\n\s+sync: false/);
+  assert.match(renderConfig, /key: PERSISTENT_AUTH_REQUIRED\s*\n\s+value: "true"/);
   assert.match(deploymentGuide, /Neon PostgreSQL stores compressed (?:SQLite )?snapshots/);
 });
 
