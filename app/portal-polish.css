@@ -7013,12 +7013,20 @@ body.community-body .community-login-card .social-icon-svg {
 
 body.community-body .community-login-register {
   display: flex;
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  min-height: 50px;
+  box-sizing: border-box;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 14px 0 0;
-  padding: 0 6px;
+  margin: 14px auto 0;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, .88);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 4px 14px rgba(5, 31, 54, .2);
   color: #102b45;
   font-size: .98rem;
   text-align: center;
@@ -7062,6 +7070,9 @@ body.dark-mode.community-body #app .community-login-register > button {
 }
 
 body.dark-mode.community-body .community-login-register {
+  border-color: rgba(137, 166, 194, .65);
+  background: rgba(13, 25, 42, .96);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .3);
   color: #d2deee;
 }
 

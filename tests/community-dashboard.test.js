@@ -341,6 +341,8 @@ test('Community login uses the responsive branded card layout and preserves auth
   assert.match(portalStyles, /body\.community-body \.community-login-page[^}]*100dvh/s);
   assert.match(portalStyles, /body\.community-body \.community-login-card\s*\{/);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.community-login-card,/);
+  assert.match(portalStyles, /body\.community-body \.community-login-register\s*\{[^}]*background:\s*rgba\(255, 255, 255, \.96\);[^}]*color:\s*#102b45;/s);
+  assert.match(portalStyles, /body\.dark-mode\.community-body \.community-login-register\s*\{[^}]*background:\s*rgba\(13, 25, 42, \.96\);[^}]*color:\s*#d2deee;/s);
   assert.match(portalStyles, /body\.community-body #app \.mobile-auth-page \.community-login-card \.mobile-auth-form \.mobile-auth-submit\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*52px;[^}]*background:\s*linear-gradient\(135deg,\s*#1688ed,\s*#0864c4\) !important;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body #app \.mobile-auth-page \.community-login-card \.mobile-auth-form \.mobile-auth-submit\s*\{[^}]*background:\s*linear-gradient\(135deg,\s*#2563eb,\s*#087eac\) !important;/s);
   assert.match(portalStyles, /body\.community-body #app \.community-login-register > button\s*\{[^}]*min-height:\s*44px;[^}]*background:\s*transparent !important;[^}]*color:\s*#0879e5 !important;/s);
