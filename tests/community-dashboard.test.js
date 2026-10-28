@@ -80,11 +80,11 @@ test('home report action shows a visible label and retains an accessible name', 
   const homeStart = communityScript.indexOf('async function renderMobileHome()');
   const homeEnd = communityScript.indexOf('\nasync function renderMobileReportForm()', homeStart);
   const homeRenderer = communityScript.slice(homeStart, homeEnd);
-  const reportButton = homeRenderer.match(/<button[^>]*class="home-report-action"[^>]*>[\s\S]*?<\/button>/)?.[0];
+  const reportButton = homeRenderer.match(/<button[^>]*class="home-report-action(?:\s+[^"]*)?"[^>]*>[\s\S]*?<\/button>/)?.[0];
 
   assert.ok(homeStart >= 0);
   assert.ok(homeEnd > homeStart);
-  assert.match(homeRenderer, /class="home-report-action" data-mobile-tab="report" aria-label="Report a power interruption" title="Report a power interruption"/);
+  assert.match(homeRenderer, /class="home-report-action(?:\s+[^"]*)?" data-mobile-tab="report" aria-label="Report a power interruption" title="Report a power interruption"/);
   assert.ok(reportButton);
   assert.match(reportButton, /<svg class="home-report-icon" viewBox="0 0 24 24" aria-hidden="true"/);
   assert.match(reportButton, /<span class="home-report-label">Report outage<\/span>/);
@@ -122,14 +122,18 @@ test('report form starts with a text location and offers the map as an alternati
 
   assert.match(communityScript, /const locationMode = state\.mobileLocationMode \|\| 'address';/);
   assert.match(communityScript, /location-mode-\$\{locationMode\}/);
+  assert.match(communityScript, /const stepNames = \['Details', 'Location', 'Evidence', 'Review'\];/);
+  assert.match(communityScript, /if \(step === 1\) \{\s*formBody = `<h2>Interruption Details<\/h2>/);
+  assert.match(communityScript, /if \(step === 2\) \{\s*formBody = `<h2>Location<\/h2>/);
   assert.match(communityScript, /activeTab: 'report',\s*showTabs: true/);
+  assert.match(communityScript, /Tell us when the interruption started and what you noticed\./);
   assert.match(communityScript, /Specific purok or sitio <span class="muted small">\(optional\)<\/span>/);
   assert.match(communityScript, /Choose your barangay and describe the location\./);
   assert.match(communityScript, /Choose a barangay from the official suggestions before continuing\./);
   assert.match(communityScript, /Describe the outage location, or add a map pin before continuing\./);
   assert.match(communityScript, /Barangay where the interruption happened/);
   assert.match(communityScript, /Other affected streets or sitios <span class="muted small">\(optional\)<\/span>/);
-  assert.match(communityScript, /if \(step === 1 && locationMode === 'map'\) \{\s*await ensureLeaflet\(\)/);
+  assert.match(communityScript, /if \(step === 2 && locationMode === 'map'\) \{\s*await ensureLeaflet\(\)/);
   assert.match(communityScript, /\$\{locationMode === 'map' \? '<button type="button" class="button ghost block" data-action="capture-gps"/);
   assert.match(portalStyles, /report-step-form\.location-mode-address #report-location-map\s*\{\s*display:\s*none;/);
   assert.match(portalStyles, /grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\)/);

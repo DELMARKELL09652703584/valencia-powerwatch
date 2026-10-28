@@ -86,7 +86,7 @@ const showToast = (message) => {
   showToast.timer = window.setTimeout(() => { toast.hidden = true; }, 3600);
 };
 
-const activeAssignments = () => state.assignments.filter((assignment) => activeStages.includes(assignment.status));
+const activeIncidents = () => state.assignments.filter((assignment) => activeStages.includes(assignment.status));
 const stageIndex = (assignment) => Math.max(0, stages.indexOf(assignment.latest_stage || 'Assigned'));
 const nextStage = (assignment) => stages[Math.min(stages.length - 1, stageIndex(assignment) + 1)];
 const stageLabel = (stage) => stage === 'Assigned' ? 'Assigned'
@@ -311,7 +311,7 @@ const renderUpdateForm = (assignment, { readOnly = false } = {}) => `<section cl
 
 const renderStats = () => {
   const assignments = state.assignments;
-  const active = activeAssignments();
+  const active = activeIncidents();
   const critical = active.filter((assignment) => String(assignment.priority).toLowerCase() === 'critical').length;
   const awaiting = assignments.filter((assignment) => assignment.latest_stage === 'Assigned').length;
   const repairing = assignments.filter((assignment) => assignment.latest_stage === 'Repairing').length;
@@ -348,6 +348,7 @@ const renderRecentUpdates = () => {
   </section>`;
 };
 
+/* data-action="show-area-reports" */
 const renderAreaReports = () => {
   const reports = state.reports.filter((report) => !['Resolved', 'Rejected', 'Duplicate'].includes(report.status));
   const cards = reports.slice(0, 8).map((report) => {
@@ -379,10 +380,11 @@ const renderAreaReports = () => {
   </section>`;
 };
 
-const getCurrentAssignments = () => state.assignments.find((assignment) => String(assignment.id) === String(state.selectedId));
+const getCurrentIncidents = () => state.assignments.find((assignment) => String(assignment.id) === String(state.selectedId));
 
+/* Next field action */
 const renderHome = () => {
-  const active = activeAssignments();
+  const active = activeIncidents();
   const prioritySorted = [...active].sort((a, b) => {
     const rank = (value) => String(value).toLowerCase() === 'critical' ? 0 : String(value).toLowerCase() === 'high' ? 1 : 2;
     return rank(a.priority) - rank(b.priority) || stageIndex(a) - stageIndex(b);
@@ -390,12 +392,12 @@ const renderHome = () => {
   const awaitingCount = state.assignments.filter((assignment) => assignment.latest_stage === 'Assigned').length;
   return `<header class="staff-page-heading staff-home-hero">
     <div>
-      <div class="staff-duty-pill"><span class="staff-pulse-dot"></span> Field Operations Active</div>Active</div>
+      <div class="staff-duty-pill"><span class="staff-pulse-dot"></span> Field Operations Active</div>
       <h1>Good day, ${escapeHtml((state.user.full_name || 'Team').split(' ')[0])}</h1>
       <p>${active.length ? `${active.length} active assignment${active.length === 1 ? '' : 's'} · ${awaitingCount} awaiting your acknowledgment.` : 'No active assignments. New dispatches will appear here.'}</p>
     </div>
   </header>
-  <div class="staff-quick-actions" aria-label="Quick actions">
+  <div class="staff-quick-actions" aria-label="Quick Navigation">
     <button class="staff-quick-action" type="button" data-action="navigate" data-page="tasks">
       <span class="staff-quick-icon">${icon('clipboard')}</span>
       <span class="staff-quick-label">My assignments</span>
@@ -426,7 +428,7 @@ const renderHome = () => {
   ${renderAreaReports()}`;
 };
 
-const filterAssignments = () => {
+const filterIncidents = () => {
   if (state.filter === 'Active') return state.assignments.filter((assignment) => activeStages.includes(assignment.status));
   if (state.filter === 'Completed') return state.assignments.filter((assignment) => ['Completed', 'Resolved'].includes(assignment.status));
   return state.assignments;
@@ -434,7 +436,7 @@ const filterAssignments = () => {
 
 const renderTasks = () => {
   const filterOptions = ['Active', 'All', 'Completed'];
-  const count = filterAssignments().length;
+  const count = filterIncidents().length;
   return `<header class="staff-page-heading">
     <div>
       <p class="staff-eyebrow">Dispatch queue</p>
@@ -445,16 +447,17 @@ const renderTasks = () => {
   <div class="staff-filter-row" aria-label="Filter assignments">${filterOptions.map((option) => `<button class="staff-filter" type="button" data-action="filter" data-filter="${option}" aria-pressed="${state.filter === option}">
     ${option} ${option === state.filter ? `<span class="staff-filter-count">(${count})</span>` : ''}
   </button>`).join('')}</div>
-  ${count ? `<div class="staff-assignment-list">${filterAssignments().map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div>`
+  ${count ? `<div class="staff-assignment-list">${filterIncidents().map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div>`
     : state.assignments.length
       ? '<div class="staff-card staff-empty"><strong>No assignments match this filter</strong>Choose another status filter to review the rest of your team’s assignments.</div>'
       : '<div class="staff-card staff-empty"><strong>No assignments have been dispatched</strong>When an administrator assigns work to one of your teams, it will appear here. Pull down or tap refresh to check for new dispatches.</div>'}`;
 };
 
+/* GPS coordinates remain unchanged */
 const renderMap = () => {
-  const active = activeAssignments();
+  const active = activeIncidents();
   const assignments = active.filter((assignment) => routeUrl(assignment));
-  const noGpsAssignments = active.filter((assignment) => !routeUrl(assignment));
+  const noGpsIncidents = active.filter((assignment) => !routeUrl(assignment));
   const selected = assignments.find((assignment) => String(assignment.id) === String(state.selectedId)) || assignments[0];
   const coordinates = selected && taskCoordinates(selected);
   const mapUrl = selected && valenciaMap(coordinates.latitude, coordinates.longitude);
@@ -474,9 +477,9 @@ const renderMap = () => {
       <button class="staff-btn staff-btn-quiet" type="button" data-action="view-assignment" data-id="${selected.id}">Incident details</button></div>
   </section><p class="staff-muted staff-map-help">Google Maps provides route, distance, and travel-time details when supported. Allow location access in Google Maps to use your current position; if denied or unavailable, enable device location or set your starting point manually. The destination remains the saved incident coordinates.</p>`
     : emptyMessage}
-  ${noGpsAssignments.length ? `<section class="staff-map-unlocated">
+  ${noGpsIncidents.length ? `<section class="staff-map-unlocated">
     <div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Location needs confirmation</span><h2>Tasks without GPS</h2></div></div>
-    <div class="staff-assignment-list">${noGpsAssignments.map((assignment) => `<article class="staff-card staff-unlocated-card">
+    <div class="staff-assignment-list">${noGpsIncidents.map((assignment) => `<article class="staff-card staff-unlocated-card">
       <div><strong>${escapeHtml(assignment.assignment_code || assignment.report_code || 'Field assignment')}</strong><p>${escapeHtml(displayLocation(assignment))}</p></div>
       <span class="staff-status">${icon('alert')} No GPS</span>
       <button class="staff-btn staff-btn-quiet" type="button" data-action="view-assignment" data-id="${assignment.id}">Review reported details</button>
@@ -509,7 +512,7 @@ const renderProfile = () => `<header class="staff-page-heading"><div><p class="s
   </section>`;
 
 const renderDetail = () => {
-  const assignment = getCurrentAssignments();
+  const assignment = getCurrentIncidents();
   if (!assignment) {
     state.page = 'tasks';
     return renderTasks();
@@ -578,7 +581,7 @@ const renderInstallHelp = () => `<section class="staff-install-help" id="staff-i
   <button class="staff-btn staff-btn-quiet" type="button" data-action="dismiss-install-help">Close</button>
 </section>`;
 
-const refreshAssignments = async () => {
+const refreshIncidents = async () => {
   const result = await api('/api/staff/assignments');
   const assignments = result.assignments || [];
   if (state.assignmentsLoaded) {
@@ -641,13 +644,13 @@ const ensureAuthenticated = async () => {
       return;
     }
     state.user = user;
-    await Promise.all([refreshAssignments(), refreshReports(), refreshNotifications()]);
+    await Promise.all([refreshIncidents(), refreshReports(), refreshNotifications()]);
     renderShell();
     window.clearInterval(refreshTimer);
     refreshTimer = window.setInterval(async () => {
       if (!state.user || document.visibilityState !== 'visible') return;
       try {
-        await Promise.all([refreshAssignments(), refreshReports(), refreshNotifications()]);
+        await Promise.all([refreshIncidents(), refreshReports(), refreshNotifications()]);
         if (state.page !== 'detail') renderShell();
       } catch (error) {
         if (error.status === 401) {
@@ -695,9 +698,9 @@ const submitUpdate = async (form, stage) => {
     gpsWarning = error.message;
   }
   await send(`/api/staff/assignments/${encodeURIComponent(assignmentId)}/updates`, 'POST', data);
-  const message = stage === getCurrentAssignments()?.latest_stage ? 'Field note saved.' : `Response moved to ${stage}.`;
+  const message = stage === getCurrentIncidents()?.latest_stage ? 'Field note saved.' : `Response moved to ${stage}.`;
   showToast(gpsWarning ? `${message} GPS was not attached: ${gpsWarning}` : message);
-  await refreshAssignments();
+  await refreshIncidents();
   state.selectedId = assignmentId;
   state.page = 'detail';
   renderShell();
@@ -775,7 +778,7 @@ const uploadEvidence = async (form) => {
   state.selectedId = form.dataset.id;
   state.page = 'detail';
   try {
-    await refreshAssignments();
+    await refreshIncidents();
   } catch (error) {
     if (error.status === 401) {
       state.user = null;
@@ -829,9 +832,9 @@ document.addEventListener('click', async (event) => {
       root.querySelector('#staff-area-reports')?.scrollIntoView({ block: 'start' });
     } else if (action === 'refresh') {
       button.disabled = true;
-      await refreshAssignments();
+      await refreshIncidents();
       renderShell();
-      showToast('Assignments refreshed.');
+      showToast('Incidents refreshed.');
     } else if (action === 'refresh-notifications') {
       button.disabled = true;
       await refreshNotifications();
@@ -870,7 +873,7 @@ document.addEventListener('click', async (event) => {
     } else if (action === 'verify-assigned-report') {
       button.disabled = true;
       const result = await send(`/api/staff/assignments/${encodeURIComponent(button.dataset.id)}/verify`, 'POST', {});
-      await refreshAssignments();
+      await refreshIncidents();
       renderShell();
       showToast(result.message || 'Report verified.');
     } else if (action === 'update-report-status') {
@@ -889,7 +892,7 @@ document.addEventListener('click', async (event) => {
         longitude: position.longitude,
       });
       showToast(`GPS shared with dispatch (±${Math.round(position.accuracy)} m).`);
-      await refreshAssignments();
+      await refreshIncidents();
       renderShell();
     } else if (action === 'enable-notifications') {
       if (!('Notification' in window)) {
@@ -1055,7 +1058,7 @@ document.addEventListener('submit', async (event) => {
         purok,
         location,
       });
-      await refreshAssignments();
+      await refreshIncidents();
       state.selectedId = form.dataset.id;
       state.page = 'detail';
       renderShell();
