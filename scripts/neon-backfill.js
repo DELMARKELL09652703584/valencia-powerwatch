@@ -22,6 +22,12 @@ const warnings = [];
 
 const isoOrNow = (value) => toIso(value) || new Date().toISOString();
 
+// These are SQLite migration markers, not configuration. They are not valid
+// JSON, so they must never be copied into the normalized settings table (which
+// is a JSON store and enforces that). neon-seed-reference.js excludes the same
+// keys.
+const EXCLUDED_SETTINGS = new Set(['demo_cleanup_version', 'seed_version']);
+
 const readSqliteTable = (sqlite, tables, name, sql) => {
   if (!tables.has(name)) return [];
   return sqlite.prepare(sql).all();
@@ -168,10 +174,25 @@ const run = async () => {
       barangayByName.set(String(row.barangay_name).toLowerCase(), Number(row.id));
     }
 
+    // users.legacy_resident_uuid is FK-enforced (migration 007). A branch created
+    // from production already has the resident accounts; a reset branch may not.
+    // Keep the link only when the target actually contains the referenced row.
+    const hasResidentAccounts = Boolean((await client.query(
+      "SELECT to_regclass('public.resident_accounts') AS present"
+    )).rows[0].present);
+    const targetResidentIds = new Set(
+      hasResidentAccounts
+        ? (await client.query('SELECT id::text AS id FROM resident_accounts')).rows.map((row) => row.id)
+        : []
+    );
+
     for (const row of mergedUsers) {
+      const legacyResidentUuid = row.legacy_resident_uuid && targetResidentIds.has(String(row.legacy_resident_uuid))
+        ? row.legacy_resident_uuid
+        : null;
       await insertRow(client, 'users', {
         id: row.id,
-        legacy_resident_uuid: row.legacy_resident_uuid,
+        legacy_resident_uuid: legacyResidentUuid,
         email: row.email,
         username: row.username,
         password_hash: row.password_hash,
@@ -638,6 +659,7 @@ const run = async () => {
     }
     const sourceSettings = readSqliteTable(sqlite, tables, 'settings', 'SELECT * FROM settings');
     for (const row of sourceSettings) {
+      if (EXCLUDED_SETTINGS.has(row.key)) continue;
       await client.query(`
         INSERT INTO settings (key, value, updated_at)
         VALUES ($1, $2, now())

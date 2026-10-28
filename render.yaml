@@ -15,5 +15,7 @@ services:
         value: 22.12.0
       - key: POWERWATCH_SNAPSHOT_ENABLED
         value: "true"
-      - key: NEON_DATABASE_URL
+      - key: PERSISTENT_AUTH_REQUIRED
+        value: "true"
+      - key: DATABASE_URL
         sync: false

@@ -2,18 +2,20 @@ const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 const { Pool } = require('pg');
 const { createResidentStore } = require('../server/resident-store');
+const { getDatabaseUrl } = require('../server/database-url');
 
 const sourcePath = process.argv[2] ? path.resolve(process.argv[2]) : null;
+const connectionString = getDatabaseUrl();
 if (!sourcePath) {
   throw new Error('Usage: node scripts/migrate-residents-to-neon.js <sqlite-backup-path>');
 }
-if (!process.env.NEON_DATABASE_URL) {
-  throw new Error('NEON_DATABASE_URL must be set in the environment before importing account data.');
+if (!connectionString) {
+  throw new Error('DATABASE_URL or NEON_DATABASE_URL must be set in the environment before importing account data.');
 }
 
 const source = new DatabaseSync(sourcePath, { readOnly: true });
 const pool = new Pool({
-  connectionString: process.env.NEON_DATABASE_URL,
+  connectionString,
   max: 1,
   connectionTimeoutMillis: 10_000,
 });

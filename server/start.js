@@ -2,10 +2,14 @@ require('dotenv').config();
 
 const { DB_PATH, UPLOAD_DIR } = require('./paths');
 const { createSnapshotStore, endPool, restoreFromNeon } = require('./persistence');
+const { getDatabaseUrl } = require('./database-url');
 
 const ENABLED = String(process.env.POWERWATCH_SNAPSHOT_ENABLED || '').toLowerCase() === 'true';
 
 async function main() {
+  if (ENABLED && !getDatabaseUrl()) {
+    console.error('[persist] POWERWATCH_SNAPSHOT_ENABLED is true, but DATABASE_URL or NEON_DATABASE_URL is not configured.');
+  }
   if (ENABLED) {
     try {
       await restoreFromNeon({ dbPath: DB_PATH, uploadDir: UPLOAD_DIR });

@@ -5,10 +5,11 @@ const {
   readMigrations,
 } = require('./neon-staging-common');
 const { Client } = require('pg');
+const { getDatabaseUrl } = require('../server/database-url');
 
 // Schema deployment for the production Neon branch that Render uses.
 //
-// This is the only script allowed to write DDL to NEON_DATABASE_URL. It is
+// This is the only script allowed to write DDL to the database. It is
 // additive by design: every migration uses CREATE TABLE IF NOT EXISTS and the
 // statements only add objects. Existing snapshot/resident tables are untouched.
 //
@@ -34,7 +35,9 @@ const EXPECTED_TABLES = [
   'staff_barangay_assignments',
 ];
 
-const EXPECTED_FOREIGN_KEYS = 68;
+// 69 relationships across the 35 application tables, plus the
+// users.legacy_resident_uuid -> resident_accounts(id) link added in 007.
+const EXPECTED_FOREIGN_KEYS = 69;
 const PROTECTED_TABLES = ['app_snapshots', 'app_snapshots_backup', 'app_snapshot_files', 'resident_accounts', 'resident_sessions'];
 
 const requireDeployEnvironment = () => {
@@ -45,8 +48,8 @@ const requireDeployEnvironment = () => {
   if (process.env.POWERWATCH_ALLOW_PRODUCTION_DDL !== '1') {
     throw new Error('Refusing to write DDL to the production branch. Set POWERWATCH_ALLOW_PRODUCTION_DDL=1 for this run only.');
   }
-  const target = process.env.NEON_DATABASE_URL;
-  if (!target) throw new Error('NEON_DATABASE_URL is required.');
+  const target = getDatabaseUrl();
+  if (!target) throw new Error('DATABASE_URL or NEON_DATABASE_URL is required.');
   const targetHost = new URL(target).hostname;
   const devUrl = process.env.NEON_DEV_DATABASE_URL;
   if (devUrl && new URL(devUrl).hostname === targetHost) {

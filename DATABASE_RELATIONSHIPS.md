@@ -2,10 +2,10 @@
 
 This document is generated from the live Neon schema (`public` schema) and lists all 35 application tables, their primary keys, foreign keys, relationships, and purpose.
 
-- **Verified:** 2026-10-23 07:48:29 UTC
+- **Verified:** 2026-10-23 07:48:29 UTC (counts refreshed after migration 007)
 - **Tables:** 35 application tables (24 core + 11 supporting), plus `schema_migrations` and the pre-existing snapshot/resident tables
-- **Foreign keys:** 68 across the application tables
-- **Indexes:** 124 on these tables (132 across the whole schema)
+- **Foreign keys:** 69 across the application tables
+- **Indexes:** 136 on these tables (147 across the whole schema)
 - **Source of truth:** `pg_constraint`, `pg_index`, and `information_schema` on the production branch
 
 **Contents:** conventions · relationship map · junction tables · table reference (35) · role and module coverage · integrity rules · verification results · remaining issues
@@ -775,8 +775,10 @@ users 1---N announcements        (created_by)
 - Junction tables cannot contain the same pair twice (composite primary key).
 - `user_profiles` and `repair_assignment_location_confirmations` are structurally one-to-one (primary key = parent id).
 - `incident_reports` and `incident_affected_areas` cannot duplicate a report link or a barangay per incident.
-- Statuses, priorities, roles, and ratings are validated by 19 `CHECK` constraints.
+- Statuses, priorities, roles, and ratings are validated by 31 `CHECK` constraints.
 - `feedback.rating` is limited to 1–5; `restoration_progress` to 0–100; affected customers cannot be negative.
+- Coordinates must be a complete, in-range latitude/longitude pair; session and reset tokens must be SHA-256 hex; `settings.value` must be valid JSON.
+- `users.role` is mirrored into `user_roles` by a trigger, and `updated_at` is maintained automatically when a statement does not set it.
 - Every foreign key column has a supporting index, so parent deletes and reverse lookups do not scan whole tables.
 
 ## 7. Verification results
@@ -784,18 +786,21 @@ users 1---N announcements        (created_by)
 | Check | Result |
 |---|---|
 | 35 application tables present | PASS |
-| 68 foreign keys, all resolving to real unique/PK targets | PASS |
-| 19 CHECK constraints, all validated | PASS |
+| 69 foreign keys, all resolving to real unique/PK targets | PASS |
+| 31 CHECK constraints, all validated | PASS |
 | Primary key on every table | PASS |
 | No unindexed foreign key column | PASS |
+| Hardening triggers (10 `updated_at` + role sync) present | PASS |
+| Diagnostics views (`v_user_effective_permissions`, `v_data_quality_issues`) | PASS |
 | Existing snapshot and resident data untouched | PASS |
 | Report -> incident -> dispatch -> feedback -> audit insert chain | PASS |
-| Invalid status / role / rating / progress / duplicate / orphan rejected | PASS |
+| Invalid status / role / rating / progress / coordinate / hash / orphan rejected | PASS |
+| `v_data_quality_issues` returns no rows | PASS |
 
 ## 8. Remaining issues (not fixed by design)
 
-1. **Dual role storage.** `users.role` duplicates `user_roles`. The running application reads `users.role`; `user_roles` is the normalized source. Until the application is switched, both must be kept in sync.
-2. **Dual report-to-incident link.** `reports.incident_id` and `incident_reports` can disagree. Choose one as authoritative before the application writes to these tables.
+1. **Dual role storage.** `users.role` duplicates `user_roles`. The running application reads `users.role`; `user_roles` is the normalized source. Migration 007 adds `users_sync_primary_role` so the primary role always appears in `user_roles`, and migration 008 makes a role change remove the previous primary role (so demotion cannot leave an administrator grant behind). `v_user_effective_permissions` shows the combined result; extra roles can still be granted explicitly in `user_roles`.
+2. **Dual report-to-incident link.** `reports.incident_id` and `incident_reports` can disagree. `incident_reports` is authoritative; `v_data_quality_issues` reports both missing and stale pointers, but no trigger rewrites them because legacy data may link one report to several incidents.
 3. **Duplicated barangay data.** `barangay_id` plus `barangay_name` appear together; the name is historical and may not match the referenced barangay row after a rename.
 4. **Dispatch attribution.** `incident_assignments.staff_id` is `SET NULL`, so deleting a staff account removes the "who did the work" link. The audit log keeps the action, not the assignment.
 5. **Announcement authorship.** `announcements.created_by` is `SET NULL` and there is no denormalized author name; only `audit_logs` preserves who published it.

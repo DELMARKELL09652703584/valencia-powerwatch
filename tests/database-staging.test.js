@@ -69,6 +69,15 @@ test('validation covers foreign keys, roles, barangays, and hashed sessions', ()
   assert.match(validation, /VALIDATION PASSED/);
 });
 
+test('production Neon audit is restricted to a read-only transaction', () => {
+  const audit = fs.readFileSync(path.join(ROOT, 'scripts', 'neon-audit-readonly.js'), 'utf8');
+
+  assert.match(audit, /BEGIN READ ONLY/);
+  assert.match(audit, /Refusing to run: the configured database host is not a Neon endpoint/);
+  assert.match(audit, /ROLLBACK/);
+  assert.doesNotMatch(audit, /\b(?:INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)\s+(?:INTO|TABLE|INDEX|SCHEMA|VIEW|TRIGGER|FUNCTION)?\b/i);
+});
+
 test('production schema deployment is opt-in, additive, and defaults to a dry run', () => {
   const deploy = fs.readFileSync(path.join(ROOT, 'scripts', 'neon-deploy-schema.js'), 'utf8');
   assert.match(deploy, /POWERWATCH_ALLOW_PRODUCTION_DDL/);
@@ -78,7 +87,7 @@ test('production schema deployment is opt-in, additive, and defaults to a dry ru
   assert.match(deploy, /EXPECTED_FOREIGN_KEYS/);
   const { EXPECTED_TABLES, EXPECTED_FOREIGN_KEYS } = require('../scripts/neon-deploy-schema');
   assert.equal(EXPECTED_TABLES.length, 35);
-  assert.equal(EXPECTED_FOREIGN_KEYS, 68);
+  assert.equal(EXPECTED_FOREIGN_KEYS, 69);
 });
 
 test('integrity hardening migration adds the missing foreign key and value checks', () => {
@@ -101,6 +110,33 @@ test('relationship indexes cover every foreign key column', () => {
   assert.doesNotMatch(sql, /DROP TABLE|DROP COLUMN|TRUNCATE/i);
   const createIndexes = sql.match(/CREATE INDEX IF NOT EXISTS/g) || [];
   assert.equal(createIndexes.length, 28);
+});
+
+test('production hardening migration is additive and keeps runtime tables safe', () => {
+  const sql = fs.readFileSync(path.join(MIGRATIONS, '007_production_hardening.sql'), 'utf8');
+  assert.match(sql, /powerwatch_touch_updated_at/);
+  assert.match(sql, /users_sync_primary_role/);
+  assert.match(sql, /users_legacy_resident_uuid_fkey/);
+  assert.match(sql, /outage_updates_subject_check/);
+  assert.match(sql, /settings_value_json_check/);
+  assert.match(sql, /v_user_effective_permissions/);
+  assert.match(sql, /v_data_quality_issues/);
+  assert.match(sql, /to_regclass\('public\.resident_accounts'\)/);
+  assert.doesNotMatch(sql, /DROP TABLE|DROP COLUMN|TRUNCATE/i);
+});
+
+test('role sync removes the previous primary role on demotion', () => {
+  const sql = fs.readFileSync(path.join(MIGRATIONS, '008_role_sync_demotion.sql'), 'utf8');
+  assert.match(sql, /CREATE OR REPLACE FUNCTION powerwatch_sync_primary_role/);
+  assert.match(sql, /OLD\.role IS DISTINCT FROM NEW\.role/);
+  assert.match(sql, /DELETE FROM user_roles/);
+  assert.doesNotMatch(sql, /DROP TABLE|DROP COLUMN|TRUNCATE/i);
+});
+
+test('backfill excludes non-JSON SQLite bookkeeping settings', () => {
+  const backfill = fs.readFileSync(path.join(ROOT, 'scripts', 'neon-backfill.js'), 'utf8');
+  assert.match(backfill, /EXCLUDED_SETTINGS = new Set\(\['demo_cleanup_version', 'seed_version'\]\)/);
+  assert.match(backfill, /EXCLUDED_SETTINGS\.has\(row\.key\)/);
 });
 
 test('reference seed is opt-in, idempotent, and limited to barangays and settings', () => {

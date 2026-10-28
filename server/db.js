@@ -305,6 +305,15 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sms_logs_created ON sms_logs(created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_repair_assignments_team ON repair_assignments(team_id);
   CREATE INDEX IF NOT EXISTS idx_repair_assignments_status ON repair_assignments(status);
+  CREATE INDEX IF NOT EXISTS idx_repair_assignments_report ON repair_assignments(report_id);
+  CREATE INDEX IF NOT EXISTS idx_repair_assignments_incident ON repair_assignments(incident_id);
+  CREATE INDEX IF NOT EXISTS idx_reports_incident ON outage_reports(incident_id);
+  CREATE INDEX IF NOT EXISTS idx_reports_barangay_reported ON outage_reports(barangay, reported_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_incident_links_report ON incident_links(report_id);
+  CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users(LOWER(email));
+  CREATE INDEX IF NOT EXISTS idx_users_role_status ON users(role, status);
+  CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id) WHERE read = 0;
 `);
 
 db.exec(`
@@ -368,6 +377,13 @@ ensureColumn('outage_incidents', 'restoration_progress', 'INTEGER');
 ensureColumn('outage_incidents', 'description', 'TEXT');
 ensureColumn('outage_incidents', 'etr_reason', 'TEXT');
 ensureColumn('audit_logs', 'ip_address', 'TEXT');
+ensureColumn('announcements', 'updated_at', 'TEXT');
+
+// Indexes over columns added by the migrations above must be created after them,
+// otherwise a brand-new or legacy database fails at startup.
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_users_username_lower ON users(LOWER(username));
+`);
 
 const BARANGAY_COORDINATES = {
   Bagontaas: [7.9304, 125.1077],

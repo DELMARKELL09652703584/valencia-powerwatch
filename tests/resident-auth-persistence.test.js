@@ -43,6 +43,7 @@ const startServer = async () => {
       ...process.env,
       NODE_ENV: 'production',
       PORT: String(port),
+      DATABASE_URL: '',
       POWERWATCH_DATA_DIR: dataDirectory,
       POWERWATCH_UPLOAD_DIR: path.join(runtimeDirectory, 'uploads'),
       NEON_DATABASE_URL: 'postgresql://mock:mock@localhost/mock',
@@ -114,6 +115,14 @@ after(async () => {
 test('resident can register, logout, log in again after restart, and avoid duplicate registration', {
   timeout: TEST_TIMEOUT_MS,
 }, async () => {
+  const healthResponse = await fetch(`${baseUrl}/api/health`);
+  const health = await healthResponse.json();
+  assert.equal(healthResponse.status, 200);
+  assert.deepEqual(health.residentAuth, {
+    persistentRequired: true,
+    persistentConfigured: true,
+  });
+
   const email = `neon-resident-${Date.now()}@example.test`;
   const password = 'neon-resident-password';
 

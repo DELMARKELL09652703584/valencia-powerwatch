@@ -28,6 +28,13 @@ production branch. `POWERWATCH_SOURCE_NEON_URL` is optional and is opened in a
 `READ ONLY` transaction only to copy resident accounts and resident sessions
 into staging.
 
+`npm run db:audit:neon` is the production-safe exception for schema inspection:
+it opens a `BEGIN READ ONLY` transaction and rolls it back. It performs no DDL
+or data writes. Prefer setting `POWERWATCH_AUDIT_DATABASE_URL` to a dedicated
+read-only Neon role; otherwise it uses `DATABASE_URL` / `NEON_DATABASE_URL`
+inside the read-only transaction. Add `-- --details` to print every required
+table's columns, constraints, and indexes. The connection URL is never printed.
+
 The single exception is `scripts/neon-deploy-schema.js`, which deploys the
 schema itself (DDL only, never row data) to the production branch. It requires
 `POWERWATCH_ALLOW_PRODUCTION_DDL=1`, refuses `NODE_ENV=production`, verifies the
@@ -37,8 +44,8 @@ tables are never altered by it.
 
 ## Deploy the schema to the production branch
 
-Render connects to the branch in `NEON_DATABASE_URL`. To create the 35 tables
-there:
+Render connects to the branch in `DATABASE_URL` (with `NEON_DATABASE_URL` as a
+backward-compatible alias). To create the 35 tables there:
 
 ```powershell
 $env:POWERWATCH_ALLOW_PRODUCTION_DDL = "1"
@@ -47,10 +54,11 @@ npm run db:deploy:apply    # commits
 Remove-Item Env:\POWERWATCH_ALLOW_PRODUCTION_DDL
 ```
 
-Both commands print a verification block: 35 required tables, 68 foreign keys,
-validated constraints, primary keys on every table, and the seeded roles,
-permissions, and role-permission matrix. The script records each applied file
-in `schema_migrations` and refuses to continue if an applied file changes.
+Both commands print a verification block: 35 required tables, 69 foreign keys,
+31 CHECK constraints, validated constraints, primary keys on every table, and
+the seeded roles, permissions, and role-permission matrix. The script records
+each applied file in `schema_migrations` and refuses to continue if an applied
+file changes.
 
 Deploying the schema does not migrate application data. The normalized tables
 start empty; the running system keeps using the SQLite snapshot and the
@@ -158,6 +166,7 @@ The backfill uses `BEGIN READ ONLY` for that source. It never writes there.
 | `npm run db:migrate:neon` | Applies `db/migrations/*.sql` in order, records checksums in `schema_migrations`, and verifies all 35 expected tables |
 | `npm run db:backfill:neon` | Idempotently copies users, profiles, roles, sessions, barangays, reports, incidents, dispatch, notifications, audit, OAuth, settings, SMS, and support data |
 | `npm run db:validate:neon` | Checks counts, foreign keys, roles, barangay mapping, evidence links, and SHA-256 session hashes |
+| `npm run db:audit:neon` | Audits the configured Neon schema and data-integrity indicators in a read-only transaction |
 | `npm run db:deploy` | Dry-runs the schema deployment on `NEON_DATABASE_URL` and rolls back |
 | `npm run db:deploy:apply` | Commits pending migrations to `NEON_DATABASE_URL` (needs `POWERWATCH_ALLOW_PRODUCTION_DDL=1`) |
 | `npm run db:seed:reference` | Dry-runs the 31-barangay and settings seed on `NEON_DATABASE_URL` and rolls back |
@@ -209,7 +218,7 @@ against the production branch:
 
 - migrations 001-006 committed in one transaction;
 - 35 domain tables plus `schema_migrations` created next to the 5 pre-existing
-  snapshot/resident tables, none of which were altered;
+  snapshot/resident tables, none of which were structurally altered;
 - 68 foreign keys across the 35 tables, 132 indexes, 19 validated CHECK constraints, and a primary
   key on every table;
 - 4 roles, 24 permissions, and 53 role-permission rows seeded;
@@ -223,12 +232,48 @@ against the production branch:
   -> feedback -> audit chain and confirmed that invalid status, role, rating,
   progress, duplicate-code, and orphan-foreign-key rows are rejected.
 
+Migration **007_production_hardening** was then applied on 2026-10-23:
+
+- 10 tables now auto-maintain `updated_at` through
+  `powerwatch_touch_updated_at`, while still preserving an explicitly supplied
+  timestamp (the backfill relies on that);
+- 12 new CHECK constraints (coordinate ranges and pairs, an outage-update subject,
+  SHA-256 token hashes, JSON settings), for 31 validated CHECKs total;
+- the missing `users.legacy_resident_uuid -> resident_accounts(id)` foreign key,
+  giving 69 foreign keys across the 35 tables;
+- 15 indexes, including the live resident login/session lookups and the Admin
+  list orderings, bringing the schema to 147 indexes;
+- `users.role` is kept in sync with `user_roles` by
+  `users_sync_primary_role`;
+- the read-only views `v_user_effective_permissions` and
+  `v_data_quality_issues`;
+- a rolled-back functional test (22 checks) exercised the triggers, the report
+  -> incident link chain, and the new rejection paths. The live row counts
+  (3 resident accounts, 2 sessions, 1 snapshot) were unchanged.
+
+Migration **008_role_sync_demotion** corrected the role trigger from 007:
+
+- changing `users.role` now removes the previous primary role from `user_roles`
+  before granting the new one. Without this, demoting an administrator would
+  leave the `administrator` grant in place and the account would keep the
+  administrator permissions through the matrix.
+- explicitly granted extra roles are preserved unless one of them is the role
+  being replaced.
+
+`scripts/neon-backfill.js` now skips `seed_version` and `demo_cleanup_version`,
+the two SQLite migration markers that are not valid JSON. This matches
+`neon-seed-reference.js` and keeps the `settings_value_json_check` from 007
+from blocking a future backfill.
+
 ## 7. Current source mapping notes
 
 
 - SQLite `users` is the staff/admin source; Neon `resident_accounts` supplies
   resident accounts when `POWERWATCH_SOURCE_NEON_URL` is configured.
-- Resident session UUIDs are mapped through `users.legacy_resident_uuid`.
+- Resident session UUIDs are mapped through `users.legacy_resident_uuid`, which
+  is foreign-keyed to `resident_accounts(id)`. The link is only written when the
+  target branch contains the referenced resident account (a branch created from
+  production does; a reset branch may not).
 - Only session hashes are copied. Raw cookies/tokens are rejected.
 - `report_attachments` and report photo paths become `report_evidence`.
 - `report_status_history` becomes `report_status_history` plus `outage_updates`

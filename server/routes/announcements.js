@@ -84,9 +84,9 @@ router.post('/', requireAuth, requireRole('personnel', 'administrator', 'utility
   try {
     imagePath = await saveAnnouncementImage(imageData);
     info = db.prepare(`
-      INSERT INTO announcements (title, content, category, status, image_path, published_at, created_by, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(String(title).trim(), String(content).trim(), category || 'General Information', status, imagePath, publish ? ts : null, req.user.id, ts);
+      INSERT INTO announcements (title, content, category, status, image_path, published_at, created_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(String(title).trim(), String(content).trim(), category || 'General Information', status, imagePath, publish ? ts : null, req.user.id, ts, ts);
   } catch (error) {
     if (imagePath) await removeAnnouncementImage(imagePath);
     next(error);
@@ -111,9 +111,10 @@ router.put('/:id', requireAuth, requireRole('personnel', 'administrator', 'utili
   try {
     newImagePath = imageData ? await saveAnnouncementImage(imageData) : null;
     imagePath = newImagePath || (removeImage ? null : row.image_path);
+    const ts = now();
     db.prepare(`
-      UPDATE announcements SET title = COALESCE(?, title), content = COALESCE(?, content), category = COALESCE(?, category), image_path = ? WHERE id = ?
-    `).run(title || null, content || null, category || null, imagePath, row.id);
+      UPDATE announcements SET title = COALESCE(?, title), content = COALESCE(?, content), category = COALESCE(?, category), image_path = ?, updated_at = ? WHERE id = ?
+    `).run(title || null, content || null, category || null, imagePath, ts, row.id);
   } catch (error) {
     if (newImagePath) await removeAnnouncementImage(newImagePath);
     next(error);
@@ -131,7 +132,8 @@ router.put('/:id/status', requireAuth, requireRole('personnel', 'administrator',
   const { status } = req.body || {};
   if (!['Draft', 'Published', 'Archived'].includes(status)) return res.status(400).json({ error: 'Invalid announcement status.' });
 
-  db.prepare('UPDATE announcements SET status = ?, published_at = ? WHERE id = ?').run(status, status === 'Published' ? now() : row.published_at, row.id);
+  const ts = now();
+  db.prepare('UPDATE announcements SET status = ?, published_at = ?, updated_at = ? WHERE id = ?').run(status, status === 'Published' ? ts : row.published_at, ts, row.id);
   audit(req.user, `Announcement ${status}`, `Announcement "${row.title}" ${status === 'Published' ? 'published' : 'moved to ' + status}.`);
 
   if (status === 'Published') {

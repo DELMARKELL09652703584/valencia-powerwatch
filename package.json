@@ -13,6 +13,7 @@
     "db:migrate:neon": "node scripts/neon-migrate.js",
     "db:backfill:neon": "node scripts/neon-backfill.js",
     "db:validate:neon": "node scripts/neon-validate.js",
+    "db:audit:neon": "node scripts/neon-audit-readonly.js",
     "db:staging": "npm run db:migrate:neon && npm run db:backfill:neon && npm run db:validate:neon",
     "db:deploy": "node scripts/neon-deploy-schema.js",
     "db:deploy:apply": "node scripts/neon-deploy-schema.js --apply",
