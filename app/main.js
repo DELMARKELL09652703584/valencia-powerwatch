@@ -418,7 +418,7 @@ async function goToTab(tab) {
 async function refreshConfig() {
   try {
     const [{ settings }, { barangays }, demo] = await Promise.all([
-      api('/api/settings'),
+      api('/api/auth/settings'),
       api('/api/barangays'),
       fetch('/api/auth/demo').then((r) => (r.ok ? r.json() : { demos: [], barangays: [] })),
     ]);
@@ -2074,39 +2074,61 @@ async function handleClick(event) {
         const newStatus = actionButton.dataset.status;
         if (!assignmentId || !newStatus) return;
 
+        actionButton.disabled = true;
+        actionButton.classList.add('admin-btn--loading');
+
         let crewReport = '';
         let resolutionRemarks;
         if (newStatus === 'Resolved') {
           resolutionRemarks = window.prompt('Admin review notes for approving this completed field response (required):');
           if (!resolutionRemarks || resolutionRemarks.trim().length < 5) {
             setToast('Resolution was not approved. Enter at least five characters of review notes.');
+            actionButton.disabled = false;
+            actionButton.classList.remove('admin-btn--loading');
             return;
           }
         }
 
-        await send(`/api/repair/assignments/${assignmentId}/status`, 'PUT', {
-          status: newStatus,
-          ...(resolutionRemarks ? { resolution_remarks: resolutionRemarks.trim() } : {}),
-        });
-        setToast(newStatus === 'Resolved'
-          ? 'Resolution reviewed and approved. The resident has been notified.'
-          : `Repair status updated to: ${newStatus}. User notification & SMS sent.`);
-        await render();
+        try {
+          await send(`/api/repair/assignments/${assignmentId}/status`, 'PUT', {
+            status: newStatus,
+            ...(resolutionRemarks ? { resolution_remarks: resolutionRemarks.trim() } : {}),
+          });
+          setToast(newStatus === 'Resolved'
+            ? 'Resolution reviewed and approved. The resident has been notified.'
+            : `Repair status updated to: ${newStatus}. User notification & SMS sent.`);
+          await render();
+        } finally {
+          actionButton.disabled = false;
+          actionButton.classList.remove('admin-btn--loading');
+        }
         return;
       }
       case 'update-repair-team-gps': {
         if (!id) return;
-        const position = await captureLocation();
-        if (!position) {
-          setToast('GPS unavailable. Allow location access on this Dispatch device and try again.');
-          return;
+        const btn = document.querySelector(`[data-action="update-repair-team-gps"][data-id="${id}"]`);
+        if (btn) {
+          btn.disabled = true;
+          btn.classList.add('admin-btn--loading');
         }
-        await send(`/api/repair-teams/${id}/location`, 'PUT', {
-          latitude: position.latitude,
-          longitude: position.longitude
-        });
-        setToast(`GPS position saved for the selected repair team (±${Math.round(position.accuracy)} m reported accuracy).`);
-        await render();
+        try {
+          const position = await captureLocation();
+          if (!position) {
+            setToast('GPS unavailable. Allow location access on this Dispatch device and try again.');
+            return;
+          }
+          await send(`/api/repair-teams/${id}/location`, 'PUT', {
+            latitude: position.latitude,
+            longitude: position.longitude
+          });
+          setToast(`GPS position saved for the selected repair team (±${Math.round(position.accuracy)} m reported accuracy).`);
+          await render();
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('admin-btn--loading');
+          }
+        }
         return;
       }
       case 'focus-repair-route': {
@@ -2203,12 +2225,19 @@ async function handleClick(event) {
         await render();
         return;
       case 'toggle-outage-category': {
-        const inactiveTypes = new Set(state.config.inactive_outage_types || []);
-        if (inactiveTypes.has(value)) inactiveTypes.delete(value);
-        else inactiveTypes.add(value);
-        await send('/api/admin/settings', 'PUT', { key: 'inactive_outage_types', value: [...inactiveTypes] });
-        await render();
-        setToast(`${value} ${inactiveTypes.has(value) ? 'deactivated' : 'activated'}.`);
+        actionButton.disabled = true;
+        actionButton.classList.add('admin-btn--loading');
+        try {
+          const inactiveTypes = new Set(state.config.inactive_outage_types || []);
+          if (inactiveTypes.has(value)) inactiveTypes.delete(value);
+          else inactiveTypes.add(value);
+          await send('/api/admin/settings', 'PUT', { key: 'inactive_outage_types', value: [...inactiveTypes] });
+          await render();
+          setToast(`${value} ${inactiveTypes.has(value) ? 'deactivated' : 'activated'}.`);
+        } finally {
+          actionButton.disabled = false;
+          actionButton.classList.remove('admin-btn--loading');
+        }
         return;
       }
       case 'new-notification':
@@ -2238,13 +2267,26 @@ async function handleClick(event) {
         setDialogFooter('<button type="button" class="button ghost" data-action="close-dialog">Close</button>');
         return;
       }
-      case 'toggle-admin-notification':
-        await send(`/api/notifications/${id}`, 'PUT', { read: value === 'read' });
-        state.notificationPreview = (state.notificationPreview || []).map((notice) => String(notice.id) === String(id) ? { ...notice, read: value === 'read' ? 1 : 0 } : notice);
-        state.adminNotifications = (state.adminNotifications || []).map((notice) => String(notice.id) === String(id) ? { ...notice, read: value === 'read' ? 1 : 0 } : notice);
-        await refreshUnread();
-        await render();
+      case 'toggle-admin-notification': {
+        const btn = document.querySelector(`[data-action="toggle-admin-notification"][data-id="${id}"]`);
+        if (btn) {
+          btn.disabled = true;
+          btn.classList.add('admin-btn--loading');
+        }
+        try {
+          await send(`/api/notifications/${id}`, 'PUT', { read: value === 'read' });
+          state.notificationPreview = (state.notificationPreview || []).map((notice) => String(notice.id) === String(id) ? { ...notice, read: value === 'read' ? 1 : 0 } : notice);
+          state.adminNotifications = (state.adminNotifications || []).map((notice) => String(notice.id) === String(id) ? { ...notice, read: value === 'read' ? 1 : 0 } : notice);
+          await refreshUnread();
+          await render();
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('admin-btn--loading');
+          }
+        }
         return;
+      }
       case 'audit-page':
         state.auditPage = Math.max(1, Number(value));
         await render();
@@ -2276,10 +2318,17 @@ async function handleClick(event) {
       }
       case 'clear-audit-logs': {
         if (!window.confirm('Are you sure you want to clear all audit logs? This cannot be undone.')) return;
-        await send('/api/admin/audit-logs', 'DELETE');
-        setToast('Audit logs cleared.');
-        state.auditPage = 1;
-        await render();
+        actionButton.disabled = true;
+        actionButton.classList.add('admin-btn--loading');
+        try {
+          await send('/api/admin/audit-logs', 'DELETE');
+          setToast('Audit logs cleared.');
+          state.auditPage = 1;
+          await render();
+        } finally {
+          actionButton.disabled = false;
+          actionButton.classList.remove('admin-btn--loading');
+        }
         return;
       }
       case 'add-list-row': {
@@ -2295,11 +2344,18 @@ async function handleClick(event) {
         actionButton.closest('.list-row').remove();
         return;
       case 'save-list': {
-        const list = document.querySelector(`[data-list-key="${actionButton.dataset.key}"]`);
-        const values = [...list.querySelectorAll('[data-list-value]')].map((i) => i.value.trim()).filter(Boolean);
-        await send('/api/admin/settings', 'PUT', { key: actionButton.dataset.key, value: values });
-        await refreshConfig();
-        setToast('List saved.');
+        actionButton.disabled = true;
+        actionButton.classList.add('admin-btn--loading');
+        try {
+          const list = document.querySelector(`[data-list-key="${actionButton.dataset.key}"]`);
+          const values = [...list.querySelectorAll('[data-list-value]')].map((i) => i.value.trim()).filter(Boolean);
+          await send('/api/admin/settings', 'PUT', { key: actionButton.dataset.key, value: values });
+          await refreshConfig();
+          setToast('List saved.');
+        } finally {
+          actionButton.disabled = false;
+          actionButton.classList.remove('admin-btn--loading');
+        }
         return;
       }
       case 'view-report': {
@@ -2491,9 +2547,16 @@ async function handleClick(event) {
       }
       case 'trigger-incident':
         if (!window.confirm('Start this scheduled outage now and monitor it as an active incident?')) return;
-        await send(`/api/scheduled/${id}/trigger-incident`, 'POST');
-        setToast('Scheduled outage started as an incident.');
-        await render();
+        actionButton.disabled = true;
+        actionButton.classList.add('admin-btn--loading');
+        try {
+          await send(`/api/scheduled/${id}/trigger-incident`, 'POST');
+          setToast('Scheduled outage started as an incident.');
+          await render();
+        } finally {
+          actionButton.disabled = false;
+          actionButton.classList.remove('admin-btn--loading');
+        }
         return;
       case 'new-announcement':
         openDialog('New announcement', `
@@ -2519,17 +2582,43 @@ async function handleClick(event) {
           `, 'Save changes', { form: 'edit-announcement', id });
         return;
       }
-      case 'announcement-status':
-        await send(`/api/announcements/${id}/status`, 'PUT', { status: value });
-        setToast('Announcement status updated.');
-        await render();
+      case 'announcement-status': {
+        const btn = document.querySelector(`[data-action="announcement-status"][data-id="${id}"]`);
+        if (btn) {
+          btn.disabled = true;
+          btn.classList.add('admin-btn--loading');
+        }
+        try {
+          await send(`/api/announcements/${id}/status`, 'PUT', { status: value });
+          setToast('Announcement status updated.');
+          await render();
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('admin-btn--loading');
+          }
+        }
         return;
-      case 'delete-announcement':
+      }
+      case 'delete-announcement': {
         if (!window.confirm('Delete this announcement permanently?')) return;
-        await send(`/api/announcements/${id}`, 'DELETE');
-        setToast('Announcement deleted.');
-        await render();
+        const btn = document.querySelector(`[data-action="delete-announcement"][data-id="${id}"]`);
+        if (btn) {
+          btn.disabled = true;
+          btn.classList.add('admin-btn--loading');
+        }
+        try {
+          await send(`/api/announcements/${id}`, 'DELETE');
+          setToast('Announcement deleted.');
+          await render();
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('admin-btn--loading');
+          }
+        }
         return;
+      }
       case 'new-user': {
         const [{ teams }, { barangays }] = await Promise.all([
           api('/api/repair-teams'),
@@ -2607,17 +2696,43 @@ async function handleClick(event) {
             <label>New password<input class="input" type="password" name="new_password" minlength="6" required></label>
           `, 'Reset password', { form: 'reset-password', id });
         return;
-      case 'toggle-user-status':
-        await send(`/api/admin/users/${id}/status`, 'PUT', { status: value });
-        setToast(`Account ${value === 'Active' ? 'activated' : 'deactivated'}.`);
-        await render();
+      case 'toggle-user-status': {
+        const btn = document.querySelector(`[data-action="toggle-user-status"][data-id="${id}"]`);
+        if (btn) {
+          btn.disabled = true;
+          btn.classList.add('admin-btn--loading');
+        }
+        try {
+          await send(`/api/admin/users/${id}/status`, 'PUT', { status: value });
+          setToast(`Account ${value === 'Active' ? 'activated' : 'deactivated'}.`);
+          await render();
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('admin-btn--loading');
+          }
+        }
         return;
-      case 'delete-user':
+      }
+      case 'delete-user': {
         if (!window.confirm('Delete this account? Historical reports will be kept.')) return;
-        await send(`/api/admin/users/${id}`, 'DELETE');
-        setToast('Account deleted.');
-        await render();
+        const btn = document.querySelector(`[data-action="delete-user"][data-id="${id}"]`);
+        if (btn) {
+          btn.disabled = true;
+          btn.classList.add('admin-btn--loading');
+        }
+        try {
+          await send(`/api/admin/users/${id}`, 'DELETE');
+          setToast('Account deleted.');
+          await render();
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('admin-btn--loading');
+          }
+        }
         return;
+      }
       case 'new-barangay':
         openDialog('Add barangay', `
           <div class="form-stack">
@@ -2658,12 +2773,25 @@ async function handleClick(event) {
           </div>`, 'Save barangay', { form: 'edit-barangay', id });
         return;
       }
-      case 'toggle-barangay-status':
-        await send(`/api/admin/barangays/${id}`, 'PUT', { status: value });
-        await refreshConfig();
-        setToast(`Barangay ${value === 'Active' ? 'activated' : 'deactivated'}.`);
-        await render();
+      case 'toggle-barangay-status': {
+        const btn = document.querySelector(`[data-action="toggle-barangay-status"][data-id="${id}"]`);
+        if (btn) {
+          btn.disabled = true;
+          btn.classList.add('admin-btn--loading');
+        }
+        try {
+          await send(`/api/admin/barangays/${id}`, 'PUT', { status: value });
+          await refreshConfig();
+          setToast(`Barangay ${value === 'Active' ? 'activated' : 'deactivated'}.`);
+          await render();
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('admin-btn--loading');
+          }
+        }
         return;
+      }
       case 'backup':
         {
           const response = await fetch('/api/admin/backup', { credentials: 'same-origin' });
@@ -2934,7 +3062,10 @@ document.addEventListener('submit', async (event) => {
     }
     if (button) button.textContent = 'Submitting…';
   }
-  if (button) button.disabled = true;
+  if (button) {
+    button.disabled = true;
+    button.classList.add('admin-btn--loading');
+  }
   document.querySelector('.dialog-error-banner')?.remove();
   try {
     await submitForm(form);
@@ -2994,6 +3125,7 @@ document.addEventListener('submit', async (event) => {
     }
     if (button && button.isConnected) {
       button.disabled = false;
+      button.classList.remove('admin-btn--loading');
       if (isReportSubmission && originalButtonLabel !== undefined) button.textContent = originalButtonLabel;
     }
   }
