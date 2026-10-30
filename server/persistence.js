@@ -3,6 +3,7 @@ const path = require('node:path');
 const zlib = require('node:zlib');
 const crypto = require('node:crypto');
 const { promisify } = require('node:util');
+const { getDatabaseUrl } = require('./database-url');
 
 const gzip = promisify(zlib.gzip);
 
@@ -31,7 +32,7 @@ const warn = (...args) => console.warn('[persist]', ...args);
 function config() {
   return {
     enabled: String(process.env.POWERWATCH_SNAPSHOT_ENABLED || '').toLowerCase() === 'true',
-    connectionString: process.env.NEON_DATABASE_URL || '',
+    connectionString: getDatabaseUrl(),
     id: process.env.POWERWATCH_SNAPSHOT_ID || 'main',
     intervalMs: Number(process.env.POWERWATCH_SNAPSHOT_INTERVAL_MS || DEFAULT_INTERVAL_MS),
     backupMinutes: Number(process.env.POWERWATCH_SNAPSHOT_BACKUP_MINUTES || DEFAULT_BACKUP_MINUTES),

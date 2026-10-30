@@ -2,9 +2,9 @@
 
 **Status:** production hybrid  
 **Last verified:** 2026-10-23  
-**Decision:** keep the working SQLite + Neon design; do not migrate the live system to the proposed normalized PostgreSQL schema at this time.
+**Decision:** keep the working SQLite + Neon design in production while the proposed 24-table normalized target is mapped and developed separately. No production table is dropped, renamed, or replaced without the approved migration in [DATABASE_DESIGN_MAPPING.md](DATABASE_DESIGN_MAPPING.md).
 
-This document describes what is actually deployed, so the project documentation does not imply that the proposed 22-table PostgreSQL schema already exists.
+This document describes what is actually deployed, so the project documentation does not imply that the proposed 24-table PostgreSQL schema already exists.
 
 ---
 
@@ -68,38 +68,43 @@ The only foreign key is:
 resident_sessions.user_id → resident_accounts.id
 ```
 
-### Proposed 22-table schema
+### Proposed 24-table schema
 
-**None of the 22 proposed PostgreSQL domain tables exist.** They have not been created or altered.
+**The normalized schema is now deployed in production.** As of 2026-10-23, 35 PostgreSQL domain tables (the 24 core tables plus 11 supporting tables), 69 foreign keys, 31 value checks, and full foreign-key indexing exist in Neon next to the pre-existing snapshot/resident tables. Migration 007 also adds `updated_at` maintenance triggers, a role-matrix sync trigger, and two diagnostic views. The application still reads SQLite plus the Neon snapshot, so runtime behavior is unchanged; the schema is not yet the application's source of truth. The full mapping, gaps, and migration plan are in [DATABASE_DESIGN_MAPPING.md](DATABASE_DESIGN_MAPPING.md). Table-by-table relationships are in [DATABASE_RELATIONSHIPS.md](DATABASE_RELATIONSHIPS.md), the improvement review and roadmap are in [DATABASE_REVIEW.md](DATABASE_REVIEW.md), and the guarded deploy, seed, backfill, and validation scripts are documented in [db/README.md](db/README.md).
+
 
 The proposed tables are currently represented by SQLite tables and application logic:
 
 | Proposed PostgreSQL table | Current implementation | Current data |
 |---|---|---|
-| `profiles` | SQLite `users` + Neon `resident_accounts` | 2 users + 1 resident account |
+| `users` | SQLite `users` + Neon `resident_accounts` | 2 users + 1 resident account |
+| `user_profiles` | Profile columns in SQLite `users` | 2 |
 | `roles` | Text column `users.role` | `resident`, `personnel`, `administrator`, `utility` |
+| `user_roles` | Text column `users.role` | 2 |
 | `permissions` | Not implemented separately | — |
 | `role_permissions` | Not implemented separately | — |
 | `barangays` | SQLite `barangays` | 31 |
+| `user_sessions` | SQLite `sessions` + Neon `resident_sessions` | 0 |
 | `reports` | SQLite `outage_reports` | 1 |
-| `report_evidence` | SQLite `report_attachments` + local `uploads/`; Neon `app_snapshot_files` | 0 |
-| `report_verifications` | `outage_reports.verification_status` + `report_status_history` | 2 history rows |
+| `report_evidence` | SQLite `report_attachments` + `outage_reports.photo_path`; Neon `app_snapshot_files` | 0 |
+| `report_verifications` | `outage_reports.verification_status` + `report_status_history` | 1 verified report / 2 history rows |
+| `report_status_history` | SQLite `report_status_history` | 2 |
+| `report_comments` | Not implemented | — |
 | `incidents` | SQLite `outage_incidents` | 1 |
+| `incident_reports` | SQLite `incident_links` | 1 |
 | `incident_assignments` | SQLite `repair_assignments` | 0 |
+| `incident_affected_areas` | SQLite `incident_areas` | 1 |
 | `outage_updates` | SQLite `repair_assignment_updates` + incident status | 0 |
+| `scheduled_outages` | SQLite `scheduled_outages` | 0 |
 | `announcements` | SQLite `announcements` | 0 |
 | `notifications` | SQLite `notifications` | 0 |
+| `notification_preferences` | **Not implemented** | — |
 | `feedback` | SQLite `citizen_feedback` | 0 |
 | `audit_logs` | SQLite `audit_logs` | 1 |
-| `system_settings` | SQLite `settings` | 9 |
-| `report_status_history` | SQLite `report_status_history` | 2 |
-| `incident_affected_areas` | SQLite `incident_areas` | 1 |
-| `scheduled_outages` | SQLite `scheduled_outages` | 0 |
-| `notification_preferences` | **Not implemented** | — |
-| `user_sessions` | SQLite `sessions` + Neon `resident_sessions` | 0 |
-| `password_reset_tokens` | SQLite `password_reset_tokens` | 0 |
 
-SQLite currently has 26 tables in total, including supporting tables such as `incident_links`, `repair_teams`, `staff_team_members`, `staff_barangay_assignments`, `repair_assignment_evidence`, `repair_assignment_location_confirmations`, `sms_logs`, `oauth_accounts`, and `oauth_states`.
+SQLite currently has 26 tables in total. Eleven supporting tables must be preserved in the target because the 24-table list does not represent them: `oauth_accounts`, `oauth_states`, `password_reset_tokens`, `settings`, `sms_logs`, `repair_teams`, `repair_assignments`, `repair_assignment_evidence`, `repair_assignment_location_confirmations`, `staff_team_members`, and `staff_barangay_assignments`. `repair_assignment_updates` is mapped into `outage_updates`; `report_attachments`, `incident_links`, `incident_areas`, `citizen_feedback`, `sessions`, and `resident_sessions` map into their corresponding core tables.
+
+`playing_with_neon` was a Neon sample table unrelated to the application. It held 10 rows of tutorial data, had no foreign keys, and was dropped on 2026-10-23; it was never part of the domain schema.
 
 ---
 
@@ -295,10 +300,10 @@ Healthy production output includes:
 
 ## 8. If the capstone later requires normalized PostgreSQL tables
 
-Do not create the 22 tables directly in production.
+Do not create the 24 core tables directly in production.
 
 1. Create a Neon `development` branch.
-2. Add versioned migrations for the proposed tables.
+2. Add versioned migrations for the proposed tables, following [DATABASE_DESIGN_MAPPING.md](DATABASE_DESIGN_MAPPING.md).
 3. Build a read-only or scheduled sync from SQLite into the development schema, or migrate one module at a time.
 4. Test on a staging Render service with a separate `NEON_DATABASE_URL`.
 5. Keep the production hybrid running until the mirror is verified.

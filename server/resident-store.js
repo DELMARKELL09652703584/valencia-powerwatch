@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const { getDatabaseUrl } = require('./database-url');
 
 const createResidentStore = (pool) => {
   let ready;
@@ -177,9 +178,10 @@ const createResidentStore = (pool) => {
   };
 };
 
-const configured = Boolean(process.env.NEON_DATABASE_URL);
+const connectionString = getDatabaseUrl();
+const configured = Boolean(connectionString);
 const pool = configured
-  ? new Pool({ connectionString: process.env.NEON_DATABASE_URL, max: 3, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 10_000 })
+  ? new Pool({ connectionString, max: 3, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 10_000 })
   : null;
 
 const residentStore = pool ? createResidentStore(pool) : null;

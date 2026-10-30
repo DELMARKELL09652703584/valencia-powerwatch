@@ -6,7 +6,7 @@ const compression = require('compression');
 const { ROOT, UPLOAD_DIR, db } = require('./db');
 const {
   cleanupExpiredSessions, cleanupPersistentSessions, COOKIE_NAME, getUserByToken, requireAuth, requireRole,
-  residentStore, persistentAuthConfigured,
+  residentStore, persistentAuthConfigured, persistentAuthRequired,
 } = require('./auth');
 const { staffCanAccessBarangay } = require('./staff-access');
 const { getStatus: getPersistenceStatus } = require('./persistence');
@@ -61,6 +61,10 @@ app.get('/api/health', (req, res) => res.json({
   status: 'ok',
   service: 'Valencia PowerWatch',
   storage: persistentAuthConfigured ? 'neon+sqlite' : 'sqlite',
+  residentAuth: {
+    persistentRequired: persistentAuthRequired,
+    persistentConfigured: persistentAuthConfigured,
+  },
   persistence: getPersistenceStatus(),
 }));
 

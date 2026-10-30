@@ -18,8 +18,8 @@ test('community dashboard keeps personal notifications out of the home feed', ()
   assert.ok(homeRendererEnd > homeRendererStart);
   assert.doesNotMatch(homeRenderer, /\/api\/(?:notifications|announcements)/);
   assert.doesNotMatch(communityScript, /class="recent-updates"/);
-  assert.match(communityPage, /\/app\/community\.js\?v=36/);
-  assert.match(communityPage, /\/app\/main\.js\?v=40/);
+  assert.match(communityPage, /\/app\/community\.js\?v=\d+/);
+  assert.match(communityPage, /\/app\/main\.js\?v=\d+/);
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=\d+/);
   assert.match(communityPage, /\/style\.css\?v=47/);
   assert.match(portalStyles, /body\.community-body \.home-report-action\s*\{/);
@@ -63,7 +63,7 @@ test('report submission announces progress and errors without discarding the dra
 
   assert.match(communityScript, /data-form="report" aria-busy="false"/);
   assert.match(communityScript, /data-form-feedback role="status" aria-live="polite" aria-atomic="true" tabindex="-1" hidden/);
-  assert.match(communityScript, /<button class="button primary" type="submit">Submit report<\/button>/);
+  assert.match(communityScript, /<button class="button primary" type="submit">Confirm &amp; submit report<\/button>/);
   assert.match(submitHandler, /if \(form\.dataset\.submitting === 'true'\) return;/);
   assert.match(submitHandler, /form\.setAttribute\('aria-busy', 'true'\)/);
   assert.match(submitHandler, /Submitting your report… Please wait\./);
@@ -74,22 +74,69 @@ test('report submission announces progress and errors without discarding the dra
   assert.ok(reportSubmit.indexOf("await api('/api/reports'") < reportSubmit.indexOf('state.mobileReportDraft = null;'));
 });
 
-test('home report action is icon-only and retains an accessible name', () => {
+test('home report action shows a visible label and retains an accessible name', () => {
   const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
   const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
   const homeStart = communityScript.indexOf('async function renderMobileHome()');
   const homeEnd = communityScript.indexOf('\nasync function renderMobileReportForm()', homeStart);
   const homeRenderer = communityScript.slice(homeStart, homeEnd);
-  const reportButton = homeRenderer.match(/<button[^>]*class="home-report-action"[^>]*>[\s\S]*?<\/button>/)?.[0];
+  const reportButton = homeRenderer.match(/<button[^>]*class="home-report-action(?:\s+[^"]*)?"[^>]*>[\s\S]*?<\/button>/)?.[0];
 
   assert.ok(homeStart >= 0);
   assert.ok(homeEnd > homeStart);
-  assert.match(homeRenderer, /class="home-report-action" data-mobile-tab="report" aria-label="Report a power interruption" title="Report a power interruption"/);
+  assert.match(homeRenderer, /class="home-report-action(?:\s+[^"]*)?" data-mobile-tab="report" aria-label="Report a power interruption" title="Report a power interruption"/);
   assert.ok(reportButton);
   assert.match(reportButton, /<svg class="home-report-icon" viewBox="0 0 24 24" aria-hidden="true"/);
-  assert.doesNotMatch(reportButton, /<strong>|home-action-arrow|<small>/);
-  assert.match(portalStyles, /body\.community-body \.home-report-action\s*\{[^}]*width:\s*60px;[^}]*min-width:\s*60px;[^}]*place-items:\s*center;/s);
+  assert.match(reportButton, /<span class="home-report-label">Report outage<\/span>/);
+  assert.doesNotMatch(reportButton, /home-action-arrow|<small>/);
+  assert.match(portalStyles, /body\.community-body \.home-report-label\s*\{[^}]*font-size:\s*15px;[^}]*font-weight:\s*750;/s);
   assert.match(portalStyles, /body\.community-body \.home-report-icon\s*\{[^}]*width:\s*28px;[^}]*height:\s*28px;[^}]*stroke:\s*currentColor;/s);
+});
+
+test('resident navigation exposes reporting, announcements, and outage history', () => {
+  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
+  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
+
+  assert.match(communityScript, /key: 'report',\s*label: 'Report'/);
+  assert.match(communityScript, /label: 'Announcements'.*action: 'open-announcements'/);
+  assert.match(communityScript, /label: 'Outage history'.*tab: 'history'/);
+  assert.match(mainScript, /case 'open-announcements':\s*state\.mobileNotificationCategory = 'announcements';\s*await goToTab\('notifications'\)/);
+  assert.match(mainScript, /data-action="retry-current-tab"/);
+  assert.match(mainScript, /case 'retry-current-tab':\s*await goToTab\(state\.mobileTab\)/);
+  assert.match(communityPage, /portal-polish\.css\?v=75/);
+  assert.match(communityPage, /community\.js\?v=43/);
+  assert.match(communityPage, /main\.js\?v=46/);
+  assert.match(mainScript, /coordinates shown above will be included with your location description/);
+  assert.match(mainScript, /case 'open-notification-settings':\s*state\.mobileNotificationSettingsReturnTab = state\.mobileTab;/);
+  assert.match(mainScript, /case 'back-from-notification-settings':\s*await goToTab\(state\.mobileNotificationSettingsReturnTab \|\| 'settings'\)/);
+  assert.match(communityScript, /backAction: 'back-from-notification-settings'/);
+  assert.match(mainScript, /state\.mobileReportDraft = null;\s*state\.mobileReportStep = 1;\s*state\.mobileLocationMode = 'address';/);
+  assert.match(mainScript, /case 'compose-report':\s*state\.mobileReportStep = 1;\s*state\.mobileReportDraft = \{\};\s*state\.mobileLocationMode = 'address';/);
+  assert.match(mainScript, /async function goToTab\(tab\) \{[\s\S]*?state\.mobileTab === 'report'[\s\S]*?state\.mobileReportDraft = \{ \.\.\.\(state\.mobileReportDraft \|\| \{\}\), \.\.\.values \};[\s\S]*?state\.mobileTab = tab;/);
+});
+
+test('report form starts with a text location and offers the map as an alternative', () => {
+  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+
+  assert.match(communityScript, /const locationMode = state\.mobileLocationMode \|\| 'address';/);
+  assert.match(communityScript, /location-mode-\$\{locationMode\}/);
+  assert.match(communityScript, /const stepNames = \['Details', 'Location', 'Evidence', 'Review'\];/);
+  assert.match(communityScript, /if \(step === 1\) \{\s*formBody = `<h2>Interruption Details<\/h2>/);
+  assert.match(communityScript, /if \(step === 2\) \{\s*formBody = `<h2>Location<\/h2>/);
+  assert.match(communityScript, /activeTab: 'report',\s*showTabs: true/);
+  assert.match(communityScript, /Tell us when the interruption started and what you noticed\./);
+  assert.match(communityScript, /Specific purok or sitio <span class="muted small">\(optional\)<\/span>/);
+  assert.match(communityScript, /Choose your barangay and describe the location\./);
+  assert.match(communityScript, /Choose a barangay from the official suggestions before continuing\./);
+  assert.match(communityScript, /Describe the outage location, or add a map pin before continuing\./);
+  assert.match(communityScript, /Barangay where the interruption happened/);
+  assert.match(communityScript, /Other affected streets or sitios <span class="muted small">\(optional\)<\/span>/);
+  assert.match(communityScript, /if \(step === 2 && locationMode === 'map'\) \{\s*await ensureLeaflet\(\)/);
+  assert.match(communityScript, /\$\{locationMode === 'map' \? '<button type="button" class="button ghost block" data-action="capture-gps"/);
+  assert.match(portalStyles, /report-step-form\.location-mode-address #report-location-map\s*\{\s*display:\s*none;/);
+  assert.match(portalStyles, /grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\)/);
 });
 
 test('community map uses exact outage coordinates and functional base-layer controls', () => {
@@ -158,7 +205,7 @@ test('community report location method buttons retain their theme colors', () =>
   const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
   const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
 
-  assert.match(communityScript, /class="mobile-segment \$\{locationMode === 'map' \? 'active' : ''\}" data-action="set-report-location-mode" data-value="map">Map<\/button>/);
+  assert.match(communityScript, /class="mobile-segment \$\{locationMode === 'map' \? 'active' : ''\}" data-action="set-report-location-mode" data-value="map">Map pin<\/button>/);
   assert.match(communityScript, /class="mobile-segment \$\{locationMode === 'address' \? 'active' : ''\}" data-action="set-report-location-mode" data-value="address">Address<\/button>/);
   assert.match(portalStyles, /body\.community-body \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)/);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)/);
@@ -250,7 +297,7 @@ test('community bottom navigation shows accessible icon and text labels', () => 
   assert.match(portalStyles, /body\.community-body \.mobile-tab\.active::after\s*\{[^}]*transform:\s*translateX\(50%\) scaleX\(1\);/s);
   assert.match(portalStyles, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*body\.community-body \.mobile-tab,/s);
   assert.match(portalStyles, /body\.community-body \.mobile-tab-icon,\s*body\.community-body \.mobile-tab-icon svg\s*\{[^}]*width:\s*22px;[^}]*height:\s*22px;/s);
-  assert.match(communityPage, /\/app\/community\.js\?v=36/);
+  assert.match(communityPage, /\/app\/community\.js\?v=\d+/);
   assert.match(communityPage, /\/app\/portal-polish\.css\?v=\d+/);
 });
 
@@ -315,7 +362,7 @@ test('User Portal provides an accessible PWA install button', () => {
   assert.match(communityScript, /data-action="install-app"[\s\S]*?<span>Install<\/span>/);
   assert.match(mainScript, /case 'install-app':\s*\{[\s\S]*?installPrompt\.prompt\(\)/);
   assert.match(mainScript, /window\.addEventListener\('beforeinstallprompt'/);
-  assert.match(communityPage, /\/app\/community\.js\?v=36/);
+  assert.match(communityPage, /\/app\/community\.js\?v=\d+/);
   assert.match(communityPage, /\/app\/pwa-update\.js\?v=3/);
 });
 

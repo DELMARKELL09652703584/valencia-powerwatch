@@ -19,7 +19,7 @@ test('Render uses free Neon snapshot persistence for production data', () => {
   assert.match(renderConfig, /^\s+startCommand: node server\/start\.js$/m);
   assert.match(renderConfig, /key: POWERWATCH_SNAPSHOT_ENABLED\s*\n\s+value: "true"/);
   assert.match(renderConfig, /key: NEON_DATABASE_URL\s*\n\s+sync: false/);
-  assert.doesNotMatch(renderConfig, /^\s+key: PERSISTENT_AUTH_REQUIRED$/m);
+  assert.match(renderConfig, /key: PERSISTENT_AUTH_REQUIRED\s*\n\s+value: "true"/);
   assert.match(deploymentGuide, /Neon PostgreSQL stores compressed (?:SQLite )?snapshots/);
 });
 
@@ -50,6 +50,7 @@ test('resident account credentials survive a database process restart', () => {
   const childEnv = {
     ...process.env,
     NODE_ENV: 'production',
+    DATABASE_URL: '',
     NEON_DATABASE_URL: '',
     POWERWATCH_DATA_DIR: dataDirectory,
     POWERWATCH_MIGRATE_LOCAL_DB: 'false',

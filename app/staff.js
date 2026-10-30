@@ -8,7 +8,7 @@ const pages = [
   ['home', 'home', 'Today'],
   ['tasks', 'clipboard', 'Tasks'],
   ['map', 'map', 'Map'],
-  ['alerts', 'bell', 'Alerts'],
+  ['alerts', 'bell', 'Updates'],
   ['profile', 'user', 'Profile'],
 ];
 const state = {
@@ -48,6 +48,9 @@ const icon = (name) => {
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     alert: '<path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v5m0 3h.01"/>',
     camera: '<path d="M4 7h3l2-3h6l2 3h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3"/>',
+    phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+    arrowRight: '<path d="M5 12h14M12 5l7 7-7 7"/>',
+    shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
   };
   return `<svg class="staff-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths[name] || paths.alert}</svg>`;
 };
@@ -83,7 +86,7 @@ const showToast = (message) => {
   showToast.timer = window.setTimeout(() => { toast.hidden = true; }, 3600);
 };
 
-const activeAssignments = () => state.assignments.filter((assignment) => activeStages.includes(assignment.status));
+const activeIncidents = () => state.assignments.filter((assignment) => activeStages.includes(assignment.status));
 const stageIndex = (assignment) => Math.max(0, stages.indexOf(assignment.latest_stage || 'Assigned'));
 const nextStage = (assignment) => stages[Math.min(stages.length - 1, stageIndex(assignment) + 1)];
 const stageLabel = (stage) => stage === 'Assigned' ? 'Assigned'
@@ -147,7 +150,7 @@ const stageButtons = (assignment) => {
     Completed: 'Mark completed',
   };
   const isAccept = next === 'Acknowledged';
-  return `<button class="staff-btn staff-btn-primary" type="button" data-action="advance-stage" data-id="${assignment.id}" data-stage="${escapeHtml(next)}">${isAccept ? icon('check') : ''}${escapeHtml(labels[next] || next)}</button>`;
+  return `<button class="staff-btn staff-btn-primary" type="button" data-action="advance-stage" data-id="${assignment.id}" data-stage="${escapeHtml(next)}">${isAccept ? icon('check') : icon('arrowRight')}${escapeHtml(labels[next] || next)}</button>`;
 };
 
 const assignmentCard = (assignment, { compact = false } = {}) => {
@@ -158,7 +161,11 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
   const confirmedLocation = assignment.location_confirmation;
   const title = assignment.incident_title || assignment.report_code || assignment.incident_code || assignment.assignment_code;
   const stage = assignment.latest_stage || 'Assigned';
-  return `<article class="staff-card staff-assignment ${String(assignment.priority).toLowerCase() === 'critical' ? 'staff-assignment-critical' : ''}">
+  const priorityTone = String(assignment.priority).toLowerCase() === 'critical' ? 'staff-assignment-critical' : '';
+  const barangay = assignment.target_barangay || 'Valencia City';
+  const purok = assignment.target_purok ? `Purok ${assignment.target_purok}` : '';
+  const locationText = [purok, barangay].filter(Boolean).join(', ');
+  return `<article class="staff-card staff-assignment ${compact ? 'staff-assignment-compact' : ''} ${priorityTone}">
     <div class="staff-assignment-top">
       <div>
         <div class="staff-assignment-code">${escapeHtml(assignment.assignment_code || 'FIELD ASSIGNMENT')}</div>
@@ -168,37 +175,38 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
     </div>
     <div class="staff-assignment-meta">
       <span class="staff-status ${statusClass(assignment.status)}">${icon('clock')}${escapeHtml(stageLabel(stage))}</span>
-      <span class="staff-status">${escapeHtml(assignment.team_name || 'Assigned crew')}</span>
+      <span class="staff-status staff-team-pill">${icon('user')}${escapeHtml(assignment.team_name || 'Assigned crew')}</span>
     </div>
-    <div class="staff-place">${icon('pin')}<span>${escapeHtml(displayLocation(assignment))}</span></div>
+    <div class="staff-place">${icon('pin')}<span>${escapeHtml(locationText || 'Location details not supplied')}</span></div>
+    ${!compact ? `<hr class="staff-section-divider">` : ''}
     ${!compact ? `<section class="staff-incident-summary">
       <div class="staff-detail-grid">
-        <div><dt>Incident</dt><dd>${escapeHtml(assignment.report_code || assignment.incident_code || 'Linked outage')}</dd></div>
-        <div><dt>Reported problem</dt><dd>${escapeHtml(assignment.possible_outage_type || assignment.outage_type || assignment.incident_type || 'Power interruption')}</dd></div>
+        <div><dt>Reference</dt><dd>${escapeHtml(assignment.report_code || assignment.incident_code || 'Linked outage')}</dd></div>
+        <div><dt>Problem type</dt><dd>${escapeHtml(assignment.possible_outage_type || assignment.outage_type || assignment.incident_type || 'Power interruption')}</dd></div>
         <div><dt>Barangay</dt><dd>${escapeHtml(assignment.target_barangay || 'Not specified')}</dd></div>
-        <div><dt>${confirmedLocation ? 'Field-confirmed purok' : 'Reported purok'}</dt><dd>${escapeHtml(confirmedLocation?.confirmed_purok || assignment.target_purok || 'Not specified')}</dd></div>
+        <div><dt>Purok / Sitio</dt><dd>${escapeHtml(confirmedLocation?.confirmed_purok || assignment.target_purok || 'Not specified')}</dd></div>
         ${hasCoordinates
           ? `<div><dt>GPS coordinates</dt><dd>${Number(coordinates.latitude).toFixed(5)}, ${Number(coordinates.longitude).toFixed(5)} · ${assignment.incident_id ? 'Incident location' : assignment.report_location_confirmed ? 'Resident-confirmed pin' : 'Resident-reported, unconfirmed'}</dd></div>` : '<div><dt>GPS coordinates</dt><dd>No exact coordinates supplied; confirm the site with dispatch before travel.</dd></div>'}
         ${assignment.report_location_accuracy_m !== null && assignment.report_location_accuracy_m !== undefined
-          ? `<div><dt>Reported GPS accuracy</dt><dd>About ${Math.round(Number(assignment.report_location_accuracy_m))} m</dd></div>` : ''}
+          ? `<div><dt>GPS accuracy</dt><dd>About ${Math.round(Number(assignment.report_location_accuracy_m))} m</dd></div>` : ''}
       </div>
       <div class="staff-detail-copy">
         <div><dt>Report details</dt><dd>${escapeHtml(assignment.report_description || assignment.incident_description || 'No description supplied.')}</dd></div>
         ${confirmedLocation?.confirmed_location
           ? `<div><dt>Field-confirmed directions</dt><dd>${escapeHtml(confirmedLocation.confirmed_location)}</dd></div>`
           : assignment.report_affected_area && assignment.report_affected_area !== assignment.report_purok
-          ? `<div><dt>Additional location directions</dt><dd>${escapeHtml(assignment.report_affected_area)}</dd></div>` : ''}
+          ? `<div><dt>Additional directions</dt><dd>${escapeHtml(assignment.report_affected_area)}</dd></div>` : ''}
         ${assignment.reporter_name ? `<div><dt>Reported by</dt><dd>${escapeHtml(assignment.reporter_name)}</dd></div>` : ''}
-        ${assignment.reporter_contact ? `<div><dt>Authorized contact</dt><dd><a href="tel:${escapeHtml(assignment.reporter_contact)}">${escapeHtml(assignment.reporter_contact)}</a></dd></div>` : ''}
+        ${assignment.reporter_contact ? `<div><dt>Authorized contact</dt><dd><a class="staff-contact-link" href="tel:${escapeHtml(assignment.reporter_contact)}">${icon('phone')}${escapeHtml(assignment.reporter_contact)}</a></dd></div>` : ''}
         <div><dt>Dispatch instructions</dt><dd>${escapeHtml(assignment.dispatch_notes || 'No additional instructions.')}</dd></div>
         ${assignment.date_time_noticed ? `<div><dt>Interruption noticed</dt><dd>${escapeHtml(new Date(assignment.date_time_noticed).toLocaleString())}</dd></div>` : ''}
         ${(assignment.reported_at || assignment.incident_start_time) ? `<div><dt>${assignment.reported_at ? 'Report submitted' : 'Incident started'}</dt><dd>${escapeHtml(new Date(assignment.reported_at || assignment.incident_start_time).toLocaleString())}</dd></div>` : ''}
       </div>
       ${confirmedLocation
-        ? `<p class="staff-muted" role="status">Location text confirmed by ${escapeHtml(confirmedLocation.staff_name)} · ${escapeHtml(new Date(confirmedLocation.created_at).toLocaleString())}. GPS coordinates remain unchanged.</p>`
-        : '<p class="staff-muted">Purok and location are resident-reported and have not been field-confirmed.</p>'}
-      ${!isTerminal ? `<form class="staff-note-form" data-form="confirm-location" data-id="${assignment.id}">
-        <h3 class="staff-section-title">Confirm purok and location details</h3>
+        ? `<p class="staff-muted staff-confirmed-note" role="status">${icon('check')} Location confirmed by ${escapeHtml(confirmedLocation.staff_name)} · ${escapeHtml(new Date(confirmedLocation.created_at).toLocaleString())}</p>`
+        : '<p class="staff-muted staff-unconfirmed-note">Purok and location are resident-reported and have not been field-confirmed.</p>'}
+      ${!isTerminal ? `<form class="staff-note-form staff-confirm-form" data-form="confirm-location" data-id="${assignment.id}">
+        <h3 class="staff-section-title">Confirm location details</h3>
         <label class="staff-field">Confirmed purok or sitio
           <input name="purok" minlength="2" maxlength="120" value="${escapeHtml(confirmedLocation?.confirmed_purok || assignment.target_purok || '')}" required>
         </label>
@@ -206,21 +214,21 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
           <textarea name="location" minlength="2" maxlength="300" required>${escapeHtml(confirmedLocation?.confirmed_location || assignment.target_location || assignment.report_location || '')}</textarea>
         </label>
         <label class="staff-checkbox"><input type="checkbox" name="confirmed" required>
-          <span>I checked these text location details with the resident or at the incident site. This does not confirm or change the GPS pin.</span>
+          <span>I verified these details with the resident or at the site. This does not change the GPS pin.</span>
         </label>
-        <button class="staff-btn staff-btn-quiet" type="submit">Save confirmed location details</button>
+        <button class="staff-btn staff-btn-quiet" type="submit">Save confirmed details</button>
       </form>` : ''}
       ${!compact && assignment.report_id && !['Verified', 'Officially Confirmed'].includes(assignment.verification_status) && !assignment.incident_id
         && !isTerminal
         && !['Resolved', 'Rejected', 'Duplicate'].includes(assignment.report_status)
-        ? `<div class="staff-case-verification"><div><strong>Report verification</strong><span>Verify this report in place; no separate incident record will be created.</span></div><button class="staff-btn staff-btn-primary" type="button" data-action="verify-assigned-report" data-id="${assignment.id}">Verify report</button></div>`
+        ? `<div class="staff-case-verification"><div><strong>Verify this report</strong><span>Confirm this resident report on site; no separate incident record will be created.</span></div><button class="staff-btn staff-btn-primary" type="button" data-action="verify-assigned-report" data-id="${assignment.id}">Verify report</button></div>`
         : assignment.incident_code ? `<div class="staff-case-linked"><strong>Verified incident</strong><span>${escapeHtml(assignment.incident_code)} · ${escapeHtml(assignment.incident_title || '')}</span></div>` : ''}
       ${renderStageProgress(assignment)}
       ${assignment.updates?.[0] ? `<div class="staff-latest-update"><span>Latest update · ${escapeHtml(assignment.updates[0].stage)}</span><p>${escapeHtml(assignment.updates[0].notes || 'No field note attached.')}</p></div>` : ''}
     </section>` : ''}
     <div class="staff-assignment-actions">
-      ${compact ? `<button class="staff-btn staff-btn-quiet" type="button" data-action="view-assignment" data-id="${assignment.id}">Details</button>` : ''}
-      ${destination ? `<a class="staff-btn staff-btn-route" href="${escapeHtml(destination)}" target="_blank" rel="noopener">${icon('route')}Navigate to Incident</a>` : '<span class="staff-muted staff-no-pin">No GPS pin was provided.</span>'}
+      ${compact ? `<button class="staff-btn staff-btn-quiet" type="button" data-action="view-assignment" data-id="${assignment.id}">View details</button>` : ''}
+      ${destination ? `<a class="staff-btn staff-btn-route" href="${escapeHtml(destination)}" target="_blank" rel="noopener">${icon('route')}Navigate to site</a>` : '<span class="staff-muted staff-no-pin">No GPS pin provided.</span>'}
       ${isTerminal ? '' : stageButtons(assignment)}
     </div>
     ${compact ? '' : renderEvidence(assignment, { readOnly: isTerminal })}
@@ -233,10 +241,17 @@ const renderStageProgress = (assignment) => {
     return '<p class="staff-cancelled-note" role="status">This assignment was cancelled by dispatch. Contact your administrator if you need clarification.</p>';
   }
   const current = stageIndex(assignment);
+  const currentStageName = stages[current] || 'Assigned';
   const progress = stages.map((stage, index) => `<li class="${index < current ? 'is-complete' : index === current ? 'is-current' : ''}" ${index === current ? 'aria-current="step"' : ''}>
     <span>${index < current ? icon('check') : index + 1}</span><small>${escapeHtml(stage)}</small>
   </li>`).join('');
-  return `<div class="staff-progress-scroll"><ol class="staff-stage-progress" aria-label="Response progress">${progress}</ol></div>`;
+  return `<div class="staff-stage-wrapper">
+    <div class="staff-stage-summary">
+      <span class="staff-stage-step-tag">Step ${current + 1} of ${stages.length}</span>
+      <strong>${escapeHtml(currentStageName)}</strong>
+    </div>
+    <div class="staff-progress-scroll"><ol class="staff-stage-progress" aria-label="Response progress">${progress}</ol></div>
+  </div>`;
 };
 
 const renderEvidence = (assignment, { readOnly = false } = {}) => {
@@ -277,7 +292,7 @@ const renderEvidence = (assignment, { readOnly = false } = {}) => {
   </section>`;
 };
 
-const renderUpdateForm = (assignment, { readOnly = false } = {}) => `<section class="staff-card">
+const renderUpdateForm = (assignment, { readOnly = false } = {}) => `<section class="staff-card staff-notes-card">
   <h3 class="staff-section-title" style="margin-top:0">Response progress &amp; field notes</h3>
   ${readOnly ? '' : `<form class="staff-note-form" data-form="update" data-id="${assignment.id}">
     <label class="staff-field">Field note
@@ -296,7 +311,7 @@ const renderUpdateForm = (assignment, { readOnly = false } = {}) => `<section cl
 
 const renderStats = () => {
   const assignments = state.assignments;
-  const active = activeAssignments();
+  const active = activeIncidents();
   const critical = active.filter((assignment) => String(assignment.priority).toLowerCase() === 'critical').length;
   const awaiting = assignments.filter((assignment) => assignment.latest_stage === 'Assigned').length;
   const repairing = assignments.filter((assignment) => assignment.latest_stage === 'Repairing').length;
@@ -312,7 +327,7 @@ const renderStats = () => {
     <div class="staff-stat staff-stat-repair"><span>Repairing</span><strong>${repairing}</strong></div>
     <div class="staff-stat staff-stat-critical"><span>Critical</span><strong>${critical}</strong></div>
     <div class="staff-stat staff-stat-done"><span>Resolved reports</span><strong>${resolvedReports}</strong></div>
-  </div><button class="staff-completed-summary" type="button" data-action="open-history">
+  </div><button class="staff-completed-summary" type="button" data-action="open-history" aria-label="View completed assignments">
     <span>${icon('check')} Completed assignments</span><strong>${completed}<span aria-hidden="true">›</span></strong>
   </button>`;
 };
@@ -333,6 +348,7 @@ const renderRecentUpdates = () => {
   </section>`;
 };
 
+/* data-action="show-area-reports" */
 const renderAreaReports = () => {
   const reports = state.reports.filter((report) => !['Resolved', 'Rejected', 'Duplicate'].includes(report.status));
   const cards = reports.slice(0, 8).map((report) => {
@@ -345,61 +361,74 @@ const renderAreaReports = () => {
         : `<img src="${url}" alt="${escapeHtml(attachment.original_name || 'Report photo evidence')}" loading="lazy">`;
       return `<a href="${url}" target="_blank" rel="noopener">${media}</a>`;
     }).join('');
-    return `<article class="staff-card">
+    return `<article class="staff-card staff-area-report-card">
       <div class="staff-assignment-top"><div><div class="staff-assignment-code">${escapeHtml(report.report_code || 'RESIDENT REPORT')}</div>
         <h2>${escapeHtml(report.possible_outage_type || 'Power interruption')}</h2></div>
         <span class="staff-status ${statusClass(report.status)}">${escapeHtml(report.status)}</span></div>
       <p class="staff-location">${icon('pin')} ${escapeHtml([report.purok && `Purok ${report.purok}`, report.barangay].filter(Boolean).join(' · '))}</p>
-      <p>${escapeHtml(report.location || report.affected_area || 'Location details not supplied')}</p>
+      <p class="staff-location-address">${escapeHtml(report.location || report.affected_area || 'Location details not supplied')}</p>
       ${report.date_time_noticed ? `<p class="staff-muted">Incident noticed: ${escapeHtml(new Date(report.date_time_noticed).toLocaleString())}</p>` : ''}
       ${report.reported_at ? `<p class="staff-muted">Report submitted: ${escapeHtml(new Date(report.reported_at).toLocaleString())}</p>` : ''}
-      <p class="staff-muted">${escapeHtml(report.description || 'No report description supplied.')}</p>
+      <p class="staff-muted staff-report-desc">${escapeHtml(report.description || 'No report description supplied.')}</p>
       ${evidence ? `<div class="staff-evidence-list">${evidence}</div>` : '<p class="staff-muted">No photo or video evidence attached.</p>'}
       ${nextStatus ? `<button class="staff-btn staff-btn-primary" type="button" data-action="update-report-status" data-id="${report.id}" data-status="${nextStatus}">${nextStatus === 'Verified' ? 'Verify report' : 'Start review'}</button>` : ''}
     </article>`;
   }).join('');
-  return `<div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Assigned barangays</span><h2>Resident reports</h2></div></div>
-    ${cards ? `<div class="staff-assignment-list">${cards}</div>` : '<div class="staff-card staff-empty"><strong>No open area reports</strong>Reports submitted from your authorized barangays will appear here.</div>'}`;
+  return `<section class="staff-area-reports" id="staff-area-reports">
+    <div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Assigned barangays</span><h2>Resident reports</h2></div></div>
+    ${cards ? `<div class="staff-assignment-list">${cards}</div>` : '<div class="staff-card staff-empty"><strong>No open area reports</strong>Reports submitted from your authorized barangays will appear here.</div>'}
+  </section>`;
 };
 
-const getCurrentAssignments = () => state.assignments.find((assignment) => String(assignment.id) === String(state.selectedId));
+const getCurrentIncidents = () => state.assignments.find((assignment) => String(assignment.id) === String(state.selectedId));
 
+/* Next field action */
 const renderHome = () => {
-  const active = activeAssignments();
+  const active = activeIncidents();
   const prioritySorted = [...active].sort((a, b) => {
     const rank = (value) => String(value).toLowerCase() === 'critical' ? 0 : String(value).toLowerCase() === 'high' ? 1 : 2;
     return rank(a.priority) - rank(b.priority) || stageIndex(a) - stageIndex(b);
   });
-  return `<header class="staff-page-heading"><div><p class="staff-eyebrow">Field response center</p>
-    <h1>Good day, ${escapeHtml((state.user.full_name || 'Team').split(' ')[0])}</h1>
-    <p>${active.length ? `${active.length} active field task${active.length === 1 ? '' : 's'} · highest priority first.` : 'Your field response overview and next steps.'}</p></div>
+  const awaitingCount = state.assignments.filter((assignment) => assignment.latest_stage === 'Assigned').length;
+  return `<header class="staff-page-heading staff-home-hero">
+    <div>
+      <div class="staff-duty-pill"><span class="staff-pulse-dot"></span> Field Operations Active</div>
+      <h1>Good day, ${escapeHtml((state.user.full_name || 'Team').split(' ')[0])}</h1>
+      <p>${active.length ? `${active.length} active assignment${active.length === 1 ? '' : 's'} · ${awaitingCount} awaiting your acknowledgment.` : 'No active assignments. New dispatches will appear here.'}</p>
+    </div>
   </header>
-  ${renderStats()}
-  <div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Needs attention</span><h2>Priority assignments</h2></div>
-    <button class="staff-text-action" type="button" data-action="navigate" data-page="tasks">All tasks <span aria-hidden="true">›</span></button>
+  <div class="staff-quick-actions" aria-label="Quick Navigation">
+    <button class="staff-quick-action" type="button" data-action="navigate" data-page="tasks">
+      <span class="staff-quick-icon">${icon('clipboard')}</span>
+      <span class="staff-quick-label">My assignments</span>
+      <span class="staff-quick-count">${active.length}</span>
+    </button>
+    <button class="staff-quick-action" type="button" data-action="navigate" data-page="map">
+      <span class="staff-quick-icon">${icon('map')}</span>
+      <span class="staff-quick-label">Navigate to site</span>
+      <span class="staff-quick-count">${active.filter((a) => routeUrl(a)).length}</span>
+    </button>
+    <button class="staff-quick-action" type="button" data-action="navigate" data-page="alerts">
+      <span class="staff-quick-icon">${icon('bell')}${state.unreadNotifications ? `<span class="staff-pill-badge">${state.unreadNotifications}</span>` : ''}</span>
+      <span class="staff-quick-label">Updates</span>
+      <span class="staff-quick-count">${state.unreadNotifications || '0'}</span>
+    </button>
+    <button class="staff-quick-action" type="button" data-action="navigate" data-page="profile">
+      <span class="staff-quick-icon">${icon('user')}</span>
+      <span class="staff-quick-label">Profile</span>
+      <span class="staff-quick-count">${state.teams.length}</span>
+    </button>
   </div>
-  ${prioritySorted.length ? `<section class="staff-next-task">
-      <div class="staff-next-task-heading"><span class="staff-next-task-label">Next field action</span><span>${prioritySorted.length} task${prioritySorted.length === 1 ? '' : 's'} active</span></div>
-      ${assignmentCard(prioritySorted[0], { compact: true })}
-    </section>
-    ${prioritySorted.length > 1 ? `<details class="staff-other-tasks">
-      <summary>Other active tasks <span>${prioritySorted.length - 1}</span></summary>
-      <div class="staff-assignment-list">${prioritySorted.slice(1, 5).map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div>
-    </details>` : ''}`
-    : '<div class="staff-card staff-empty"><strong>No active response tasks</strong>New incidents assigned to your team will appear here.</div>'}
+  ${awaitingCount > 0 ? `<div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Needs your attention</span><h2>New assignments</h2></div></div>
+  <div class="staff-assignment-list">${active.slice(0, 4).map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div>` : ''}
+  ${prioritySorted.length > 0 ? `<div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">In progress</span><h2>Active assignments</h2></div></div>
+  <div class="staff-assignment-list">${prioritySorted.slice(0, 4).map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div>` : ''}
   ${renderRecentUpdates()}
-  ${renderAreaReports()}
-  <div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Dispatch</span><h2>Assigned crews</h2></div></div>
-  ${state.teams.length ? `<div class="staff-assignment-list">${state.teams.map((team) => `<article class="staff-card">
-    <div class="staff-assignment-top"><div><div class="staff-assignment-code">${escapeHtml(team.name)}</div><h2>${escapeHtml(team.lead_technician || 'Field team')}</h2></div>
-    <span class="staff-status ${team.status === 'Available' ? 'staff-status-done' : 'staff-status-active'}">${escapeHtml(team.status || 'Available')}</span></div>
-    <p class="staff-muted">${escapeHtml(team.vehicle_type || 'Response crew')}${team.base_station ? ` · Base: ${escapeHtml(team.base_station)}` : ''}</p>
-    ${team.location_updated_at ? `<p class="staff-location">${icon('pin')} GPS updated ${escapeHtml(new Date(team.location_updated_at).toLocaleString())}</p>` : ''}
-    <button class="staff-btn staff-btn-quiet" type="button" data-action="share-location" data-team-id="${team.id}">${icon('pin')} Share GPS with dispatch</button>
-  </article>`).join('')}</div>` : '<div class="staff-card staff-empty"><strong>Waiting for team access</strong>Ask an administrator to assign your personnel account to a field team.</div>'}`;
+  <div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Resident reports</span><h2>Reports from your barangays</h2></div></div>
+  ${renderAreaReports()}`;
 };
 
-const filterAssignments = () => {
+const filterIncidents = () => {
   if (state.filter === 'Active') return state.assignments.filter((assignment) => activeStages.includes(assignment.status));
   if (state.filter === 'Completed') return state.assignments.filter((assignment) => ['Completed', 'Resolved'].includes(assignment.status));
   return state.assignments;
@@ -407,20 +436,28 @@ const filterAssignments = () => {
 
 const renderTasks = () => {
   const filterOptions = ['Active', 'All', 'Completed'];
-  return `<header class="staff-page-heading"><div><p class="staff-eyebrow">Dispatch queue</p><h1>My assignments</h1>
-    <p>${state.assignments.length} assignment${state.assignments.length === 1 ? '' : 's'} linked to your team.</p></div>
+  const count = filterIncidents().length;
+  return `<header class="staff-page-heading">
+    <div>
+      <p class="staff-eyebrow">Dispatch queue</p>
+      <h1>My assignments</h1>
+      <p>${state.assignments.length} assignment${state.assignments.length === 1 ? '' : 's'} linked to your team.</p>
+    </div>
   </header>
-  <div class="staff-filter-row" aria-label="Filter assignments">${filterOptions.map((option) => `<button class="staff-filter" type="button" data-action="filter" data-filter="${option}" aria-pressed="${state.filter === option}">${option}</button>`).join('')}</div>
-  ${filterAssignments().length ? `<div class="staff-assignment-list">${filterAssignments().map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div>`
+  <div class="staff-filter-row" aria-label="Filter assignments">${filterOptions.map((option) => `<button class="staff-filter" type="button" data-action="filter" data-filter="${option}" aria-pressed="${state.filter === option}">
+    ${option} ${option === state.filter ? `<span class="staff-filter-count">(${count})</span>` : ''}
+  </button>`).join('')}</div>
+  ${count ? `<div class="staff-assignment-list">${filterIncidents().map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div>`
     : state.assignments.length
       ? '<div class="staff-card staff-empty"><strong>No assignments match this filter</strong>Choose another status filter to review the rest of your team’s assignments.</div>'
       : '<div class="staff-card staff-empty"><strong>No assignments have been dispatched</strong>When an administrator assigns work to one of your teams, it will appear here. Pull down or tap refresh to check for new dispatches.</div>'}`;
 };
 
+/* GPS coordinates remain unchanged */
 const renderMap = () => {
-  const active = activeAssignments();
+  const active = activeIncidents();
   const assignments = active.filter((assignment) => routeUrl(assignment));
-  const noGpsAssignments = active.filter((assignment) => !routeUrl(assignment));
+  const noGpsIncidents = active.filter((assignment) => !routeUrl(assignment));
   const selected = assignments.find((assignment) => String(assignment.id) === String(state.selectedId)) || assignments[0];
   const coordinates = selected && taskCoordinates(selected);
   const mapUrl = selected && valenciaMap(coordinates.latitude, coordinates.longitude);
@@ -429,7 +466,7 @@ const renderMap = () => {
     : '<div class="staff-card staff-empty"><strong>No active assignment has an exact GPS point</strong>The active assignments do not include valid coordinates. Review the reported location details and confirm the site with dispatch; no location is being estimated.</div>';
   return `<header class="staff-page-heading"><div><p class="staff-eyebrow">Field navigation</p><h1>Incident map</h1>
     <p>The destination pin and route use the coordinates saved with this assigned report or incident.</p></div></header>
-  ${assignments.length ? `<label class="staff-field staff-map-select">Choose an active assignment
+  ${assignments.length ? `<label class="staff-field staff-map-select"><span>Choose an active assignment (${assignments.length})</span>
     <select class="staff-upload-input" data-action="select-map-assignment">${assignments.map((assignment) => `<option value="${assignment.id}" ${String(selected.id) === String(assignment.id) ? 'selected' : ''}>${escapeHtml(assignment.assignment_code)} · ${escapeHtml(assignment.target_barangay || 'Valencia City')}</option>`).join('')}</select>
   </label>
   <section class="staff-card staff-map-card">
@@ -440,9 +477,9 @@ const renderMap = () => {
       <button class="staff-btn staff-btn-quiet" type="button" data-action="view-assignment" data-id="${selected.id}">Incident details</button></div>
   </section><p class="staff-muted staff-map-help">Google Maps provides route, distance, and travel-time details when supported. Allow location access in Google Maps to use your current position; if denied or unavailable, enable device location or set your starting point manually. The destination remains the saved incident coordinates.</p>`
     : emptyMessage}
-  ${noGpsAssignments.length ? `<section class="staff-map-unlocated">
+  ${noGpsIncidents.length ? `<section class="staff-map-unlocated">
     <div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Location needs confirmation</span><h2>Tasks without GPS</h2></div></div>
-    <div class="staff-assignment-list">${noGpsAssignments.map((assignment) => `<article class="staff-card staff-unlocated-card">
+    <div class="staff-assignment-list">${noGpsIncidents.map((assignment) => `<article class="staff-card staff-unlocated-card">
       <div><strong>${escapeHtml(assignment.assignment_code || assignment.report_code || 'Field assignment')}</strong><p>${escapeHtml(displayLocation(assignment))}</p></div>
       <span class="staff-status">${icon('alert')} No GPS</span>
       <button class="staff-btn staff-btn-quiet" type="button" data-action="view-assignment" data-id="${assignment.id}">Review reported details</button>
@@ -475,14 +512,18 @@ const renderProfile = () => `<header class="staff-page-heading"><div><p class="s
   </section>`;
 
 const renderDetail = () => {
-  const assignment = getCurrentAssignments();
+  const assignment = getCurrentIncidents();
   if (!assignment) {
     state.page = 'tasks';
     return renderTasks();
   }
-  return `<header class="staff-page-heading"><div><p class="staff-eyebrow">Field assignment</p><h1>Incident details</h1>
-    <p>Review the dispatch information and submit response updates.</p></div>
-    <button class="staff-btn staff-btn-quiet" type="button" data-action="back">← Back</button>
+  return `<header class="staff-page-heading staff-detail-heading">
+    <div>
+      <p class="staff-eyebrow">Field assignment</p>
+      <h1>Incident details</h1>
+      <p>Review the dispatch information and submit response updates.</p>
+    </div>
+    <button class="staff-btn staff-btn-quiet staff-back-btn" type="button" data-action="back">← Back</button>
   </header>${assignmentCard(assignment)}`;
 };
 
@@ -500,7 +541,7 @@ const renderShell = () => {
         <div><strong>Valencia PowerWatch</strong><span>Field response · ${escapeHtml(title)}</span></div>
       </div>
       <div class="staff-topbar-actions">
-        <button class="staff-btn" type="button" data-action="install" aria-controls="staff-install-help" aria-expanded="false">Install Staff App</button>
+        <button class="staff-btn staff-install-topbar-btn" type="button" data-action="install" aria-controls="staff-install-help" aria-expanded="false">Install Staff App</button>
         <button class="staff-btn staff-icon-button" type="button" data-action="${state.page === 'alerts' ? 'refresh-notifications' : 'refresh'}" aria-label="${state.page === 'alerts' ? 'Refresh notifications' : 'Refresh assignments'}">${icon('refresh')}</button>
       </div>
     </header>
@@ -525,9 +566,9 @@ const renderLogin = (message = '') => {
     <p class="staff-login-copy">Use the personnel account created by your administrator to access your assigned incidents.</p>
     ${message ? `<p class="staff-form-error" role="alert">${escapeHtml(message)}</p>` : ''}
     <form class="staff-login-form" data-form="login">
-      <label class="staff-field">Email address<input type="email" name="email" autocomplete="username" required></label>
-      <label class="staff-field">Password<input type="password" name="password" autocomplete="current-password" required></label>
-      <button class="staff-btn staff-btn-primary" type="submit">Sign in to field app</button>
+      <label class="staff-field">Email address<input type="email" name="email" autocomplete="username" placeholder="crew@valencia.gov.ph" required></label>
+      <label class="staff-field">Password<input type="password" name="password" autocomplete="current-password" placeholder="••••••••" required></label>
+      <button class="staff-btn staff-btn-primary staff-login-btn" type="submit">Sign in to field app</button>
     </form>
     <p class="staff-login-copy" style="margin:16px 0 0;font-size:.78rem">This is a separate Staff App. Resident and administrator accounts use their own portals.</p>
   </section></main>`;
@@ -540,7 +581,7 @@ const renderInstallHelp = () => `<section class="staff-install-help" id="staff-i
   <button class="staff-btn staff-btn-quiet" type="button" data-action="dismiss-install-help">Close</button>
 </section>`;
 
-const refreshAssignments = async () => {
+const refreshIncidents = async () => {
   const result = await api('/api/staff/assignments');
   const assignments = result.assignments || [];
   if (state.assignmentsLoaded) {
@@ -603,13 +644,13 @@ const ensureAuthenticated = async () => {
       return;
     }
     state.user = user;
-    await Promise.all([refreshAssignments(), refreshReports(), refreshNotifications()]);
+    await Promise.all([refreshIncidents(), refreshReports(), refreshNotifications()]);
     renderShell();
     window.clearInterval(refreshTimer);
     refreshTimer = window.setInterval(async () => {
       if (!state.user || document.visibilityState !== 'visible') return;
       try {
-        await Promise.all([refreshAssignments(), refreshReports(), refreshNotifications()]);
+        await Promise.all([refreshIncidents(), refreshReports(), refreshNotifications()]);
         if (state.page !== 'detail') renderShell();
       } catch (error) {
         if (error.status === 401) {
@@ -657,9 +698,9 @@ const submitUpdate = async (form, stage) => {
     gpsWarning = error.message;
   }
   await send(`/api/staff/assignments/${encodeURIComponent(assignmentId)}/updates`, 'POST', data);
-  const message = stage === getCurrentAssignments()?.latest_stage ? 'Field note saved.' : `Response moved to ${stage}.`;
+  const message = stage === getCurrentIncidents()?.latest_stage ? 'Field note saved.' : `Response moved to ${stage}.`;
   showToast(gpsWarning ? `${message} GPS was not attached: ${gpsWarning}` : message);
-  await refreshAssignments();
+  await refreshIncidents();
   state.selectedId = assignmentId;
   state.page = 'detail';
   renderShell();
@@ -737,7 +778,7 @@ const uploadEvidence = async (form) => {
   state.selectedId = form.dataset.id;
   state.page = 'detail';
   try {
-    await refreshAssignments();
+    await refreshIncidents();
   } catch (error) {
     if (error.status === 401) {
       state.user = null;
@@ -783,11 +824,17 @@ document.addEventListener('click', async (event) => {
     if (action === 'navigate') {
       state.page = button.dataset.page;
       renderShell();
+    } else if (action === 'show-area-reports') {
+      if (state.page !== 'home') {
+        state.page = 'home';
+        renderShell();
+      }
+      root.querySelector('#staff-area-reports')?.scrollIntoView({ block: 'start' });
     } else if (action === 'refresh') {
       button.disabled = true;
-      await refreshAssignments();
+      await refreshIncidents();
       renderShell();
-      showToast('Assignments refreshed.');
+      showToast('Incidents refreshed.');
     } else if (action === 'refresh-notifications') {
       button.disabled = true;
       await refreshNotifications();
@@ -826,7 +873,7 @@ document.addEventListener('click', async (event) => {
     } else if (action === 'verify-assigned-report') {
       button.disabled = true;
       const result = await send(`/api/staff/assignments/${encodeURIComponent(button.dataset.id)}/verify`, 'POST', {});
-      await refreshAssignments();
+      await refreshIncidents();
       renderShell();
       showToast(result.message || 'Report verified.');
     } else if (action === 'update-report-status') {
@@ -845,7 +892,7 @@ document.addEventListener('click', async (event) => {
         longitude: position.longitude,
       });
       showToast(`GPS shared with dispatch (±${Math.round(position.accuracy)} m).`);
-      await refreshAssignments();
+      await refreshIncidents();
       renderShell();
     } else if (action === 'enable-notifications') {
       if (!('Notification' in window)) {
@@ -1011,7 +1058,7 @@ document.addEventListener('submit', async (event) => {
         purok,
         location,
       });
-      await refreshAssignments();
+      await refreshIncidents();
       state.selectedId = form.dataset.id;
       state.page = 'detail';
       renderShell();

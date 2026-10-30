@@ -7,13 +7,18 @@ const MOBILE_TABS = [
     icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/></svg>',
   },
   {
+    key: 'report',
+    label: 'Report',
+    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/><circle cx="12" cy="12" r="9"/></svg>',
+  },
+  {
     key: 'reports',
-    label: 'Reports',
+    label: 'My Reports',
     icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><path d="M9 14l2 2 4-4"/></svg>',
   },
   {
     key: 'map',
-    label: 'Map',
+    label: 'Outages',
     icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
   },
   {
@@ -437,7 +442,8 @@ async function renderMobileHome() {
   const shortcuts = [
     { label: 'Current outages', icon: '<path d="M13 2 4 14h7l-1 8 10-12h-7z"/>', action: 'open-current-outages' },
     { label: 'Scheduled outages', icon: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>', action: 'open-scheduled-outages' },
-    { label: 'Outage map', icon: '<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15m6-12v15"/>', tab: 'map' },
+    { label: 'Announcements', icon: '<path d="M3 11v3a2 2 0 0 0 2 2h2l3 5h3l-2-7 8 3V7l-8 3H5a2 2 0 0 0-2 1z"/>', action: 'open-announcements' },
+    { label: 'Outage history', icon: '<path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"/><path d="M3 3v5h5m4-1v5l3 2"/>', tab: 'history' },
   ];
   const monthlyMaximum = Math.max(1, ...outageInsights.monthly.map((item) => Number(item.count) || 0));
   const trendCopy = outageInsights.trend.direction === 'up'
@@ -460,28 +466,28 @@ async function renderMobileHome() {
         </section>
       </div>
       ${barangayHeroMarkup}
-      <section class="home-primary-actions" aria-label="Main actions">
-        <button type="button" class="home-report-action" data-mobile-tab="report" aria-label="Report a power interruption" title="Report a power interruption">
-          <svg class="home-report-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><path d="m9 14 2 2 4-4"/><path d="M19 3v4m-2-2h4"/></svg>
+      <section class="home-primary-actions" aria-label="Quick actions">
+        <button type="button" class="home-report-action primary" data-mobile-tab="report" aria-label="Report a power interruption" title="Report a power interruption">
+          <svg class="home-report-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          <span class="home-report-label">Report outage</span>
         </button>
-        <button type="button" class="home-track-action" data-mobile-tab="reports">
+        <button type="button" class="home-track-action" data-mobile-tab="reports" aria-label="Track my submitted reports">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><path d="m9 14 2 2 4-4"/></svg>
-          <span>Track my report</span><span aria-hidden="true">›</span>
+          <span>Track My Reports</span><span aria-hidden="true">›</span>
         </button>
       </section>
-      <section class="home-shortcuts" aria-label="Power and account updates">
-        ${shortcuts.map((shortcut) => `<button type="button" class="home-shortcut" ${shortcut.action ? `data-action="${shortcut.action}"` : `data-mobile-tab="${shortcut.tab}"`}>
+      <section class="home-shortcuts" aria-label="More options">
+        ${shortcuts.map((shortcut) => `<button type="button" class="home-shortcut" ${shortcut.action ? `data-action="${shortcut.action}"` : `data-mobile-tab="${shortcut.tab}"`} aria-label="${shortcut.label}">
           <span class="home-shortcut-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${shortcut.icon}</svg>${shortcut.count ? `<span class="home-shortcut-count">${shortcut.count > 99 ? '99+' : shortcut.count}</span>` : ''}</span>
           <span>${shortcut.label}</span>
         </button>`).join('')}
       </section>
       <section class="home-summary" aria-labelledby="home-summary-title">
-        <h2 id="home-summary-title">At a glance</h2>
+        <h2 id="home-summary-title">Overview</h2>
         <div class="home-summary-grid">
-      ${dashboardCards.map((card) => `<button type="button" class="mobile-dashboard-card" data-dashboard-tone="${card.tone}" ${card.action ? `data-action="${card.action}"` : `data-mobile-tab="${card.tab}"`}>
+      ${dashboardCards.map((card) => `<button type="button" class="mobile-dashboard-card" data-dashboard-tone="${card.tone}" ${card.action ? `data-action="${card.action}"` : `data-mobile-tab="${card.tab}"`} aria-label="${card.label}: ${card.value}">
         <span class="dashboard-card-icon" aria-hidden="true">${card.icon}</span>
-        <span class="dashboard-card-label">${card.label}</span>
-        <strong>${escapeHtml(String(card.value))}</strong>
+        <div class="dashboard-card-text"><span class="dashboard-card-label">${card.label}</span><strong>${escapeHtml(String(card.value))}</strong></div>
       </button>`).join('')}
         </div>
       </section>
@@ -524,7 +530,8 @@ async function renderMobileReportForm() {
   const types = activeOutageTypes();
   const draft = state.mobileReportDraft || {};
   const step = state.mobileReportStep || 1;
-  const locationMode = state.mobileLocationMode || 'map';
+  const locationMode = state.mobileLocationMode || 'address';
+  state.mobileLocationMode = locationMode;
   const attachments = draft.attachments || [];
 
   // Default to user's registered barangay or Poblacion
@@ -537,8 +544,11 @@ async function renderMobileReportForm() {
     delete draft.location_accuracy_m;
   }
   state.mobileReportDraft = draft;
+  const locationStatus = draft.location_source && draft.latitude
+    ? `${draft.location_confirmed === 'true' ? 'Location confirmed' : 'Location needs confirmation'}: ${draft.location_source === 'gps' ? 'GPS' : 'map pin'} · ${Number(draft.latitude).toFixed(5)}, ${Number(draft.longitude).toFixed(5)}${draft.location_accuracy_m ? ` · ±${Math.round(Number(draft.location_accuracy_m))} m reported accuracy` : ''}${draft.location_confirmed === 'true' ? '' : locationMode === 'map' ? ' · Review the marker and barangay, then confirm below.' : ` · <button type="button" class="button small ghost" data-action="confirm-selected-report-barangay">Confirm selected barangay</button>`}`
+    : 'Choose Map pin to place or adjust a marker. If location services are unavailable, continue with the address fields.';
 
-  const stepNames = ['Location', 'Details', 'Evidence', 'Review'];
+  const stepNames = ['Details', 'Location', 'Evidence', 'Review'];
   const stepper = `<div class="stepper">${stepNames.map((name, index) => `
     <div class="step ${step === index + 1 ? 'active' : ''} ${step > index + 1 ? 'complete' : ''}"><span class="step-number">${step > index + 1 ? '✓' : index + 1}</span><span>${name}</span></div>
   `).join('')}</div>`;
@@ -562,14 +572,15 @@ async function renderMobileReportForm() {
         ? '<p class="possible-duplicate-clear" role="status">No similar active reports were found nearby in the last 72 hours.</p>'
         : '<p class="possible-duplicate-clear" role="status">Nearby matching is unavailable without confirmed GPS or a map pin. Staff will review your report.</p>';
 
-  if (step === 1) {
+  if (step === 2) {
     formBody = `<h2>Location</h2>
-      <p class="report-step-hint">A specific written location is required. GPS or a map pin is optional, but helps responders navigate. Barangay estimates are not used as exact report coordinates.</p>
+      <p class="report-step-hint">Choose your barangay and describe the location. Adding a map pin or GPS point is optional and can help responders find the site.</p>
       <div class="mobile-segments report-location-modes" role="group" aria-label="Location method">
-        <button type="button" class="mobile-segment ${locationMode === 'map' ? 'active' : ''}" data-action="set-report-location-mode" data-value="map">Map</button>
         <button type="button" class="mobile-segment ${locationMode === 'address' ? 'active' : ''}" data-action="set-report-location-mode" data-value="address">Address</button>
+        <button type="button" class="mobile-segment ${locationMode === 'map' ? 'active' : ''}" data-action="set-report-location-mode" data-value="map">Map pin</button>
       </div>
-      <label>Search barangay<input type="search" name="barangay" list="report-barangay-options" data-location-search placeholder="Search barangay..." value="${escapeHtml(draft.barangay || state.user?.barangay || 'Poblacion')}" required></label>
+      <label>Barangay where the interruption happened<input type="search" name="barangay" list="report-barangay-options" data-location-search placeholder="Search the official barangay list" value="${escapeHtml(draft.barangay || state.user?.barangay || 'Poblacion')}" required></label>
+      <p class="muted small">Your home barangay is preselected. Change it if the interruption happened somewhere else.</p>
       <datalist id="report-barangay-options">${state.barangays.map((barangay) => `<option value="${escapeHtml(barangay)}">`).join('')}</datalist>
       <div class="report-location-map" id="report-location-map" aria-label="Tap or drag the marker to select the outage location"></div>
       
@@ -584,22 +595,24 @@ async function renderMobileReportForm() {
         <span class="pill pill-ok" style="font-size:0.75rem;font-weight:750;">Report area</span>
       </div>
 
-      <label>📍 Specific Purok / Sitio / Landmark (Precise Location)<input name="purok" value="${escapeHtml(draft.purok || draft.affected_area || '')}" placeholder="e.g. Purok 4, Crossing, Near San Agustin Chapel" required></label>
+      <label>Specific purok or sitio <span class="muted small">(optional)</span><input name="purok" value="${escapeHtml(draft.purok || draft.affected_area || '')}" placeholder="For example: Purok 4"></label>
 
-      <label>${locationMode === 'map' ? '📍 Pinned location' : 'Street address / full location'}<input name="location" value="${escapeHtml(draft.location || '')}" placeholder="${locationMode === 'map' ? 'Tap the map or switch to Address to describe the location' : 'Purok, street, or nearby landmark'}" ${locationMode === 'map' ? 'readonly' : ''} required></label>
+      <label>${locationMode === 'map' ? 'Pinned location' : 'Location description'}<input name="location" value="${escapeHtml(draft.location || '')}" placeholder="${locationMode === 'map' ? 'Tap the map or switch to Address to describe the location' : 'Street, landmark, or directions near the outage'}" ${locationMode === 'map' ? 'readonly' : ''} required></label>
       <div class="mobile-gps">
-        <button type="button" class="button ghost block" data-action="capture-gps">📍 Use current location (GPS)</button>
+        ${locationMode === 'map' ? '<button type="button" class="button ghost block" data-action="capture-gps" aria-describedby="report-gps-help">Use current location (GPS)</button>' : ''}
         <input type="hidden" name="latitude" data-gps="latitude" value="${escapeHtml(draft.latitude || '')}">
         <input type="hidden" name="longitude" data-gps="longitude" value="${escapeHtml(draft.longitude || '')}">
         <input type="hidden" name="location_source" value="${escapeHtml(draft.location_source || '')}">
         <input type="hidden" name="location_accuracy_m" value="${escapeHtml(draft.location_accuracy_m || '')}">
         <input type="hidden" name="location_confirmed" value="${draft.location_confirmed === 'true' ? 'true' : 'false'}">
-        <span class="muted small" data-gps="status" role="status" aria-live="polite">${draft.location_source && draft.latitude ? `${draft.location_confirmed === 'true' ? 'Location confirmed' : 'Location needs confirmation'}: ${draft.location_source === 'gps' ? 'GPS' : 'map pin'} · ${Number(draft.latitude).toFixed(5)}, ${Number(draft.longitude).toFixed(5)}${draft.location_accuracy_m ? ` · ±${Math.round(Number(draft.location_accuracy_m))} m reported accuracy` : ''}${draft.location_confirmed === 'true' ? '' : ' · Review the marker and barangay, then confirm below.'}` : 'Use GPS or tap/drag the map marker. Barangay lookup uses OpenStreetMap; if it cannot identify a barangay, choose one manually. Exact coordinates are optional in Address mode.'}</span>
+        <span id="report-gps-help" class="muted small">GPS is optional. You can enter the location manually instead.</span>
+        <span class="muted small" data-gps="status" role="status" aria-live="polite">${locationStatus}</span>
       </div>
       <button type="button" class="button primary block" data-action="next-report-step">Next</button>`;
-  } else if (step === 2) {
+  } else if (step === 1) {
     formBody = `<h2>Interruption Details</h2>
-      <label>Affected area / Purok note<input name="affected_area" value="${escapeHtml(draft.affected_area || draft.purok || '')}" placeholder="Nearby streets, purok, or sitios"></label>
+      <p class="report-step-hint">Tell us when the interruption started and what you noticed. You can add the exact location next.</p>
+      <label>Other affected streets or sitios <span class="muted small">(optional)</span><input name="affected_area" value="${escapeHtml(draft.affected_area || '')}" placeholder="Areas beyond the location you entered"></label>
       <label>Date and time noticed<input type="datetime-local" name="date_time_noticed" value="${escapeHtml(draft.date_time_noticed || toLocalInputValue(new Date()))}" required></label>
       <label>Interruption type<select name="possible_outage_type"><option value="">Select a type</option>${types.map((type) => `<option ${draft.possible_outage_type === type ? 'selected' : ''}>${escapeHtml(type)}</option>`).join('')}</select></label>
       <label>Description<textarea name="description" rows="4" placeholder="Describe what happened" required>${escapeHtml(draft.description || '')}</textarea></label>
@@ -622,7 +635,7 @@ async function renderMobileReportForm() {
       <input class="visually-hidden" type="file" name="attachments" data-attachment-kind="photo" accept="image/jpeg,image/png,image/webp" capture="environment" multiple tabindex="-1" aria-hidden="true">
       <input class="visually-hidden" type="file" name="attachments" data-attachment-kind="video" accept="video/mp4,video/quicktime" capture="environment" multiple tabindex="-1" aria-hidden="true">
       <p class="report-evidence-hint">Supported: JPG, PNG, WebP, MP4, MOV (Video: 5–10 mins max, up to 50 MB)</p>
-      <button type="button" class="button primary block report-evidence-next" data-action="next-report-step">Next</button>`;
+      <div class="dual-action-row"><button type="button" class="button ghost" data-action="previous-report-step">Back</button><button type="button" class="button ghost" data-action="next-report-step">Skip evidence</button><button type="button" class="button primary block report-evidence-next" data-action="next-report-step">Next</button></div>`;
   } else {
     formBody = `<h2>Review Your Report</h2>
       ${duplicateWarning}
@@ -639,24 +652,23 @@ async function renderMobileReportForm() {
       </div>
       <form class="mobile-form" data-form="report" aria-busy="false">${hidden}<input type="hidden" name="photoData" value="${escapeHtml(draft.photoData || '')}">
         <div class="report-submit-feedback" data-form-feedback role="status" aria-live="polite" aria-atomic="true" tabindex="-1" hidden></div>
-        <div class="dual-action-row"><button type="button" class="button ghost" data-action="previous-report-step">Back</button><button class="button primary" type="submit">Submit report</button></div>
+        <div class="dual-action-row"><button type="button" class="button ghost" data-action="previous-report-step">Back</button><button class="button primary" type="submit">Confirm &amp; submit report</button></div>
       </form>
-      <p class="muted small">Reports are reviewed by authorized personnel before confirmation.</p>`;
+      <p class="report-submit-note">Check your details before submitting. Authorized personnel will review your report.</p>`;
   }
 
   mobileShell(`
-    ${step === 3 ? '' : mobileHero('Report Power Interruption', 'Share accurate details so your report can be verified.')}
-    ${step === 3 ? '' : stepper}
-    <form class="mobile-form report-step-form ${step === 3 ? 'report-evidence-step' : ''}" data-form="report" ${step === 4 ? 'hidden' : ''}>${step === 4 ? '' : formBody}</form>
+    ${mobileHero('Report Power Interruption', 'Share accurate details so your report can be verified.')}
+    ${stepper}
+    <form class="mobile-form report-step-form ${step === 3 ? 'report-evidence-step' : ''} ${step === 2 ? `location-mode-${locationMode}` : ''}" data-form="report" ${step === 4 ? 'hidden' : ''}>${step === 4 ? '' : formBody}</form>
     ${step === 4 ? formBody : ''}
   `, {
-    activeTab: 'reports',
-    showTabs: step !== 3,
-    subpageHeader: step === 3 ? { title: 'Add Evidence (Optional)', backAction: 'previous-report-step' } : null,
+    activeTab: 'report',
+    showTabs: true,
   });
 
   disposeReportLocationMap();
-  if (step === 1) {
+  if (step === 2 && locationMode === 'map') {
     await ensureLeaflet();
     const locations = state.barangayLocations || [];
     const mapElement = document.getElementById('report-location-map');
@@ -839,10 +851,20 @@ async function moveMobileReportStep(direction) {
   const form = document.querySelector('form[data-form="report"]');
   if (!form) return;
   if (direction > 0 && !form.reportValidity()) return;
-  if (direction > 0 && (state.mobileReportStep || 1) === 1) {
+  if (direction > 0 && (state.mobileReportStep || 1) === 2) {
     const values = new FormData(form);
     const latitudes = values.getAll('latitude');
     const longitudes = values.getAll('longitude');
+    const selectedBarangay = String(values.get('barangay') || '').trim();
+    const officialBarangay = state.barangays.find((barangay) => (
+      barangay.toLocaleLowerCase('en') === selectedBarangay.toLocaleLowerCase('en')
+    ));
+    if (!officialBarangay) {
+      throw new Error('Choose a barangay from the official suggestions before continuing.');
+    }
+    if (!String(values.get('location') || '').trim()) {
+      throw new Error('Describe the outage location, or add a map pin before continuing.');
+    }
     if (state.mobileLocationMode !== 'address'
       && (!['gps', 'map_pin'].includes(values.get('location_source'))
         || !latitudes.at(-1) || !longitudes.at(-1))) {
@@ -952,7 +974,7 @@ async function renderMobileOutages() {
           <button type="button" class="button ghost small" data-action="view-incident-details" data-id="${i.id}">Details &rarr;</button>
         </div>
       </section>`).join('') : `<div class="mobile-card">${emptyState('No active outages', 'There are no ongoing interruptions right now.', '⚡')}</div>`}
-  `, { activeTab: 'outages' });
+  `, { activeTab: 'home' });
 }
 
 async function renderMobileProfile() {
@@ -1683,7 +1705,8 @@ async function renderMobileNotifications() {
         : '')}
     </div>
   `, {
-    showTabs: false,
+    activeTab: 'home',
+    showTabs: true,
     subpageHeader: {
       title: 'Notifications',
       backAction: 'back-home',
@@ -1863,7 +1886,7 @@ function renderMobileNotificationSettings() {
     showTabs: false,
     subpageHeader: {
       title: 'Notifications Settings',
-      backAction: 'back-to-settings',
+      backAction: 'back-from-notification-settings',
     },
   });
 }
