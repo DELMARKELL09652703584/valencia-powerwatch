@@ -1376,6 +1376,7 @@ async function renderAdminDispatch() {
               </label>`).join('')}
             </div>` : '<p class="muted small">Create a repair team before assigning staff accounts.</p>'}
             <button type="submit" class="button secondary" style="justify-self:start;">Save staff access</button>
+            <div data-staff-membership-feedback class="admin-inline-feedback" hidden></div>
           </form>`).join('')}
         </div>
       </details>` : ''}
@@ -2645,17 +2646,41 @@ document.addEventListener('submit', async (event) => {
   event.preventDefault();
   const userId = form.dataset.userId;
   const submitButton = form.querySelector('button[type="submit"]');
+  const feedback = form.querySelector('[data-staff-membership-feedback]');
   if (!userId || !submitButton) return;
   submitButton.disabled = true;
+  submitButton.classList.add('admin-btn--loading');
+  if (feedback) {
+    feedback.hidden = true;
+    feedback.removeAttribute('open');
+  }
   try {
     const team_ids = [...form.querySelectorAll('input[name="team_ids"]:checked')].map((input) => Number(input.value));
     const barangay_names = [...form.querySelectorAll('input[name="barangay_names"]:checked')].map((input) => input.value);
     await send(`/api/admin/staff-memberships/${encodeURIComponent(userId)}`, 'PUT', { team_ids, barangay_names });
     setToast('Staff team and barangay access saved.');
+    if (feedback) {
+      feedback.textContent = 'Staff team and barangay access saved.';
+      feedback.className = 'admin-inline-feedback admin-inline-success';
+      feedback.hidden = false;
+      feedback.setAttribute('open', '');
+    }
     await render();
   } catch (error) {
+    if (feedback) {
+      feedback.textContent = error.message || 'Could not save staff team access.';
+      feedback.className = 'admin-inline-feedback admin-inline-error';
+      feedback.hidden = false;
+      feedback.setAttribute('open', '');
+    }
     setToast(error.message || 'Could not save staff team access.');
     submitButton.disabled = false;
+    submitButton.classList.remove('admin-btn--loading');
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.classList.remove('admin-btn--loading');
+    }
   }
 });
 
