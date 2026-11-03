@@ -3429,30 +3429,46 @@ body.dark-mode.admin-body .scada-card.tone-blue .scada-card-tag {
   color: #9be8f5 !important;
 }
 
-body.community-body .mobile-header:not(.mobile-home-header):not(.mobile-subpage-header):not(.mobile-auth-header) {
-  border-color: rgba(255, 255, 255, .18);
-  background: linear-gradient(118deg, #0b3558, #0b6394);
-  color: #fff;
-  box-shadow: 0 10px 26px rgba(8, 51, 88, .18);
+body.community-body:not(.dark-mode) .mobile-header {
+  border-color: #dce7ef;
+  background: rgba(255, 255, 255, .98);
+  color: #173752;
+  box-shadow: 0 4px 18px rgba(24, 54, 81, .08);
 }
 
-body.community-body .mobile-header:not(.mobile-home-header):not(.mobile-subpage-header):not(.mobile-auth-header) .mobile-header-brand strong,
-body.community-body .mobile-header:not(.mobile-home-header):not(.mobile-subpage-header):not(.mobile-auth-header) .mobile-header-brand b {
-  color: #fff !important;
+body.community-body:not(.dark-mode) .mobile-header :is(.mobile-header-brand strong, .mobile-header-brand b, .mobile-home-greeting strong, .mobile-header-title) {
+  color: #173752;
 }
 
-body.community-body .mobile-home-header .mobile-home-greeting strong {
-  color: #fff !important;
+body.community-body:not(.dark-mode) .mobile-home-greeting > span {
+  color: #647b90;
 }
 
-body.community-body .mobile-subpage-header .mobile-header-title {
-  color: #fff !important;
+body.community-body:not(.dark-mode) .mobile-header :is(.mobile-theme-toggle, .mobile-lang-chip, .mobile-bell, .mobile-header-back, .mobile-install-button) {
+  border-color: #d8e4ed;
+  background: #f5f9fc;
+  color: #294b66;
 }
 
-body.community-body .mobile-header:not(.mobile-home-header):not(.mobile-subpage-header):not(.mobile-auth-header) .mobile-theme-toggle {
-  border-color: rgba(255, 255, 255, .3);
-  background: rgba(255, 255, 255, .12);
-  color: #fff !important;
+body.community-body:not(.dark-mode) .mobile-header .mobile-install-button {
+  border-color: #c8dff0;
+  background: #edf6fd;
+  color: #145b91;
+}
+
+body.dark-mode.community-body .mobile-header {
+  border-color: #263c55;
+  background: rgba(13, 25, 44, .98);
+  color: #e8f1ff;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .24);
+}
+
+body.dark-mode.community-body .mobile-header :is(.mobile-header-brand strong, .mobile-header-brand b, .mobile-home-greeting strong, .mobile-header-title) {
+  color: #f1f5ff !important;
+}
+
+body.dark-mode.community-body .mobile-home-greeting > span {
+  color: #b6c8dd !important;
 }
 
 

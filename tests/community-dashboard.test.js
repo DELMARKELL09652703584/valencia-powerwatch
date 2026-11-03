@@ -100,7 +100,7 @@ test('resident navigation exposes reporting, announcements, and outage history',
   assert.match(mainScript, /case 'open-announcements':\s*state\.mobileNotificationCategory = 'announcements';\s*await goToTab\('notifications'\)/);
   assert.match(mainScript, /data-action="retry-current-tab"/);
   assert.match(mainScript, /case 'retry-current-tab':\s*await goToTab\(state\.mobileTab\)/);
-  assert.match(communityPage, /portal-polish\.css\?v=81/);
+  assert.match(communityPage, /portal-polish\.css\?v=82/);
   assert.match(communityPage, /community\.js\?v=46/);
   assert.match(communityPage, /main\.js\?v=47/);
   assert.match(mainScript, /coordinates shown above will be included with your location description/);
