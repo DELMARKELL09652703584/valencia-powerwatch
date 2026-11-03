@@ -365,11 +365,7 @@ body.community-body .empty-state p {
     margin-inline: auto;
   }
 
-  body.community-body #app > .mobile-shell .mobile-phone-status-bar {
-    display: none;
-  }
-
-  body.community-body #app > .mobile-shell .mobile-content {
+body.community-body #app > .mobile-shell .mobile-content {
     width: 100%;
     max-width: none;
     padding-inline: clamp(24px, 5vw, 64px);

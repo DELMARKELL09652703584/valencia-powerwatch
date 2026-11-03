@@ -187,8 +187,8 @@ test('route guide is draggable, viewport-bounded, collapsible, and remembers its
   assert.match(coreScript, /data-action="sim-crew-dispatch"/);
   assert.match(coreScript, /<span>🚀 Crew Tracker<\/span>/);
   assert.match(coreScript, /data-action="clear-route-guide"/);
-  assert.match(adminPage, /\/client\/js\/shared\/core\.js\?v=23/);
-  assert.match(communityPage, /\/client\/js\/shared\/core\.js\?v=23/);
+  assert.match(adminPage, /\/client\/js\/shared\/core\.js\?v=24/);
+  assert.match(communityPage, /\/client\/js\/shared\/core\.js\?v=24/);
 });
 
 test('route guide card is compact while keeping actions easy to tap', () => {
@@ -245,9 +245,9 @@ test('staff checkbox accent uses a defined token and refreshed shell assets', ()
   const staffWorker = fs.readFileSync(path.join(ROOT, 'client', 'pwa', 'staff-sw.js'), 'utf8');
 
   assert.match(styles, /accent-color:\s*var\(--staff-blue,\s*#1675df\);/);
-  assert.match(staffPage, /\/client\/css\/staff\.css\?v=14/);
+  assert.match(staffPage, /\/client\/css\/staff\.css\?v=16/);
   assert.match(staffPage, /\/client\/js\/staff\/staff\.js\?v=17/);
-  assert.match(staffWorker, /\/client\/css\/staff\.css\?v=14/);
+  assert.match(staffWorker, /\/client\/css\/staff\.css\?v=16/);
   assert.match(staffWorker, /\/client\/js\/staff\/staff\.js\?v=17/);
 });
 

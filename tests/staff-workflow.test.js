@@ -10,7 +10,7 @@ const { DatabaseSync } = require('node:sqlite');
 
 const ROOT = path.resolve(__dirname, '..');
 const TEST_TIMEOUT_MS = 30000;
-const testAdminEmail = 'dsaroay@gmail.com';
+const testAdminEmail = 'DELMARKEL SARO-AY';
 const testAdminPassword = `${crypto.randomUUID()}Aa1!`;
 const OFFICIAL_VALENCIA_BARANGAYS = [
   'Bagontaas', 'Banlag', 'Barobo', 'Batangan', 'Catumbalon', 'Colonia',
@@ -64,9 +64,9 @@ test('Staff portal shows report times, recent field updates, and accurate assign
   assert.match(staffStyles, /\.staff-quick-nav\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/s);
   assert.match(staffStyles, /\.staff-stats\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/s);
   assert.match(staffPage, /\/client\/js\/staff\/staff\.js\?v=17/);
-  assert.match(staffPage, /\/client\/css\/staff\.css\?v=14/);
+  assert.match(staffPage, /\/client\/css\/staff\.css\?v=16/);
   assert.match(serviceWorker, /\/client\/js\/staff\/staff\.js\?v=17/);
-  assert.match(serviceWorker, /\/client\/css\/staff\.css\?v=14/);
+  assert.match(serviceWorker, /\/client\/css\/staff\.css\?v=16/);
   assert.match(staffStyles, /\.staff-login-page\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*100vh;[^}]*min-height:\s*100svh;[^}]*min-height:\s*100dvh;[^}]*align-content:\s*safe center;[^}]*env\(safe-area-inset-top\)/s);
   assert.match(staffStyles, /@media \(max-height:\s*760px\)\s*\{\s*\.staff-login-page\s*\{[^}]*align-content:\s*start;/s);
   assert.match(staffStyles, /@media \(max-width:\s*380px\)\s*\{\s*\.staff-login-page\s*\{/s);
@@ -177,6 +177,13 @@ before(async () => {
       POWERWATCH_ADMIN_EMAIL: testAdminEmail,
       POWERWATCH_ADMIN_PASSWORD: testAdminPassword,
       POWERWATCH_ADMIN_NAME: 'Isolated Test Administrator',
+      PUBLIC_BASE_URL: 'https://powerwatch.test',
+      SMTP_HOST: 'smtp.test.invalid',
+      SMTP_PORT: '587',
+      SMTP_USER: 'test-mailer',
+      SMTP_PASSWORD: 'test-mailer-password',
+      SMTP_FROM: 'no-reply@powerwatch.test',
+      POWERWATCH_TEST_MAIL_CAPTURE: path.join(testDirectory, 'mail-capture.log'),
       GOOGLE_CLIENT_ID: '',
       GOOGLE_CLIENT_SECRET: '',
       FACEBOOK_CLIENT_ID: '',
@@ -359,7 +366,7 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
     fetch(`${baseUrl}/community`),
     fetch(`${baseUrl}/manifest.json`),
     fetch(`${baseUrl}/sw.js`),
-    fetch(`${baseUrl}/client/css/staff.css?v=14`),
+    fetch(`${baseUrl}/client/css/staff.css?v=16`),
     fetch(`${baseUrl}/client/js/staff/staff.js?v=17`),
     fetch(`${baseUrl}/client/js/staff/staff-pwa-update.js?v=1`),
     Promise.all([
@@ -437,7 +444,7 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
   const workerSource = await workerResponse.text();
   const shellAssets = workerSource.match(/const STAFF_SHELL = \[[\s\S]*?\];/)?.[0] || '';
   assert.doesNotMatch(shellAssets, /\/api\/|\/admin/);
-  assert.match(shellAssets, /staff\.css\?v=14/);
+  assert.match(shellAssets, /staff\.css\?v=16/);
   assert.match(shellAssets, /staff\.js\?v=17/);
   assert.match(shellAssets, /staff-pwa-update\.js\?v=1/);
   const communityWorkerSource = await communityWorkerResponse.text();
@@ -629,21 +636,30 @@ test('built-in administrator account remains active and protected from account c
     current_password: testAdminPassword,
     new_password: temporaryAdminPassword,
   });
-  assert.equal(selfPasswordChange.status, 200);
-  const selfPasswordRestore = await jsonRequest('/api/profile/password', adminCookie, 'PUT', {
-    current_password: temporaryAdminPassword,
-    new_password: testAdminPassword,
-  });
-  assert.equal(selfPasswordRestore.status, 200);
+  assert.equal(selfPasswordChange.status, 403);
 
   assert.equal(builtInUser.role, 'administrator');
   assert.equal(builtInUser.status, 'Active');
+  assert.equal(builtInUser.username, testAdminEmail);
+  assert.equal(builtInUser.is_built_in_admin, true);
+  assert.equal((await login(testAdminEmail, testAdminPassword, 'admin')).user.email, testAdminEmail);
 
   const reservedAccounts = await Promise.all([
     jsonRequest('/api/auth/register', '', 'POST', {
       full_name: 'Reserved Username Attempt',
       email: `reserved-username-${Date.now()}@example.test`,
       username: 'DELMARKEL2003',
+      password: 'resident-password-123',
+    }),
+    jsonRequest('/api/auth/register', '', 'POST', {
+      full_name: 'Reserved Canonical Login Attempt',
+      email: `reserved-login-${Date.now()}@example.test`,
+      username: testAdminEmail,
+      password: 'resident-password-123',
+    }),
+    jsonRequest('/api/auth/register', '', 'POST', {
+      full_name: 'Reserved Recovery Email Attempt',
+      email: 'dsaro-ay@aclcbukidnon.com',
       password: 'resident-password-123',
     }),
     jsonRequest('/api/auth/register', '', 'POST', {
@@ -1150,6 +1166,38 @@ test('clean reset requires a verified backup, keeps only the selected admin, and
   const freshAssignments = await jsonRequest('/api/staff/assignments', staffCookie);
   assert.equal(freshAssignments.status, 200);
   assert.equal((await freshAssignments.json()).assignments.length, 1);
+});
+
+test('built-in administrator recovers a password through the protected recovery email', { timeout: TEST_TIMEOUT_MS }, async () => {
+  const recoveryEmail = 'dsaro-ay@aclcbukidnon.com';
+  const capturePath = path.join(testDirectory, 'mail-capture.log');
+  if (fs.existsSync(capturePath)) fs.rmSync(capturePath);
+
+  const forgotResponse = await jsonRequest('/api/auth/forgot-password', '', 'POST', { email: recoveryEmail });
+  assert.equal(forgotResponse.status, 200);
+  const forgot = await forgotResponse.json();
+  assert.match(forgot.message, /recovery email/);
+  assert.ok(fs.existsSync(capturePath), 'recovery email should be captured');
+
+  const captured = fs.readFileSync(capturePath, 'utf8').trim().split(/\r?\n/).map((line) => JSON.parse(line));
+  assert.equal(captured.length, 1);
+  assert.equal(captured[0].to, recoveryEmail);
+  assert.equal(captured[0].from, 'no-reply@powerwatch.test');
+  const match = captured[0].text.match(/https:\/\/powerwatch\.test\/admin\?reset=([^\s]+)/);
+  assert.ok(match, 'built-in reset links should open the admin portal');
+  const resetToken = decodeURIComponent(match[1]);
+
+  const newAdminPassword = `${crypto.randomUUID()}Cc3!`;
+  const resetResponse = await jsonRequest('/api/auth/reset-password', '', 'POST', {
+    token: resetToken,
+    password: newAdminPassword,
+  });
+  assert.equal(resetResponse.status, 200);
+  assert.equal((await jsonRequest('/api/auth/me', adminCookie)).status, 401);
+  assert.equal((await login(testAdminEmail, testAdminPassword, 'admin')).status, 401);
+  const recoveredLogin = await login(testAdminEmail, newAdminPassword, 'admin');
+  assert.equal(recoveredLogin.user.email, testAdminEmail);
+  assert.equal(recoveredLogin.user.is_built_in_admin, true);
 });
 
 test('Staff portal UX includes loading states, inline feedback, and scannable assignment cards', () => {
