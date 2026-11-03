@@ -1066,6 +1066,14 @@ function computeReportProgressStage(report) {
 }
 
 async function renderMobileReports() {
+  mobileShell(`
+    ${mobileHero(t('my_reports', 'My Reports'), t('my_reports_sub', 'Track reports you have submitted and their verification status.'))}
+    <div class="mobile-loading" style="margin-top:16px;">
+      <div class="mobile-loading-spinner"></div>
+      <p class="mobile-loading-text">Loading your reports…</p>
+    </div>
+  `, { activeTab: 'reports' });
+
   const [{ reports }, { history }] = await Promise.all([
     api('/api/reports/mine'),
     api('/api/history'),
@@ -1238,6 +1246,14 @@ async function renderMobileReportDetail() {
 }
 
 async function renderMobileMap() {
+  mobileShell(`
+    ${mobileHero('Power Outage Map', 'Explore active interruption locations and your submitted reports across Valencia City.')}
+    <div class="mobile-loading" style="margin-top:16px;">
+      <div class="mobile-loading-spinner"></div>
+      <p class="mobile-loading-text">Loading map data…</p>
+    </div>
+  `, { activeTab: 'map' });
+
   const [{ incidents }, { scheduled }, { reports = [] }, { reports: myReports = [] }] = await Promise.all([
     api('/api/incidents'),
     api('/api/scheduled/upcoming'),

@@ -358,6 +358,18 @@ body.community-body .empty-state p {
   line-height: 1.5;
 }
 
+body.dark-mode.community-body .empty-state {
+  color: #a8bbd3;
+}
+
+body.dark-mode.community-body .empty-state h3 {
+  color: #e8f1ff;
+}
+
+body.dark-mode.community-body .empty-state p {
+  color: #c1d0e4;
+}
+
 @media (min-width: 760px) {
   body.community-body #app > .mobile-shell {
     width: min(100%, 1120px);
@@ -887,7 +899,7 @@ button:disabled {
 }
 
 .community-body .mobile-content {
-  padding-top: max(14px, env(safe-area-inset-top));
+  padding-top: max(20px, env(safe-area-inset-top));
   padding-bottom: calc(98px + env(safe-area-inset-bottom));
 }
 
@@ -3410,6 +3422,18 @@ body.dark-mode.admin-body .scada-card.tone-blue .scada-card-tag {
   border-color: rgba(103, 232, 249, .34) !important;
   background: #112d47 !important;
   color: #9be8f5 !important;
+}
+
+body.community-body .mobile-header:not(.mobile-home-header):not(.mobile-subpage-header):not(.mobile-auth-header) {
+  border-bottom-color: rgba(255, 255, 255, .18);
+  background: linear-gradient(115deg, #0d3b66 0%, #0a5d94 55%, #0e7ea0 100%);
+  color: #fff;
+  box-shadow: 0 10px 26px rgba(8, 51, 88, .18);
+}
+
+body.community-body .mobile-header:not(.mobile-home-header):not(.mobile-subpage-header):not(.mobile-auth-header) .mobile-header-brand strong,
+body.community-body .mobile-header:not(.mobile-home-header):not(.mobile-subpage-header):not(.mobile-auth-header) .mobile-header-brand b {
+  color: #fff;
 }
 
 
