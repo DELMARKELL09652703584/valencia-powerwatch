@@ -1194,7 +1194,8 @@ test('built-in administrator recovers a password through the protected recovery 
   });
   assert.equal(resetResponse.status, 200);
   assert.equal((await jsonRequest('/api/auth/me', adminCookie)).status, 401);
-  assert.equal((await login(testAdminEmail, testAdminPassword, 'admin')).status, 401);
+  const oldLogin = await jsonRequest('/api/auth/login', '', 'POST', { email: testAdminEmail, password: testAdminPassword, portal: 'admin' });
+  assert.equal(oldLogin.status, 401);
   const recoveredLogin = await login(testAdminEmail, newAdminPassword, 'admin');
   assert.equal(recoveredLogin.user.email, testAdminEmail);
   assert.equal(recoveredLogin.user.is_built_in_admin, true);
