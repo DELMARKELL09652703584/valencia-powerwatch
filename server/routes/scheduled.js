@@ -1,6 +1,6 @@
 const express = require('express');
 const { db, now, nextCode } = require('../db');
-const { requireAuth, requireRole, audit, notifyRole, notifyAllResidents } = require('../auth');
+const { requireAuth, requireRole, audit, notifyRole, notifyAllResidents } = require('../middleware/auth');
 
 const router = express.Router();
 

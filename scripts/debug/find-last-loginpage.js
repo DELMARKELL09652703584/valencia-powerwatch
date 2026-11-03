@@ -1,0 +1,11 @@
+const fs=require('fs');
+const m=fs.readFileSync('app/main.js','utf8');
+const idx = m.indexOf('function renderLogin');
+const idx2 = m.indexOf('function renderAdminRestrictedAccess');
+const func = m.substring(idx, idx2);
+const last = func.lastIndexOf('login-page');
+console.log(last);
+console.log(func.substring(last-40, last+500));
+console.log('---');
+const sync = func.indexOf('syncOAuthProviderControls()', last);
+if(sync>=0) console.log(func.substring(sync, sync+60));

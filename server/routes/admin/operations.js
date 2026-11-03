@@ -5,8 +5,8 @@ const os = require('node:os');
 const crypto = require('node:crypto');
 const { DatabaseSync } = require('node:sqlite');
 const { db, now, DB_PATH, UPLOAD_DIR, VALENCIA_BARANGAYS } = require('../../db');
-const { requireAuth, requireRole, audit, isBuiltInAdmin } = require('../../auth');
-const { hashSessionToken } = require('../../session-token');
+const { requireAuth, requireRole, audit, isBuiltInAdmin } = require('../../middleware/auth');
+const { hashSessionToken } = require('../../middleware/session-token');
 
 const router = express.Router();
 

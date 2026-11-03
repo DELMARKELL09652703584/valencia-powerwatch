@@ -2,6 +2,7 @@
 .env.*
 !.env.example
 node_modules/
+.kilo/
 cloudflared.exe
 *.log
 public-url.txt

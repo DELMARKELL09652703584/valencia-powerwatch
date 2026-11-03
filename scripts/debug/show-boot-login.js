@@ -1,0 +1,13 @@
+const fs=require('fs');
+const m=fs.readFileSync('app/main.js','utf8');
+const boot = m.indexOf('async function boot');
+const end = m.indexOf('document.addEventListener', boot);
+const b = m.substring(boot, end);
+const idx = b.indexOf('renderLogin()');
+console.log(b.substring(idx-80, idx+80));
+console.log('---');
+const idx2 = b.indexOf('renderWelcomeScreen()');
+if(idx2>=0) console.log(b.substring(idx2-40, idx2+40));
+console.log('---');
+const idx3 = b.indexOf('renderAdminRestrictedAccess()');
+if(idx3>=0) console.log(b.substring(idx3-40, idx3+40));

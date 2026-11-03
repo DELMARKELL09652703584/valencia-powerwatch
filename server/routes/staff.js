@@ -4,9 +4,9 @@ const path = require('node:path');
 const multer = require('multer');
 const express = require('express');
 const { db, DB_PATH, now } = require('../db');
-const { requireAuth, requireRole, audit, notifyUsers } = require('../auth');
-const { recordReportEvent, recordReportStatusChange } = require('../report-events');
-const { normalizeBarangayName } = require('../staff-access');
+const { requireAuth, requireRole, audit, notifyUsers } = require('../middleware/auth');
+const { recordReportEvent, recordReportStatusChange } = require('../services/report-events');
+const { normalizeBarangayName } = require('../middleware/staff-access');
 
 const router = express.Router();
 const evidenceDirectory = path.join(path.dirname(DB_PATH), 'staff-evidence');

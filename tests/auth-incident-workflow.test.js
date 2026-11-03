@@ -137,7 +137,7 @@ after(async () => {
 });
 
 test('private data and server source are not exposed as static files', { timeout: TEST_TIMEOUT_MS }, async () => {
-  for (const pathname of ['/data/powerwatch.db', '/data/powerwatch.db-wal', '/server/auth.js', '/package.json', '/render.yaml']) {
+  for (const pathname of ['/data/powerwatch.db', '/data/powerwatch.db-wal', '/server/middleware/auth.js', '/package.json', '/render.yaml']) {
     const response = await fetch(`${baseUrl}${pathname}`);
     assert.equal(response.status, 404, `${pathname} must not be publicly accessible`);
   }

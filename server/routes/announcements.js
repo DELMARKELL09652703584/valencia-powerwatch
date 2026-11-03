@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { db, now, UPLOAD_DIR } = require('../db');
-const { requireAuth, requireRole, audit, notifyAllActive } = require('../auth');
+const { requireAuth, requireRole, audit, notifyAllActive } = require('../middleware/auth');
 
 const router = express.Router();
 

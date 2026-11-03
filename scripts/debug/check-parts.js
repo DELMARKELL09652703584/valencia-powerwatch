@@ -1,0 +1,13 @@
+const fs=require('fs');
+const m=fs.readFileSync('app/main.js','utf8');
+const idx = m.indexOf('function renderLogin');
+const idx2 = m.indexOf('function renderAdminRestrictedAccess');
+const func = m.substring(idx, idx2);
+const parts = func.split('app.innerHTML');
+console.log(parts[1].includes('IS_COMMUNITY'));
+console.log(parts[1].includes('return'));
+console.log(parts[1].lastIndexOf('}'));
+console.log(parts[2].indexOf('if'));
+console.log(parts[2].indexOf('IS_ADMIN'));
+console.log(parts[2].includes('IS_COMMUNITY'));
+console.log(parts[2].includes('IS_ADMIN'));

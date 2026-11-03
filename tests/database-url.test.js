@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { test } = require('node:test');
-const { getDatabaseUrl } = require('../server/database-url');
+const { getDatabaseUrl } = require('../server/config/database-url');
 
 const ROOT = path.resolve(__dirname, '..');
 

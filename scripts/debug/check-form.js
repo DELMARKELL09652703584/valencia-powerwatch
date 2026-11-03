@@ -1,0 +1,11 @@
+const fs = require('fs');
+const main = fs.readFileSync('app/main.js','utf8');
+const idx = main.indexOf('function renderLogin');
+const idx2 = main.indexOf('function renderAdminRestrictedAccess');
+const func = main.substring(idx, idx2);
+console.log(func.includes('form-stack'));
+console.log(func.includes('data-form="login"'));
+console.log(func.includes('name="password"'));
+console.log(func.includes('name="email"'));
+console.log(func.match(/<form/g)?.length);
+console.log(func.match(/<input/g)?.length);

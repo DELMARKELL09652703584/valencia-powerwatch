@@ -1,0 +1,13 @@
+const fs=require('fs');
+const m=fs.readFileSync('app/main.js','utf8');
+const idx = m.indexOf('function renderLogin');
+const idx2 = m.indexOf('function renderAdminRestrictedAccess');
+const func = m.substring(idx, idx2);
+const parts = func.split('app.innerHTML');
+console.log(parts[1].slice(-200));
+console.log('===SEP===');
+console.log(func.substring(parts[0].length + 15 + parts[1].length, parts[0].length + 15 + parts[1].length + 80));
+console.log('===SEP2===');
+console.log(func.substring(parts[0].length + 15 + parts[1].length, parts[0].length + 15 + parts[1].length + 200));
+console.log('===SEP3===');
+console.log(func.substring(parts[0].length + 15 + parts[1].length + 50, parts[0].length + 15 + parts[1].length + 150));

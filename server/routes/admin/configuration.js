@@ -1,6 +1,6 @@
 const express = require('express');
 const { db, VALENCIA_BARANGAYS } = require('../../db');
-const { requireAuth, requireRole, audit } = require('../../auth');
+const { requireAuth, requireRole, audit } = require('../../middleware/auth');
 
 const router = express.Router();
 

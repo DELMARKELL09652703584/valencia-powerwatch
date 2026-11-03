@@ -1,0 +1,10 @@
+const fs = require('fs');
+const p = 'app/main.js';
+let c = fs.readFileSync(p, 'utf8');
+console.log(c.includes('password'));
+console.log(c.includes('type="password"'));
+console.log((c.match(/name="password"/g)||[]).length);
+console.log(c.includes('renderLogin'));
+console.log(c.includes('/api/auth/login'));
+console.log(c.includes('loginForm'));
+console.log(c.includes('data-form="login"'));

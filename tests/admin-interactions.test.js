@@ -6,8 +6,8 @@ const { test } = require('node:test');
 const ROOT = path.resolve(__dirname, '..');
 
 test('SCADA Verify in Queue dismisses its banner and opens the verification queue', () => {
-  const adminScript = fs.readFileSync(path.join(ROOT, 'app', 'admin.js'), 'utf8');
-  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+  const adminScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'admin', 'admin.js'), 'utf8');
+  const mainScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
   const button = adminScript.match(/<button[^>]*class="button small primary scada-banner-cta"[^>]*>[\s\S]*?Verify in Queue[\s\S]*?<\/button>/)?.[0];
 
   assert.ok(button);
@@ -17,9 +17,9 @@ test('SCADA Verify in Queue dismisses its banner and opens the verification queu
 });
 
 test('Admin portal UX includes loading states and inline feedback for async actions', () => {
-  const adminStyles = fs.readFileSync(path.join(ROOT, 'app', 'admin-theme.css'), 'utf8');
-  const adminApp = fs.readFileSync(path.join(ROOT, 'app', 'admin.js'), 'utf8');
-  const mainApp = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+  const adminStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'admin-theme.css'), 'utf8');
+  const adminApp = fs.readFileSync(path.join(ROOT, 'client', 'js', 'admin', 'admin.js'), 'utf8');
+  const mainApp = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
 
   // Loading state styles
   assert.match(adminStyles, /\.admin-btn--loading\s*\{/s);
@@ -65,13 +65,13 @@ test('Admin portal UX includes loading states and inline feedback for async acti
 });
 
 test('refreshConfig requests settings from /api/auth/settings, not /api/settings', () => {
-  const mainApp = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+  const mainApp = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
   assert.match(mainApp, /api\('\/api\/auth\/settings'\)/);
   assert.doesNotMatch(mainApp, /api\('\/api\/settings'\)/);
 });
 
 test('delete-announcement disables the delete-announcement button, not announcement-status', () => {
-  const mainApp = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+  const mainApp = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
   assert.match(mainApp, /case 'delete-announcement':/);
   const deleteBlock = mainApp.match(/case 'delete-announcement':[\s\S]*?case 'new-user':/)?.[0];
   assert.ok(deleteBlock, 'delete-announcement case block found');

@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const { resolveBarangay } = require('../server/location-geocoder');
+const { resolveBarangay } = require('../server/services/location-geocoder');
 
 const barangays = ['Poblacion', 'Barobo', 'Batangan'];
 

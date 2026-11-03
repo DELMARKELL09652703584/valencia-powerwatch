@@ -7,9 +7,9 @@ const { test } = require('node:test');
 const ROOT = path.resolve(__dirname, '..');
 
 test('community dashboard keeps personal notifications out of the home feed', () => {
-  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
-  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
-  const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
   const homeRendererStart = communityScript.indexOf('async function renderMobileHome()');
   const homeRendererEnd = communityScript.indexOf('\nasync function renderMobileReportForm()', homeRendererStart);
   const homeRenderer = communityScript.slice(homeRendererStart, homeRendererEnd);
@@ -18,9 +18,9 @@ test('community dashboard keeps personal notifications out of the home feed', ()
   assert.ok(homeRendererEnd > homeRendererStart);
   assert.doesNotMatch(homeRenderer, /\/api\/(?:notifications|announcements)/);
   assert.doesNotMatch(communityScript, /class="recent-updates"/);
-  assert.match(communityPage, /\/app\/community\.js\?v=\d+/);
-  assert.match(communityPage, /\/app\/main\.js\?v=\d+/);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=\d+/);
+  assert.match(communityPage, /\/client\/js\/community\/community\.js\?v=\d+/);
+  assert.match(communityPage, /\/client\/js\/shared\/main\.js\?v=\d+/);
+  assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
   assert.match(communityPage, /\/style\.css\?v=47/);
   assert.match(portalStyles, /body\.community-body \.home-report-action\s*\{/);
   assert.match(portalStyles, /body\.community-body \.home-track-action svg\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;[^}]*fill:\s*none;/s);
@@ -28,8 +28,8 @@ test('community dashboard keeps personal notifications out of the home feed', ()
 });
 
 test('community outage list keeps barangay scope and supports an explicit city-wide view', () => {
-  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
-  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const mainScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
   const helperStart = communityScript.indexOf('function filterMobileIncidentsByBarangay(');
   const helperEnd = communityScript.indexOf('\nasync function renderMobileOutages()', helperStart);
   const helperSource = communityScript.slice(helperStart, helperEnd);
@@ -52,8 +52,8 @@ test('community outage list keeps barangay scope and supports an explicit city-w
 });
 
 test('report submission announces progress and errors without discarding the draft', () => {
-  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
-  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const mainScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
   const submitHandlerStart = mainScript.indexOf("document.addEventListener('submit', async (event) => {");
   const submitHandlerEnd = mainScript.indexOf("\ndocument.addEventListener('change', async (event) => {", submitHandlerStart);
   const submitHandler = mainScript.slice(submitHandlerStart, submitHandlerEnd);
@@ -75,8 +75,8 @@ test('report submission announces progress and errors without discarding the dra
 });
 
 test('home report action shows a visible label and retains an accessible name', () => {
-  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
-  const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
   const homeStart = communityScript.indexOf('async function renderMobileHome()');
   const homeEnd = communityScript.indexOf('\nasync function renderMobileReportForm()', homeStart);
   const homeRenderer = communityScript.slice(homeStart, homeEnd);
@@ -86,7 +86,7 @@ test('home report action shows a visible label and retains an accessible name', 
   assert.ok(homeEnd > homeStart);
   assert.match(homeRenderer, /class="home-report-action(?:\s+[^"]*)?" data-mobile-tab="report" aria-label="Report a power interruption" title="Report a power interruption"/);
   assert.ok(reportButton);
-  assert.match(reportButton, /<svg class="home-report-icon" viewBox="0 0 24 24" aria-hidden="true"/);
+  assert.match(reportButton, /\$\{mobileIcon\('report', 24\)\}/);
   assert.match(reportButton, /<span class="home-report-label">Report outage<\/span>/);
   assert.doesNotMatch(reportButton, /home-action-arrow|<small>/);
   assert.match(portalStyles, /body\.community-body \.home-report-label\s*\{[^}]*font-size:\s*15px;[^}]*font-weight:\s*750;/s);
@@ -94,9 +94,9 @@ test('home report action shows a visible label and retains an accessible name', 
 });
 
 test('resident navigation exposes reporting, announcements, and outage history', () => {
-  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
-  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
-  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const mainScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
 
   assert.match(communityScript, /key: 'report',\s*label: 'Report'/);
   assert.match(communityScript, /label: 'Announcements'.*action: 'open-announcements'/);
@@ -117,8 +117,8 @@ test('resident navigation exposes reporting, announcements, and outage history',
 });
 
 test('report form starts with a text location and offers the map as an alternative', () => {
-  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
-  const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
 
   assert.match(communityScript, /const locationMode = state\.mobileLocationMode \|\| 'address';/);
   assert.match(communityScript, /location-mode-\$\{locationMode\}/);
@@ -140,8 +140,8 @@ test('report form starts with a text location and offers the map as an alternati
 });
 
 test('community map uses exact outage coordinates and functional base-layer controls', () => {
-  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
-  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const mainScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
   const mapStart = communityScript.indexOf('async function renderMobileMap()');
   const mapEnd = communityScript.indexOf('\nfunction filterMobileNotifications', mapStart);
   const mapRenderer = communityScript.slice(mapStart, mapEnd);
@@ -161,15 +161,15 @@ test('community map uses exact outage coordinates and functional base-layer cont
 });
 
 test('community report location remains readable in Night Ops mode', () => {
-  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
-  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
-  const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
 
   assert.match(communityScript, /class="stepper"/);
   assert.match(communityScript, /id="report-assigned-barangay-badge"/);
   assert.match(communityScript, /id="assigned-barangay-name"/);
   assert.match(communityScript, /class="mobile-gps"/);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=\d+/);
+  assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.stepper \.step > span:last-child\s*\{[^}]*color:\s*var\(--pw-body\)\s*!important;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.stepper \.step\.active \.step-number\s*\{[^}]*background:\s*var\(--pw-primary\);/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body #report-assigned-barangay-badge\s*\{[^}]*background:\s*#10352b\s*!important;/s);
@@ -177,44 +177,44 @@ test('community report location remains readable in Night Ops mode', () => {
 });
 
 test('community report review notices have readable Night Ops colors', () => {
-  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
-  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
-  const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
 
   assert.match(communityScript, /class="possible-duplicate-notice is-unavailable"/);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.possible-duplicate-notice\.is-unavailable\s*\{[^}]*background:\s*#3a211e\s*!important;[^}]*color:\s*#ffd2c8\s*!important;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.possible-duplicate-notice\.is-unavailable p\s*\{[^}]*color:\s*#f0c9c0\s*!important;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.possible-duplicate-notice,\s*body\.dark-mode\.community-body \.possible-duplicate-clear\s*\{[^}]*background:\s*#332a1a\s*!important;/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=\d+/);
+  assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
 });
 
 test('community report review keeps the Back button label visible in both themes', () => {
-  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
-  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
-  const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
 
   assert.match(communityScript, /class="button ghost" data-action="previous-report-step">Back<\/button>/);
   assert.match(portalStyles, /body\.community-body \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\):not\(\.report-evidence-picker\),\s*body\.community-body \.mobile-auth-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)\s*\{\s*color:\s*#fff\s*!important;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\):not\(\.report-evidence-picker\),\s*body\.dark-mode\.community-body \.mobile-auth-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)\s*\{/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \:is\(\.button\.primary, \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\):not\(\.report-evidence-picker\), \.mobile-auth-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)\)\s*\{/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=\d+/);
+  assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
 });
 
 test('community report location method buttons retain their theme colors', () => {
-  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
-  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
-  const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
 
   assert.match(communityScript, /class="mobile-segment \$\{locationMode === 'map' \? 'active' : ''\}" data-action="set-report-location-mode" data-value="map">Map pin<\/button>/);
   assert.match(communityScript, /class="mobile-segment \$\{locationMode === 'address' \? 'active' : ''\}" data-action="set-report-location-mode" data-value="address">Address<\/button>/);
   assert.match(portalStyles, /body\.community-body \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)/);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-form button:not\(\.button\.ghost\):not\(\.button\.secondary\):not\(\.mobile-segment\)/);
   assert.match(portalStyles, /body\.community-body \.mobile-tab\.active,\s*body\.community-body \.mobile-segment\.active\s*\{[^}]*color:\s*var\(--pw-primary\);/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=\d+/);
+  assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
 });
 
 test('community home greeting stays legible over the Night Ops header', () => {
-  const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
 
   assert.match(portalStyles, /body\.community-body \.mobile-home-greeting > span\s*\{[^}]*color:\s*#e4f0fc !important;/s);
   assert.match(portalStyles, /body\.community-body \.mobile-home-greeting strong\s*\{[^}]*color:\s*#fff !important;/s);
@@ -223,10 +223,10 @@ test('community home greeting stays legible over the Night Ops header', () => {
 });
 
 test('report details activity, ETR, and feedback remain readable in Night Ops mode', () => {
-  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
-  const baseStyles = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
-  const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
-  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const baseStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'style.css'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
 
   assert.match(communityScript, /class="mobile-etr-badge is-restored"/);
   assert.match(communityScript, /class="mobile-etr-badge is-pending"/);
@@ -236,12 +236,12 @@ test('report details activity, ETR, and feedback remain readable in Night Ops mo
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-etr-badge\.is-restored\s*\{[^}]*background:\s*#0d302b;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.report-feedback-question,\s*body\.dark-mode\.community-body \.report-feedback-rating-label\s*\{[^}]*color:\s*var\(--pw-text\);/s);
   assert.match(communityPage, /\/style\.css\?v=47/);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=\d+/);
+  assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
 });
 
 test('community notification panel preserves readable text in Light and Night Ops themes', () => {
-  const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
-  const baseStyles = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
+  const baseStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'style.css'), 'utf8');
 
   assert.match(baseStyles, /\.notif-panel-title-row strong\s*\{[^}]*color:\s*#13395c;/s);
   assert.match(baseStyles, /\.notif-item-title\s*\{[^}]*color:\s*#173859;/s);
@@ -254,26 +254,26 @@ test('community notification panel preserves readable text in Light and Night Op
 });
 
 test('community theme toggle is an accessible icon-only control', () => {
-  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
-  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
   const themeToggleStart = communityScript.indexOf('function mobileThemeToggle()');
   const themeToggleEnd = communityScript.indexOf('\nfunction mobileNotificationPanelMarkup()', themeToggleStart);
   const themeToggle = communityScript.slice(themeToggleStart, themeToggleEnd);
-  const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
 
   assert.ok(themeToggleStart >= 0);
   assert.ok(themeToggleEnd > themeToggleStart);
   assert.match(themeToggle, /class="mobile-theme-toggle"[^>]*aria-pressed="\$\{isDark\}" aria-label="\$\{label\}"/);
-  assert.match(themeToggle, /<span id="theme-btn-icon" aria-hidden="true">\$\{isDark \? '☀️' : '🌙'\}<\/span>/);
+  assert.match(themeToggle, /<span id="theme-btn-icon" aria-hidden="true">\$\{isDark \? mobileIcon\('settings', 16\) : mobileIcon\('crew', 16\)\}<\/span>/);
   assert.doesNotMatch(themeToggle, /theme-btn-text|Night Ops<\/span>|Light<\/span>/);
   assert.match(portalStyles, /\.community-body \.mobile-theme-toggle\s*\{[^}]*width:\s*42px;[^}]*min-width:\s*42px;[^}]*min-height:\s*42px;/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=\d+/);
+  assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
 });
 
 test('community bottom navigation shows accessible icon and text labels', () => {
-  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
-  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
-  const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
   const navigationStart = communityScript.indexOf('<nav class="mobile-tabs"');
   const navigationEnd = communityScript.indexOf('</nav>', navigationStart);
   const navigationMarkup = communityScript.slice(navigationStart, navigationEnd);
@@ -297,14 +297,14 @@ test('community bottom navigation shows accessible icon and text labels', () => 
   assert.match(portalStyles, /body\.community-body \.mobile-tab\.active::after\s*\{[^}]*transform:\s*translateX\(50%\) scaleX\(1\);/s);
   assert.match(portalStyles, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*body\.community-body \.mobile-tab,/s);
   assert.match(portalStyles, /body\.community-body \.mobile-tab-icon,\s*body\.community-body \.mobile-tab-icon svg\s*\{[^}]*width:\s*22px;[^}]*height:\s*22px;/s);
-  assert.match(communityPage, /\/app\/community\.js\?v=\d+/);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=\d+/);
+  assert.match(communityPage, /\/client\/js\/community\/community\.js\?v=\d+/);
+  assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
 });
 
 test('Community login preserves the Valencia panorama backdrop and caches it for offline launch', () => {
-  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
-  const styles = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
-  const worker = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'style.css'), 'utf8');
+  const worker = fs.readFileSync(path.join(ROOT, 'client', 'pwa', 'sw.js'), 'utf8');
   const loginRuleStart = styles.indexOf('.community-body .mobile-auth-page {');
   const loginRuleEnd = styles.indexOf('\n}', loginRuleStart);
   const loginRule = styles.slice(loginRuleStart, loginRuleEnd);
@@ -314,12 +314,12 @@ test('Community login preserves the Valencia panorama backdrop and caches it for
   assert.match(loginRule, /url\('\/assets\/valencia-city-panorama\.jpg'\) center \/ cover no-repeat/);
   assert.match(worker, /'\/assets\/valencia-city-panorama\.jpg'/);
   assert.ok(worker.includes('/\\.(?:jpe?g|png|svg|webp|woff2?)$/.test(pathname)'));
-  assert.ok(fs.existsSync(path.join(ROOT, 'assets', 'valencia-city-panorama.jpg')));
+  assert.ok(fs.existsSync(path.join(ROOT, 'client', 'assets', 'valencia-city-panorama.jpg')));
 });
 
 test('Community login uses the responsive branded card layout and preserves auth actions', () => {
-  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
-  const portalStyles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const mainScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
   const loginStart = mainScript.indexOf('function renderLogin(');
   const loginEnd = mainScript.indexOf('\nfunction ', loginStart + 1);
   const loginRenderer = mainScript.slice(loginStart, loginEnd);
@@ -354,27 +354,27 @@ test('Community login uses the responsive branded card layout and preserves auth
 });
 
 test('User Portal provides an accessible PWA install button', () => {
-  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
-  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
-  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const mainScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
 
   assert.match(communityScript, /function mobileInstallButton\(\)\s*\{[^}]*data-action="install-app"[^}]*aria-label="Install Valencia PowerWatch"/s);
   assert.match(communityScript, /data-action="install-app"[\s\S]*?<span>Install<\/span>/);
   assert.match(mainScript, /case 'install-app':\s*\{[\s\S]*?installPrompt\.prompt\(\)/);
   assert.match(mainScript, /window\.addEventListener\('beforeinstallprompt'/);
-  assert.match(communityPage, /\/app\/community\.js\?v=\d+/);
-  assert.match(communityPage, /\/app\/pwa-update\.js\?v=3/);
+  assert.match(communityPage, /\/client\/js\/community\/community\.js\?v=\d+/);
+  assert.match(communityPage, /\/client\/js\/community\/pwa-update\.js\?v=3/);
 });
 
 test('User Portal PWA is distinct from Staff and preserves its own cache during updates', () => {
-  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
-  const staffManifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'staff-manifest.json'), 'utf8'));
-  const worker = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-  const staffWorker = fs.readFileSync(path.join(ROOT, 'staff-sw.js'), 'utf8');
-  const pwaUpdate = fs.readFileSync(path.join(ROOT, 'app', 'pwa-update.js'), 'utf8');
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'client', 'pwa', 'manifest.json'), 'utf8'));
+  const staffManifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'client', 'pwa', 'staff-manifest.json'), 'utf8'));
+  const worker = fs.readFileSync(path.join(ROOT, 'client', 'pwa', 'sw.js'), 'utf8');
+  const staffWorker = fs.readFileSync(path.join(ROOT, 'client', 'pwa', 'staff-sw.js'), 'utf8');
+  const pwaUpdate = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'pwa-update.js'), 'utf8');
   const server = fs.readFileSync(path.join(ROOT, 'server', 'index.js'), 'utf8');
-  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
-  const staffPage = fs.readFileSync(path.join(ROOT, 'staff.html'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
+  const staffPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'staff.html'), 'utf8');
 
   assert.equal(manifest.start_url, '/community');
   assert.equal(manifest.scope, '/community');
@@ -396,10 +396,10 @@ test('User Portal PWA is distinct from Staff and preserves its own cache during 
   assert.match(staffPage, /href="\/staff-manifest\.json"/);
   assert.match(staffPage, /rel="icon" type="image\/png" sizes="192x192" href="\/assets\/powerwatch-field-icon-192\.png"/);
   assert.match(staffPage, /rel="apple-touch-icon" sizes="180x180" href="\/assets\/powerwatch-field-icon-180\.png"/);
-  assert.match(staffPage, /\/app\/staff-pwa-update\.js\?v=1/);
+  assert.match(staffPage, /\/client\/js\/staff\/staff-pwa-update\.js\?v=1/);
   assert.ok(worker.includes("['/', '/index.html'"));
-  assert.ok(worker.includes("'/app/community.js'"));
-  assert.ok(!worker.includes("'/app/admin.js'"));
+  assert.ok(worker.includes("'/client/js/community/community.js'"));
+  assert.ok(!worker.includes("'/client/js/admin/admin.js'"));
   assert.ok(worker.includes("const COMMUNITY_CACHE_PREFIX = 'powerwatch-community-'"));
   assert.ok(worker.includes("name.startsWith(COMMUNITY_CACHE_PREFIX)"));
   assert.ok(!worker.includes("name.startsWith('powerwatch-')"));

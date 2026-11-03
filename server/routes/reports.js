@@ -4,9 +4,9 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const multer = require('multer');
 const { db, now, UPLOAD_DIR, nextCode } = require('../db');
-const { requireAuth, requireRole, audit, notifyRole, notifyUsers } = require('../auth');
-const { recordReportEvent, recordReportStatusChange } = require('../report-events');
-const { staffBarangaysFor, staffCanAccessBarangay } = require('../staff-access');
+const { requireAuth, requireRole, audit, notifyRole, notifyUsers } = require('../middleware/auth');
+const { recordReportEvent, recordReportStatusChange } = require('../services/report-events');
+const { staffBarangaysFor, staffCanAccessBarangay } = require('../middleware/staff-access');
 
 const router = express.Router();
 

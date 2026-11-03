@@ -1,8 +1,8 @@
 require('dotenv').config();
 
-const { DB_PATH, UPLOAD_DIR } = require('./paths');
-const { createSnapshotStore, endPool, restoreFromNeon } = require('./persistence');
-const { getDatabaseUrl } = require('./database-url');
+const { DB_PATH, UPLOAD_DIR } = require('./config/paths');
+const { createSnapshotStore, endPool, restoreFromNeon } = require('./services/persistence');
+const { getDatabaseUrl } = require('./config/database-url');
 
 const ENABLED = String(process.env.POWERWATCH_SNAPSHOT_ENABLED || '').toLowerCase() === 'true';
 
