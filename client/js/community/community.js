@@ -7,14 +7,9 @@ const MOBILE_TABS = [
     icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/></svg>',
   },
   {
-    key: 'report',
-    label: 'Report',
-    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/><circle cx="12" cy="12" r="9"/></svg>',
-  },
-  {
     key: 'reports',
-    label: 'My Reports',
-    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><path d="M9 14l2 2 4-4"/></svg>',
+    label: 'Reports',
+    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/><circle cx="12" cy="12" r="9"/></svg>',
   },
   {
     key: 'map',
@@ -308,27 +303,6 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
   const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
   const greeting = hour < 12 ? 'Good morning,' : hour < 18 ? 'Good afternoon,' : 'Good evening,';
 
-  const statusBarMarkup = (homeHeader || subpageHeader) ? `
-    <div class="mobile-phone-status-bar">
-      <span class="phone-time">9:41</span>
-      <div class="phone-status-icons" aria-hidden="true">
-        <svg class="phone-status-icon" width="17" height="11" viewBox="0 0 17 11" fill="currentColor">
-          <rect x="0" y="8" width="2.8" height="3" rx="0.5"/>
-          <rect x="4.5" y="5.5" width="2.8" height="5.5" rx="0.5"/>
-          <rect x="9" y="3" width="2.8" height="8" rx="0.5"/>
-          <rect x="13.5" y="0.5" width="2.8" height="10.5" rx="0.5"/>
-        </svg>
-        <svg class="phone-status-icon" width="15" height="11" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 3C7.31 3 3.07 4.9 0 7.98L12 21 24 7.98C20.93 4.9 16.69 3 12 3z"/>
-        </svg>
-        <svg class="phone-status-icon" width="21" height="11" viewBox="0 0 24 12" fill="none">
-          <rect x="0.8" y="0.8" width="19.4" height="10.4" rx="2.8" stroke="currentColor" stroke-width="1.4"/>
-          <rect x="2.5" y="2.5" width="13" height="7" rx="1.5" fill="currentColor"/>
-          <path d="M22 4.2v3.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-        </svg>
-      </div>
-    </div>` : '';
-
   let headerMarkup = '';
   if (subpageHeader) {
     headerMarkup = `
@@ -381,7 +355,6 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
 
   app.innerHTML = `<div class="mobile-shell">
     ${!navigator.onLine ? '<div class="offline-banner" id="mobile-offline-banner"><span>Offline: reports are not saved or sent. Reconnect before submitting.</span></div>' : navigator.onLine ? '<div class="online-banner" id="mobile-online-banner"><span>Connection restored. Reports can now be submitted.</span></div>' : ''}
-    ${statusBarMarkup}
     ${headerMarkup}
     <main class="mobile-content ${subpageHeader ? 'mobile-content-subpage' : ''}" id="mobile-content">${content}</main>
     ${showTabs ? `<nav class="mobile-tabs" aria-label="Main navigation">${MOBILE_TABS.map((tab) => `<button type="button" class="mobile-tab ${activeTab === tab.key ? 'active' : ''}" data-mobile-tab="${tab.key}" aria-current="${activeTab === tab.key ? 'page' : 'false'}">
@@ -499,7 +472,6 @@ async function renderMobileHome() {
 
   const dashboardCards = [
     { label: 'Active outages', value: stats.active_incidents, icon: mobileIcon('dashboard'), tone: 'danger', action: 'open-current-outages' },
-    { label: 'Pending reports', value: stats.reports_pending, icon: mobileIcon('report'), tone: 'warning', action: 'dashboard-pending-reports' },
   ];
   const shortcuts = [
     { label: 'Current outages', icon: '<path d="M13 2 4 14h7l-1 8 10-12h-7z"/>', action: 'open-current-outages' },
@@ -528,16 +500,6 @@ async function renderMobileHome() {
         </section>
       </div>
       ${barangayHeroMarkup}
-      <section class="home-primary-actions" aria-label="Quick actions">
-        <button type="button" class="home-report-action primary" data-mobile-tab="report" aria-label="Report a power interruption" title="Report a power interruption">
-          ${mobileIcon('report', 24)}
-          <span class="home-report-label">Report outage</span>
-        </button>
-        <button type="button" class="home-track-action" data-mobile-tab="reports" aria-label="Track my submitted reports">
-          ${mobileIcon('report', 24)}
-          <span>Track My Reports</span><span aria-hidden="true">›</span>
-        </button>
-      </section>
       <section class="home-shortcuts" aria-label="More options">
         ${shortcuts.map((shortcut) => `<button type="button" class="home-shortcut" ${shortcut.action ? `data-action="${shortcut.action}"` : `data-mobile-tab="${shortcut.tab}"`} aria-label="${shortcut.label}">
           <span class="home-shortcut-icon" aria-hidden="true">${mobileIcon('dashboard', 20)}</span>

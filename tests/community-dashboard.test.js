@@ -21,7 +21,7 @@ test('community dashboard keeps personal notifications out of the home feed', ()
   assert.match(communityPage, /\/client\/js\/community\/community\.js\?v=\d+/);
   assert.match(communityPage, /\/client\/js\/shared\/main\.js\?v=\d+/);
   assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
-  assert.match(communityPage, /\/style\.css\?v=47/);
+  assert.match(communityPage, /\/style\.css\?v=48/);
   assert.match(portalStyles, /body\.community-body \.home-report-action\s*\{/);
   assert.match(portalStyles, /body\.community-body \.home-track-action svg\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;[^}]*fill:\s*none;/s);
   assert.match(portalStyles, /@media \(max-width: 600px\)\s*\{\s*body\.community-body \.mobile-home-header\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
@@ -77,18 +77,14 @@ test('report submission announces progress and errors without discarding the dra
 test('home report action shows a visible label and retains an accessible name', () => {
   const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
   const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
-  const homeStart = communityScript.indexOf('async function renderMobileHome()');
-  const homeEnd = communityScript.indexOf('\nasync function renderMobileReportForm()', homeStart);
-  const homeRenderer = communityScript.slice(homeStart, homeEnd);
-  const reportButton = homeRenderer.match(/<button[^>]*class="home-report-action(?:\s+[^"]*)?"[^>]*>[\s\S]*?<\/button>/)?.[0];
+  const reportsStart = communityScript.indexOf('async function renderMobileReports()');
+  const reportsEnd = communityScript.indexOf('\nasync function renderMobileReportDetail()', reportsStart);
+  const reportsRenderer = communityScript.slice(reportsStart, reportsEnd);
 
-  assert.ok(homeStart >= 0);
-  assert.ok(homeEnd > homeStart);
-  assert.match(homeRenderer, /class="home-report-action(?:\s+[^"]*)?" data-mobile-tab="report" aria-label="Report a power interruption" title="Report a power interruption"/);
-  assert.ok(reportButton);
-  assert.match(reportButton, /\$\{mobileIcon\('report', 24\)\}/);
-  assert.match(reportButton, /<span class="home-report-label">Report outage<\/span>/);
-  assert.doesNotMatch(reportButton, /home-action-arrow|<small>/);
+  assert.ok(reportsStart >= 0);
+  assert.ok(reportsEnd > reportsStart);
+  assert.match(reportsRenderer, /<button[^>]*data-action="compose-report"[^>]*>/);
+  assert.match(reportsRenderer, /Report an interruption/);
   assert.match(portalStyles, /body\.community-body \.home-report-label\s*\{[^}]*font-size:\s*15px;[^}]*font-weight:\s*750;/s);
   assert.match(portalStyles, /body\.community-body \.home-report-icon\s*\{[^}]*width:\s*28px;[^}]*height:\s*28px;[^}]*stroke:\s*currentColor;/s);
 });
@@ -98,15 +94,15 @@ test('resident navigation exposes reporting, announcements, and outage history',
   const mainScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
   const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
 
-  assert.match(communityScript, /key: 'report',\s*label: 'Report'/);
+  assert.match(communityScript, /key: 'reports',\s*label: 'Reports'/);
   assert.match(communityScript, /label: 'Announcements'.*action: 'open-announcements'/);
   assert.match(communityScript, /label: 'Outage history'.*tab: 'history'/);
   assert.match(mainScript, /case 'open-announcements':\s*state\.mobileNotificationCategory = 'announcements';\s*await goToTab\('notifications'\)/);
   assert.match(mainScript, /data-action="retry-current-tab"/);
   assert.match(mainScript, /case 'retry-current-tab':\s*await goToTab\(state\.mobileTab\)/);
-  assert.match(communityPage, /portal-polish\.css\?v=75/);
-  assert.match(communityPage, /community\.js\?v=43/);
-  assert.match(communityPage, /main\.js\?v=46/);
+  assert.match(communityPage, /portal-polish\.css\?v=77/);
+  assert.match(communityPage, /community\.js\?v=45/);
+  assert.match(communityPage, /main\.js\?v=47/);
   assert.match(mainScript, /coordinates shown above will be included with your location description/);
   assert.match(mainScript, /case 'open-notification-settings':\s*state\.mobileNotificationSettingsReturnTab = state\.mobileTab;/);
   assert.match(mainScript, /case 'back-from-notification-settings':\s*await goToTab\(state\.mobileNotificationSettingsReturnTab \|\| 'settings'\)/);
@@ -136,7 +132,7 @@ test('report form starts with a text location and offers the map as an alternati
   assert.match(communityScript, /if \(step === 2 && locationMode === 'map'\) \{\s*await ensureLeaflet\(\)/);
   assert.match(communityScript, /\$\{locationMode === 'map' \? '<button type="button" class="button ghost block" data-action="capture-gps"/);
   assert.match(portalStyles, /report-step-form\.location-mode-address #report-location-map\s*\{\s*display:\s*none;/);
-  assert.match(portalStyles, /grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(portalStyles, /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
 });
 
 test('community map uses exact outage coordinates and functional base-layer controls', () => {
@@ -235,7 +231,7 @@ test('report details activity, ETR, and feedback remain readable in Night Ops mo
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-report-timeline\s*\{[^}]*background:\s*var\(--pw-panel\);/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-etr-badge\.is-restored\s*\{[^}]*background:\s*#0d302b;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.report-feedback-question,\s*body\.dark-mode\.community-body \.report-feedback-rating-label\s*\{[^}]*color:\s*var\(--pw-text\);/s);
-  assert.match(communityPage, /\/style\.css\?v=47/);
+  assert.match(communityPage, /\/style\.css\?v=48/);
   assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
 });
 
@@ -392,7 +388,7 @@ test('User Portal PWA is distinct from Staff and preserves its own cache during 
   assert.ok(manifest.icons.every((icon) => !icon.src.includes('powerwatch-field-icon')));
   assert.ok(staffManifest.icons.every((icon) => icon.src.includes('powerwatch-field-icon')));
   assert.match(communityPage, /href="\/manifest\.json"/);
-  assert.match(communityPage, /\/style\.css\?v=47/);
+  assert.match(communityPage, /\/style\.css\?v=48/);
   assert.match(staffPage, /href="\/staff-manifest\.json"/);
   assert.match(staffPage, /rel="icon" type="image\/png" sizes="192x192" href="\/assets\/powerwatch-field-icon-192\.png"/);
   assert.match(staffPage, /rel="apple-touch-icon" sizes="180x180" href="\/assets\/powerwatch-field-icon-180\.png"/);

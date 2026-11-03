@@ -24,7 +24,7 @@ body.community-body #app > .mobile-shell .report-step-form.location-mode-address
 }
 
 body.community-body #app > .mobile-shell .mobile-tabs {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 body.community-body #app > .mobile-shell .mobile-tab {
@@ -62,62 +62,6 @@ body.dark-mode.community-body #app > .mobile-shell .mobile-load-error {
 
 body.dark-mode.community-body #app > .mobile-shell .mobile-load-error h2 {
   color: #fecaca;
-}
-
-/* ---------- Home dashboard actions ---------- */
-
-body.community-body .home-primary-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin: 14px 0;
-}
-
-body.community-body .home-report-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 20px;
-  border-radius: 16px;
-  font-weight: 700;
-  font-size: 1rem;
-  min-height: 56px;
-  flex: 1;
-  min-width: 0;
-  justify-content: center;
-}
-
-body.community-body .home-report-action .home-report-icon {
-  width: 22px;
-  height: 22px;
-  stroke-width: 2;
-}
-
-body.community-body .home-track-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 18px;
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(255, 255, 255, 0.7);
-  font-weight: 600;
-  font-size: 0.9rem;
-  min-height: 56px;
-  flex: 1;
-  min-width: 0;
-  justify-content: center;
-  color: #172f43;
-}
-
-body.community-body .home-track-action:hover {
-  background: #eef5fb;
-  border-color: rgba(148, 163, 184, 0.4);
-}
-
-body.community-body .home-track-action span:last-child {
-  font-size: 1.1rem;
-  line-height: 1;
 }
 
 /* ---------- Home shortcuts ---------- */
@@ -6449,6 +6393,27 @@ body.community-body .mobile-tab.active::after {
 body.community-body .mobile-tab.active .mobile-tab-icon {
   filter: drop-shadow(0 1px 3px rgba(11, 116, 209, .3));
   transform: translateY(-1px) scale(1.06);
+}
+
+body.community-body .mobile-tab[data-mobile-tab="reports"] {
+  color: var(--primary);
+  font-weight: 750;
+}
+
+body.community-body .mobile-tab[data-mobile-tab="reports"] .mobile-tab-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+body.community-body .mobile-tab.active[data-mobile-tab="reports"] .mobile-tab-icon {
+  background: var(--primary-dark);
+  color: #fff;
 }
 
 body.community-body .mobile-tab:active {
