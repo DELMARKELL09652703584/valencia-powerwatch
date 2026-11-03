@@ -6,7 +6,7 @@ const {
   hashPassword, createSession, createPersistentSession, publicUser, audit, COOKIE_NAME,
   isBuiltInAdmin, residentStore, persistentAuthConfigured, persistentAuthRequired,
   migrateLegacyResidents, mirrorPersistentResident,
-} = require('../auth');
+} = require('../middleware/auth');
 
 const router = express.Router();
 const RESET_LIFETIME_MS = 30 * 60 * 1000;

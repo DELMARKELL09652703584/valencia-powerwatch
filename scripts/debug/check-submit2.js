@@ -1,0 +1,10 @@
+const fs=require('fs');
+const m=fs.readFileSync('app/main.js','utf8');
+const idx=m.indexOf("document.addEventListener('submit'");
+const end1=m.indexOf("document.addEventListener('input'", idx);
+const end2=m.indexOf("document.addEventListener('change'", idx);
+const end=end1>0?end1:end2;
+const s=m.substring(idx, end);
+console.log(s.includes('loginForm'));
+console.log(s.includes('addEventListener'));
+console.log(s.length);

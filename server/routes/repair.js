@@ -1,8 +1,8 @@
 const express = require('express');
 const { db, now, nextCode } = require('../db');
-const { requireAuth, requireRole, audit, notifyUsers } = require('../auth');
-const { sendSMS } = require('../sms');
-const { recordReportEvent, recordReportStatusChange } = require('../report-events');
+const { requireAuth, requireRole, audit, notifyUsers } = require('../middleware/auth');
+const { sendSMS } = require('../services/sms');
+const { recordReportEvent, recordReportStatusChange } = require('../services/report-events');
 
 const router = express.Router();
 

@@ -1,0 +1,12 @@
+const fs = require('fs');
+const main = fs.readFileSync('app/main.js','utf8');
+const idx = main.indexOf('function renderLogin');
+const idx2 = main.indexOf('function ', idx+1);
+const func = main.substring(idx, idx2);
+console.log(func.indexOf('if (IS_ADMIN)'));
+console.log(func.indexOf('admin-login'));
+console.log(func.indexOf('Admin'));
+console.log(func.includes('login-page'));
+console.log(func.includes('login-panel'));
+console.log(func.includes('form-stack'));
+console.log(func.match(/data-form/g)?.length);

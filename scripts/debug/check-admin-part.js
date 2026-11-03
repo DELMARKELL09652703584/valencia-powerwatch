@@ -1,0 +1,17 @@
+const fs=require('fs');
+const m=fs.readFileSync('app/main.js','utf8');
+const idx = m.indexOf('function renderLogin');
+const idx2 = m.indexOf('function renderAdminRestrictedAccess');
+const func = m.substring(idx, idx2);
+const parts = func.split('app.innerHTML');
+const p2 = parts[2];
+console.log(p2.includes('data-form="login"'));
+console.log(p2.includes('name="email"'));
+console.log(p2.includes('name="password"'));
+console.log(p2.includes('form-stack'));
+console.log(p2.includes('login-panel'));
+console.log(p2.includes('login-art'));
+console.log(p2.includes('admin-login-art'));
+console.log(p2.includes('admin-login-options'));
+console.log(p2.includes('toggle-password'));
+console.log(p2.includes('submit'));

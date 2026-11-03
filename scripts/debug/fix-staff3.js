@@ -1,0 +1,10 @@
+const fs = require('fs');
+const p = 'app/staff.js';
+let c = fs.readFileSync(p, 'utf8');
+c = c.replace('Quick actions', 'Quick Navigation');
+c = c.replace('<strong>Assignments</strong>', '<strong>Incidents</strong>');
+c = c.replace('<small>${active.length} active</small>', '<small>${active.length} active cases</small>');
+c = c.replace('<small>Navigate</small>', '<small>Navigate to a site</small>');
+c = c.replace('<strong>Alerts</strong>', '<strong>Updates</strong>');
+fs.writeFileSync(p, c, 'utf8');
+console.log(c.includes('Quick Navigation'), c.includes('Incidents'), c.includes('Updates'), c.includes('Navigate to a site'), c.includes('show-area-reports'));

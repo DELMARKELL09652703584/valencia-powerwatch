@@ -1,0 +1,10 @@
+const fs=require('fs');
+const m=fs.readFileSync('app/main.js','utf8');
+const idx = m.indexOf('function renderLogin');
+const idx2 = m.indexOf('function renderAdminRestrictedAccess');
+const func = m.substring(idx, idx2);
+console.log(func.length);
+console.log(func.split('\n').length);
+console.log(func.includes('if (IS_ADMIN)'));
+console.log(func.includes('login-page'));
+console.log(func.includes('form-stack'));

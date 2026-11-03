@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const { DatabaseSync } = require('node:sqlite');
 const crypto = require('node:crypto');
 
-const { ROOT, DATA_DIR, UPLOAD_DIR, DB_PATH } = require('./paths');
+const { ROOT, DATA_DIR, UPLOAD_DIR, DB_PATH } = require('./config/paths');
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });

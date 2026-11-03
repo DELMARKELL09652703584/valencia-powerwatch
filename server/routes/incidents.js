@@ -1,10 +1,10 @@
 const express = require('express');
 const { db, now, nextCode } = require('../db');
-const { requireAuth, requireRole, audit, notifyUsers } = require('../auth');
-const { recordReportEvent, recordReportStatusChange } = require('../report-events');
-const { staffBarangaysFor, staffCanAccessBarangay, staffCanAccessIncident } = require('../staff-access');
-const { sendSMS } = require('../sms');
-const { calculateETR } = require('../etr');
+const { requireAuth, requireRole, audit, notifyUsers } = require('../middleware/auth');
+const { recordReportEvent, recordReportStatusChange } = require('../services/report-events');
+const { staffBarangaysFor, staffCanAccessBarangay, staffCanAccessIncident } = require('../middleware/staff-access');
+const { sendSMS } = require('../services/sms');
+const { calculateETR } = require('../services/etr');
 
 const router = express.Router();
 

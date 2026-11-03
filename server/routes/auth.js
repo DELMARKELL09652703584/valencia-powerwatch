@@ -3,14 +3,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { db, now, checkpointDb } = require('../db');
 const { UPLOAD_DIR } = require('../db');
-const { resolveBarangay } = require('../location-geocoder');
+const { resolveBarangay } = require('../services/location-geocoder');
 const {
   COOKIE_NAME, hashPassword, verifyPassword, createSession, destroySession,
   requireAuth, publicUser, roleLabel, audit, notifyRole,
   PORTAL_ROLES, isBuiltInAdmin, hasBuiltInAdminIdentifier,
   createPersistentSession, migrateLegacyResidents, mirrorPersistentResident,
   residentStore, persistentAuthConfigured, persistentAuthRequired,
-} = require('../auth');
+} = require('../middleware/auth');
 
 const router = express.Router();
 

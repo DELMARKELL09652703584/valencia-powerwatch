@@ -5,10 +5,10 @@ const { test } = require('node:test');
 const {
   combineDateTime,
   validSessionHash,
-} = require('../scripts/neon-staging-common');
+} = require('../scripts/production/neon-staging-common');
 
 const ROOT = path.resolve(__dirname, '..');
-const MIGRATIONS = path.join(ROOT, 'db', 'migrations');
+const MIGRATIONS = path.join(ROOT, 'database', 'migrations');
 
 const CORE_TABLES = [
   'users', 'user_profiles', 'roles', 'user_roles', 'permissions', 'role_permissions',
@@ -51,7 +51,7 @@ test('migrations seed four operational roles and the permission matrix', () => {
 });
 
 test('staging scripts require an isolated Neon development URL and refuse production', () => {
-  const common = fs.readFileSync(path.join(ROOT, 'scripts', 'neon-staging-common.js'), 'utf8');
+  const common = fs.readFileSync(path.join(ROOT, 'scripts', 'production', 'neon-staging-common.js'), 'utf8');
   assert.match(common, /NEON_DEV_DATABASE_URL/);
   assert.match(common, /POWERWATCH_ALLOW_NEON_DEV/);
   assert.match(common, /NODE_ENV === 'production'/);
@@ -60,7 +60,7 @@ test('staging scripts require an isolated Neon development URL and refuse produc
 });
 
 test('validation covers foreign keys, roles, barangays, and hashed sessions', () => {
-  const validation = fs.readFileSync(path.join(ROOT, 'scripts', 'neon-validate.js'), 'utf8');
+  const validation = fs.readFileSync(path.join(ROOT, 'scripts', 'production', 'neon-validate.js'), 'utf8');
   assert.match(validation, /reports without reporter/);
   assert.match(validation, /users without roles/);
   assert.match(validation, /required roles present/);
@@ -70,7 +70,7 @@ test('validation covers foreign keys, roles, barangays, and hashed sessions', ()
 });
 
 test('production Neon audit is restricted to a read-only transaction', () => {
-  const audit = fs.readFileSync(path.join(ROOT, 'scripts', 'neon-audit-readonly.js'), 'utf8');
+  const audit = fs.readFileSync(path.join(ROOT, 'scripts', 'production', 'neon-audit-readonly.js'), 'utf8');
 
   assert.match(audit, /BEGIN READ ONLY/);
   assert.match(audit, /Refusing to run: the configured database host is not a Neon endpoint/);
@@ -79,13 +79,13 @@ test('production Neon audit is restricted to a read-only transaction', () => {
 });
 
 test('production schema deployment is opt-in, additive, and defaults to a dry run', () => {
-  const deploy = fs.readFileSync(path.join(ROOT, 'scripts', 'neon-deploy-schema.js'), 'utf8');
+  const deploy = fs.readFileSync(path.join(ROOT, 'scripts', 'production', 'neon-deploy-schema.js'), 'utf8');
   assert.match(deploy, /POWERWATCH_ALLOW_PRODUCTION_DDL/);
   assert.match(deploy, /process\.argv\.includes\('--apply'\)/);
   assert.match(deploy, /ROLLBACK/);
   assert.match(deploy, /\.neon\.tech/);
   assert.match(deploy, /EXPECTED_FOREIGN_KEYS/);
-  const { EXPECTED_TABLES, EXPECTED_FOREIGN_KEYS } = require('../scripts/neon-deploy-schema');
+  const { EXPECTED_TABLES, EXPECTED_FOREIGN_KEYS } = require('../scripts/production/neon-deploy-schema');
   assert.equal(EXPECTED_TABLES.length, 35);
   assert.equal(EXPECTED_FOREIGN_KEYS, 69);
 });
@@ -134,20 +134,20 @@ test('role sync removes the previous primary role on demotion', () => {
 });
 
 test('backfill excludes non-JSON SQLite bookkeeping settings', () => {
-  const backfill = fs.readFileSync(path.join(ROOT, 'scripts', 'neon-backfill.js'), 'utf8');
+  const backfill = fs.readFileSync(path.join(ROOT, 'scripts', 'production', 'neon-backfill.js'), 'utf8');
   assert.match(backfill, /EXCLUDED_SETTINGS = new Set\(\['demo_cleanup_version', 'seed_version'\]\)/);
   assert.match(backfill, /EXCLUDED_SETTINGS\.has\(row\.key\)/);
 });
 
 test('reference seed is opt-in, idempotent, and limited to barangays and settings', () => {
-  const seed = fs.readFileSync(path.join(ROOT, 'scripts', 'neon-seed-reference.js'), 'utf8');
+  const seed = fs.readFileSync(path.join(ROOT, 'scripts', 'production', 'neon-seed-reference.js'), 'utf8');
   assert.match(seed, /POWERWATCH_ALLOW_PRODUCTION_SEED/);
   assert.match(seed, /process\.argv\.includes\('--apply'\)/);
   assert.match(seed, /ROLLBACK/);
   assert.match(seed, /ON CONFLICT \(barangay_name\) DO UPDATE/);
   assert.match(seed, /ON CONFLICT \(key\) DO UPDATE/);
   assert.match(seed, /demo_cleanup_version/);
-  const { EXCLUDED_SETTINGS } = require('../scripts/neon-seed-reference');
+  const { EXCLUDED_SETTINGS } = require('../scripts/production/neon-seed-reference');
   assert.ok(EXCLUDED_SETTINGS.has('seed_version'));
   for (const table of ['users', 'reports', 'incidents', 'feedback', 'app_snapshots']) {
     assert.doesNotMatch(seed, new RegExp(`INSERT INTO ${table}\\b`), `seed must not write ${table}`);

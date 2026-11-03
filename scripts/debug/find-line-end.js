@@ -1,0 +1,10 @@
+const fs=require('fs');
+const m=fs.readFileSync('app/main.js','utf8');
+const idx = m.indexOf('function renderLogin');
+const idx2 = m.indexOf('function renderAdminRestrictedAccess');
+const func = m.substring(idx, idx2);
+const commStart = func.indexOf('if (IS_COMMUNITY)');
+const ret = func.indexOf('    return;', commStart);
+console.log(func.substring(ret, ret+50));
+console.log(func.charCodeAt(ret+12), func.charCodeAt(ret+13));
+console.log(func.charCodeAt(ret+14), func.charCodeAt(ret+15));

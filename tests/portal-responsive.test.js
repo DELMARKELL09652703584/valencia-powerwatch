@@ -6,7 +6,7 @@ const { test } = require('node:test');
 const ROOT = path.resolve(__dirname, '..');
 
 test('portal theme stylesheet keeps mobile home actions styled in both themes', () => {
-  const styles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
 
   assert.match(styles, /body\.community-body \.home-report-action\s*\{/);
   assert.match(styles, /body\.community-body \.home-track-action svg\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;[^}]*fill:\s*none;/s);
@@ -14,41 +14,41 @@ test('portal theme stylesheet keeps mobile home actions styled in both themes', 
 });
 
 test('portal layouts remain constrained on narrow mobile screens', () => {
-  const styles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
-  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
-  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'admin.html'), 'utf8');
 
   assert.match(styles, /@media \(max-width: 600px\)\s*\{\s*body\.community-body \.mobile-home-header\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
   assert.match(styles, /@media \(max-width: 600px\)\s*\{\s*body\.community-body \.mobile-home-header\s*\{[^}]*gap:\s*4px;[^}]*padding:\s*6px 14px 8px;/s);
   assert.match(styles, /@media \(max-width: 360px\)\s*\{\s*body\.admin-body \.login-page\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
   assert.match(styles, /body\.admin-body \.login-page \.social-row\s*\{\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=\d+/);
-  assert.match(adminPage, /\/app\/portal-polish\.css\?v=38/);
+  assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
+  assert.match(adminPage, /\/client\/css\/portal-polish\.css\?v=38/);
 });
 
 test('report wizard content can scroll above the fixed bottom navigation', () => {
-  const styles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
-  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
   const mobileContentRule = styles.match(/\.community-body \.mobile-content\s*\{([^}]*)\}/)?.[1] || '';
 
   assert.match(mobileContentRule, /padding-bottom:\s*calc\(98px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=\d+/);
+  assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
 });
 
 test('report evidence buttons and subpage title remain legible on mobile', () => {
-  const styles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
-  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
 
   assert.match(styles, /body\.community-body \.mobile-subpage-header \.mobile-header-title\s*\{[^}]*min-width:\s*0;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;[^}]*white-space:\s*nowrap;/s);
   assert.match(styles, /body\.community-body \.report-evidence-step \.report-evidence-picker\s*\{[^}]*color:\s*#1265ad !important;/s);
   assert.match(styles, /body\.dark-mode\.community-body \.report-evidence-step \.report-evidence-picker\s*\{[^}]*background:\s*var\(--pw-raised\) !important;[^}]*color:\s*#9dd6ff !important;/s);
-  assert.match(communityPage, /\/app\/portal-polish\.css\?v=\d+/);
+  assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
 });
 
 test('Admin dashboard releases its fixed desktop frame for mobile page scrolling', () => {
-  const styles = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
-  const staffStyles = fs.readFileSync(path.join(ROOT, 'app', 'staff.css'), 'utf8');
-  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'style.css'), 'utf8');
+  const staffStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'staff.css'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'admin.html'), 'utf8');
   const mobileAdminStyles = styles.slice(styles.indexOf('@media (max-width: 900px)', styles.indexOf('/* Admin command-center visual system */')));
 
   assert.match(mobileAdminStyles, /body\.admin-body\s*\{[^}]*height:\s*auto !important;[^}]*max-height:\s*none !important;[^}]*overflow-y:\s*auto !important;/s);
@@ -60,21 +60,21 @@ test('Admin dashboard releases its fixed desktop frame for mobile page scrolling
 });
 
 test('Admin login design adapts to mobile and Night Ops themes', () => {
-  const styles = fs.readFileSync(path.join(ROOT, 'app', 'admin-theme.css'), 'utf8');
-  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'admin-theme.css'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'admin.html'), 'utf8');
 
   assert.match(styles, /body\.admin-body \.login-page \.login-panel \.login-content\s*\{[^}]*border-radius:\s*22px;[^}]*background:\s*#fff;/s);
   assert.match(styles, /body\.dark-mode\.admin-body \.login-page \.login-panel \.login-content\s*\{[^}]*background:\s*var\(--pw-panel\);/s);
   assert.match(styles, /@media \(max-width: 900px\)\s*\{[\s\S]*?body\.admin-body \.login-page \.login-panel\s*\{[^}]*margin-top:\s*-22px;/);
   assert.match(styles, /@media \(max-width: 600px\)\s*\{[\s\S]*?body\.admin-body \.login-page \.login-panel \.login-content\s*\{[^}]*padding:\s*27px 21px;/);
   assert.match(styles, /body\.admin-body \.login-page \.login-panel \.admin-login-options input\[type="checkbox"\]\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;[^}]*min-height:\s*18px;/s);
-  assert.match(adminPage, /\/app\/admin-theme\.css\?v=16/);
+  assert.match(adminPage, /\/client\/css\/admin-theme\.css\?v=16/);
 });
 
 test('Admin dashboard report charts use live data and remain responsive in both themes', () => {
-  const adminScript = fs.readFileSync(path.join(ROOT, 'app', 'admin.js'), 'utf8');
-  const styles = fs.readFileSync(path.join(ROOT, 'app', 'admin-theme.css'), 'utf8');
-  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+  const adminScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'admin', 'admin.js'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'admin-theme.css'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'admin.html'), 'utf8');
 
   assert.match(adminScript, /api\('\/api\/analytics\/dashboard-report-distribution'\)/);
   assert.match(adminScript, /item\.count \/ total/);
@@ -114,13 +114,13 @@ test('Admin dashboard report charts use live data and remain responsive in both 
   assert.match(styles, /\.report-status-zero-list summary\s*\{/);
   assert.match(styles, /@media \(max-width: 600px\)\s*\{[\s\S]*?\.report-status-chart-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
   assert.match(styles, /body\.dark-mode\.admin-body \.report-distribution-panel/);
-  assert.match(adminPage, /\/app\/admin-theme\.css\?v=16/);
-  assert.match(adminPage, /\/app\/admin\.js\?v=37/);
+  assert.match(adminPage, /\/client\/css\/admin-theme\.css\?v=16/);
+  assert.match(adminPage, /\/client\/js\/admin\/admin\.js\?v=37/);
 });
 
 test('Analytics & Reports charts use matching HUD styling in both themes', () => {
-  const styles = fs.readFileSync(path.join(ROOT, 'app', 'admin-theme.css'), 'utf8');
-  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'admin-theme.css'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'admin.html'), 'utf8');
 
   assert.match(styles, /\.admin-shell\.page-analytics \.analytics-chart-panel\s*\{[^}]*isolation:\s*isolate/s);
   assert.match(styles, /\.admin-shell\.page-analytics \.analytics-bar-track i\s*\{[^}]*analytics-bar-rise/);
@@ -128,20 +128,20 @@ test('Analytics & Reports charts use matching HUD styling in both themes', () =>
   assert.match(styles, /body\.dark-mode\.admin-body \.admin-shell\.page-analytics \.analytics-chart-panel\s*\{/);
   assert.match(styles, /body\.dark-mode\.admin-body \.admin-shell\.page-analytics \.analytics-donut-legend li\s*\{/);
   assert.match(styles, /prefers-reduced-motion:\s*reduce[\s\S]*?page-analytics \.analytics-donut::after/);
-  assert.match(adminPage, /\/app\/admin-theme\.css\?v=16/);
+  assert.match(adminPage, /\/client\/css\/admin-theme\.css\?v=16/);
 });
 
 test('Admin dashboard right-side command actions stay compact and usable on mobile', () => {
-  const styles = fs.readFileSync(path.join(ROOT, 'app', 'admin-theme.css'), 'utf8');
-  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'admin-theme.css'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'admin.html'), 'utf8');
 
   assert.match(styles, /body\.admin-body \.admin-shell\.page-admin-dashboard \.admin-dashboard-page \.command-header-actions \.button\s*\{[^}]*min-height:\s*38px;[^}]*padding:\s*4px 8px;[^}]*font-size:\s*\.72rem;/s);
   assert.match(styles, /@media \(max-width: 760px\)\s*\{[\s\S]*?body\.admin-body \.admin-shell\.page-admin-dashboard \.admin-dashboard-page \.command-header-actions \.button\s*\{[^}]*min-height:\s*38px;[^}]*font-size:\s*\.68rem !important;/);
-  assert.match(adminPage, /\/app\/admin-theme\.css\?v=16/);
+  assert.match(adminPage, /\/client\/css\/admin-theme\.css\?v=16/);
 });
 
 test('home weather widget stays compact in Light Mode and Night Ops', () => {
-  const styles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
 
   assert.match(styles, /body\.community-body \.home-dashboard \.mobile-weather\s*\{[^}]*min-height:\s*0;[^}]*gap:\s*7px;[^}]*padding:\s*6px 10px;[^}]*border-radius:\s*999px;/s);
   assert.match(styles, /body\.community-body \.home-dashboard \.mobile-weather-copy\s*\{[^}]*display:\s*flex;[^}]*align-items:\s*baseline;/s);
@@ -150,30 +150,30 @@ test('home weather widget stays compact in Light Mode and Night Ops', () => {
 });
 
 test('Night Ops outage trends toggle stays on the right when its text wraps', () => {
-  const styles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
 
   assert.match(styles, /body\.dark-mode\.community-body \.home-trends > summary\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto;[^}]*grid-template-rows:\s*auto auto;/s);
   assert.match(styles, /body\.dark-mode\.community-body \.home-trends > summary::after\s*\{[^}]*grid-column:\s*2;[^}]*grid-row:\s*1 \/ span 2;[^}]*justify-self:\s*end;/s);
 });
 
 test('Admin route guide text remains readable in dark mode', () => {
-  const styles = fs.readFileSync(path.join(ROOT, 'app', 'portal-polish.css'), 'utf8');
-  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
-  const coreScript = fs.readFileSync(path.join(ROOT, 'app', 'core.js'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'admin.html'), 'utf8');
+  const coreScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'core.js'), 'utf8');
 
   assert.match(coreScript, /Navigation Route Guide/);
   assert.match(styles, /body\.dark-mode\.admin-body \.map-route-hud\s*\{[^}]*background:\s*rgba\(13,\s*25,\s*44,\s*\.98\);/s);
   assert.match(styles, /body\.dark-mode\.admin-body \.map-route-hud-endpoints :where\(span, strong\)\s*\{[^}]*color:\s*#d2deee\s*!important;/s);
   assert.match(styles, /body\.dark-mode\.admin-body \.map-route-hud-details :where\(span, strong\)\s*\{[^}]*color:\s*#bfdbfe\s*!important;/s);
   assert.match(styles, /body\.dark-mode\.admin-body \.map-route-hud \.map-route-hud-btn:not\(\.secondary\) :where\(span\)\s*\{\s*color:\s*#fff\s*!important;/s);
-  assert.match(adminPage, /\/app\/portal-polish\.css\?v=38/);
+  assert.match(adminPage, /\/client\/css\/portal-polish\.css\?v=38/);
 });
 
 test('route guide is draggable, viewport-bounded, collapsible, and remembers its position', () => {
-  const styles = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
-  const coreScript = fs.readFileSync(path.join(ROOT, 'app', 'core.js'), 'utf8');
-  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
-  const communityPage = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'style.css'), 'utf8');
+  const coreScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'core.js'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'admin.html'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
 
   assert.match(styles, /\.map-route-hud\s*\{[^}]*position:\s*fixed;[^}]*max-height:\s*calc\(100dvh - 16px\);/s);
   assert.match(styles, /\.map-route-hud-header\s*\{[^}]*touch-action:\s*none;/s);
@@ -187,12 +187,12 @@ test('route guide is draggable, viewport-bounded, collapsible, and remembers its
   assert.match(coreScript, /data-action="sim-crew-dispatch"/);
   assert.match(coreScript, /<span>🚀 Crew Tracker<\/span>/);
   assert.match(coreScript, /data-action="clear-route-guide"/);
-  assert.match(adminPage, /\/app\/core\.js\?v=23/);
-  assert.match(communityPage, /\/app\/core\.js\?v=23/);
+  assert.match(adminPage, /\/client\/js\/shared\/core\.js\?v=23/);
+  assert.match(communityPage, /\/client\/js\/shared\/core\.js\?v=23/);
 });
 
 test('route guide card is compact while keeping actions easy to tap', () => {
-  const styles = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'style.css'), 'utf8');
 
   assert.match(styles, /\.map-route-hud\s*\{[^}]*width:\s*min\(300px,\s*calc\(100vw - 16px\)\);[^}]*height:\s*170px;[^}]*padding:\s*6px 7px;/s);
   assert.match(styles, /\.map-route-hud-btn\s*\{[^}]*min-height:\s*28px;[^}]*font-size:\s*0\.64rem;/s);
@@ -200,17 +200,17 @@ test('route guide card is compact while keeping actions easy to tap', () => {
 });
 
 test('Admin map removes the top barangay finder and keeps sidebar map focus', () => {
-  const adminScript = fs.readFileSync(path.join(ROOT, 'app', 'admin.js'), 'utf8');
-  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+  const adminScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'admin', 'admin.js'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'admin.html'), 'utf8');
 
   assert.doesNotMatch(adminScript, /Find a barangay|data-map-focus|power-map-focus/);
   assert.match(adminScript, /id="map-fly-select"/);
-  assert.match(adminPage, /\/app\/admin\.js\?v=37/);
+  assert.match(adminPage, /\/client\/js\/admin\/admin\.js\?v=37/);
 });
 
 test('Admin notifications use readable theme-specific unread colors', () => {
-  const styles = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
-  const adminPage = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'style.css'), 'utf8');
+  const adminPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'admin.html'), 'utf8');
 
   assert.match(styles, /body\.admin-body:not\(\.dark-mode\) \.admin-notification-panel \.notification-panel-item\.unread\s*\{[^}]*background:\s*#f1f7ff\s*!important;/s);
   assert.match(styles, /body\.admin-body:not\(\.dark-mode\) \.admin-notification-panel \.notification-panel-open strong\s*\{[^}]*color:\s*#173859\s*!important;/s);
@@ -220,7 +220,7 @@ test('Admin notifications use readable theme-specific unread colors', () => {
 });
 
 test('dispatch eligibility offers a direct path to staff access settings', () => {
-  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+  const mainScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
 
   assert.match(mainScript, /data-action="open-staff-access">Open Manage Staff Team Access/);
   assert.match(mainScript, /case 'open-staff-access':\s*\{\s*closeDialog\(\);\s*await goToPage\('dispatch'\);/);
@@ -228,7 +228,7 @@ test('dispatch eligibility offers a direct path to staff access settings', () =>
 });
 
 test('staff logout clears account-scoped notification state and refresh flags', () => {
-  const staffScript = fs.readFileSync(path.join(ROOT, 'app', 'staff.js'), 'utf8');
+  const staffScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'staff', 'staff.js'), 'utf8');
   const logout = staffScript.match(/action === 'logout'[\s\S]*?renderLogin\(\);/);
 
   assert.ok(logout, 'staff logout handler should remain present');
@@ -240,19 +240,19 @@ test('staff logout clears account-scoped notification state and refresh flags', 
 });
 
 test('staff checkbox accent uses a defined token and refreshed shell assets', () => {
-  const styles = fs.readFileSync(path.join(ROOT, 'app', 'staff.css'), 'utf8');
-  const staffPage = fs.readFileSync(path.join(ROOT, 'staff.html'), 'utf8');
-  const staffWorker = fs.readFileSync(path.join(ROOT, 'staff-sw.js'), 'utf8');
+  const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'staff.css'), 'utf8');
+  const staffPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'staff.html'), 'utf8');
+  const staffWorker = fs.readFileSync(path.join(ROOT, 'client', 'pwa', 'staff-sw.js'), 'utf8');
 
   assert.match(styles, /accent-color:\s*var\(--staff-blue,\s*#1675df\);/);
-  assert.match(staffPage, /\/app\/staff\.css\?v=14/);
-  assert.match(staffPage, /\/app\/staff\.js\?v=17/);
-  assert.match(staffWorker, /\/app\/staff\.css\?v=14/);
-  assert.match(staffWorker, /\/app\/staff\.js\?v=17/);
+  assert.match(staffPage, /\/client\/css\/staff\.css\?v=14/);
+  assert.match(staffPage, /\/client\/js\/staff\/staff\.js\?v=17/);
+  assert.match(staffWorker, /\/client\/css\/staff\.css\?v=14/);
+  assert.match(staffWorker, /\/client\/js\/staff\/staff\.js\?v=17/);
 });
 
 test('community notification category controls use pressed button semantics', () => {
-  const communityScript = fs.readFileSync(path.join(ROOT, 'app', 'community.js'), 'utf8');
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
 
   assert.match(communityScript, /class="mobile-segments notification-category-tabs" role="group" aria-label="Notification categories"/);
   assert.match(communityScript, /class="mobile-segment \$\{category === key \? 'active' : ''\}" aria-pressed="\$\{category === key\}"/);
@@ -261,7 +261,7 @@ test('community notification category controls use pressed button semantics', ()
 });
 
 test('community boot failure provides a safe offline retry state', () => {
-  const mainScript = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
+  const mainScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
 
   assert.match(mainScript, /const offline = navigator\.onLine === false;/);
   assert.match(mainScript, /const heading = offline \? 'You are offline' : 'Cannot reach the server';/);

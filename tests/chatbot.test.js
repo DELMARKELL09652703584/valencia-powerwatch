@@ -181,12 +181,12 @@ test('chatbot assets are loaded only by the User Portal', async () => {
   const [community, admin, script, portal, styles] = await Promise.all([
     fetch(`${baseUrl}/community`).then((response) => response.text()),
     fetch(`${baseUrl}/admin`).then((response) => response.text()),
-    fetch(`${baseUrl}/app/chatbot.js`).then((response) => response.text()),
-    fetch(`${baseUrl}/app/community.js`).then((response) => response.text()),
-    fetch(`${baseUrl}/app/portal-polish.css`).then((response) => response.text()),
+    fetch(`${baseUrl}/client/js/community/chatbot.js`).then((response) => response.text()),
+    fetch(`${baseUrl}/client/js/community/community.js`).then((response) => response.text()),
+    fetch(`${baseUrl}/client/css/portal-polish.css`).then((response) => response.text()),
   ]);
-  assert.match(community, /\/app\/chatbot\.js\?v=2/);
-  assert.doesNotMatch(admin, /\/app\/chatbot\.js/);
+  assert.match(community, /\/client\/js\/community\/chatbot\.js\?v=2/);
+  assert.doesNotMatch(admin, /\/client\/js\/community\/chatbot\.js/);
   assert.match(script, /\/api\/chatbot/);
   assert.match(portal, /class="powerwatch-chat-launcher"[\s\S]*?<svg class="powerwatch-chat-launcher-icon"/);
   assert.doesNotMatch(portal, /class="powerwatch-chat-launcher"[^>]*>[\s\S]*?<span>Ask PowerWatch<\/span>/);

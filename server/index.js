@@ -7,9 +7,9 @@ const { ROOT, UPLOAD_DIR, db } = require('./db');
 const {
   cleanupExpiredSessions, cleanupPersistentSessions, COOKIE_NAME, getUserByToken, requireAuth, requireRole,
   residentStore, persistentAuthConfigured, persistentAuthRequired,
-} = require('./auth');
-const { staffCanAccessBarangay } = require('./staff-access');
-const { getStatus: getPersistenceStatus } = require('./persistence');
+} = require('./middleware/auth');
+const { staffCanAccessBarangay } = require('./middleware/staff-access');
+const { getStatus: getPersistenceStatus } = require('./services/persistence');
 
 const authRoutes = require('./routes/auth');
 const identityRoutes = require('./routes/identity');
@@ -138,27 +138,27 @@ app.get('/uploads/:filename', async (req, res, next) => {
   });
 });
 app.use('/uploads', express.static(UPLOAD_DIR));
-app.use('/assets', express.static(path.join(ROOT, 'assets')));
+app.use('/assets', express.static(path.join(ROOT, 'client', 'assets')));
 app.use('/vendor/leaflet', express.static(path.join(ROOT, 'node_modules', 'leaflet', 'dist')));
 app.use('/vendor/leaflet-heat', express.static(path.join(ROOT, 'node_modules', 'leaflet.heat', 'dist')));
 
-app.get(['/install', '/install.html', '/download', '/download.html'], (req, res) => res.sendFile(path.join(ROOT, 'download.html')));
+app.get(['/install', '/install.html', '/download', '/download.html'], (req, res) => res.sendFile(path.join(ROOT, 'client', 'pages', 'download.html')));
 app.get('/manifest.json', (req, res) => {
   res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-  res.sendFile(path.join(ROOT, 'manifest.json'));
+  res.sendFile(path.join(ROOT, 'client', 'pwa', 'manifest.json'));
 });
 app.get('/staff-manifest.json', (req, res) => {
   res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-  res.sendFile(path.join(ROOT, 'staff-manifest.json'));
+  res.sendFile(path.join(ROOT, 'client', 'pwa', 'staff-manifest.json'));
 });
 app.get('/sw.js', async (req, res, next) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-cache, must-revalidate');
   res.setHeader('Service-Worker-Allowed', '/community');
   try {
-    const workerSource = await fs.readFile(path.join(ROOT, 'sw.js'), 'utf8');
+    const workerSource = await fs.readFile(path.join(ROOT, 'client', 'pwa', 'sw.js'), 'utf8');
     const buildId = JSON.stringify(process.env.RENDER_GIT_COMMIT || 'development');
     res.send(workerSource.replace("'__POWERWATCH_BUILD_ID__'", buildId));
   } catch (error) {
@@ -170,16 +170,16 @@ app.get('/staff-sw.js', async (req, res, next) => {
   res.setHeader('Cache-Control', 'no-cache, must-revalidate');
   res.setHeader('Service-Worker-Allowed', '/staff');
   try {
-    const workerSource = await fs.readFile(path.join(ROOT, 'staff-sw.js'), 'utf8');
+    const workerSource = await fs.readFile(path.join(ROOT, 'client', 'pwa', 'staff-sw.js'), 'utf8');
     const buildId = JSON.stringify(process.env.RENDER_GIT_COMMIT || 'development');
     res.send(workerSource.replace("'__POWERWATCH_STAFF_BUILD_ID__'", buildId));
   } catch (error) {
     next(error);
   }
 });
-app.get(['/staff', '/staff/'], (req, res) => res.sendFile(path.join(ROOT, 'staff.html')));
-app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(ROOT, 'admin.html')));
-app.get(['/user', '/user.html', '/citizen', '/citizen.html', '/community', '/community.html'], (req, res) => res.sendFile(path.join(ROOT, 'community.html')));
+app.get(['/staff', '/staff/'], (req, res) => res.sendFile(path.join(ROOT, 'client', 'pages', 'staff.html')));
+app.get(['/admin', '/admin.html'], (req, res) => res.sendFile(path.join(ROOT, 'client', 'pages', 'admin.html')));
+app.get(['/user', '/user.html', '/citizen', '/citizen.html', '/community', '/community.html'], (req, res) => res.sendFile(path.join(ROOT, 'client', 'pages', 'community.html')));
 app.get(['/auth/oauth-dialog', '/auth/oauth-popup'], (req, res) => {
   const provider = String(req.query.provider || '');
   if (!['google', 'facebook'].includes(provider)) return res.status(400).send('Unsupported sign-in provider.');
@@ -187,21 +187,24 @@ app.get(['/auth/oauth-dialog', '/auth/oauth-popup'], (req, res) => {
 });
 app.get(['/style.css', '/community/style.css', '/admin/style.css', '/install/style.css'], (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-  res.sendFile(path.join(ROOT, 'style.css'));
+  res.sendFile(path.join(ROOT, 'client', 'css', 'style.css'));
 });
 app.get(['/script.js', '/community/script.js', '/admin/script.js'], (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-  res.sendFile(path.join(ROOT, 'script.js'));
+  res.sendFile(path.join(ROOT, 'client', 'js', 'shared', 'script.js'));
 });
-app.use(['/app', '/community/app', '/admin/app', '/install/app'], express.static(path.join(ROOT, 'app'), {
+app.use(['/client/js', '/community/client/js', '/admin/client/js', '/install/client/js'], express.static(path.join(ROOT, 'client', 'js'), {
   setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache, must-revalidate')
 }));
-app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(ROOT, 'community.html')));
+app.use(['/client/css', '/community/client/css', '/admin/client/css', '/install/client/css'], express.static(path.join(ROOT, 'client', 'css'), {
+  setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache, must-revalidate')
+}));
+app.get(['/', '/index.html'], (req, res) => res.sendFile(path.join(ROOT, 'client', 'pages', 'community.html')));
 
 // Never serve the repository root. It contains the live SQLite database, server
 // source, deployment configuration, and project documents.
 app.use(
-  ['/data', '/server', '/scripts', '/tests', '/node_modules', '/package.json', '/package-lock.json', '/render.yaml'],
+  ['/data', '/server', '/scripts', '/database', '/tests', '/node_modules', '/package.json', '/package-lock.json', '/render.yaml'],
   (req, res) => res.sendStatus(404),
 );
 

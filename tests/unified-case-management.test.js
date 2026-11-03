@@ -4,11 +4,11 @@ const path = require('node:path');
 const { test } = require('node:test');
 
 const ROOT = path.resolve(__dirname, '..');
-const adminSource = fs.readFileSync(path.join(ROOT, 'app', 'admin.js'), 'utf8');
-const mainSource = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
-const adminHtml = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
-const communityHtml = fs.readFileSync(path.join(ROOT, 'community.html'), 'utf8');
-const styles = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
+const adminSource = fs.readFileSync(path.join(ROOT, 'client', 'js', 'admin', 'admin.js'), 'utf8');
+const mainSource = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
+const adminHtml = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'admin.html'), 'utf8');
+const communityHtml = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
+const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'style.css'), 'utf8');
 
 test('Admin navigation consolidates report verification and incident operations', () => {
   const nav = adminSource.match(/const ADMIN_NAV = \[([\s\S]*?)\n\];/)?.[1] || '';
@@ -35,8 +35,8 @@ test('Report verification updates the authoritative report without creating a du
   assert.match(mainSource, /status: 'Verified'/);
   assert.doesNotMatch(mainSource, /type === 'verify-create-incident'/);
   assert.match(adminSource, /Verify Report/);
-  assert.match(adminHtml, /app\/admin\.js\?v=37/);
-  assert.match(adminHtml, /app\/main\.js\?v=37/);
+  assert.match(adminHtml, /client\/js\/admin\/admin\.js\?v=37/);
+  assert.match(adminHtml, /client\/js\/shared\/main\.js\?v=37/);
   assert.match(adminHtml, /admin-theme\.css\?v=16/);
 });
 

@@ -1,8 +1,8 @@
 const express = require('express');
 const { db } = require('../db');
-const { requireAuth, requireRole, audit, notifyRole } = require('../auth');
-const { sendSMS, getSmsLogs } = require('../sms');
-const { calculateETR } = require('../etr');
+const { requireAuth, requireRole, audit, notifyRole } = require('../middleware/auth');
+const { sendSMS, getSmsLogs } = require('../services/sms');
+const { calculateETR } = require('../services/etr');
 
 const requireStaff = [requireAuth, requireRole('personnel', 'administrator', 'utility')];
 

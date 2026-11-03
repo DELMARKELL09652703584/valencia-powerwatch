@@ -41,11 +41,11 @@ let alternateTeamId;
 let serverOutput = '';
 
 test('Staff portal shows report times, recent field updates, and accurate assignment/map empty states', () => {
-  const staffApp = fs.readFileSync(path.join(ROOT, 'app', 'staff.js'), 'utf8');
-  const staffPage = fs.readFileSync(path.join(ROOT, 'staff.html'), 'utf8');
-  const staffStyles = fs.readFileSync(path.join(ROOT, 'app', 'staff.css'), 'utf8');
-  const serviceWorker = fs.readFileSync(path.join(ROOT, 'staff-sw.js'), 'utf8');
-  const updateManager = fs.readFileSync(path.join(ROOT, 'app', 'staff-pwa-update.js'), 'utf8');
+  const staffApp = fs.readFileSync(path.join(ROOT, 'client', 'js', 'staff', 'staff.js'), 'utf8');
+  const staffPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'staff.html'), 'utf8');
+  const staffStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'staff.css'), 'utf8');
+  const serviceWorker = fs.readFileSync(path.join(ROOT, 'client', 'pwa', 'staff-sw.js'), 'utf8');
+  const updateManager = fs.readFileSync(path.join(ROOT, 'client', 'js', 'staff', 'staff-pwa-update.js'), 'utf8');
 
   assert.match(staffApp, /Incident noticed: \$\{escapeHtml\(new Date\(report\.date_time_noticed\)\.toLocaleString\(\)\)\}/);
   assert.match(staffApp, /Report submitted: \$\{escapeHtml\(new Date\(report\.reported_at\)\.toLocaleString\(\)\)\}/);
@@ -63,10 +63,10 @@ test('Staff portal shows report times, recent field updates, and accurate assign
   assert.match(staffApp, /scrollIntoView\(\{ block: 'start' \}\)/);
   assert.match(staffStyles, /\.staff-quick-nav\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/s);
   assert.match(staffStyles, /\.staff-stats\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/s);
-  assert.match(staffPage, /\/app\/staff\.js\?v=17/);
-  assert.match(staffPage, /\/app\/staff\.css\?v=14/);
-  assert.match(serviceWorker, /\/app\/staff\.js\?v=17/);
-  assert.match(serviceWorker, /\/app\/staff\.css\?v=14/);
+  assert.match(staffPage, /\/client\/js\/staff\/staff\.js\?v=17/);
+  assert.match(staffPage, /\/client\/css\/staff\.css\?v=14/);
+  assert.match(serviceWorker, /\/client\/js\/staff\/staff\.js\?v=17/);
+  assert.match(serviceWorker, /\/client\/css\/staff\.css\?v=14/);
   assert.match(staffStyles, /\.staff-login-page\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*100vh;[^}]*min-height:\s*100svh;[^}]*min-height:\s*100dvh;[^}]*align-content:\s*safe center;[^}]*env\(safe-area-inset-top\)/s);
   assert.match(staffStyles, /@media \(max-height:\s*760px\)\s*\{\s*\.staff-login-page\s*\{[^}]*align-content:\s*start;/s);
   assert.match(staffStyles, /@media \(max-width:\s*380px\)\s*\{\s*\.staff-login-page\s*\{/s);
@@ -75,7 +75,7 @@ test('Staff portal shows report times, recent field updates, and accurate assign
   assert.match(staffApp, /In Chrome, open the ⋮ menu and choose <b>Install app<\/b> or <b>Add to Home screen<\/b>/);
   assert.match(staffApp, /else if \(action === 'install'\)[\s\S]*?if \(state\.installPrompt\)[\s\S]*?help\.hidden = !help\.hidden/);
   assert.match(staffApp, /dismiss-install-help/);
-  assert.match(staffPage, /\/app\/staff-pwa-update\.js\?v=1/);
+  assert.match(staffPage, /\/client\/js\/staff\/staff-pwa-update\.js\?v=1/);
   assert.match(updateManager, /registration\.update\(\)/);
   assert.match(updateManager, /\.waiting/);
   assert.match(updateManager, /controllerchange/);
@@ -160,29 +160,9 @@ before(async () => {
   fs.mkdirSync(path.join(runtimeRoot, 'data'), { recursive: true });
   testDatabasePath = path.join(runtimeRoot, 'data', 'powerwatch.db');
   fs.mkdirSync(path.join(runtimeRoot, 'uploads'), { recursive: true });
-  fs.mkdirSync(path.join(runtimeRoot, 'app'), { recursive: true });
-  fs.mkdirSync(path.join(runtimeRoot, 'assets'), { recursive: true });
   fs.writeFileSync(path.join(runtimeRoot, 'package.json'), JSON.stringify({ type: 'commonjs' }));
   fs.cpSync(path.join(ROOT, 'server'), path.join(runtimeRoot, 'server'), { recursive: true });
-  for (const file of ['community.html', 'admin.html', 'staff.html', 'manifest.json', 'staff-manifest.json', 'sw.js', 'staff-sw.js']) {
-    fs.copyFileSync(path.join(ROOT, file), path.join(runtimeRoot, file));
-  }
-  for (const file of ['staff.css', 'staff.js', 'staff-pwa-update.js']) {
-    fs.copyFileSync(path.join(ROOT, 'app', file), path.join(runtimeRoot, 'app', file));
-  }
-  fs.copyFileSync(path.join(ROOT, 'assets', 'powerwatch-logo.svg'), path.join(runtimeRoot, 'assets', 'powerwatch-logo.svg'));
-  for (const file of [
-    'powerwatch-icon-180.png',
-    'powerwatch-icon-192.png',
-    'powerwatch-icon-512.png',
-    'powerwatch-icon-maskable-512.png',
-    'powerwatch-field-icon-180.png',
-    'powerwatch-field-icon-192.png',
-    'powerwatch-field-icon-512.png',
-    'powerwatch-field-icon-maskable-512.png',
-  ]) {
-    fs.copyFileSync(path.join(ROOT, 'assets', file), path.join(runtimeRoot, 'assets', file));
-  }
+  fs.cpSync(path.join(ROOT, 'client'), path.join(runtimeRoot, 'client'), { recursive: true });
 
   const port = await getAvailablePort();
   baseUrl = `http://127.0.0.1:${port}`;
@@ -379,9 +359,9 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
     fetch(`${baseUrl}/community`),
     fetch(`${baseUrl}/manifest.json`),
     fetch(`${baseUrl}/sw.js`),
-    fetch(`${baseUrl}/app/staff.css?v=14`),
-    fetch(`${baseUrl}/app/staff.js?v=17`),
-    fetch(`${baseUrl}/app/staff-pwa-update.js?v=1`),
+    fetch(`${baseUrl}/client/css/staff.css?v=14`),
+    fetch(`${baseUrl}/client/js/staff/staff.js?v=17`),
+    fetch(`${baseUrl}/client/js/staff/staff-pwa-update.js?v=1`),
     Promise.all([
       'powerwatch-field-icon-180.png',
       'powerwatch-field-icon-192.png',
@@ -393,7 +373,7 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
   const staffPage = await pageResponse.text();
   assert.match(staffPage, /Field Staff/);
   assert.match(staffPage, /href="\/staff-manifest\.json"/);
-  assert.match(staffPage, /\/app\/staff-pwa-update\.js\?v=1/);
+  assert.match(staffPage, /\/client\/js\/staff\/staff-pwa-update\.js\?v=1/);
   assert.equal(manifestResponse.status, 200);
   const manifest = await manifestResponse.json();
   assert.equal(manifest.start_url, '/staff');
@@ -604,8 +584,8 @@ test('verified database roles assign each account its own portal after login', {
   assert.match(await portalPages[1].text(), /Field Staff/);
   assert.match(await portalPages[2].text(), /Admin Web Portal/);
 
-  const adminBoot = fs.readFileSync(path.join(ROOT, 'app', 'main.js'), 'utf8');
-  const staffApp = fs.readFileSync(path.join(ROOT, 'app', 'staff.js'), 'utf8');
+  const adminBoot = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
+  const staffApp = fs.readFileSync(path.join(ROOT, 'client', 'js', 'staff', 'staff.js'), 'utf8');
   assert.match(staffApp, /Acknowledged: 'Accept assignment'/);
   assert.match(staffApp, /data-action="advance-stage"/);
   assert.match(staffApp, /data-action="read-notification"/);
@@ -1170,4 +1150,79 @@ test('clean reset requires a verified backup, keeps only the selected admin, and
   const freshAssignments = await jsonRequest('/api/staff/assignments', staffCookie);
   assert.equal(freshAssignments.status, 200);
   assert.equal((await freshAssignments.json()).assignments.length, 1);
+});
+
+test('Staff portal UX includes loading states, inline feedback, and scannable assignment cards', () => {
+  const staffApp = fs.readFileSync(path.join(ROOT, 'client', 'js', 'staff', 'staff.js'), 'utf8');
+  const staffStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'staff.css'), 'utf8');
+
+  // Loading state styles
+  assert.match(staffStyles, /\.staff-btn--loading\s*\{/s);
+  assert.match(staffStyles, /\.staff-form-loading\s*\{/s);
+  assert.match(staffStyles, /staff-spin/);
+
+  // Inline feedback styles
+  assert.match(staffStyles, /\.staff-inline-feedback\s*\{/s);
+  assert.match(staffStyles, /\.staff-inline-success\s*\{/s);
+  assert.match(staffStyles, /\.staff-inline-error\s*\{/s);
+  assert.match(staffStyles, /\.staff-form-error-inline\s*\{/s);
+  assert.match(staffStyles, /@keyframes\s+staff-slideDown/);
+
+  // Assignment card scannability
+  assert.match(staffStyles, /\.staff-assignment-key-info\s*\{/s);
+  assert.match(staffStyles, /\.staff-key-status\s*\{/s);
+  assert.match(staffStyles, /\.staff-key-status-active\s*\{/s);
+  assert.match(staffStyles, /\.staff-key-status-done\s*\{/s);
+  assert.match(staffStyles, /\.staff-key-status-normal\s*\{/s);
+  assert.match(staffStyles, /\.staff-assignment-map-action\s*\{/s);
+  assert.match(staffStyles, /\.staff-home-section\s*\{/s);
+
+  // Inline feedback elements in forms
+  assert.match(staffApp, /data-update-feedback/);
+  assert.match(staffApp, /data-location-feedback/);
+  assert.match(staffApp, /data-stage-feedback/);
+
+  // Loading state handling in JS
+  assert.match(staffApp, /staff-btn--loading/);
+  assert.match(staffApp, /classList\.add\('staff-btn--loading'\)/);
+  assert.match(staffApp, /classList\.remove\('staff-btn--loading'\)/);
+
+  // Inline feedback rendering in JS
+  assert.match(staffApp, /staff-inline-success/);
+  assert.match(staffApp, /staff-inline-error/);
+  assert.match(staffApp, /setAttribute\('open', ''\)/);
+
+  // Assignment card key info section
+  assert.match(staffApp, /staff-assignment-key-info/);
+  assert.match(staffApp, /staff-key-status/);
+  assert.match(staffApp, /staff-key-label/);
+  assert.match(staffApp, /staff-key-value/);
+
+  // Map action wrapper in assignment actions
+  assert.match(staffApp, /staff-assignment-map-action/);
+
+  // Home dashboard sections
+  assert.match(staffApp, /staff-home-section/);
+
+  // Stage advancement loading + inline feedback
+  assert.match(staffApp, /action === 'advance-stage'/);
+  assert.match(staffApp, /data-stage-feedback/);
+  assert.match(staffApp, /classList\.add\('staff-btn--loading'\)/);
+
+  // Verify-assigned-report loading + inline feedback
+  assert.match(staffApp, /action === 'verify-assigned-report'/);
+  assert.match(staffApp, /staff-inline-success/);
+
+  // Update-report-status loading + inline feedback
+  assert.match(staffApp, /action === 'update-report-status'/);
+
+  // Share-location loading + inline feedback
+  assert.match(staffApp, /action === 'share-location'/);
+
+  // Evidence upload loading state
+  assert.match(staffApp, /uploadEvidence/);
+  assert.match(staffApp, /classList\.add\('staff-btn--loading'\)/);
+
+  // Error feedback is thrown after rendering (so outer handler also shows toast)
+  assert.match(staffApp, /catch \(error\) \{[\s\S]*?staff-inline-error[\s\S]*?throw error;/);
 });

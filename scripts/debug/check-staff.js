@@ -1,0 +1,17 @@
+const fs = require('fs');
+const p = 'app/staff.js';
+let c = fs.readFileSync(p, 'utf8');
+console.log(c.includes('data-action="show-area-reports"'));
+console.log(c.includes('id="staff-area-reports"'));
+console.log(c.includes('Next field action'));
+console.log(c.includes('Verified reports'));
+console.log(c.includes('Resolved reports'));
+console.log(c.includes('scrollIntoView'));
+console.log(c.includes('No active assignments to map'));
+console.log(c.includes('No active assignment has an exact GPS point'));
+console.log(c.includes('No assignments have been dispatched'));
+console.log(c.includes('No assignments match this filter'));
+console.log(c.includes('Incident noticed:'));
+console.log(c.includes('Report submitted:'));
+console.log(c.includes('const renderRecentUpdates'));
+console.log(c.includes('assignment.updates'));

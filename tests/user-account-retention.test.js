@@ -5,13 +5,13 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
-const { createResidentStore } = require('../server/resident-store');
+const { createResidentStore } = require('../server/services/resident-store');
 
 const ROOT = path.resolve(__dirname, '..');
 
 test('Render uses free Neon snapshot persistence for production data', () => {
   const renderConfig = fs.readFileSync(path.join(ROOT, 'render.yaml'), 'utf8');
-  const deploymentGuide = fs.readFileSync(path.join(ROOT, 'SYSTEM_DEPLOYMENT_AND_USER_GUIDE.md'), 'utf8');
+  const deploymentGuide = fs.readFileSync(path.join(ROOT, 'docs', 'SYSTEM_DEPLOYMENT_AND_USER_GUIDE.md'), 'utf8');
 
   assert.match(renderConfig, /^\s+branch: main$/m);
   assert.match(renderConfig, /^\s+plan: free$/m);
@@ -39,7 +39,7 @@ test('resident account credentials survive a database process restart', () => {
   const verifyScript = `
     const assert = require('node:assert/strict');
     const { db } = require('./server/db');
-    const { verifyPassword } = require('./server/auth');
+    const { verifyPassword } = require('./server/middleware/auth');
     const user = db.prepare('SELECT * FROM users WHERE email = ?').get(${JSON.stringify(email)});
     assert.ok(user);
     assert.equal(user.role, 'resident');
@@ -161,7 +161,7 @@ test('database startup preserves existing accounts and credentials', () => {
   const script = `
     const assert = require('node:assert/strict');
     const { db, ensureAdminAccount, hashPassword } = require('./server/db');
-    const { verifyPassword } = require('./server/auth');
+    const { verifyPassword } = require('./server/middleware/auth');
     const timestamp = new Date().toISOString();
     const addUser = db.prepare(\`
       INSERT INTO users (id, full_name, username, email, password_hash, role, status, created_at)
@@ -230,7 +230,7 @@ test('persistent data directory migration retains legacy registered users', () =
   const verifyScript = `
     const assert = require('node:assert/strict');
     const { db } = require('./server/db');
-    const { verifyPassword } = require('./server/auth');
+    const { verifyPassword } = require('./server/middleware/auth');
     const resident = db.prepare('SELECT * FROM users WHERE email = ?').get('migrated-resident@example.test');
     assert.ok(resident);
     assert.equal(resident.status, 'Active');

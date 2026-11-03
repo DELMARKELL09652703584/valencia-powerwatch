@@ -29,7 +29,7 @@ before(async () => {
   fs.mkdirSync(path.join(runtimeRoot, 'data'), { recursive: true });
   fs.mkdirSync(path.join(runtimeRoot, 'uploads'), { recursive: true });
   fs.writeFileSync(path.join(runtimeRoot, 'package.json'), JSON.stringify({ type: 'commonjs' }));
-  for (const directory of ['server', 'app', 'assets', 'vendor']) {
+  for (const directory of ['server', 'client']) {
     const source = path.join(ROOT, directory);
     if (fs.existsSync(source)) fs.cpSync(source, path.join(runtimeRoot, directory), { recursive: true });
   }

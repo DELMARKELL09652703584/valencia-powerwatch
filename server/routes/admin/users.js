@@ -3,7 +3,7 @@ const { db, now } = require('../../db');
 const {
   requireAuth, requireRole, audit, hashPassword, roleLabel, notifyUsers,
   isBuiltInAdmin, hasBuiltInAdminIdentifier, residentStore, migrateLegacyResidents,
-} = require('../../auth');
+} = require('../../middleware/auth');
 
 const router = express.Router();
 
