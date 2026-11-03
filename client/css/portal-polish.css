@@ -2017,6 +2017,11 @@ body.community-body .mobile-home-header {
   background: linear-gradient(115deg, #071326, #0c3770 68%, #087b98);
 }
 
+body.dark-mode.community-body .mobile-header:not(.mobile-home-header):not(.mobile-subpage-header):not(.mobile-auth-header) {
+  background: linear-gradient(115deg, #071326, #0c3770 68%, #087b98);
+  color: #fff;
+}
+
 
 body.dark-mode.community-body :is(.mobile-card, .mobile-outage-card, .mobile-profile-head, .mobile-settings-list, .barangay-status-hero, .recent-updates, .mobile-weather, .mobile-dashboard-card, .mobile-report-item, .mobile-history-item, .mobile-notification-item) {
   border-color: #263955;
@@ -3425,15 +3430,29 @@ body.dark-mode.admin-body .scada-card.tone-blue .scada-card-tag {
 }
 
 body.community-body .mobile-header:not(.mobile-home-header):not(.mobile-subpage-header):not(.mobile-auth-header) {
-  border-bottom-color: rgba(255, 255, 255, .18);
-  background: linear-gradient(115deg, #0d3b66 0%, #0a5d94 55%, #0e7ea0 100%);
+  border-color: rgba(255, 255, 255, .18);
+  background: linear-gradient(118deg, #0b3558, #0b6394);
   color: #fff;
   box-shadow: 0 10px 26px rgba(8, 51, 88, .18);
 }
 
 body.community-body .mobile-header:not(.mobile-home-header):not(.mobile-subpage-header):not(.mobile-auth-header) .mobile-header-brand strong,
 body.community-body .mobile-header:not(.mobile-home-header):not(.mobile-subpage-header):not(.mobile-auth-header) .mobile-header-brand b {
-  color: #fff;
+  color: #fff !important;
+}
+
+body.community-body .mobile-home-header .mobile-home-greeting strong {
+  color: #fff !important;
+}
+
+body.community-body .mobile-subpage-header .mobile-header-title {
+  color: #fff !important;
+}
+
+body.community-body .mobile-header:not(.mobile-home-header):not(.mobile-subpage-header):not(.mobile-auth-header) .mobile-theme-toggle {
+  border-color: rgba(255, 255, 255, .3);
+  background: rgba(255, 255, 255, .12);
+  color: #fff !important;
 }
 
 
@@ -5982,7 +6001,6 @@ body.community-body .mobile-shell {
     var(--pw-bg);
 }
 
-body.community-body .mobile-header:not(.mobile-home-header):not(.mobile-subpage-header):not(.mobile-auth-header),
 body.community-body .mobile-tabs {
   border-color: var(--pw-line);
   background: color-mix(in srgb, var(--pw-panel) 96%, transparent);
