@@ -73,7 +73,7 @@ self.addEventListener('fetch', (event) => {
       if (response.ok) await cache.put(request, response.clone());
       return response;
     } catch (error) {
-      const cachedResponse = await cache.match(request, { ignoreSearch: true });
+      const cachedResponse = await cache.match(request);
       if (cachedResponse) return cachedResponse;
       if (isCommunityNavigation) {
         const appShell = await cache.match('/community');
