@@ -38,22 +38,6 @@
   --space-lg: 24px;
 }
 
-/* Dark mode overrides */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b1220;
-    --surface: #1e293b;
-    --panel: #1e293b;
-    --ink: #e2e8f0;
-    --ink-soft: #cbd5e1;
-    --muted: #a8bbd3;
-    --line: #334155;
-    --primary: #8ab4f8;
-    --primary-dark: #5590f9;
-    --accent: #4fd1c5;
-    --ok: #68d391;
-    --warn: #fbbf24;
-    --bad: #f87171;
-  }
-}
+/* Theme changes are controlled by the app toggle so system dark mode cannot
+   leave light pages with dark surfaces and low-contrast text. */
 

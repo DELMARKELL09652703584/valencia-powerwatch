@@ -7470,14 +7470,12 @@ body.dark-mode.community-body .report-evidence-step .report-evidence-picker {
   margin: 0 8px;
 }
 
-@media (prefers-color-scheme: dark) {
-  body.community-body { background: #030712; color: #f1f5f9; }
-  body.community-body .mobile-card { border-color: #1e293b; background: #0f172a; }
-  body.community-body .mobile-card-header { border-bottom-color: #1e293b; }
-  body.community-body .mobile-divider { background: #1e293b; }
-  body.community-body .mobile-btn-ghost { border-color: #1e293b; background: #0f172a; color: #f1f5f9; }
-  body.community-body .mobile-badge { border-color: #1e293b; background: #0f172a; color: #f1f5f9; }
-}
+body.dark-mode.community-body { background: #030712; color: #f1f5f9; }
+body.dark-mode.community-body .mobile-card { border-color: #1e293b; background: #0f172a; }
+body.dark-mode.community-body .mobile-card-header { border-bottom-color: #1e293b; }
+body.dark-mode.community-body .mobile-divider { background: #1e293b; }
+body.dark-mode.community-body .mobile-btn-ghost { border-color: #1e293b; background: #0f172a; color: #f1f5f9; }
+body.dark-mode.community-body .mobile-badge { border-color: #1e293b; background: #0f172a; color: #f1f5f9; }
 
 /* ─── Confirmation dialog ─── */
 .mobile-confirm-dialog {
@@ -7544,14 +7542,12 @@ body.dark-mode.community-body .report-evidence-step .report-evidence-picker {
 }
 .mobile-confirm-foot .mobile-btn { flex: 1; min-height: 48px; }
 
-@media (prefers-color-scheme: dark) {
-  .mobile-confirm-card { border-color: #1e293b; background: #0f172a; }
-  .mobile-confirm-head { border-bottom-color: #1e293b; }
-  .mobile-confirm-foot { border-top-color: #1e293b; background: rgba(0, 0, 0, 0.2); }
-  .mobile-confirm-title { color: #f1f5f9; }
-  .mobile-confirm-body { color: #cbd5e1; }
-  .mobile-confirm-close:hover { background: #1e293b; color: #f1f5f9; }
-}
+body.dark-mode .mobile-confirm-card { border-color: #1e293b; background: #0f172a; }
+body.dark-mode .mobile-confirm-head { border-bottom-color: #1e293b; }
+body.dark-mode .mobile-confirm-foot { border-top-color: #1e293b; background: rgba(0, 0, 0, 0.2); }
+body.dark-mode .mobile-confirm-title { color: #f1f5f9; }
+body.dark-mode .mobile-confirm-body { color: #cbd5e1; }
+body.dark-mode .mobile-confirm-close:hover { background: #1e293b; color: #f1f5f9; }
 
 /* ─── Offline banner ─── */
 .offline-banner {

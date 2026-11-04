@@ -13,6 +13,17 @@ test('portal theme stylesheet keeps mobile home actions styled in both themes', 
   assert.match(styles, /body\.community-body \.home-shortcut-icon svg\s*\{[^}]*width:\s*19px;[^}]*height:\s*19px;/s);
 });
 
+test('community colors follow the app theme toggle instead of system dark mode', () => {
+  const themeStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'theme.css'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
+
+  assert.doesNotMatch(themeStyles, /prefers-color-scheme:\s*dark/i);
+  assert.doesNotMatch(portalStyles, /@media\s*\(prefers-color-scheme:\s*dark\)[^{]*\{[^}]*body\.community-body/s);
+  assert.match(portalStyles, /body\.community-body\s*\{[^}]*--pw-panel:\s*#fff;/s);
+  assert.match(portalStyles, /body\.dark-mode\.community-body\s*\{[^}]*--pw-panel:\s*#142238;/s);
+  assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-card\s*\{[^}]*background:\s*#0f172a;/s);
+});
+
 test('portal layouts remain constrained on narrow mobile screens', () => {
   const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
   const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
