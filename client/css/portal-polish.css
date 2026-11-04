@@ -6290,13 +6290,16 @@ body.community-body .home-trends > summary small {
 
 @media (max-width: 600px) {
   body.community-body .mobile-home-header {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 4px;
-    padding: 6px 14px 8px;
+    display: flex;
+    min-height: 62px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 14px;
   }
 
   body.community-body .mobile-home-identity {
+    flex: 1 1 auto;
     min-width: 0;
   }
 
@@ -6313,11 +6316,12 @@ body.community-body .home-trends > summary small {
   }
 
   body.community-body .mobile-home-header .mobile-header-actions {
-    width: 100%;
+    flex: 0 0 auto;
+    width: auto;
     min-width: 0;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-end;
-    gap: 6px;
+    gap: 0;
   }
 }
 

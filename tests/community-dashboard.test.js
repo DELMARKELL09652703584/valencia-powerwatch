@@ -25,7 +25,8 @@ test('community dashboard shows public updates without exposing personal notific
   assert.match(communityPage, /\/style\.css\?v=51/);
   assert.match(portalStyles, /body\.community-body \.home-report-action\s*\{/);
   assert.match(portalStyles, /body\.community-body \.home-track-action svg\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;[^}]*fill:\s*none;/s);
-  assert.match(portalStyles, /@media \(max-width: 600px\)\s*\{\s*body\.community-body \.mobile-home-header\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
+  assert.match(portalStyles, /@media \(max-width: 600px\)\s*\{\s*body\.community-body \.mobile-home-header\s*\{[^}]*display:\s*flex;[^}]*min-height:\s*62px;[^}]*align-items:\s*center;[^}]*justify-content:\s*space-between;/s);
+  assert.match(portalStyles, /body\.community-body \.mobile-home-header \.mobile-header-actions\s*\{[^}]*width:\s*auto;[^}]*flex-wrap:\s*nowrap;/s);
 });
 
 test('community outage list keeps barangay scope and supports an explicit city-wide view', () => {
@@ -101,7 +102,7 @@ test('resident navigation exposes reporting, announcements, and outage history',
   assert.match(mainScript, /case 'open-announcements':\s*state\.mobileNotificationCategory = 'announcements';\s*await goToTab\('notifications'\)/);
   assert.match(mainScript, /data-action="retry-current-tab"/);
   assert.match(mainScript, /case 'retry-current-tab':\s*await goToTab\(state\.mobileTab\)/);
-  assert.match(communityPage, /portal-polish\.css\?v=90/);
+  assert.match(communityPage, /portal-polish\.css\?v=91/);
   assert.match(communityPage, /community\.js\?v=48/);
   assert.match(communityPage, /main\.js\?v=48/);
   assert.match(mainScript, /coordinates shown above will be included with your location description/);
@@ -402,7 +403,7 @@ test('Community account creation uses the light mobile form design and preserves
   assert.match(portalStyles, /body\.community-body \.community-register-form > label > input,[\s\S]*?border-radius:\s*13px;[\s\S]*?background:\s*#fff;/s);
   assert.match(portalStyles, /body\.community-body \.community-register-form \.mobile-auth-submit\s*\{[^}]*background:\s*linear-gradient\(135deg, #1688ed, #0864c4\);/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.community-register-page/);
-  assert.match(communityPage, /portal-polish\.css\?v=90/);
+  assert.match(communityPage, /portal-polish\.css\?v=91/);
   assert.match(communityPage, /shared\/main\.js\?v=48/);
 });
 
