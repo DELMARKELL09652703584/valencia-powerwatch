@@ -24,7 +24,7 @@ body.community-body #app > .mobile-shell .report-step-form.location-mode-address
 }
 
 body.community-body #app > .mobile-shell .mobile-tabs {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 body.community-body #app > .mobile-shell .mobile-tab {

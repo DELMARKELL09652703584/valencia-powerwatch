@@ -101,8 +101,8 @@ test('resident navigation exposes reporting, announcements, and outage history',
   assert.match(mainScript, /case 'open-announcements':\s*state\.mobileNotificationCategory = 'announcements';\s*await goToTab\('notifications'\)/);
   assert.match(mainScript, /data-action="retry-current-tab"/);
   assert.match(mainScript, /case 'retry-current-tab':\s*await goToTab\(state\.mobileTab\)/);
-  assert.match(communityPage, /portal-polish\.css\?v=87/);
-  assert.match(communityPage, /community\.js\?v=47/);
+  assert.match(communityPage, /portal-polish\.css\?v=88/);
+  assert.match(communityPage, /community\.js\?v=48/);
   assert.match(communityPage, /main\.js\?v=48/);
   assert.match(mainScript, /coordinates shown above will be included with your location description/);
   assert.match(mainScript, /case 'open-notification-settings':\s*state\.mobileNotificationSettingsReturnTab = state\.mobileTab;/);
@@ -282,8 +282,11 @@ test('community bottom navigation shows accessible icon and text labels', () => 
   assert.match(navigationMarkup, /class="mobile-tab-icon" aria-hidden="true"/);
   assert.match(navigationMarkup, /class="mobile-tab-label"/);
   assert.match(communityScript, /key: 'map',\s*label: 'Map'/);
-  assert.match(communityScript, /key: 'notifications',\s*label: 'Notifications'/);
-  assert.match(portalStyles, /body\.community-body #app > \.mobile-shell \.mobile-tabs\s*\{[^}]*grid-template-columns:\s*repeat\(5, minmax\(0, 1fr\)\);/s);
+  assert.match(communityScript, /key: 'profile',\s*label: 'Profile'/);
+  assert.doesNotMatch(navigationMarkup, /data-mobile-tab="notifications"/);
+  assert.match(communityScript, /function mobileNotificationBell\(\)[\s\S]*?data-action="toggle-mobile-notification-panel"[\s\S]*?aria-label="Notifications/);
+  assert.match(communityScript, /data-action="view-all-mobile-notifications"/);
+  assert.match(portalStyles, /body\.community-body #app > \.mobile-shell \.mobile-tabs\s*\{[^}]*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\);/s);
   assert.match(portalStyles, /body\.community-body \.mobile-tab\s*\{[^}]*grid-template-rows:\s*24px auto;[^}]*font-size:\s*0\.75rem;/s);
   assert.match(portalStyles, /body\.community-body \.mobile-tab\s*\{[^}]*background:\s*transparent !important;[^}]*box-shadow:\s*none !important;/s);
   assert.match(portalStyles, /body\.community-body \.mobile-tab\.active\s*\{[^}]*border-color:\s*transparent !important;[^}]*background:\s*transparent !important;[^}]*box-shadow:\s*none !important;[^}]*color:\s*#0b74d1 !important;/s);
@@ -399,7 +402,7 @@ test('Community account creation uses the light mobile form design and preserves
   assert.match(portalStyles, /body\.community-body \.community-register-form > label > input,[\s\S]*?border-radius:\s*13px;[\s\S]*?background:\s*#fff;/s);
   assert.match(portalStyles, /body\.community-body \.community-register-form \.mobile-auth-submit\s*\{[^}]*background:\s*linear-gradient\(135deg, #1688ed, #0864c4\);/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.community-register-page/);
-  assert.match(communityPage, /portal-polish\.css\?v=87/);
+  assert.match(communityPage, /portal-polish\.css\?v=88/);
   assert.match(communityPage, /shared\/main\.js\?v=48/);
 });
 
