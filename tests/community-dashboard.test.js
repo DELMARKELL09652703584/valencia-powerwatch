@@ -141,9 +141,9 @@ test('resident navigation exposes reporting, announcements, and outage history',
   assert.match(mainScript, /case 'open-announcements':\s*state\.mobileNotificationCategory = 'announcements';\s*await goToTab\('notifications'\)/);
   assert.match(mainScript, /data-action="retry-current-tab"/);
   assert.match(mainScript, /case 'retry-current-tab':\s*await goToTab\(state\.mobileTab\)/);
-  assert.match(communityPage, /portal-polish\.css\?v=92/);
-  assert.match(communityPage, /community\.js\?v=49/);
-  assert.match(communityPage, /main\.js\?v=49/);
+  assert.match(communityPage, /portal-polish\.css\?v=93/);
+  assert.match(communityPage, /community\.js\?v=50/);
+  assert.match(communityPage, /main\.js\?v=50/);
   assert.match(mainScript, /coordinates shown above will be included with your location description/);
   assert.match(mainScript, /case 'open-notification-settings':\s*state\.mobileNotificationSettingsReturnTab = state\.mobileTab;/);
   assert.match(mainScript, /case 'back-from-notification-settings':\s*await goToTab\(state\.mobileNotificationSettingsReturnTab \|\| 'settings'\)/);
@@ -170,7 +170,7 @@ test('report form starts with a text location and offers the map as an alternati
   assert.match(communityScript, /Describe the outage location, or add a map pin before continuing\./);
   assert.match(communityScript, /Barangay where the interruption happened/);
   assert.match(communityScript, /Other affected streets or sitios <span class="muted small">\(optional\)<\/span>/);
-  assert.match(communityScript, /if \(step === 2 && locationMode === 'map'\) \{\s*await ensureLeaflet\(\)/);
+  assert.match(communityScript, /if \(step === 2 && locationMode === 'map'\) \{\s*await ensureLeafletBase\(\)/);
   assert.match(communityScript, /\$\{locationMode === 'map' \? '<button type="button" class="button ghost block" data-action="capture-gps"/);
   assert.match(portalStyles, /report-step-form\.location-mode-address #report-location-map\s*\{\s*display:\s*none;/);
   assert.match(portalStyles, /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
@@ -442,8 +442,8 @@ test('Community account creation uses the light mobile form design and preserves
   assert.match(portalStyles, /body\.community-body \.community-register-form > label > input,[\s\S]*?border-radius:\s*13px;[\s\S]*?background:\s*#fff;/s);
   assert.match(portalStyles, /body\.community-body \.community-register-form \.mobile-auth-submit\s*\{[^}]*background:\s*linear-gradient\(135deg, #1688ed, #0864c4\);/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.community-register-page/);
-  assert.match(communityPage, /portal-polish\.css\?v=92/);
-  assert.match(communityPage, /shared\/main\.js\?v=49/);
+  assert.match(communityPage, /portal-polish\.css\?v=93/);
+  assert.match(communityPage, /shared\/main\.js\?v=50/);
 });
 
 test('User Portal provides an accessible PWA install button', () => {

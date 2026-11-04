@@ -31,6 +31,7 @@ Resident / Staff / Admin browser
 - **SQLite** is the operational database used by the application routes.
 - **Neon PostgreSQL** stores durable SQLite snapshots and persistent resident/staff authentication records.
 - Render's free service has no persistent disk; Neon is what makes data survive restarts, sleep, and redeploys.
+- Staff live GPS positions are stored in SQLite per active assignment and staff member. They are included in the existing compressed SQLite snapshots; this feature does not add direct CRUD against the normalized Neon schema or require a Neon migration. Resident reads are limited to the owner of the assigned report, and positions older than two minutes are not exposed as current. OpenStreetMap receives map-tile requests and the public OSRM service receives the route endpoints needed for distance and ETA.
 
 ### Neon connection used in production
 
@@ -102,7 +103,7 @@ The proposed tables are currently represented by SQLite tables and application l
 | `feedback` | SQLite `citizen_feedback` | 0 |
 | `audit_logs` | SQLite `audit_logs` | 1 |
 
-SQLite currently has 26 tables in total. Eleven supporting tables must be preserved in the target because the 24-table list does not represent them: `oauth_accounts`, `oauth_states`, `password_reset_tokens`, `settings`, `sms_logs`, `repair_teams`, `repair_assignments`, `repair_assignment_evidence`, `repair_assignment_location_confirmations`, `staff_team_members`, and `staff_barangay_assignments`. `repair_assignment_updates` is mapped into `outage_updates`; `report_attachments`, `incident_links`, `incident_areas`, `citizen_feedback`, `sessions`, and `resident_sessions` map into their corresponding core tables.
+SQLite currently has 27 tables in total. Eleven supporting tables must be preserved in the normalized target because the 24-table list does not represent them: `oauth_accounts`, `oauth_states`, `password_reset_tokens`, `settings`, `sms_logs`, `repair_teams`, `repair_assignments`, `repair_assignment_evidence`, `repair_assignment_location_confirmations`, `staff_team_members`, and `staff_barangay_assignments`. `repair_assignment_updates` is mapped into `outage_updates`; `report_attachments`, `incident_links`, `incident_areas`, `citizen_feedback`, `sessions`, and `resident_sessions` map into their corresponding core tables. `repair_assignment_live_locations` is an additional SQLite-only runtime table that remains durable through snapshots; it is not in the active normalized Neon schema.
 
 `playing_with_neon` was a Neon sample table unrelated to the application. It held 10 rows of tutorial data, had no foreign keys, and was dropped on 2026-10-23; it was never part of the domain schema.
 

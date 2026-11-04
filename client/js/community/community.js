@@ -37,9 +37,10 @@ function weatherDescription(code) {
 }
 
 let leafletLoadPromise;
-function ensureLeaflet() {
-  if (window.L && typeof window.L.heatLayer === 'function') return Promise.resolve();
-  if (leafletLoadPromise) return leafletLoadPromise;
+let leafletBaseLoadPromise;
+function ensureLeafletBase() {
+  if (window.L) return Promise.resolve();
+  if (leafletBaseLoadPromise) return leafletBaseLoadPromise;
   const stylesheet = document.createElement('link');
   stylesheet.rel = 'stylesheet';
   stylesheet.href = '/vendor/leaflet/leaflet.css';
@@ -49,6 +50,19 @@ function ensureLeaflet() {
   });
   document.head.append(stylesheet);
 
+  leafletBaseLoadPromise = styleReady.then(() => new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = '/vendor/leaflet/leaflet.js';
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('The interactive map library could not be loaded.'));
+    document.head.append(script);
+  }));
+  return leafletBaseLoadPromise;
+}
+
+function ensureLeaflet() {
+  if (window.L && typeof window.L.heatLayer === 'function') return Promise.resolve();
+  if (leafletLoadPromise) return leafletLoadPromise;
   const loadScript = (src) => new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = src;
@@ -56,9 +70,7 @@ function ensureLeaflet() {
     script.onerror = () => reject(new Error(`Failed to load ${src}`));
     document.head.append(script);
   });
-
-  leafletLoadPromise = styleReady
-    .then(() => (window.L ? Promise.resolve() : loadScript('/vendor/leaflet/leaflet.js')))
+  leafletLoadPromise = ensureLeafletBase()
     .then(() => (typeof window.L?.heatLayer === 'function' ? Promise.resolve() : loadScript('/assets/leaflet-heat.js').catch(() => loadScript('https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js'))))
     .then(() => undefined);
 
@@ -766,7 +778,7 @@ async function renderMobileReportForm() {
 
   disposeReportLocationMap();
   if (step === 2 && locationMode === 'map') {
-    await ensureLeaflet();
+    await ensureLeafletBase();
     const locations = state.barangayLocations || [];
     const mapElement = document.getElementById('report-location-map');
     if (!mapElement) return;
@@ -1124,6 +1136,168 @@ async function renderMobileProfile() {
   `, { activeTab: 'profile' });
 }
 
+let residentTrackingPollTimer = null;
+let residentTrackingMap = null;
+let residentTrackingStaffMarker = null;
+let residentTrackingReportMarker = null;
+let residentTrackingRoute = null;
+let residentTrackingRouteAt = 0;
+let residentTrackingLastRoutePosition = '';
+let residentTrackingGeneration = 0;
+
+function stopResidentTracking() {
+  residentTrackingGeneration += 1;
+  if (residentTrackingPollTimer) window.clearInterval(residentTrackingPollTimer);
+  residentTrackingPollTimer = null;
+  if (residentTrackingMap) residentTrackingMap.remove();
+  residentTrackingMap = null;
+  residentTrackingStaffMarker = null;
+  residentTrackingReportMarker = null;
+  residentTrackingRoute = null;
+  residentTrackingRouteAt = 0;
+  residentTrackingLastRoutePosition = '';
+}
+
+async function updateResidentTracking(reportId, generation) {
+  const statusElement = document.getElementById('resident-tracking-status');
+  const mapElement = document.getElementById('resident-tracking-map');
+  const detailsElement = document.getElementById('resident-tracking-details');
+  const routeElement = document.getElementById('resident-tracking-route');
+  if (!statusElement || !mapElement || !detailsElement || !routeElement) return;
+  const { tracking } = await api(`/api/reports/${encodeURIComponent(reportId)}/tracking`);
+  if (generation !== residentTrackingGeneration || document.getElementById('resident-tracking-map') !== mapElement) return;
+  if (!tracking.active) {
+    statusElement.textContent = tracking.message || 'There is no active staff assignment for this report.';
+    detailsElement.textContent = 'The map will update automatically if the report is assigned while you are viewing it.';
+    mapElement.hidden = true;
+    routeElement.hidden = true;
+    if (residentTrackingMap) {
+      residentTrackingMap.remove();
+      residentTrackingMap = null;
+      residentTrackingStaffMarker = null;
+      residentTrackingReportMarker = null;
+      residentTrackingRoute = null;
+    }
+    return;
+  }
+  const report = tracking.report || {};
+  const assignment = tracking.assignment || {};
+  const location = tracking.location;
+  detailsElement.textContent = `${report.report_code || 'Your report'} · ${report.barangay || 'Valencia City'} · ${assignment.team_name || 'Response team'} · ${assignment.status || 'Active'}`;
+  if (location?.staff_name) {
+    const time = location.updated_at ? new Date(location.updated_at).toLocaleTimeString() : 'time unavailable';
+    const accuracy = location.accuracy_m === null || location.accuracy_m === undefined ? '' : ` · GPS accuracy ±${Math.round(Number(location.accuracy_m))} m`;
+    statusElement.textContent = location.stale || !hasCoordinates(location)
+      ? `${location.staff_name} · Last location is stale (${time}). Waiting for a fresh GPS update.`
+      : `${location.staff_name} · ${time}${accuracy} · ${assignment.status}`;
+  } else {
+    statusElement.textContent = 'A team is assigned. Waiting for staff to enable GPS location sharing.';
+  }
+  if (!hasCoordinates(report)) {
+    mapElement.hidden = true;
+    routeElement.hidden = true;
+    detailsElement.textContent += ' · The report has no exact GPS coordinates, so map tracking is unavailable.';
+    if (residentTrackingMap) {
+      residentTrackingMap.remove();
+      residentTrackingMap = null;
+      residentTrackingStaffMarker = null;
+      residentTrackingReportMarker = null;
+      residentTrackingRoute = null;
+    }
+    return;
+  }
+  mapElement.hidden = false;
+  const target = [Number(report.latitude), Number(report.longitude)];
+  const hasStaffPosition = location && !location.stale && hasCoordinates(location);
+  await ensureLeafletBase();
+  if (generation !== residentTrackingGeneration || document.getElementById('resident-tracking-map') !== mapElement) return;
+  if (!residentTrackingMap) {
+    residentTrackingMap = L.map(mapElement, { zoomControl: false }).setView(target, 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      subdomains: 'abc',
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(residentTrackingMap);
+    L.control.zoom({ position: 'bottomright' }).addTo(residentTrackingMap);
+    residentTrackingReportMarker = L.marker(target).addTo(residentTrackingMap)
+      .bindPopup('Your reported incident location');
+  } else {
+    residentTrackingReportMarker?.setLatLng(target);
+  }
+  if (!hasStaffPosition) {
+    if (residentTrackingStaffMarker) residentTrackingMap.removeLayer(residentTrackingStaffMarker);
+    if (residentTrackingRoute) residentTrackingMap.removeLayer(residentTrackingRoute);
+    residentTrackingStaffMarker = null;
+    residentTrackingRoute = null;
+    routeElement.hidden = true;
+    residentTrackingMap.setView(target, 14);
+    return;
+  }
+
+  const start = [Number(location.latitude), Number(location.longitude)];
+  if (!residentTrackingStaffMarker) {
+    residentTrackingStaffMarker = L.circleMarker(start, {
+      radius: 9, color: '#075985', weight: 3, fillColor: '#38bdf8', fillOpacity: 1,
+    }).addTo(residentTrackingMap).bindPopup('Assigned staff location');
+  } else residentTrackingStaffMarker.setLatLng(start);
+  if (!residentTrackingRoute) {
+    residentTrackingRoute = L.polyline([start, target], {
+      color: '#2563eb', weight: 5, opacity: 0.8, dashArray: '8 7',
+    }).addTo(residentTrackingMap);
+    residentTrackingMap.fitBounds(L.latLngBounds([start, target]), { padding: [28, 28], maxZoom: 15 });
+  }
+
+  const positionKey = `${start[0].toFixed(4)},${start[1].toFixed(4)}>${target[0].toFixed(4)},${target[1].toFixed(4)}`;
+  const nowMs = Date.now();
+  if (positionKey === residentTrackingLastRoutePosition && nowMs - residentTrackingRouteAt < 30000) return;
+  residentTrackingLastRoutePosition = positionKey;
+  residentTrackingRouteAt = nowMs;
+  routeElement.hidden = false;
+  routeElement.textContent = 'Getting driving route and ETA…';
+  try {
+    const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${target[1]},${target[0]}?overview=full&geometries=geojson`, {
+      signal: typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(8000) : undefined,
+    });
+    if (!response.ok) throw new Error('Route service unavailable.');
+    const result = await response.json();
+    const route = result.routes?.[0];
+    if (!route?.geometry?.coordinates?.length) throw new Error('No driving route is available.');
+    if (generation !== residentTrackingGeneration || document.getElementById('resident-tracking-map') !== mapElement) return;
+    residentTrackingRoute.setLatLngs(route.geometry.coordinates.map(([lng, lat]) => [lat, lng])).setStyle({ dashArray: null });
+    const distance = route.distance >= 1000 ? `${(route.distance / 1000).toFixed(1)} km` : `${Math.round(route.distance)} m`;
+    const eta = `${Math.max(1, Math.round(route.duration / 60))} min estimated`;
+    routeElement.textContent = `Driving route · ${distance} · ${eta}`;
+  } catch {
+    if (generation === residentTrackingGeneration && document.getElementById('resident-tracking-map') === mapElement) {
+      routeElement.textContent = 'Driving route and ETA are temporarily unavailable. The map shows a direct guide.';
+    }
+  }
+}
+
+function startResidentTracking(reportId) {
+  stopResidentTracking();
+  const generation = residentTrackingGeneration;
+  let requestInFlight = false;
+  const poll = async () => {
+    if (!document.getElementById('resident-tracking-map') || Number(state.mobileReportId) !== Number(reportId)) {
+      stopResidentTracking();
+      return;
+    }
+    if (requestInFlight || document.visibilityState === 'hidden') return;
+    requestInFlight = true;
+    try {
+      await updateResidentTracking(reportId, generation);
+    } catch (error) {
+      const status = document.getElementById('resident-tracking-status');
+      if (generation === residentTrackingGeneration && status) status.textContent = `Tracking update unavailable: ${error.message}. Retrying automatically.`;
+    } finally {
+      requestInFlight = false;
+    }
+  };
+  poll();
+  residentTrackingPollTimer = window.setInterval(poll, 15000);
+}
+
 function computeReportProgressStage(report) {
   const rStatus = String(report.status || '').trim();
   const incStatus = String(report.incident?.status || '').trim();
@@ -1210,6 +1384,7 @@ async function renderMobileReports() {
 }
 
 async function renderMobileReportDetail() {
+  stopResidentTracking();
   const { report } = await api(`/api/reports/${Number(state.mobileReportId)}`);
   const prog = computeReportProgressStage(report);
   const isResolved = prog.stage === 4;
@@ -1310,6 +1485,17 @@ async function renderMobileReportDetail() {
         : `<img src="${escapeHtml(attachment.file_path)}" alt="${escapeHtml(attachment.original_name)}">`).join('')}</div>`
         : report.photo_path ? `<h2>Attachments</h2><img class="mobile-report-photo" src="${escapeHtml(report.photo_path)}" alt="Evidence attached to this report">` : ''}
     </section>
+    <section class="mobile-card resident-tracking-card" aria-labelledby="resident-tracking-heading">
+      <header class="mobile-card-head"><h2 id="resident-tracking-heading">Live staff tracking</h2></header>
+      <div class="mobile-card-body">
+        <p id="resident-tracking-status" class="resident-tracking-status" role="status" aria-live="polite">Checking the assignment and staff location…</p>
+        <p id="resident-tracking-details" class="resident-tracking-details"></p>
+        <p id="resident-tracking-route" class="resident-tracking-route" hidden></p>
+        <div id="resident-tracking-map" class="resident-tracking-map" role="application" aria-label="Interactive map showing assigned staff and the reported incident"></div>
+        <div class="resident-tracking-legend" aria-label="Map legend"><span><i class="resident-tracking-legend-staff"></i> Staff GPS</span><span><i class="resident-tracking-legend-incident"></i> Incident</span><span><i class="resident-tracking-legend-route"></i> Route</span></div>
+        <p class="resident-tracking-note">Updates every 15 seconds. Staff location is shared only while the assignment is active and the Staff App is open with GPS permission. Map tiles come from OpenStreetMap; driving route requests use OSRM.</p>
+      </div>
+    </section>
     ${feedbackCardMarkup}
   `, {
     activeTab: 'reports',
@@ -1318,6 +1504,7 @@ async function renderMobileReportDetail() {
       backAction: 'back-to-reports',
     },
   });
+  startResidentTracking(report.id);
 }
 
 async function renderMobileMap() {

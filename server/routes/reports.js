@@ -287,6 +287,81 @@ router.get('/reports/possible-duplicates', requireAuth, requireRole('resident'),
   res.json({ possible_duplicates: matches, radius_m: 1000, lookback_hours: 72 });
 });
 
+router.get('/reports/:id/tracking', requireAuth, requireRole('resident'), (req, res) => {
+  const reportId = Number(req.params.id);
+  if (!Number.isSafeInteger(reportId) || reportId < 1) return res.status(404).json({ error: 'Report not found.' });
+  const report = db.prepare(`
+    SELECT id, reporter_id, report_code, status, latitude, longitude, location, barangay, purok,
+           incident_id
+    FROM outage_reports WHERE id = ?
+  `).get(reportId);
+  if (!report || Number(report.reporter_id) !== Number(req.user.id)) {
+    return res.status(404).json({ error: 'Report not found.' });
+  }
+  res.set('Cache-Control', 'no-store');
+
+  const assignment = db.prepare(`
+    SELECT a.id, a.assignment_code, a.status, t.name AS team_name,
+           COALESCE(i.latitude, r.latitude) AS latitude,
+           COALESCE(i.longitude, r.longitude) AS longitude
+    FROM repair_assignments a
+    JOIN repair_teams t ON t.id = a.team_id
+    JOIN outage_reports r ON r.id = ?
+    LEFT JOIN outage_incidents i ON i.id = a.incident_id
+    WHERE (a.report_id = r.id OR (r.incident_id IS NOT NULL AND a.incident_id = r.incident_id))
+      AND a.status IN ('Dispatched', 'En Route', 'Arrived On Site', 'In Progress')
+      AND r.status NOT IN ('Resolved', 'Closed', 'Rejected', 'Duplicate')
+    ORDER BY a.id DESC
+    LIMIT 1
+  `).get(reportId);
+  if (!assignment) {
+    return res.json({ tracking: { active: false, message: 'There is no active staff assignment for this report.' } });
+  }
+
+  const latestLocation = db.prepare(`
+    SELECT l.latitude, l.longitude, l.accuracy_m, l.updated_at, u.full_name AS staff_name
+    FROM repair_assignment_live_locations l
+    JOIN users u ON u.id = l.staff_id AND u.role = 'personnel' AND u.status = 'Active'
+    WHERE l.assignment_id = ?
+    ORDER BY l.updated_at DESC, l.staff_id
+    LIMIT 1
+  `).get(assignment.id);
+  let location = null;
+  if (latestLocation) {
+    const updatedAt = new Date(latestLocation.updated_at).getTime();
+    const stale = !Number.isFinite(updatedAt) || Date.now() - updatedAt > 120000;
+    location = {
+      staff_name: latestLocation.staff_name,
+      updated_at: latestLocation.updated_at,
+      accuracy_m: latestLocation.accuracy_m,
+      stale,
+      latitude: stale ? null : latestLocation.latitude,
+      longitude: stale ? null : latestLocation.longitude,
+    };
+  }
+  res.json({
+    tracking: {
+      active: true,
+      assignment: {
+        id: assignment.id,
+        assignment_code: assignment.assignment_code,
+        status: assignment.status,
+        team_name: assignment.team_name,
+      },
+      report: {
+        report_code: report.report_code,
+        status: report.status,
+        location: report.location,
+        barangay: report.barangay,
+        purok: report.purok,
+        latitude: assignment.latitude,
+        longitude: assignment.longitude,
+      },
+      location,
+    },
+  });
+});
+
 router.get('/reports/:id', requireAuth, (req, res) => {
   const report = reportDetailRow(Number(req.params.id));
   if (!report) return res.status(404).json({ error: 'Report not found.' });
@@ -403,6 +478,7 @@ router.put('/reports/:id/status', requireAuth, requireRole('personnel', 'adminis
         SET status = 'Resolved', resolution_remarks = ?, updated_at = ?
         WHERE id = ?`)
         .run(cleanRemarks, updatedAt, completedAssignment.id);
+      db.prepare('DELETE FROM repair_assignment_live_locations WHERE assignment_id = ?').run(completedAssignment.id);
     }
     recordReportStatusChange(report, nextStatus, req.user, updatedAt, cleanRemarks || null);
     db.exec('COMMIT');

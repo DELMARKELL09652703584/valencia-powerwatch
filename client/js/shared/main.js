@@ -362,6 +362,7 @@ async function render() {
   if (IS_COMMUNITY) {
     const target = MOBILE_PAGES[state.mobileTab] ? state.mobileTab : 'home';
     if (target !== 'report') disposeReportLocationMap();
+    if (target !== 'reports' || !state.mobileReportId) stopResidentTracking();
     if (!state.user) return;
     state.mobileTab = target;
     if (target === 'reports' && state.mobileReportId) return renderMobileReportDetail();

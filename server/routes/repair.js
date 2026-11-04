@@ -493,6 +493,9 @@ router.put('/repair/assignments/:id/status', requireAuth, requireRole('administr
           arrived_at = ?, completed_at = ?, updated_at = ?
       WHERE id = ?
     `).run(status, status, crew_report || null, status, String(resolution_remarks || '').trim() || null, arrivedAt, completedAt, ts, assignment.id);
+    if (['Completed', 'Resolved', 'Cancelled'].includes(status)) {
+      db.prepare('DELETE FROM repair_assignment_live_locations WHERE assignment_id = ?').run(assignment.id);
+    }
 
     // 2. Update repair team position & status
     const isFinished = ['Resolved', 'Cancelled'].includes(status);

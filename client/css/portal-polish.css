@@ -6677,6 +6677,83 @@ body.dark-mode.community-body .mobile-report-timeline {
   background: var(--pw-panel);
 }
 
+body.community-body .resident-tracking-map {
+  width: 100%;
+  height: min(46vh, 360px);
+  min-height: 260px;
+  margin-top: 12px;
+  border: 1px solid var(--pw-line);
+  border-radius: 14px;
+  background: #dbe7ef;
+  z-index: 0;
+}
+
+body.community-body .resident-tracking-map[hidden],
+body.community-body .resident-tracking-route[hidden] {
+  display: none !important;
+}
+
+body.community-body .resident-tracking-status,
+body.community-body .resident-tracking-details,
+body.community-body .resident-tracking-route,
+body.community-body .resident-tracking-note {
+  margin: 0;
+  font-size: .82rem;
+  line-height: 1.5;
+}
+
+body.community-body .resident-tracking-status {
+  color: var(--pw-text);
+  font-weight: 700;
+}
+
+body.community-body .resident-tracking-details,
+body.community-body .resident-tracking-note {
+  margin-top: 6px;
+  color: var(--pw-muted);
+}
+
+body.community-body .resident-tracking-route {
+  margin-top: 8px;
+  color: #075985;
+  font-weight: 700;
+}
+
+body.community-body .resident-tracking-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+  color: var(--pw-muted);
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+body.community-body .resident-tracking-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+body.community-body .resident-tracking-legend i {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  border-radius: 50%;
+}
+
+body.community-body .resident-tracking-legend-staff { background: #38bdf8; border: 2px solid #075985; }
+body.community-body .resident-tracking-legend-incident { background: #ef4444; border: 1px solid #b91c1c; }
+body.community-body .resident-tracking-legend-route { width: 17px !important; height: 3px !important; border-radius: 0 !important; background: #2563eb; }
+
+body.community-body .resident-tracking-note {
+  font-size: .74rem;
+}
+
+body.dark-mode.community-body .resident-tracking-route {
+  color: #8bdcf2;
+}
+
 body.dark-mode.community-body .mobile-report-timeline h3 {
   color: var(--pw-text);
 }

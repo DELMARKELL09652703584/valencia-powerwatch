@@ -28,7 +28,7 @@ Read-only inspection of the local SQLite database and the production Neon databa
 
 The current SQLite tables are:
 
-`announcements`, `audit_logs`, `barangays`, `citizen_feedback`, `incident_areas`, `incident_links`, `notifications`, `oauth_accounts`, `oauth_states`, `outage_incidents`, `outage_reports`, `password_reset_tokens`, `repair_assignment_evidence`, `repair_assignment_location_confirmations`, `repair_assignment_updates`, `repair_assignments`, `repair_teams`, `report_attachments`, `report_status_history`, `scheduled_outages`, `sessions`, `settings`, `sms_logs`, `staff_barangay_assignments`, `staff_team_members`, `users`.
+`announcements`, `audit_logs`, `barangays`, `citizen_feedback`, `incident_areas`, `incident_links`, `notifications`, `oauth_accounts`, `oauth_states`, `outage_incidents`, `outage_reports`, `password_reset_tokens`, `repair_assignment_evidence`, `repair_assignment_live_locations`, `repair_assignment_location_confirmations`, `repair_assignment_updates`, `repair_assignments`, `repair_teams`, `report_attachments`, `report_status_history`, `scheduled_outages`, `sessions`, `settings`, `sms_logs`, `staff_barangay_assignments`, `staff_team_members`, `users`.
 
 ---
 
@@ -39,6 +39,7 @@ The proposed 24 tables are a sound **conceptual core**, but they are not yet a c
 - repair teams and team-based dispatch;
 - staff team and barangay scopes;
 - staff evidence and location confirmations;
+- active assignment GPS sharing (`repair_assignment_live_locations`);
 - OAuth account/state records;
 - password-reset tokens;
 - SMS delivery logs;
@@ -63,11 +64,14 @@ The 24 core tables should remain the public/capstone data model. The supporting 
 | `repair_teams` | Team roster, vehicle, lead technician, live location |
 | `repair_assignments` | Dispatch record linked to a report or incident |
 | `repair_assignment_evidence` | Staff-uploaded field evidence |
+| `repair_assignment_live_locations` | SQLite-only latest GPS position per staff member and active assignment; persists through snapshots and is not part of the current Neon CRUD schema |
 | `repair_assignment_location_confirmations` | Staff confirmation of purok/location |
 | `staff_team_members` | Staff-to-team membership |
 | `staff_barangay_assignments` | Staff area authorization |
 
 `repair_assignment_updates` can be folded into `outage_updates`; it does not need to remain as a separate target table. `report_attachments`, `incident_links`, `incident_areas`, `citizen_feedback`, `sessions`, and `resident_sessions` are migrated into their corresponding core tables.
+
+The live-location table is persisted by the current SQLite snapshot flow; it does not add a Neon table or change the current 35-table normalized Neon schema. Revisit its target mapping only when operational assignment data is migrated to PostgreSQL.
 
 ---
 

@@ -49,6 +49,17 @@ db.exec(`
     confirmed_location TEXT NOT NULL,
     created_at TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS repair_assignment_live_locations (
+    assignment_id INTEGER NOT NULL REFERENCES repair_assignments(id) ON DELETE CASCADE,
+    staff_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    latitude REAL NOT NULL,
+    longitude REAL NOT NULL,
+    accuracy_m REAL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (assignment_id, staff_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_assignment_live_locations_updated
+    ON repair_assignment_live_locations(assignment_id, updated_at DESC);
 `);
 
 const STAGES = ['Assigned', 'Acknowledged', 'On the Way', 'Arrived', 'Inspecting', 'Repairing', 'Completed'];
@@ -298,6 +309,50 @@ router.post('/staff/assignments/:id/location', requireAuth, requireRole('personn
   res.json({ message: 'Purok and location details confirmed. The saved GPS coordinates were not changed.' });
 });
 
+router.post('/staff/assignments/:id/live-location', requireAuth, requireRole('personnel'), requireAssignment, requireOpenAssignment, (req, res) => {
+  const { latitude, longitude, accuracy_m: accuracy } = req.body || {};
+  if ([null, undefined, ''].includes(latitude) || [null, undefined, ''].includes(longitude)
+    || !Number.isFinite(Number(latitude)) || Number(latitude) < -90 || Number(latitude) > 90
+    || !Number.isFinite(Number(longitude)) || Number(longitude) < -180 || Number(longitude) > 180) {
+    return res.status(400).json({ error: 'Send valid GPS latitude and longitude coordinates.' });
+  }
+  const hasAccuracy = accuracy !== null && accuracy !== undefined && accuracy !== '';
+  if (hasAccuracy && (!Number.isFinite(Number(accuracy)) || Number(accuracy) < 0 || Number(accuracy) > 10000)) {
+    return res.status(400).json({ error: 'GPS accuracy must be between 0 and 10,000 meters.' });
+  }
+
+  const timestamp = now();
+  db.prepare(`
+    INSERT INTO repair_assignment_live_locations
+      (assignment_id, staff_id, latitude, longitude, accuracy_m, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(assignment_id, staff_id) DO UPDATE SET
+      latitude = excluded.latitude,
+      longitude = excluded.longitude,
+      accuracy_m = excluded.accuracy_m,
+      updated_at = excluded.updated_at
+  `).run(req.staffAssignment.id, req.user.id, Number(latitude), Number(longitude),
+    hasAccuracy ? Number(accuracy) : null, timestamp);
+  res.set('Cache-Control', 'no-store');
+  res.json({
+    location: {
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      accuracy_m: hasAccuracy ? Number(accuracy) : null,
+      updated_at: timestamp,
+    },
+  });
+});
+
+router.delete('/staff/assignments/:id/live-location', requireAuth, requireRole('personnel'), requireAssignment, (req, res) => {
+  db.prepare(`
+    DELETE FROM repair_assignment_live_locations
+    WHERE assignment_id = ? AND staff_id = ?
+  `).run(req.staffAssignment.id, req.user.id);
+  res.set('Cache-Control', 'no-store');
+  res.json({ message: 'Live location sharing stopped.' });
+});
+
 router.post('/staff/assignments/:id/updates', requireAuth, requireRole('personnel'), requireAssignment, requireOpenAssignment, (req, res) => {
   const { stage, notes = '', latitude, longitude } = req.body || {};
   const cleanNotes = String(notes).trim();
@@ -341,6 +396,9 @@ router.post('/staff/assignments/:id/updates', requireAuth, requireRole('personne
         updated_at = ?
       WHERE id = ?
     `).run(dbStatus, cleanNotes, cleanNotes, cleanNotes, stage, timestamp, stage, timestamp, timestamp, req.staffAssignment.id);
+    if (stage === 'Completed') {
+      db.prepare('DELETE FROM repair_assignment_live_locations WHERE assignment_id = ?').run(req.staffAssignment.id);
+    }
     if (req.staffAssignment.report_id) {
       const nextReportStatus = stage === 'Acknowledged'
         ? 'Acknowledged'

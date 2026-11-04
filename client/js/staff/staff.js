@@ -26,6 +26,20 @@ const state = {
   assignmentsLoaded: false,
   notificationsLoaded: false,
 };
+let staffLocationWatchId = null;
+let staffLocationPollTimer = null;
+let staffLocationPollInFlight = false;
+let staffLocationAssignmentId = null;
+let staffLocationLastSentAt = 0;
+let staffLocationRequestInFlight = false;
+let staffLocationUpdatePromise = null;
+let staffMap = null;
+let staffDestinationMarker = null;
+let staffCurrentMarker = null;
+let staffRouteLine = null;
+let staffRouteRequestedAt = 0;
+let staffLeafletPromise = null;
+let staffMapGeneration = 0;
 
 const supportedEvidenceTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime']);
 const maxEvidenceBytes = 8 * 1024 * 1024;
@@ -169,6 +183,200 @@ const routeUrl = (assignment) => {
   const lat = Number(latitude);
   const lng = Number(longitude);
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${lat},${lng}`)}&travelmode=driving&dir_action=navigate`;
+};
+
+const ensureStaffLeaflet = () => {
+  if (window.L) return Promise.resolve();
+  if (staffLeafletPromise) return staffLeafletPromise;
+  const stylesheet = document.createElement('link');
+  stylesheet.rel = 'stylesheet';
+  stylesheet.href = '/vendor/leaflet/leaflet.css';
+  const styleReady = new Promise((resolve, reject) => {
+    stylesheet.onload = resolve;
+    stylesheet.onerror = () => reject(new Error('The map styles could not be loaded.'));
+  });
+  document.head.append(stylesheet);
+  staffLeafletPromise = styleReady.then(() => new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = '/vendor/leaflet/leaflet.js';
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('The interactive map could not be loaded.'));
+    document.head.append(script);
+  }));
+  return staffLeafletPromise;
+};
+
+const staffMapStatus = (message) => {
+  const status = root.querySelector('[data-live-location-status]');
+  if (status) status.textContent = message;
+};
+
+const setStaffSharingButton = () => {
+  const button = root.querySelector('[data-action="start-location-sharing"], [data-action="stop-location-sharing"]');
+  if (!button) return;
+  const isSharing = staffLocationAssignmentId === String(button.dataset.id);
+  button.dataset.action = isSharing ? 'stop-location-sharing' : 'start-location-sharing';
+  button.classList.toggle('staff-btn-danger', isSharing);
+  button.classList.toggle('staff-btn-primary', !isSharing);
+  button.textContent = isSharing ? 'Stop sharing my location' : 'Start sharing my location';
+  button.disabled = !navigator.onLine && !isSharing;
+};
+
+const drawStaffRoute = async (position, destination) => {
+  if (!staffMap || !window.L || !hasValidCoordinates(destination.latitude, destination.longitude)) return;
+  const mapAtStart = staffMap;
+  const current = [Number(position.latitude), Number(position.longitude)];
+  const target = [Number(destination.latitude), Number(destination.longitude)];
+  if (!staffCurrentMarker) {
+    staffCurrentMarker = L.circleMarker(current, {
+      radius: 9, color: '#075985', weight: 3, fillColor: '#38bdf8', fillOpacity: 1,
+    }).addTo(staffMap).bindPopup('Your current location');
+  } else staffCurrentMarker.setLatLng(current);
+  if (!staffDestinationMarker) {
+    staffDestinationMarker = L.marker(target).addTo(staffMap).bindPopup('Reported incident location');
+  } else staffDestinationMarker.setLatLng(target);
+  if (!staffRouteLine) {
+    staffRouteLine = L.polyline([current, target], { color: '#2563eb', weight: 5, opacity: 0.8, dashArray: '8 7' }).addTo(staffMap);
+  } else staffRouteLine.setLatLngs([current, target]);
+
+  if (!staffMap._powerwatchHasFramedRoute) {
+    staffMap.fitBounds(L.latLngBounds([current, target]), { padding: [28, 28], maxZoom: 15 });
+    staffMap._powerwatchHasFramedRoute = true;
+  }
+  const nowMs = Date.now();
+  if (nowMs - staffRouteRequestedAt < 30000) return;
+  staffRouteRequestedAt = nowMs;
+  const status = root.querySelector('[data-live-location-status]');
+  if (status) status.textContent = 'GPS is sharing. Loading route distance and ETA…';
+  try {
+    const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${current[1]},${current[0]};${target[1]},${target[0]}?overview=full&geometries=geojson`, {
+      signal: typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(8000) : undefined,
+    });
+    if (!response.ok) throw new Error('Route service unavailable.');
+    const result = await response.json();
+    const route = result.routes?.[0];
+    if (!route?.geometry?.coordinates?.length) throw new Error('No driving route is available.');
+    if (staffMap !== mapAtStart) return;
+    if (staffRouteLine) staffRouteLine.setLatLngs(route.geometry.coordinates.map(([lng, lat]) => [lat, lng])).setStyle({ dashArray: null });
+    const distance = route.distance >= 1000 ? `${(route.distance / 1000).toFixed(1)} km` : `${Math.round(route.distance)} m`;
+    const eta = `${Math.max(1, Math.round(route.duration / 60))} min estimated`;
+    staffMapStatus(`GPS is sharing · ${distance} · ${eta}. Keep the Staff App open and visible for updates.`);
+  } catch {
+    staffMapStatus('GPS is sharing. A driving route or ETA is temporarily unavailable; the map shows a direct guide.');
+  }
+};
+
+const stopStaffLocationSharing = async ({ remove = true } = {}) => {
+  const assignmentId = staffLocationAssignmentId;
+  if (staffLocationWatchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(staffLocationWatchId);
+  if (staffLocationPollTimer) window.clearInterval(staffLocationPollTimer);
+  staffLocationWatchId = null;
+  staffLocationPollTimer = null;
+  staffLocationPollInFlight = false;
+  staffLocationAssignmentId = null;
+  staffLocationLastSentAt = 0;
+  staffLocationRequestInFlight = false;
+  state.liveLocation = null;
+  if (staffCurrentMarker && staffMap) staffMap.removeLayer(staffCurrentMarker);
+  if (staffRouteLine && staffMap) staffMap.removeLayer(staffRouteLine);
+  staffCurrentMarker = null;
+  staffRouteLine = null;
+  staffRouteRequestedAt = 0;
+  setStaffSharingButton();
+  if (assignmentId && remove && state.user && staffLocationUpdatePromise) {
+    await staffLocationUpdatePromise.catch(() => {});
+  }
+  if (assignmentId && remove && state.user) {
+    await api(`/api/staff/assignments/${encodeURIComponent(assignmentId)}/live-location`, { method: 'DELETE' });
+  }
+  staffMapStatus('Location sharing is off. Start sharing to show your live GPS position for this assignment.');
+};
+
+const startStaffLocationSharing = (assignmentId) => {
+  if (!navigator.geolocation) throw new Error('This browser does not support GPS location.');
+  if (!navigator.onLine) throw new Error('Reconnect to the internet before sharing your location.');
+  if (staffLocationAssignmentId) throw new Error('Stop location sharing for the current assignment first.');
+  const assignment = state.assignments.find((item) => String(item.id) === String(assignmentId));
+  if (!assignment || !activeStages.includes(assignment.status)) throw new Error('This assignment is no longer active. Refresh the Staff App.');
+  staffLocationAssignmentId = String(assignment.id);
+  state.liveLocation = null;
+  setStaffSharingButton();
+  staffMapStatus('Waiting for GPS permission and a location fix…');
+  const handlePosition = async (position) => {
+    if (staffLocationAssignmentId !== String(assignment.id)) return;
+    const location = {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      accuracy_m: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
+    };
+    state.liveLocation = location;
+    const destination = taskCoordinates(assignment);
+    drawStaffRoute(location, destination).catch((error) => staffMapStatus(`The map route could not be updated: ${error.message}`));
+    if (location.accuracy_m > 10000) {
+      staffMapStatus('GPS accuracy is too low to share this fix. Move to a clearer area and wait for an improved GPS reading.');
+      return;
+    }
+    const nowMs = Date.now();
+    if (staffLocationRequestInFlight || nowMs - staffLocationLastSentAt < 15000) return;
+    staffLocationRequestInFlight = true;
+    staffLocationLastSentAt = nowMs;
+    try {
+      const request = send(`/api/staff/assignments/${encodeURIComponent(assignment.id)}/live-location`, 'POST', location);
+      staffLocationUpdatePromise = request;
+      await request;
+      if (staffLocationAssignmentId === String(assignment.id)) {
+        staffMapStatus(`Sharing your GPS location${location.accuracy_m ? ` (±${Math.round(location.accuracy_m)} m)` : ''}. Keep the Staff App open and visible for updates.`);
+      }
+    } catch (error) {
+      staffMapStatus(`Location update failed: ${error.message}. Check your connection and keep sharing enabled to retry.`);
+      if (error.status === 409) {
+        await stopStaffLocationSharing({ remove: false });
+        showToast('Location sharing stopped because this assignment is closed.');
+      }
+    } finally {
+      staffLocationRequestInFlight = false;
+      staffLocationUpdatePromise = null;
+    }
+  };
+  const handleLocationError = async (error) => {
+    if (staffLocationAssignmentId !== String(assignment.id)) return;
+    if (error.code === 1) {
+      const message = 'Location permission was denied. Allow GPS access in browser settings and try again.';
+      try {
+        await stopStaffLocationSharing();
+      } catch (stopError) {
+        showToast(`${message} Server cleanup could not be confirmed: ${stopError.message}`);
+        return;
+      }
+      showToast(message);
+      return;
+    }
+    staffMapStatus(error.code === 3
+      ? 'GPS timed out. Check device location services; location sharing will retry automatically.'
+      : 'The device could not determine a GPS location. Check location services; sharing will retry automatically.');
+  };
+  try {
+    staffLocationWatchId = navigator.geolocation.watchPosition(handlePosition, handleLocationError, {
+      enableHighAccuracy: true, maximumAge: 5000, timeout: 20000,
+    });
+    staffLocationPollTimer = window.setInterval(() => {
+      if (staffLocationAssignmentId !== String(assignment.id) || staffLocationPollInFlight) return;
+      staffLocationPollInFlight = true;
+      navigator.geolocation.getCurrentPosition((position) => {
+        staffLocationPollInFlight = false;
+        handlePosition(position);
+      }, (error) => {
+        staffLocationPollInFlight = false;
+        handleLocationError(error);
+      }, {
+        enableHighAccuracy: true, maximumAge: 5000, timeout: 20000,
+      });
+    }, 15000);
+  } catch (error) {
+    staffLocationAssignmentId = null;
+    setStaffSharingButton();
+    throw new Error(`GPS sharing could not start: ${error.message}`);
+  }
 };
 
 const stageButtons = (assignment) => {
@@ -517,17 +725,24 @@ const renderMap = () => {
     ? '<div class="staff-card staff-empty"><strong>No active assignments to map</strong>Your team has no active dispatches right now. New assigned incidents will appear here; completed tasks remain available in Tasks.</div>'
     : '<div class="staff-card staff-empty"><strong>No active assignment has an exact GPS point</strong>The active assignments do not include valid coordinates. Review the reported location details and confirm the site with dispatch; no location is being estimated.</div>';
   return `<header class="staff-page-heading"><div><p class="staff-eyebrow">Field navigation</p><h1>Incident map</h1>
-    <p>The destination pin and route use the coordinates saved with this assigned report or incident.</p></div></header>
+    <p>Share your GPS while traveling to see your position, a driving route, distance, and ETA. Sharing is optional and only available for active assignments.</p></div></header>
   ${assignments.length ? `<label class="staff-field staff-map-select"><span>Choose an active assignment (${assignments.length})</span>
     <select class="staff-upload-input" data-action="select-map-assignment">${assignments.map((assignment) => `<option value="${assignment.id}" ${String(selected.id) === String(assignment.id) ? 'selected' : ''}>${escapeHtml(assignment.assignment_code)} · ${escapeHtml(assignment.target_barangay || 'Valencia City')}</option>`).join('')}</select>
   </label>
   <section class="staff-card staff-map-card">
-    <iframe class="staff-map-frame" title="OpenStreetMap incident location" loading="lazy" referrerpolicy="no-referrer" src="${escapeHtml(mapUrl)}"></iframe>
+    <div class="staff-live-map" id="staff-live-map" role="application" aria-label="Interactive map with the reported incident and staff GPS location"></div>
+    <div class="staff-map-legend" aria-label="Map legend"><span><i class="staff-map-legend-staff"></i> Staff GPS</span><span><i class="staff-map-legend-incident"></i> Incident</span><span><i class="staff-map-legend-route"></i> Route</span></div>
     <div class="staff-map-location">${icon('pin')}<div><strong>${escapeHtml(selected.target_barangay || 'Valencia City')}</strong><span>${escapeHtml(displayLocation(selected))}</span>
       <span>Destination: ${Number(coordinates.latitude).toFixed(6)}, ${Number(coordinates.longitude).toFixed(6)} · ${selected.incident_id ? 'incident location' : selected.report_location_confirmed ? 'resident-confirmed' : 'resident-reported, not confirmed'}</span></div></div>
+    <div class="staff-live-location-controls">
+      <p data-live-location-status role="status" aria-live="polite">${staffLocationAssignmentId === String(selected.id) ? 'Sharing your GPS location. Keep the Staff App open and visible for updates.' : 'Location sharing is off. Start sharing to show your live GPS position for this assignment.'}</p>
+      <button class="staff-btn ${staffLocationAssignmentId === String(selected.id) ? 'staff-btn-danger' : 'staff-btn-primary'}" type="button" data-action="${staffLocationAssignmentId === String(selected.id) ? 'stop-location-sharing' : 'start-location-sharing'}" data-id="${selected.id}" ${!navigator.onLine && staffLocationAssignmentId !== String(selected.id) ? 'disabled' : ''}>
+        ${staffLocationAssignmentId === String(selected.id) ? 'Stop sharing my location' : 'Start sharing my location'}
+      </button>
+    </div>
     <div class="staff-map-actions"><a class="staff-btn staff-btn-primary" href="${escapeHtml(routeUrl(selected))}" target="_blank" rel="noopener">${icon('route')} Navigate to Incident</a>
       <button class="staff-btn staff-btn-quiet" type="button" data-action="view-assignment" data-id="${selected.id}">Incident details</button></div>
-  </section><p class="staff-muted staff-map-help">Google Maps provides route, distance, and travel-time details when supported. Allow location access in Google Maps to use your current position; if denied or unavailable, enable device location or set your starting point manually. The destination remains the saved incident coordinates.</p>`
+  </section><p class="staff-muted staff-map-help">GPS is sent about every 15 seconds after browser permission is granted. Keep this app open and visible while traveling; mobile browsers may pause location updates in the background. Map tiles come from OpenStreetMap and route requests use OSRM.</p>`
     : emptyMessage}
   ${noGpsIncidents.length ? `<section class="staff-map-unlocated">
     <div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Location needs confirmation</span><h2>Tasks without GPS</h2></div></div>
@@ -537,6 +752,48 @@ const renderMap = () => {
       <button class="staff-btn staff-btn-quiet" type="button" data-action="view-assignment" data-id="${assignment.id}">Review reported details</button>
     </article>`).join('')}</div>
   </section>` : ''}`;
+};
+
+const destroyStaffMap = () => {
+  staffMapGeneration += 1;
+  if (staffMap) staffMap.remove();
+  staffMap = null;
+  staffDestinationMarker = null;
+  staffCurrentMarker = null;
+  staffRouteLine = null;
+  staffRouteRequestedAt = 0;
+};
+
+const mountStaffMap = async (assignment) => {
+  const mapElement = document.getElementById('staff-live-map');
+  if (!mapElement || !assignment) return;
+  const generation = staffMapGeneration;
+  try {
+    await ensureStaffLeaflet();
+    if (generation !== staffMapGeneration || document.getElementById('staff-live-map') !== mapElement) return;
+    const destination = taskCoordinates(assignment);
+    staffMap = L.map(mapElement, { zoomControl: false }).setView(
+      hasValidCoordinates(destination.latitude, destination.longitude)
+        ? [Number(destination.latitude), Number(destination.longitude)]
+        : [7.9064, 125.0941],
+      hasValidCoordinates(destination.latitude, destination.longitude) ? 14 : 12,
+    );
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      subdomains: 'abc',
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(staffMap);
+    L.control.zoom({ position: 'bottomright' }).addTo(staffMap);
+    if (hasValidCoordinates(destination.latitude, destination.longitude)) {
+      staffDestinationMarker = L.marker([Number(destination.latitude), Number(destination.longitude)])
+        .addTo(staffMap).bindPopup('Reported incident location');
+    }
+    if (staffLocationAssignmentId === String(assignment.id) && state.liveLocation) {
+      await drawStaffRoute(state.liveLocation, destination);
+    }
+  } catch (error) {
+    staffMapStatus(`${error.message} You can still open the incident in your navigation app.`);
+  }
 };
 
 const renderAlerts = () => `<header class="staff-page-heading"><div><p class="staff-eyebrow">Updates from PowerWatch</p><h1>Notifications</h1>
@@ -581,6 +838,7 @@ const renderDetail = () => {
 };
 
 const renderShell = () => {
+  destroyStaffMap();
   const title = pages.find(([key]) => key === state.page)?.[2] || 'Incident';
   const content = state.page === 'home' ? renderHome()
     : state.page === 'tasks' ? renderTasks()
@@ -607,6 +865,11 @@ const renderShell = () => {
     </button>`).join('')}</nav>
   </div>`;
   syncInstallButton();
+  if (state.page === 'map') {
+    const active = activeIncidents().filter((assignment) => routeUrl(assignment));
+    const selected = active.find((assignment) => String(assignment.id) === String(state.selectedId)) || active[0];
+    if (selected) mountStaffMap(selected);
+  }
 };
 
 const renderLogin = (message = '') => {
@@ -656,6 +919,12 @@ const refreshIncidents = async () => {
   state.assignments = assignments;
   state.teams = result.teams || [];
   state.assignmentsLoaded = true;
+  if (staffLocationAssignmentId) {
+    const trackedAssignment = assignments.find((item) => String(item.id) === staffLocationAssignmentId);
+    if (!trackedAssignment || !activeStages.includes(trackedAssignment.status)) {
+      stopStaffLocationSharing().catch((error) => showToast(`Location sharing stopped locally, but the server could not confirm removal: ${error.message}`));
+    }
+  }
 };
 
 const refreshReports = async () => {
@@ -917,6 +1186,10 @@ document.addEventListener('click', async (event) => {
     if (action === 'navigate') {
       state.page = button.dataset.page;
       renderShell();
+    } else if (action === 'start-location-sharing') {
+      startStaffLocationSharing(button.dataset.id);
+    } else if (action === 'stop-location-sharing') {
+      await stopStaffLocationSharing();
     } else if (action === 'show-area-reports') {
       if (state.page !== 'home') {
         state.page = 'home';
@@ -1125,6 +1398,7 @@ document.addEventListener('click', async (event) => {
       if (help) help.hidden = true;
       root.querySelector('[data-action="install"]')?.setAttribute('aria-expanded', 'false');
     } else if (action === 'logout') {
+      if (staffLocationAssignmentId) await stopStaffLocationSharing();
       await send('/api/auth/logout', 'POST');
       if (evidencePreviewUrl) URL.revokeObjectURL(evidencePreviewUrl);
       evidencePreviewUrl = null;
@@ -1155,8 +1429,11 @@ document.addEventListener('click', async (event) => {
   }
 });
 
-document.addEventListener('change', (event) => {
+document.addEventListener('change', async (event) => {
   if (event.target.matches('[data-action="select-map-assignment"]')) {
+    if (staffLocationAssignmentId && staffLocationAssignmentId !== String(event.target.value)) {
+      await stopStaffLocationSharing();
+    }
     state.selectedId = event.target.value;
     renderShell();
     return;

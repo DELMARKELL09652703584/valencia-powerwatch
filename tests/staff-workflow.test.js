@@ -47,6 +47,7 @@ test('Staff portal shows report times, recent field updates, and accurate assign
   const staffStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'staff.css'), 'utf8');
   const serviceWorker = fs.readFileSync(path.join(ROOT, 'client', 'pwa', 'staff-sw.js'), 'utf8');
   const updateManager = fs.readFileSync(path.join(ROOT, 'client', 'js', 'staff', 'staff-pwa-update.js'), 'utf8');
+  const communityApp = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
 
   assert.match(staffApp, /Incident noticed: \$\{escapeHtml\(new Date\(report\.date_time_noticed\)\.toLocaleString\(\)\)\}/);
   assert.match(staffApp, /Report submitted: \$\{escapeHtml\(new Date\(report\.reported_at\)\.toLocaleString\(\)\)\}/);
@@ -59,6 +60,13 @@ test('Staff portal shows report times, recent field updates, and accurate assign
   assert.match(staffApp, /No active assignment has an exact GPS point/);
   assert.match(staffApp, /No assignments have been dispatched/);
   assert.match(staffApp, /No assignments match this filter/);
+  assert.match(staffApp, /data-action="start-location-sharing"/);
+  assert.match(staffApp, /\/live-location/);
+  assert.match(staffApp, /https:\/\/router\.project-osrm\.org\/route\/v1\/driving/);
+  assert.match(staffApp, /L\.tileLayer\('https:\/\/\{s\}\.tile\.openstreetmap\.org/);
+  assert.match(communityApp, /\/api\/reports\/\$\{encodeURIComponent\(reportId\)\}\/tracking/);
+  assert.match(communityApp, /resident-tracking-map/);
+  assert.match(communityApp, /window\.setInterval\(poll, 15000\)/);
   assert.match(staffApp, /data-action="show-area-reports"/);
   assert.match(staffApp, /id="staff-area-reports"/);
   assert.match(staffApp, /scrollIntoView\(\{ block: 'start' \}\)/);
@@ -76,10 +84,10 @@ test('Staff portal shows report times, recent field updates, and accurate assign
   assert.match(staffStyles, /body\.staff-app \.staff-work-focus-action\s*\{[^}]*min-height:\s*50px;/s);
   assert.match(staffStyles, /body\.staff-app \.staff-btn > \.staff-icon\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;/s);
   assert.match(staffStyles, /@media \(max-width:\s*559px\)[\s\S]*?body\.staff-app \.staff-main\s*\{[^}]*overflow:\s*visible;/s);
-  assert.match(staffPage, /\/client\/js\/staff\/staff\.js\?v=19/);
-  assert.match(staffPage, /\/client\/css\/staff\.css\?v=18/);
-  assert.match(serviceWorker, /\/client\/js\/staff\/staff\.js\?v=19/);
-  assert.match(serviceWorker, /\/client\/css\/staff\.css\?v=18/);
+  assert.match(staffPage, /\/client\/js\/staff\/staff\.js\?v=20/);
+  assert.match(staffPage, /\/client\/css\/staff\.css\?v=19/);
+  assert.match(serviceWorker, /\/client\/js\/staff\/staff\.js\?v=20/);
+  assert.match(serviceWorker, /\/client\/css\/staff\.css\?v=19/);
   assert.match(staffStyles, /\.staff-login-page\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*100vh;[^}]*min-height:\s*100svh;[^}]*min-height:\s*100dvh;[^}]*align-content:\s*safe center;[^}]*env\(safe-area-inset-top\)/s);
   assert.match(staffStyles, /@media \(max-height:\s*760px\)\s*\{\s*\.staff-login-page\s*\{[^}]*align-content:\s*start;/s);
   assert.match(staffStyles, /@media \(max-width:\s*380px\)\s*\{\s*\.staff-login-page\s*\{/s);
@@ -389,8 +397,8 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
     fetch(`${baseUrl}/community`),
     fetch(`${baseUrl}/manifest.json`),
     fetch(`${baseUrl}/sw.js`),
-    fetch(`${baseUrl}/client/css/staff.css?v=18`),
-    fetch(`${baseUrl}/client/js/staff/staff.js?v=19`),
+    fetch(`${baseUrl}/client/css/staff.css?v=19`),
+    fetch(`${baseUrl}/client/js/staff/staff.js?v=20`),
     fetch(`${baseUrl}/client/js/staff/staff-pwa-update.js?v=1`),
     Promise.all([
       'powerwatch-field-icon-180.png',
@@ -444,7 +452,7 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
   assert.match(staffSource, /No active assignment has an exact GPS point/);
   assert.match(staffSource, /Navigate to Incident/);
   assert.match(staffSource, /dir_action=navigate/);
-  assert.match(staffSource, /The destination remains the saved incident coordinates/);
+  assert.match(staffSource, /Keep this app open and visible while traveling/);
   assert.match(staffSource, /Destination: \$\{Number\(coordinates\.latitude\)\.toFixed\(6\)\}/);
   assert.match(staffSource, /report_location_accuracy_m/);
   assert.match(staffSource, /report_affected_area/);
@@ -467,8 +475,8 @@ test('User and Staff PWAs have separate install URLs, manifests, and service-wor
   const workerSource = await workerResponse.text();
   const shellAssets = workerSource.match(/const STAFF_SHELL = \[[\s\S]*?\];/)?.[0] || '';
   assert.doesNotMatch(shellAssets, /\/api\/|\/admin/);
-  assert.match(shellAssets, /staff\.css\?v=18/);
-  assert.match(shellAssets, /staff\.js\?v=19/);
+  assert.match(shellAssets, /staff\.css\?v=19/);
+  assert.match(shellAssets, /staff\.js\?v=20/);
   assert.match(shellAssets, /staff-pwa-update\.js\?v=1/);
   const communityWorkerSource = await communityWorkerResponse.text();
   assert.match(communityWorkerSource, /powerwatch-community-/);
@@ -727,6 +735,43 @@ test('Staff API scopes assignments, reports, evidence, and incidents to authoriz
   assert.equal(allAssignments[0].report_location_accuracy_m, null);
   assert.equal(allAssignments[0].report_affected_area, 'Field Workflow Test Site');
   assert.equal(allAssignments[0].report_location_source, 'map_pin');
+  assert.equal((await jsonRequest(`/api/reports/${primaryReportId}/tracking`, adminCookie)).status, 403);
+  assert.equal((await jsonRequest(`/api/reports/${primaryReportId}/tracking`, unassignedCookie)).status, 403);
+  const missingTracking = await jsonRequest(`/api/reports/${primaryReportId}/tracking`, residentCookie);
+  assert.equal(missingTracking.status, 200);
+  assert.equal((await missingTracking.json()).tracking.active, true);
+  const invalidLiveLocation = await jsonRequest(`/api/staff/assignments/${assignmentId}/live-location`, staffCookie, 'POST', {
+    latitude: 91,
+    longitude: 125.095,
+  });
+  assert.equal(invalidLiveLocation.status, 400);
+  const deniedLiveLocation = await jsonRequest(`/api/staff/assignments/${assignmentId}/live-location`, unassignedCookie, 'POST', {
+    latitude: 7.907,
+    longitude: 125.095,
+  });
+  assert.equal(deniedLiveLocation.status, 404);
+  const liveLocationResponse = await jsonRequest(`/api/staff/assignments/${assignmentId}/live-location`, staffCookie, 'POST', {
+    latitude: 7.907,
+    longitude: 125.095,
+    accuracy_m: 12.5,
+  });
+  assert.equal(liveLocationResponse.status, 200);
+  assert.equal(liveLocationResponse.headers.get('cache-control'), 'no-store');
+  const residentTrackingResponse = await jsonRequest(`/api/reports/${primaryReportId}/tracking`, residentCookie);
+  const residentTracking = (await residentTrackingResponse.json()).tracking;
+  assert.equal(residentTracking.active, true);
+  assert.equal(residentTracking.assignment.status, 'Dispatched');
+  assert.equal(residentTracking.location.staff_name, 'Assigned Field Staff');
+  assert.equal(residentTracking.location.latitude, 7.907);
+  assert.equal(residentTracking.location.accuracy_m, 12.5);
+  const stopSharing = await jsonRequest(`/api/staff/assignments/${assignmentId}/live-location`, staffCookie, 'DELETE');
+  assert.equal(stopSharing.status, 200);
+  assert.equal((await (await jsonRequest(`/api/reports/${primaryReportId}/tracking`, residentCookie)).json()).tracking.location, null);
+  const resumeSharing = await jsonRequest(`/api/staff/assignments/${assignmentId}/live-location`, staffCookie, 'POST', {
+    latitude: 7.907,
+    longitude: 125.095,
+  });
+  assert.equal(resumeSharing.status, 200);
   assert.equal(allAssignments[0].reporter_contact, '+639171234567');
   assert.ok(allAssignments[0].date_time_noticed);
   assert.equal(allAssignments[0].incident_id, null, 'dispatching a single report must not create a duplicate incident');
@@ -944,6 +989,8 @@ test('Staff response stages are ordered, documented, and notify the reporting re
   const completed = (await completedResponse.json()).assignment;
   assert.equal(completed.status, 'Completed');
   assert.equal(completed.latest_stage, 'Completed');
+  const stoppedTracking = await jsonRequest(`/api/reports/${primaryReportId}/tracking`, residentCookie);
+  assert.equal((await stoppedTracking.json()).tracking.active, false);
   const missingReviewNotes = await jsonRequest(`/api/repair/assignments/${assignmentId}/status`, adminCookie, 'PUT', {
     status: 'Resolved',
   });

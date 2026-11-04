@@ -266,10 +266,10 @@ test('staff checkbox accent uses a defined token and refreshed shell assets', ()
   const staffWorker = fs.readFileSync(path.join(ROOT, 'client', 'pwa', 'staff-sw.js'), 'utf8');
 
   assert.match(styles, /accent-color:\s*var\(--staff-blue,\s*#1675df\);/);
-  assert.match(staffPage, /\/client\/css\/staff\.css\?v=18/);
-  assert.match(staffPage, /\/client\/js\/staff\/staff\.js\?v=19/);
-  assert.match(staffWorker, /\/client\/css\/staff\.css\?v=18/);
-  assert.match(staffWorker, /\/client\/js\/staff\/staff\.js\?v=19/);
+  assert.match(staffPage, /\/client\/css\/staff\.css\?v=19/);
+  assert.match(staffPage, /\/client\/js\/staff\/staff\.js\?v=20/);
+  assert.match(staffWorker, /\/client\/css\/staff\.css\?v=19/);
+  assert.match(staffWorker, /\/client\/js\/staff\/staff\.js\?v=20/);
 });
 
 test('community notification category controls use pressed button semantics', () => {
