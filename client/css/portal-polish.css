@@ -6688,6 +6688,71 @@ body.community-body .resident-tracking-map {
   z-index: 0;
 }
 
+body.community-body .resident-tracking-map .leaflet-marker-icon.resident-tracking-map-icon {
+  border: 0;
+  background: transparent;
+}
+
+body.community-body .resident-tracking-marker {
+  position: relative;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  filter: drop-shadow(0 3px 4px rgba(13, 35, 56, .28));
+}
+
+body.community-body .resident-tracking-marker-incident {
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 8px;
+  background: #e11d48;
+  color: #fff;
+  transform: rotate(-45deg);
+}
+
+body.community-body .resident-tracking-marker-incident svg {
+  width: 19px;
+  height: 19px;
+  fill: currentColor;
+  transform: rotate(45deg);
+}
+
+body.community-body .resident-tracking-marker-staff {
+  width: 38px;
+  height: 38px;
+  border: 2px solid rgba(14, 116, 144, .36);
+  border-radius: 50%;
+  background: rgba(14, 165, 233, .14);
+  filter: none;
+}
+
+body.community-body .resident-tracking-marker-core {
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: #06a6d8;
+  box-shadow: 0 1px 5px rgba(8, 47, 73, .5);
+}
+
+body.community-body .resident-tracking-marker-pulse {
+  position: absolute;
+  inset: 3px;
+  border: 2px solid #0284c7;
+  border-radius: 50%;
+  animation: resident-tracking-pulse 1.8s ease-out infinite;
+}
+
+@keyframes resident-tracking-pulse {
+  0% { opacity: .8; transform: scale(.45); }
+  100% { opacity: 0; transform: scale(1.45); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.community-body .resident-tracking-marker-pulse { animation: none; }
+}
+
 body.community-body .resident-tracking-map[hidden],
 body.community-body .resident-tracking-route[hidden] {
   display: none !important;
@@ -6742,8 +6807,8 @@ body.community-body .resident-tracking-legend i {
   border-radius: 50%;
 }
 
-body.community-body .resident-tracking-legend-staff { background: #38bdf8; border: 2px solid #075985; }
-body.community-body .resident-tracking-legend-incident { background: #ef4444; border: 1px solid #b91c1c; }
+body.community-body .resident-tracking-legend-staff { background: #06a6d8; border: 2px solid #fff; box-shadow: 0 0 0 1px #0284c7; }
+body.community-body .resident-tracking-legend-incident { background: #e11d48; border: 1px solid #be123c; }
 body.community-body .resident-tracking-legend-route { width: 17px !important; height: 3px !important; border-radius: 0 !important; background: #2563eb; }
 
 body.community-body .resident-tracking-note {

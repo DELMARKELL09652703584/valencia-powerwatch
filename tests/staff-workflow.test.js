@@ -66,6 +66,11 @@ test('Staff portal shows report times, recent field updates, and accurate assign
   assert.match(staffApp, /L\.tileLayer\('https:\/\/\{s\}\.tile\.openstreetmap\.org/);
   assert.match(communityApp, /\/api\/reports\/\$\{encodeURIComponent\(reportId\)\}\/tracking/);
   assert.match(communityApp, /resident-tracking-map/);
+  assert.match(communityApp, /residentTrackingStaffIcon = L\.divIcon/);
+  assert.match(communityApp, /residentTrackingReportIcon = L\.divIcon/);
+  assert.match(communityApp, /residentTrackingMap\.fitBounds\(L\.latLngBounds\(\[start, target\]\)/);
+  assert.match(communityApp, /residentTrackingMap\.getBounds\(\)\.pad\(-0\.04\)/);
+  assert.match(communityApp, /residentTrackingRoute\.setLatLngs\(\[start, target\]\)/);
   assert.match(communityApp, /window\.setInterval\(poll, 15000\)/);
   assert.match(staffApp, /data-action="show-area-reports"/);
   assert.match(staffApp, /id="staff-area-reports"/);

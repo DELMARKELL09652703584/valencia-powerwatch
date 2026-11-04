@@ -1141,8 +1141,10 @@ let residentTrackingMap = null;
 let residentTrackingStaffMarker = null;
 let residentTrackingReportMarker = null;
 let residentTrackingRoute = null;
+let residentTrackingStaffIcon = null;
+let residentTrackingReportIcon = null;
 let residentTrackingRouteAt = 0;
-let residentTrackingLastRoutePosition = '';
+let residentTrackingHasDrivingRoute = false;
 let residentTrackingGeneration = 0;
 
 function stopResidentTracking() {
@@ -1154,8 +1156,10 @@ function stopResidentTracking() {
   residentTrackingStaffMarker = null;
   residentTrackingReportMarker = null;
   residentTrackingRoute = null;
+  residentTrackingStaffIcon = null;
+  residentTrackingReportIcon = null;
   residentTrackingRouteAt = 0;
-  residentTrackingLastRoutePosition = '';
+  residentTrackingHasDrivingRoute = false;
 }
 
 async function updateResidentTracking(reportId, generation) {
@@ -1177,6 +1181,9 @@ async function updateResidentTracking(reportId, generation) {
       residentTrackingStaffMarker = null;
       residentTrackingReportMarker = null;
       residentTrackingRoute = null;
+      residentTrackingStaffIcon = null;
+      residentTrackingReportIcon = null;
+      residentTrackingHasDrivingRoute = false;
     }
     return;
   }
@@ -1189,7 +1196,7 @@ async function updateResidentTracking(reportId, generation) {
     const accuracy = location.accuracy_m === null || location.accuracy_m === undefined ? '' : ` · GPS accuracy ±${Math.round(Number(location.accuracy_m))} m`;
     statusElement.textContent = location.stale || !hasCoordinates(location)
       ? `${location.staff_name} · Last location is stale (${time}). Waiting for a fresh GPS update.`
-      : `${location.staff_name} · ${time}${accuracy} · ${assignment.status}`;
+      : `${location.staff_name} · Live GPS · ${time}${accuracy} · ${assignment.status}`;
   } else {
     statusElement.textContent = 'A team is assigned. Waiting for staff to enable GPS location sharing.';
   }
@@ -1203,6 +1210,9 @@ async function updateResidentTracking(reportId, generation) {
       residentTrackingStaffMarker = null;
       residentTrackingReportMarker = null;
       residentTrackingRoute = null;
+      residentTrackingStaffIcon = null;
+      residentTrackingReportIcon = null;
+      residentTrackingHasDrivingRoute = false;
     }
     return;
   }
@@ -1219,7 +1229,21 @@ async function updateResidentTracking(reportId, generation) {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(residentTrackingMap);
     L.control.zoom({ position: 'bottomright' }).addTo(residentTrackingMap);
-    residentTrackingReportMarker = L.marker(target).addTo(residentTrackingMap)
+    residentTrackingReportIcon = L.divIcon({
+      className: 'resident-tracking-map-icon',
+      html: '<span class="resident-tracking-marker resident-tracking-marker-incident" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M13.2 2.5 5.7 13h5.1l-.8 8.5L18.3 11h-5.2l.1-8.5Z"/></svg></span>',
+      iconSize: [36, 42],
+      iconAnchor: [18, 38],
+      popupAnchor: [0, -34],
+    });
+    residentTrackingStaffIcon = L.divIcon({
+      className: 'resident-tracking-map-icon',
+      html: '<span class="resident-tracking-marker resident-tracking-marker-staff" aria-hidden="true"><span class="resident-tracking-marker-pulse"></span><span class="resident-tracking-marker-core"></span></span>',
+      iconSize: [38, 38],
+      iconAnchor: [19, 19],
+      popupAnchor: [0, -18],
+    });
+    residentTrackingReportMarker = L.marker(target, { icon: residentTrackingReportIcon }).addTo(residentTrackingMap)
       .bindPopup('Your reported incident location');
   } else {
     residentTrackingReportMarker?.setLatLng(target);
@@ -1229,6 +1253,8 @@ async function updateResidentTracking(reportId, generation) {
     if (residentTrackingRoute) residentTrackingMap.removeLayer(residentTrackingRoute);
     residentTrackingStaffMarker = null;
     residentTrackingRoute = null;
+    residentTrackingHasDrivingRoute = false;
+    residentTrackingRouteAt = 0;
     routeElement.hidden = true;
     residentTrackingMap.setView(target, 14);
     return;
@@ -1236,24 +1262,32 @@ async function updateResidentTracking(reportId, generation) {
 
   const start = [Number(location.latitude), Number(location.longitude)];
   if (!residentTrackingStaffMarker) {
-    residentTrackingStaffMarker = L.circleMarker(start, {
-      radius: 9, color: '#075985', weight: 3, fillColor: '#38bdf8', fillOpacity: 1,
-    }).addTo(residentTrackingMap).bindPopup('Assigned staff location');
+    residentTrackingStaffMarker = L.marker(start, { icon: residentTrackingStaffIcon }).addTo(residentTrackingMap)
+      .bindPopup(`${location.staff_name || 'Assigned staff'} · Live location`);
   } else residentTrackingStaffMarker.setLatLng(start);
   if (!residentTrackingRoute) {
     residentTrackingRoute = L.polyline([start, target], {
       color: '#2563eb', weight: 5, opacity: 0.8, dashArray: '8 7',
     }).addTo(residentTrackingMap);
-    residentTrackingMap.fitBounds(L.latLngBounds([start, target]), { padding: [28, 28], maxZoom: 15 });
+    residentTrackingMap.fitBounds(L.latLngBounds([start, target]), { padding: [36, 44], maxZoom: 16 });
+  } else if (residentTrackingHasDrivingRoute) {
+    const routePoints = residentTrackingRoute.getLatLngs();
+    residentTrackingRoute.setLatLngs([L.latLng(start), ...routePoints.slice(1)]);
+  } else {
+    residentTrackingRoute.setLatLngs([start, target]);
+  }
+  const visibleBounds = residentTrackingMap.getBounds().pad(-0.04);
+  if (!visibleBounds.contains(start) || !visibleBounds.contains(target)) {
+    residentTrackingMap.fitBounds(L.latLngBounds([start, target]), { padding: [36, 44], maxZoom: 16, animate: true });
   }
 
-  const positionKey = `${start[0].toFixed(4)},${start[1].toFixed(4)}>${target[0].toFixed(4)},${target[1].toFixed(4)}`;
   const nowMs = Date.now();
-  if (positionKey === residentTrackingLastRoutePosition && nowMs - residentTrackingRouteAt < 30000) return;
-  residentTrackingLastRoutePosition = positionKey;
+  if (nowMs - residentTrackingRouteAt < 30000) return;
   residentTrackingRouteAt = nowMs;
   routeElement.hidden = false;
   routeElement.textContent = 'Getting driving route and ETA…';
+  residentTrackingRoute.setLatLngs([start, target]).setStyle({ dashArray: '8 7' });
+  residentTrackingHasDrivingRoute = false;
   try {
     const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${target[1]},${target[0]}?overview=full&geometries=geojson`, {
       signal: typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(8000) : undefined,
@@ -1264,6 +1298,7 @@ async function updateResidentTracking(reportId, generation) {
     if (!route?.geometry?.coordinates?.length) throw new Error('No driving route is available.');
     if (generation !== residentTrackingGeneration || document.getElementById('resident-tracking-map') !== mapElement) return;
     residentTrackingRoute.setLatLngs(route.geometry.coordinates.map(([lng, lat]) => [lat, lng])).setStyle({ dashArray: null });
+    residentTrackingHasDrivingRoute = true;
     const distance = route.distance >= 1000 ? `${(route.distance / 1000).toFixed(1)} km` : `${Math.round(route.distance)} m`;
     const eta = `${Math.max(1, Math.round(route.duration / 60))} min estimated`;
     routeElement.textContent = `Driving route · ${distance} · ${eta}`;
@@ -1492,7 +1527,7 @@ async function renderMobileReportDetail() {
         <p id="resident-tracking-details" class="resident-tracking-details"></p>
         <p id="resident-tracking-route" class="resident-tracking-route" hidden></p>
         <div id="resident-tracking-map" class="resident-tracking-map" role="application" aria-label="Interactive map showing assigned staff and the reported incident"></div>
-        <div class="resident-tracking-legend" aria-label="Map legend"><span><i class="resident-tracking-legend-staff"></i> Staff GPS</span><span><i class="resident-tracking-legend-incident"></i> Incident</span><span><i class="resident-tracking-legend-route"></i> Route</span></div>
+        <div class="resident-tracking-legend" aria-label="Map legend"><span><i class="resident-tracking-legend-staff"></i> Staff live location</span><span><i class="resident-tracking-legend-incident"></i> Report location</span><span><i class="resident-tracking-legend-route"></i> Route</span></div>
         <p class="resident-tracking-note">Updates every 15 seconds. Staff location is shared only while the assignment is active and the Staff App is open with GPS permission. Map tiles come from OpenStreetMap; driving route requests use OSRM.</p>
       </div>
     </section>

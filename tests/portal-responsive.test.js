@@ -33,6 +33,15 @@ test('resident report detail and live tracking cards grow to fit on mobile', () 
   assert.match(portalStyles, /body\.community-body \.resident-tracking-map\s*\{[^}]*height:\s*clamp\(250px, 42vh, 340px\);[^}]*min-height:\s*250px;/s);
 });
 
+test('resident tracking map uses clear live staff and incident markers', () => {
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
+
+  assert.match(portalStyles, /resident-tracking-marker-staff\s*\{[^}]*border-radius:\s*50%;[^}]*background:\s*rgba\(14, 165, 233, \.14\);/s);
+  assert.match(portalStyles, /resident-tracking-marker-pulse\s*\{[^}]*animation:\s*resident-tracking-pulse 1\.8s ease-out infinite;/s);
+  assert.match(portalStyles, /resident-tracking-marker-incident\s*\{[^}]*background:\s*#e11d48;/s);
+  assert.match(portalStyles, /prefers-reduced-motion:\s*reduce\)[\s\S]*?resident-tracking-marker-pulse\s*\{\s*animation:\s*none;/s);
+});
+
 test('community dashboard weather card follows the resident mobile reference layout', () => {
   const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
 
