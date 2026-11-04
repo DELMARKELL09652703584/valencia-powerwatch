@@ -7763,3 +7763,271 @@ body.community-body .home-more-options .home-shortcuts {
   margin: 0;
   padding: 12px;
 }
+
+/* Resident account creation follows the light, blue-accented mobile reference. */
+body.community-body .community-register-page {
+  box-sizing: border-box;
+  display: flex;
+  width: min(100%, 520px);
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  flex-direction: column;
+  align-items: stretch;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0 0 max(16px, env(safe-area-inset-bottom));
+  background: #f2f7fc;
+  color: #132b45;
+}
+
+body.community-body .community-register-header {
+  box-sizing: border-box;
+  min-height: 68px;
+  gap: 14px;
+  padding: max(12px, env(safe-area-inset-top)) 18px 12px;
+  border: 0;
+  background: linear-gradient(135deg, #063b70, #0879c4);
+  color: #fff;
+  box-shadow: 0 5px 16px rgba(12, 58, 102, .16);
+}
+
+body.community-body .community-register-header > span {
+  flex: 1;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+
+body.community-body .community-register-header .mobile-auth-back,
+body.community-body .community-register-header .mobile-theme-toggle {
+  flex: 0 0 42px;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .35);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .12);
+  color: #fff;
+}
+
+body.community-body .community-register-header .mobile-auth-back {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+body.community-body .community-register-content {
+  box-sizing: border-box;
+  display: grid;
+  width: 100%;
+  max-width: none;
+  flex: 1;
+  align-content: start;
+  gap: 14px;
+  padding: 28px clamp(20px, 6vw, 34px) 30px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.community-body .community-register-content h1 {
+  margin: 0;
+  color: #102b55;
+  font-size: clamp(1.85rem, 7vw, 2.15rem);
+  letter-spacing: -.035em;
+  line-height: 1.15;
+}
+
+body.community-body .community-register-content > p {
+  margin: 0 0 4px;
+  color: #334c64;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+body.community-body .community-register-form {
+  gap: 14px;
+}
+
+body.community-body .community-register-form > label {
+  display: grid;
+  gap: 6px;
+  color: #253f59;
+  font-size: .98rem;
+  font-weight: 600;
+}
+
+body.community-body .community-register-form > label > input,
+body.community-body .community-register-form > label > select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 1.5px solid #bfd0df;
+  border-radius: 13px;
+  background: #fff;
+  color: #142b45;
+  font-size: 1rem;
+}
+
+body.community-body .community-register-form > label > input:focus,
+body.community-body .community-register-form > label > select:focus {
+  border-color: #1688ed;
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(22, 136, 237, .14);
+}
+
+body.community-body .community-register-form .mobile-password-field {
+  box-sizing: border-box;
+  display: grid;
+  min-height: 52px;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  align-items: center;
+  padding: 0 5px 0 14px;
+  border: 1.5px solid #bfd0df;
+  border-radius: 13px;
+  background: #fff;
+}
+
+body.community-body .community-register-form .mobile-password-field:focus-within {
+  border-color: #1688ed;
+  box-shadow: 0 0 0 3px rgba(22, 136, 237, .14);
+}
+
+body.community-body .community-register-form .mobile-password-field input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 !important;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  color: #142b45 !important;
+  box-shadow: none !important;
+}
+
+body.community-body .community-register-form .mobile-password-field button {
+  display: grid;
+  width: 38px;
+  min-width: 38px;
+  min-height: 42px;
+  place-items: center;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: #637b91;
+}
+
+body.community-body .community-register-form .mobile-password-field button svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+body.community-body .community-register-form .mobile-auth-submit {
+  width: 100%;
+  min-height: 54px;
+  margin-top: 3px;
+  border: 1px solid #0864c4;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1688ed, #0864c4);
+  box-shadow: 0 5px 14px rgba(3, 73, 137, .18);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+body.community-body .community-register-content .auth-divider {
+  margin: 4px 0 0;
+  color: #607487;
+}
+
+body.community-body .community-register-content .social-row {
+  gap: 10px;
+}
+
+body.community-body .community-register-content .social-btn {
+  min-height: 48px;
+  border: 1px solid #c5d5e2;
+  border-radius: 12px;
+  background: #fff;
+  color: #142b45;
+}
+
+body.community-body .community-register-switch {
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0;
+  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+  color: #263f58;
+  font-size: .98rem;
+  text-align: center;
+}
+
+body.community-body #app .community-register-switch > button {
+  min-height: 42px;
+  padding: 0 3px;
+  border: 0;
+  background: transparent;
+  color: #0879c4;
+  font-size: inherit;
+  font-weight: 700;
+}
+
+body.dark-mode.community-body .community-register-page {
+  background: #101a2b;
+  color: #e6eef7;
+}
+
+body.dark-mode.community-body .community-register-content {
+  background: transparent;
+}
+
+body.dark-mode.community-body .community-register-content h1,
+body.dark-mode.community-body .community-register-form > label,
+body.dark-mode.community-body .community-register-switch {
+  color: #e6eef7;
+}
+
+body.dark-mode.community-body .community-register-content > p {
+  color: #b8c8d8;
+}
+
+body.dark-mode.community-body .community-register-form > label > input,
+body.dark-mode.community-body .community-register-form > label > select,
+body.dark-mode.community-body .community-register-form .mobile-password-field {
+  border-color: #50647b;
+  background: #17263b;
+  color: #e6eef7;
+}
+
+body.dark-mode.community-body .community-register-form .mobile-password-field input {
+  color: #e6eef7 !important;
+}
+
+body.dark-mode.community-body .community-register-content .social-btn {
+  border-color: #50647b;
+  background: #17263b;
+  color: #e6eef7;
+}
+
+@media (max-width: 360px) {
+  body.community-body .community-register-header {
+    gap: 10px;
+    padding-inline: 13px;
+  }
+
+  body.community-body .community-register-content {
+    padding-inline: 17px;
+  }
+}

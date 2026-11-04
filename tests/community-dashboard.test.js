@@ -101,9 +101,9 @@ test('resident navigation exposes reporting, announcements, and outage history',
   assert.match(mainScript, /case 'open-announcements':\s*state\.mobileNotificationCategory = 'announcements';\s*await goToTab\('notifications'\)/);
   assert.match(mainScript, /data-action="retry-current-tab"/);
   assert.match(mainScript, /case 'retry-current-tab':\s*await goToTab\(state\.mobileTab\)/);
-  assert.match(communityPage, /portal-polish\.css\?v=86/);
+  assert.match(communityPage, /portal-polish\.css\?v=87/);
   assert.match(communityPage, /community\.js\?v=47/);
-  assert.match(communityPage, /main\.js\?v=47/);
+  assert.match(communityPage, /main\.js\?v=48/);
   assert.match(mainScript, /coordinates shown above will be included with your location description/);
   assert.match(mainScript, /case 'open-notification-settings':\s*state\.mobileNotificationSettingsReturnTab = state\.mobileTab;/);
   assert.match(mainScript, /case 'back-from-notification-settings':\s*await goToTab\(state\.mobileNotificationSettingsReturnTab \|\| 'settings'\)/);
@@ -370,6 +370,37 @@ test('Community login uses the responsive branded card layout and preserves auth
   assert.match(portalStyles, /#app \.mobile-auth-page \.community-login-card \.mobile-auth-form \.community-login-password-heading > button\s*\{[^}]*color:\s*#17658f !important;/s);
   assert.match(portalStyles, /community-login-input-wrap input\s*\{[^}]*border:\s*0 !important;[^}]*background:\s*transparent !important;/s);
   assert.match(portalStyles, /env\(safe-area-inset-top\)/);
+});
+
+test('Community account creation uses the light mobile form design and preserves registration actions', () => {
+  const mainScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
+  const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
+  const registerStart = mainScript.indexOf('function renderRegister(');
+  const registerEnd = mainScript.indexOf('\nconst ADMIN_PAGES', registerStart + 1);
+  const registerRenderer = mainScript.slice(registerStart, registerEnd);
+
+  assert.ok(registerStart >= 0);
+  assert.ok(registerEnd > registerStart);
+  assert.match(registerRenderer, /class="mobile-auth-page community-register-page"/);
+  assert.match(registerRenderer, /class="mobile-auth-header community-register-header"/);
+  assert.match(registerRenderer, /class="mobile-auth-content community-register-content"/);
+  assert.match(registerRenderer, /class="mobile-auth-form community-register-form" data-form="register"/);
+  assert.match(registerRenderer, /name="full_name"/);
+  assert.match(registerRenderer, /name="email" type="email"/);
+  assert.match(registerRenderer, /name="contact_number" type="tel"/);
+  assert.match(registerRenderer, /name="barangay"/);
+  assert.match(registerRenderer, /name="password" type="password" minlength="6"/);
+  assert.match(registerRenderer, /name="confirm_password" type="password" minlength="6"/);
+  assert.match(registerRenderer, /data-action="toggle-password"/);
+  assert.match(registerRenderer, /data-action="start-oauth"/);
+  assert.match(registerRenderer, /Already have an account\?[\s\S]*?data-action="back-login">Login/);
+  assert.match(portalStyles, /body\.community-body \.community-register-page\s*\{[^}]*background:\s*#f2f7fc;/s);
+  assert.match(portalStyles, /body\.community-body \.community-register-form > label > input,[\s\S]*?border-radius:\s*13px;[\s\S]*?background:\s*#fff;/s);
+  assert.match(portalStyles, /body\.community-body \.community-register-form \.mobile-auth-submit\s*\{[^}]*background:\s*linear-gradient\(135deg, #1688ed, #0864c4\);/s);
+  assert.match(portalStyles, /body\.dark-mode\.community-body \.community-register-page/);
+  assert.match(communityPage, /portal-polish\.css\?v=87/);
+  assert.match(communityPage, /shared\/main\.js\?v=48/);
 });
 
 test('User Portal provides an accessible PWA install button', () => {

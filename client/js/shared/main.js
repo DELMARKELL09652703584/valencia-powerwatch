@@ -241,19 +241,19 @@ function renderResetPassword(token, message = '') {
 
 function renderRegister(message = '') {
   if (IS_COMMUNITY) {
-    app.innerHTML = `<main class="mobile-auth-page">
-      <header class="mobile-auth-header"><button type="button" class="mobile-auth-back" data-action="back-login" aria-label="Back to login">&#8249;</button><span>Valencia PowerWatch</span>${mobileThemeToggle()}</header>
-      <section class="mobile-auth-content">
+    app.innerHTML = `<main class="mobile-auth-page community-register-page">
+      <header class="mobile-auth-header community-register-header"><button type="button" class="mobile-auth-back" data-action="back-login" aria-label="Back to login">&#8249;</button><span>Valencia PowerWatch</span>${mobileThemeToggle()}</header>
+      <section class="mobile-auth-content community-register-content">
         <h1>Create Account</h1>
         <p>Join Valencia PowerWatch to stay informed and report power interruptions.</p>
         ${message ? `<div class="inline-alert">${escapeHtml(message)}</div>` : ''}
-        <form class="mobile-auth-form" data-form="register">
+        <form class="mobile-auth-form community-register-form" data-form="register">
           <label>Full Name<input name="full_name" autocomplete="name" required></label>
           <label>Email Address<input name="email" type="email" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="email" required></label>
           <label>Mobile Number<input name="contact_number" type="tel" autocomplete="tel" placeholder="0917 123 4567"></label>
           <label>Home Barangay<select name="barangay"><option value="">Choose barangay</option>${state.barangays.map((b) => `<option>${escapeHtml(b)}</option>`).join('')}</select></label>
-          <label>Password<span class="mobile-password-field"><input name="password" type="password" minlength="6" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="new-password" required><button type="button" data-action="toggle-password" aria-label="Show password">&#9673;</button></span></label>
-          <label>Confirm Password<span class="mobile-password-field"><input name="confirm_password" type="password" minlength="6" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="new-password" required><button type="button" data-action="toggle-password" aria-label="Show password">&#9673;</button></span></label>
+          <label>Password<span class="mobile-password-field"><input name="password" type="password" minlength="6" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="new-password" required><button type="button" data-action="toggle-password" aria-label="Show password"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button></span></label>
+          <label>Confirm Password<span class="mobile-password-field"><input name="confirm_password" type="password" minlength="6" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="new-password" required><button type="button" data-action="toggle-password" aria-label="Show password"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button></span></label>
           <button class="button primary mobile-auth-submit" type="submit">Register</button>
         </form>
         ${mobileInstallButton()}
@@ -275,7 +275,7 @@ function renderRegister(message = '') {
             <span>Facebook</span>
           </button>
         </div>
-        <p class="mobile-auth-switch">Already have an account? <button type="button" data-action="back-login">Login</button></p>
+        <p class="mobile-auth-switch community-register-switch">Already have an account? <button type="button" data-action="back-login">Login</button></p>
       </section>
       <div class="toast" role="status" hidden></div>
     </main>`;
