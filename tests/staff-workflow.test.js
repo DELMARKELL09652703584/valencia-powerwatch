@@ -241,6 +241,12 @@ before(async () => {
   residentCookie = cookieFrom(resident);
   portalLoginEmails.resident = residentUser.email;
 
+  const report = await submitReport();
+  primaryReportId = report.id;
+  const noTeamsEligibility = await jsonRequest(`/api/repair/dispatch-eligibility?report_id=${report.id}`, adminCookie);
+  assert.equal(noTeamsEligibility.status, 200);
+  assert.equal((await noTeamsEligibility.json()).reason, 'no_repair_teams');
+
   const teamResponse = await jsonRequest('/api/repair-teams', adminCookie, 'POST', {
     name: 'Test Field Crew',
     lead_technician: 'Test Crew Lead',
@@ -270,8 +276,6 @@ before(async () => {
   });
   assert.equal(membershipResponse.status, 200);
 
-  const report = await submitReport();
-  primaryReportId = report.id;
   assert.equal(report.status, 'Submitted');
   assert.equal(report.verification_status, 'Pending');
   const noCoordinateReport = await submitReport({ purok: 'Text-only location test', withCoordinates: false });

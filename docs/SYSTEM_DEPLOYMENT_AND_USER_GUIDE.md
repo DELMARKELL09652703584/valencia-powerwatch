@@ -37,8 +37,8 @@ Configure `DATABASE_URL` as a Render secret and set `POWERWATCH_SNAPSHOT_ENABLED
 
 ### Staff Field App setup
 1. In User Management, create an account with the **System Personnel** role.
-2. In Admin Portal → Repair & Dispatch, create or select a repair team, open **Manage Staff Team Access**, and assign the personnel account to that team.
-3. Verify a resident report and dispatch the response team. Only personnel assigned to that team can view its work orders and evidence in the Staff App.
+2. In Admin Portal → Repair & Dispatch, create a **Response Team** (this is separate from the staff login account), then open **Manage Staff Team Access** and assign the personnel account to that team and the barangays it will cover.
+3. Verify a resident report and dispatch an available response team that has an active staff member assigned to both the team and the report's barangay. Only personnel assigned to that team can view its work orders and evidence in the Staff App.
 4. Open `/staff` on the staff member's phone and sign in with the Admin-created account. On compatible Android browsers, use **Install**; on iOS Safari, use **Share → Add to Home Screen**.
 5. Staff acknowledge, navigate to, inspect, and repair assigned incidents; they can post field notes and JPG/PNG/WebP photos (up to 8 MB). After staff marks work complete, Admin reviews the response under **Awaiting Review** and confirms resolution.
 

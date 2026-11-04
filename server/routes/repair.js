@@ -226,7 +226,9 @@ router.get('/repair/dispatch-eligibility', requireAuth, requireRole('administrat
   const eligibleTeams = teams.filter((team) => team.eligible);
   const reason = eligibleTeams.length
     ? null
-    : !availableTeams.length
+    : !allTeams.length
+      ? 'no_repair_teams'
+      : !availableTeams.length
       ? 'no_available_team'
       : !areaStaffCount
         ? 'no_staff_coverage'

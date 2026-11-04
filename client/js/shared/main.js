@@ -579,6 +579,20 @@ async function submitForm(form) {
     await render();
     return;
   }
+  if (type === 'create-repair-team') {
+    const result = await send('/api/repair-teams', 'POST', {
+      name: values.name,
+      lead_technician: values.lead_technician,
+      contact_number: values.contact_number || null,
+      vehicle_type: values.vehicle_type || 'Utility Vehicle',
+      base_station: values.base_station || 'Valencia City Central Base',
+    });
+    closeDialog();
+    state.dispatchStaffAccessOpen = true;
+    await goToPage('dispatch');
+    setToast(`${result.team.name} created. Assign the staff account to this team and the report barangay before dispatch.`);
+    return;
+  }
   if (type === 'report') {
     const reportFormData = new FormData();
     const reportValues = {
@@ -978,6 +992,18 @@ async function handleClick(event) {
         }
         return;
       }
+      case 'open-create-repair-team':
+        openDialog('Create response team', `
+          <div class="form-stack">
+            <p class="muted small">A staff login is not a response team. Create the crew here, then link the staff account to this team and the report's barangay.</p>
+            <label>Response team name<input class="input" name="name" maxlength="120" placeholder="e.g. Valencia Field Crew 1" required></label>
+            <label>Lead technician<input class="input" name="lead_technician" maxlength="120" required></label>
+            <label>Team contact number <span class="muted small">(optional)</span><input class="input" name="contact_number" type="tel" autocomplete="tel"></label>
+            <label>Vehicle type<input class="input" name="vehicle_type" maxlength="80" value="Utility Vehicle"></label>
+            <label>Base station<input class="input" name="base_station" maxlength="160" value="Valencia City Central Base"></label>
+          </div>
+        `, 'Create team', { form: 'create-repair-team' });
+        return;
       case 'install-app': {
         if (deferredPwaInstallPrompt) {
           const installPrompt = deferredPwaInstallPrompt;
@@ -1977,7 +2003,8 @@ async function handleClick(event) {
           </option>`).join('');
         const verified = ['Verified', 'Officially Confirmed'].includes(report.verification_status);
         const eligibilityMessage = {
-          no_available_team: 'All response teams are currently assigned or unavailable. Try again when a team becomes available.',
+          no_repair_teams: 'No response teams have been set up yet. Staff accounts are separate from response teams. Create a team, then assign the staff member to that team and this report’s barangay.',
+          no_available_team: 'All response teams are currently assigned or unavailable. Create another response team or try again when one becomes available.',
           no_staff_coverage: `No active Staff account has ${escapeHtml(report.barangay)} in its assigned coverage areas. In Manage Staff Team Access, assign an active staff member to this barangay.`,
           staff_not_assigned_to_team: `There are ${eligibility.active_staff_in_barangay} active Staff account(s) covering ${escapeHtml(report.barangay)}, but none is linked to an available response team. In Manage Staff Team Access, assign the staff member to both the response team and this barangay.`,
         }[eligibility.reason];
@@ -2003,6 +2030,9 @@ async function handleClick(event) {
                 ${teamOptions}
               </select>
               ${eligibilityMessage ? `<div class="muted small">${eligibilityMessage}</div>` : ''}
+              ${['no_repair_teams', 'no_available_team'].includes(eligibility.reason)
+                ? '<button type="button" class="button secondary small" data-action="open-create-repair-team">Create response team</button>'
+                : ''}
               ${!verified ? '<div class="muted small">Verify this report before dispatch.</div>' : ''}
               ${['no_staff_coverage', 'staff_not_assigned_to_team'].includes(eligibility.reason)
                 ? '<button type="button" class="button ghost small" data-action="open-staff-access">Open Manage Staff Team Access</button>'

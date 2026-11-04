@@ -35,9 +35,21 @@ test('Report verification updates the authoritative report without creating a du
   assert.match(mainSource, /status: 'Verified'/);
   assert.doesNotMatch(mainSource, /type === 'verify-create-incident'/);
   assert.match(adminSource, /Verify Report/);
-  assert.match(adminHtml, /client\/js\/admin\/admin\.js\?v=39/);
-  assert.match(adminHtml, /client\/js\/shared\/main\.js\?v=38/);
+  assert.match(adminHtml, /client\/js\/admin\/admin\.js\?v=40/);
+  assert.match(adminHtml, /client\/js\/shared\/main\.js\?v=39/);
   assert.match(adminHtml, /admin-theme\.css\?v=16/);
+});
+
+test('Admin can create a response team and assign an existing staff account before dispatch', () => {
+  assert.match(mainSource, /type === 'create-repair-team'/);
+  assert.match(mainSource, /send\('\/api\/repair-teams', 'POST'/);
+  assert.match(mainSource, /data-action="open-create-repair-team"/);
+  assert.match(mainSource, /form: 'create-repair-team'/);
+  assert.match(mainSource, /Staff accounts are separate from response teams/);
+  assert.match(adminSource, /data-action="open-create-repair-team"/);
+  assert.match(adminSource, /state\.dispatchStaffAccessOpen \? 'open' : ''/);
+  assert.match(mainSource, /no_repair_teams: 'No response teams have been set up yet/);
+  assert.match(mainSource, /In Manage Staff Team Access, assign the staff member to both the response team and this barangay/);
 });
 
 test('Staff account form requires matching initial and confirmation passwords', () => {
@@ -64,5 +76,5 @@ test('built-in Admin settings hide ordinary profile and password editing', () =>
   assert.match(adminSource, /state\.user\.is_built_in_admin \? '<p class="muted">The built-in Admin password is managed by system configuration/);
   assert.match(adminSource, /Use the secure recovery link from the Admin sign-in page/);
   assert.match(adminSource, /Email recovery is unavailable until SMTP is configured on the server/);
-  assert.match(adminHtml, /client\/js\/admin\/admin\.js\?v=39/);
+  assert.match(adminHtml, /client\/js\/admin\/admin\.js\?v=40/);
 });

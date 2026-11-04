@@ -1302,6 +1302,7 @@ async function renderAdminDispatch() {
           <h2>Repair Teams &amp; Dispatch Control</h2>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
+          <button type="button" class="button secondary" data-action="open-create-repair-team" style="font-weight:750;">Create Response Team</button>
           <button type="button" class="button primary" data-action="open-quick-dispatch-modal" style="display:inline-flex;align-items:center;gap:6px;font-weight:750;">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
             Dispatch Response Crew
@@ -1346,7 +1347,7 @@ async function renderAdminDispatch() {
         </div>
       </section>` : ''}
 
-      ${staffAccountsExist ? `<details class="staff-team-management" style="margin:12px 0;background:#fff;border:1px solid #d9e6f1;border-radius:10px;padding:14px 16px;box-shadow:0 2px 6px rgba(0,0,0,0.02);">
+      ${staffAccountsExist ? `<details class="staff-team-management" ${state.dispatchStaffAccessOpen ? 'open' : ''} style="margin:12px 0;background:#fff;border:1px solid #d9e6f1;border-radius:10px;padding:14px 16px;box-shadow:0 2px 6px rgba(0,0,0,0.02);">
         <summary style="cursor:pointer;font-weight:800;color:#153d5a;">Manage Staff Team Access <span class="muted small">· assign personnel accounts to field crews</span></summary>
         <p class="muted small" style="margin:8px 0 12px;">Manage actual staff accounts and their operational access. Changes take effect immediately.</p>
         <div class="dispatch-metrics" style="margin:10px 0 14px;">
@@ -1562,6 +1563,7 @@ async function renderAdminDispatch() {
       </div>
     </section>
   `);
+  state.dispatchStaffAccessOpen = false;
 
   await loadAdminMapLibrary();
   const mapElement = document.getElementById('admin-dispatch-map');
@@ -2665,6 +2667,7 @@ document.addEventListener('submit', async (event) => {
       feedback.hidden = false;
       feedback.setAttribute('open', '');
     }
+    state.dispatchStaffAccessOpen = true;
     await render();
   } catch (error) {
     if (feedback) {

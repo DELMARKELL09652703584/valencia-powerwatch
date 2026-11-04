@@ -90,8 +90,8 @@ test('Add Staff remains actionable at the account cap and opens without active t
   assert.match(addButton, /data-action="new-user"/);
   assert.match(addButton, /data-limit-reached="\$\{atStaffLimit\}"/);
   assert.doesNotMatch(addButton, /\sdisabled(?:\s|>)/);
-  assert.match(adminPage, /admin\.js\?v=39/);
-  assert.match(adminPage, /shared\/main\.js\?v=38/);
+  assert.match(adminPage, /admin\.js\?v=40/);
+  assert.match(adminPage, /shared\/main\.js\?v=39/);
   assert.ok(addHandler);
   assert.match(addHandler, /No active teams are available/);
   assert.doesNotMatch(addHandler, /if \(!activeTeams\.length \|\| !barangays\.length\)/);
