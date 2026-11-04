@@ -156,44 +156,63 @@ test('Neon resident account and session records survive store reinitialization',
   assert.equal(sessionUser.email, account.email);
 });
 
-test('database startup preserves existing accounts and credentials', () => {
+test('database startup migrates the built-in administrator once without overwriting a recovered password', () => {
   const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'powerwatch-user-retention-'));
+  const builtInAdminPassword = 'temporary-built-in-admin-password';
   const script = `
     const assert = require('node:assert/strict');
     const { db, ensureAdminAccount, hashPassword } = require('./server/db');
     const { verifyPassword } = require('./server/middleware/auth');
+    const {
+      BUILT_IN_ADMIN_LOGIN,
+      BUILT_IN_ADMIN_RECOVERY_EMAIL,
+    } = require('./server/config/built-in-admin');
     const timestamp = new Date().toISOString();
+    db.prepare('DELETE FROM users WHERE is_built_in_admin = 1').run();
+    db.prepare("DELETE FROM settings WHERE key = 'built_in_admin_version'").run();
     const addUser = db.prepare(\`
       INSERT INTO users (id, full_name, username, email, password_hash, role, status, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     \`);
     const residentPassword = 'resident-password-stays-valid';
     const residentHash = hashPassword(residentPassword);
-    addUser.run(9, 'Existing Resident', 'existing-resident', 'existing-resident@example.test', residentHash, 'resident', 'Active', timestamp);
+    addUser.run(8, 'Existing Resident', 'existing-resident', 'existing-resident@example.test', residentHash, 'resident', 'Active', timestamp);
 
     const adminPassword = 'admin-password-was-changed';
     const demoPassword = 'demo-password-was-changed';
-    db.prepare("UPDATE users SET password_hash = ?, status = 'Inactive' WHERE LOWER(email) = LOWER(?)")
-      .run(hashPassword(adminPassword), 'dsaroay@gmail.com');
-    db.prepare("UPDATE users SET password_hash = ?, status = 'Inactive' WHERE LOWER(email) = LOWER(?)")
-      .run(hashPassword(demoPassword), 'admin@powerwatch.ph');
+    addUser.run(9, 'Delmarkel Saro-ay', 'DELMARKEL2003', 'dsaroay@gmail.com', hashPassword(adminPassword), 'administrator', 'Inactive', timestamp);
+    addUser.run(10, 'Demo Administrator', 'admin', 'admin@powerwatch.ph', hashPassword(demoPassword), 'administrator', 'Inactive', timestamp);
 
     ensureAdminAccount();
 
-    const resident = db.prepare('SELECT * FROM users WHERE id = 9').get();
+    const resident = db.prepare('SELECT * FROM users WHERE id = 8').get();
     assert.equal(resident.email, 'existing-resident@example.test');
     assert.equal(resident.status, 'Active');
     assert.equal(verifyPassword(residentPassword, resident.password_hash), true);
 
-    const admin = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get('dsaroay@gmail.com');
-    assert.equal(admin.username, 'DELMARKEL2003');
+    const admin = db.prepare('SELECT * FROM users WHERE id = 9').get();
+    assert.equal(admin.username, BUILT_IN_ADMIN_LOGIN);
+    assert.equal(admin.email, BUILT_IN_ADMIN_LOGIN);
+    assert.equal(admin.recovery_email, BUILT_IN_ADMIN_RECOVERY_EMAIL);
     assert.equal(admin.role, 'administrator');
-    assert.equal(admin.status, 'Inactive');
-    assert.equal(verifyPassword(adminPassword, admin.password_hash), true);
+    assert.equal(admin.status, 'Active');
+    assert.equal(admin.is_built_in_admin, 1);
+    assert.equal(verifyPassword(adminPassword, admin.password_hash), false);
+    assert.equal(verifyPassword('temporary-built-in-admin-password', admin.password_hash), true);
 
-    const demo = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get('admin@powerwatch.ph');
+    const demo = db.prepare('SELECT * FROM users WHERE id = 10').get();
     assert.equal(demo.status, 'Inactive');
+    assert.equal(demo.is_built_in_admin, 0);
     assert.equal(verifyPassword(demoPassword, demo.password_hash), true);
+
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = 9').run(hashPassword('recovered-admin-password'));
+    ensureAdminAccount();
+
+    const recovered = db.prepare('SELECT * FROM users WHERE id = 9').get();
+    assert.equal(recovered.username, BUILT_IN_ADMIN_LOGIN);
+    assert.equal(recovered.status, 'Active');
+    assert.equal(verifyPassword('recovered-admin-password', recovered.password_hash), true);
+    assert.equal(db.prepare('SELECT COUNT(*) AS count FROM users WHERE is_built_in_admin = 1').get().count, 1);
   `;
 
   try {
@@ -205,6 +224,7 @@ test('database startup preserves existing accounts and credentials', () => {
         NODE_ENV: 'test',
         NEON_DATABASE_URL: '',
         POWERWATCH_DATA_DIR: dataDirectory,
+        POWERWATCH_ADMIN_PASSWORD: builtInAdminPassword,
       },
     });
     assert.equal(result.status, 0, result.stderr || result.stdout);

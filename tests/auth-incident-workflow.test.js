@@ -9,7 +9,7 @@ const { after, before, test } = require('node:test');
 
 const ROOT = path.resolve(__dirname, '..');
 const TEST_TIMEOUT_MS = 30000;
-const testAdminEmail = 'dsaroay@gmail.com';
+const testAdminEmail = 'DELMARKEL SARO-AY';
 const testAdminPassword = `${crypto.randomUUID()}Aa1!`;
 
 let serverProcess;

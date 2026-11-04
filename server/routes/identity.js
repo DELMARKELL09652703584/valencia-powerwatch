@@ -1,10 +1,12 @@
-const crypto = require('node:crypto');
+﻿const crypto = require('node:crypto');
+const fs = require('node:fs');
 const express = require('express');
 const nodemailer = require('nodemailer');
 const { db, now } = require('../db');
 const {
   hashPassword, createSession, createPersistentSession, publicUser, audit, COOKIE_NAME,
-  isBuiltInAdmin, residentStore, persistentAuthConfigured, persistentAuthRequired,
+  isBuiltInAdmin, hasBuiltInAdminIdentifier, BUILT_IN_ADMIN_RECOVERY_EMAIL,
+  residentStore, persistentAuthConfigured, persistentAuthRequired,
   migrateLegacyResidents, mirrorPersistentResident,
 } = require('../middleware/auth');
 
@@ -78,6 +80,9 @@ const signInWithProvider = async (provider, profile, req, res) => {
   if (!user) {
     user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(profile.email);
     if (!user) {
+      if (hasBuiltInAdminIdentifier({ email: profile.email, username: String(profile.email).split('@')[0] })) {
+        return redirectAuthError(res, 'reserved-account');
+      }
       const timestamp = now();
       const info = db.prepare(`
         INSERT INTO users (full_name, email, password_hash, role, status, created_at, last_login)
@@ -86,11 +91,13 @@ const signInWithProvider = async (provider, profile, req, res) => {
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(info.lastInsertRowid));
     }
     if (user.status !== 'Active') return redirectAuthError(res, 'inactive-account');
+    if (isBuiltInAdmin(user)) return redirectAuthError(res, 'built-in-admin-password-only');
     db.prepare('INSERT OR IGNORE INTO oauth_accounts (provider, provider_user_id, user_id, created_at) VALUES (?, ?, ?, ?)')
       .run(provider, String(profile.id), user.id, now());
   }
 
   if (user.status !== 'Active') return redirectAuthError(res, 'inactive-account');
+  if (isBuiltInAdmin(user)) return redirectAuthError(res, 'built-in-admin-password-only');
   if (residentStore && user.role === 'resident') {
     const persistent = await residentStore.saveLegacyAccount(user);
     if (!persistent) throw new Error('OAuth resident account could not be saved to persistent storage.');
@@ -217,26 +224,54 @@ router.get('/auth/oauth/:provider/callback', async (req, res) => {
   }
 });
 
+const passwordResetTransport = () => {
+  if (process.env.NODE_ENV === 'test' && process.env.POWERWATCH_TEST_MAIL_CAPTURE) {
+    return {
+      sendMail: async (message) => {
+        fs.appendFileSync(process.env.POWERWATCH_TEST_MAIL_CAPTURE, `${JSON.stringify(message)}\n`);
+        return { messageId: 'test-capture' };
+      },
+    };
+  }
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
+  });
+};
+
 router.post('/auth/forgot-password', async (req, res, next) => {
   if (!emailConfigured()) return res.status(503).json({ error: 'Password recovery email is not configured on this server.' });
-  const email = String(req.body?.email || '').trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid account email address.' });
+  const identifier = String(req.body?.email || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) return res.status(400).json({ error: 'Enter the recovery email address for the account.' });
   let user;
   try {
     if (persistentAuthRequired && !persistentAuthConfigured) {
       return res.status(503).json({ error: 'Persistent account storage is not configured. Please try again later.' });
     }
     if (residentStore) await migrateLegacyResidents();
-    const persistent = residentStore ? await residentStore.findByEmail(email) : null;
+    const persistent = residentStore ? await residentStore.findByEmail(identifier) : null;
     user = persistent ? mirrorPersistentResident(persistent) : null;
   } catch (error) {
     return next(error);
   }
-  user ||= db.prepare('SELECT id, email, full_name FROM users WHERE LOWER(email) = LOWER(?) AND status = ?').get(email, 'Active');
-  const message = 'If an active account uses that email, password reset instructions have been sent.';
+  user ||= db.prepare(`
+    SELECT * FROM users
+    WHERE status = 'Active'
+      AND (
+        (is_built_in_admin = 1 AND LOWER(COALESCE(recovery_email, '')) = LOWER(?))
+        OR LOWER(email) = LOWER(?)
+      )
+    ORDER BY is_built_in_admin DESC
+    LIMIT 1
+  `).get(identifier, identifier);
+  const message = 'If an active account uses that recovery email, password reset instructions have been sent.';
   if (!user) return res.json({ message });
   if (user.status !== 'Active') return res.json({ message });
-  if (isBuiltInAdmin(user)) return res.json({ message });
+  const builtIn = isBuiltInAdmin(user);
+  const recipient = builtIn ? (user.recovery_email || BUILT_IN_ADMIN_RECOVERY_EMAIL) : user.email;
+  if (!recipient) return res.json({ message });
 
   const recent = db.prepare('SELECT created_at FROM password_reset_tokens WHERE user_id = ? ORDER BY created_at DESC LIMIT 1').get(user.id);
   if (recent && Date.now() - new Date(recent.created_at).getTime() < 60_000) return res.json({ message });
@@ -247,18 +282,12 @@ router.post('/auth/forgot-password', async (req, res, next) => {
   db.prepare('DELETE FROM password_reset_tokens WHERE user_id = ?').run(user.id);
   db.prepare('INSERT INTO password_reset_tokens (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)')
     .run(tokenHash, user.id, new Date(Date.now() + RESET_LIFETIME_MS).toISOString(), timestamp);
-  const resetUrl = `${publicBaseUrl()}/community?reset=${encodeURIComponent(token)}`;
+  const resetUrl = `${publicBaseUrl()}${builtIn ? '/admin' : '/community'}?reset=${encodeURIComponent(token)}`;
 
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
-    });
-    await transporter.sendMail({
+    await passwordResetTransport().sendMail({
       from: process.env.SMTP_FROM,
-      to: user.email,
+      to: recipient,
       subject: 'Reset your Valencia PowerWatch password',
       text: `Hello ${user.full_name}, use this link within 30 minutes to reset your password: ${resetUrl}`,
       html: `<p>Hello ${String(user.full_name).replace(/[&<>"']/g, '')},</p><p><a href="${resetUrl}">Reset your PowerWatch password</a></p><p>This link expires in 30 minutes. If you did not request it, ignore this email.</p>`,
@@ -282,7 +311,6 @@ router.post('/auth/reset-password', async (req, res, next) => {
 
   const user = db.prepare('SELECT * FROM users WHERE id = ? AND status = ?').get(reset.user_id, 'Active');
   if (!user) return res.status(400).json({ error: 'This account cannot be reset. Contact an administrator.' });
-  if (isBuiltInAdmin(user)) return res.status(403).json({ error: 'The built-in administrator password is managed by system configuration.' });
   try {
     const passwordHash = hashPassword(password);
     db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, user.id);
@@ -301,5 +329,4 @@ router.post('/auth/reset-password', async (req, res, next) => {
     return next(error);
   }
 });
-
 module.exports = router;

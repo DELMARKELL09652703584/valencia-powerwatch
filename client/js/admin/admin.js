@@ -2713,8 +2713,8 @@ async function renderAdminUsers() {
     <td>${escapeHtml(roles[user.role] || roleLabel(user.role))}</td>
     <td><span class="user-status-badge ${user.status === 'Active' ? 'active' : 'inactive'}">${escapeHtml(user.status)}</span></td>
     <td><div class="user-row-actions">
-      <button type="button" class="user-view-action" data-action="view-user" data-id="${user.id}" aria-label="View ${escapeHtml(user.full_name)}" title="View account">↗</button>
-      <details class="user-action-menu"><summary aria-label="More actions for ${escapeHtml(user.full_name)}" title="More actions">⋯</summary>
+      <button type="button" class="user-view-action" data-action="view-user" data-id="${user.id}" aria-label="View ${escapeHtml(user.full_name)}" title="View account">�+-</button>
+      ${user.is_built_in_admin ? '<span class="muted small" title="This permanent administrator is managed by system configuration.">Protected</span>' : `<details class="user-action-menu"><summary aria-label="More actions for ${escapeHtml(user.full_name)}" title="More actions">�<_</summary>
         <div class="user-action-menu-items" role="menu">
           <button type="button" role="menuitem" data-action="edit-user" data-id="${user.id}">Edit account</button>
           <button type="button" role="menuitem" data-action="change-role" data-id="${user.id}">Change role</button>
@@ -2722,7 +2722,7 @@ async function renderAdminUsers() {
           <button type="button" role="menuitem" data-action="toggle-user-status" data-id="${user.id}" data-value="${user.status === 'Active' ? 'Inactive' : 'Active'}">${user.status === 'Active' ? 'Deactivate' : 'Activate'}</button>
           ${Number(user.id) !== Number(state.user.id) ? `<button type="button" class="danger" role="menuitem" data-action="delete-user" data-id="${user.id}">Delete account</button>` : ''}
         </div>
-      </details>
+      </details>`}
     </div></td>
   </tr>`).join('');
 

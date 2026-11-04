@@ -191,10 +191,10 @@ function renderForgotPassword(message = '') {
       </aside>
       <section class="login-panel"><div class="login-content">
         <h1>Forgot password?</h1>
-        <p class="login-intro">Enter your account email to request a secure reset link.</p>
+        <p class="login-intro">Enter your account or built-in administrator recovery email to request a secure reset link.</p>
         ${message ? `<div class="inline-alert">${escapeHtml(message)}</div>` : ''}
         <form class="form-stack" data-form="forgot-password">
-          <label>Email address<input name="email" type="email" autocomplete="email" required></label>
+          <label>Recovery email address<input name="email" type="email" autocomplete="email" required></label>
           <button class="button primary full" type="submit" ${state.passwordRecoveryEnabled ? '' : 'disabled'}>Send reset link</button>
           <button class="button secondary full" type="button" data-action="back-login">Back to sign in</button>
         </form>
@@ -418,7 +418,7 @@ async function goToTab(tab) {
 async function refreshConfig() {
   try {
     const [{ settings }, { barangays }, demo] = await Promise.all([
-      api('/api/auth/settings'),
+      api('/api/settings'),
       api('/api/barangays'),
       fetch('/api/auth/demo').then((r) => (r.ok ? r.json() : { demos: [], barangays: [] })),
     ]);
@@ -486,7 +486,7 @@ async function submitForm(form) {
   if (type === 'reset-password') {
     if (values.password !== values.confirm_password) throw new Error('Passwords do not match.');
     const result = await send('/api/auth/reset-password', 'POST', { token: values.token, password: values.password });
-    window.history.replaceState({}, '', '/community');
+    window.history.replaceState({}, '', IS_ADMIN ? '/admin' : '/community');
     state.mobileAuthScreen = 'login';
     renderLogin(result.message);
     return;
@@ -2654,12 +2654,14 @@ async function handleClick(event) {
         if (!user) throw new Error('User not found.');
         openDialog(user.full_name, `
           <div class="detail-grid">
-            <div><span>Email</span><strong>${escapeHtml(user.email)}</strong></div>
+            <div><span>Login / email</span><strong>${escapeHtml(user.email)}</strong></div>
+            ${user.is_built_in_admin ? `<div><span>Recovery email</span><strong>${escapeHtml(user.recovery_email || 'Not configured')}</strong></div>` : ''}
             <div><span>Role</span><strong>${escapeHtml(roleLabel(user.role))}</strong></div>
             <div><span>Status</span><strong>${statusPill(user.status)}</strong></div>
             <div><span>Barangay</span><strong>${escapeHtml(user.barangay || '—')}</strong></div>
             <div><span>Contact</span><strong>${escapeHtml(user.contact_number || '—')}</strong></div>
             <div><span>Last login</span><strong>${escapeHtml(formatDateTime(user.last_login))}</strong></div>
+            ${user.is_built_in_admin ? '<div class="wide-field"><span>Protection</span><strong>Permanent built-in administrator. Account details, role, status, and password can only be changed through the configured recovery email.</strong></div>' : ''}
             <div class="wide-field"><span>Address</span><strong>${escapeHtml(user.address || '—')}</strong></div>
           </div>`, 'Close');
         setDialogFooter('<button type="button" class="button ghost" data-action="close-dialog">Close</button>');
@@ -2821,17 +2823,17 @@ async function handleClick(event) {
         }
         return;
       case 'seed-reset':
-        if (String(state.user?.email || '').toLowerCase() !== 'dsaroay@gmail.com') {
-          throw new Error('Sign in as Delmarkel Saro-ay (dsaroay@gmail.com), the administrator account selected to keep.');
+        if (!state.user?.is_built_in_admin) {
+          throw new Error('Sign in with the built-in administrator account selected to keep.');
         }
         if (!state.maintenanceBackupHash) throw new Error('Download the verified database backup first.');
         if (!window.confirm('Confirm that the verified database backup file has downloaded and is safely kept. Continue to the final confirmation?')) return;
-        let resetMessage = 'The clean reset is complete. Sign in with dsaroay@gmail.com; only that Admin account and system settings remain, and all 31 official barangays are preserved.';
+        let resetMessage = `The clean reset is complete. Sign in with ${state.user.email}; only that built-in administrator account and system settings remain, and all 31 official barangays are preserved.`;
         {
-          const expected = 'RESET ALL EXCEPT dsaroay@gmail.com';
+          const expected = `RESET ALL EXCEPT ${String(state.user.email).toLowerCase()}`;
           if (window.prompt(`This permanently deletes every other account and all operational/demo data. Type exactly:\n${expected}`) !== expected) return;
           const result = await send('/api/admin/maintenance/clean-reset', 'POST', {
-            keep_email: 'dsaroay@gmail.com',
+            keep_email: state.user.email,
             confirmation: expected,
             backup_sha256: state.maintenanceBackupHash,
           });
@@ -2913,6 +2915,8 @@ async function boot() {
         'invalid-oauth-state': 'Sign-in link expired. Please try again.',
         'unverified-email': 'The provider did not return a verified email address.',
         'inactive-account': 'This account is deactivated. Contact the administrator.',
+        'reserved-account': 'That email address is reserved for the built-in administrator recovery account.',
+        'built-in-admin-password-only': 'The built-in administrator must sign in with its password. Use the recovery email to reset it.',
         'provider-account-role': 'Social sign-in is available for resident accounts only.',
         'provider-denied': 'Sign-in was cancelled.',
       };

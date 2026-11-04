@@ -520,16 +520,16 @@ CHAPTER 3
 RESEARCH METHODOLOGY
 ================================================================================
 
-This chapter explains the methods, research procedures, system architecture,
-and technical specifications used to design, develop, and evaluate Valencia
-PowerWatch. It details the research setting, research design, participants,
-sampling technique, data gathering tools, statistical treatment, development
-process, system flow, architecture, hardware and software requirements, Data
-Flow Diagrams (DFD), and Entity Relationship Diagrams (ERD).
+This chapter presents the proposed methods and research procedures for evaluating
+Valencia PowerWatch, together with the system architecture and technical
+specifications. It describes the research setting, design, proposed participants
+and sampling technique, planned data-gathering tools, statistical treatment,
+development process, system flow, hardware and software requirements, Data Flow
+Diagrams (DFD), and Entity Relationship Diagrams (ERD).
 
 Research Setting
 
-The study is conducted in Valencia City, a bustling component city in central
+The study will be conducted in Valencia City, a component city in central
 Bukidnon, Northern Mindanao (Region X), Philippines. Located at geographic
 coordinates 7.906° N, 125.094° E, Valencia City spans an area of 587.29 square
 kilometers, serving as the trade and agricultural center of the province.
@@ -554,26 +554,28 @@ Figure 1. Geographic Map of Valencia City, Bukidnon (Study Site)
 
 Research Design
 
-This study uses a Developmental Research Design, based on the Design and
+This study will use a Developmental Research Design, based on the Design and
 Development Research (DDR) model described by Richey and Klein (2007).
 Developmental research focuses on the systematic planning, creation, testing,
 and evaluation of a functional software solution that solves a concrete problem.
 
-The study followed four sequential phases:
-1. Requirements Analysis: Documenting current reporting pain points, user roles,
+The study will follow four sequential phases:
+1. Requirements Analysis: Document current reporting pain points, user roles,
    and necessary system features through stakeholder consultations.
-2. System Design: Developing user interface mockups, process flowcharts, DFDs,
-   and database schemas.
-3. Prototype Development: Writing and integrating the backend REST API, responsive
-   web interfaces, mapping components, and SMS messaging services.
-4. Testing and Evaluation: Conducting functional automated unit testing and
-   measuring user acceptance using an ISO/IEC 25010 evaluation questionnaire.
+2. System Design: Develop user interface mockups, process flowcharts, DFDs,
+   and database designs.
+3. Prototype Development: Develop and integrate the backend REST API, responsive
+   web interfaces, mapping components, and notification integrations.
+4. Testing and Evaluation: Conduct functional automated testing and, after
+   institutional approval, measure user acceptance using an ISO/IEC 25010
+   evaluation questionnaire.
 
 
 Respondents and Sampling Technique
 
-To obtain reliable and well-rounded feedback, the study involved fifty (50)
-selected respondents representing four key stakeholder groups:
+To obtain feedback from relevant stakeholder groups, the study proposes a
+purposive sample of fifty (50) respondents, subject to participant availability
+and institutional approval:
 
 | Respondent Group               | Count | Description / Role in Evaluation                                    |
 |--------------------------------|-------|---------------------------------------------------------------------|
@@ -583,23 +585,25 @@ selected respondents representing four key stakeholder groups:
 | IT Professionals / Engineers   | 5     | Software developers who evaluate code quality and architecture      |
 | **Total Respondents**          | **50**|                                                                     |
 
-The study used Purposive Sampling. This non-probability sampling method was
-chosen because evaluation required participants who either live in Valencia City,
-work directly in power maintenance, or possess technical knowledge in software
-engineering to assess the system accurately against ISO/IEC 25010 standards.
+The study will use purposive sampling, a non-probability sampling method. The
+proposed participants are residents of Valencia City, personnel involved in
+power maintenance or dispatch, and information technology professionals with
+relevant knowledge to evaluate the system using ISO/IEC 25010 criteria. The
+final sample and respondent counts will be reported after recruitment and data
+collection; no survey results are claimed in this proposal.
 
 
 Data Gathering and Research Instruments
 
-Data was collected through qualitative and quantitative methods:
-1. Semi-Structured Interviews: Conducted with residents, barangay leaders, and
-   linemen to understand common reporting delays and verbal communication
-   difficulties during blackouts.
-2. Workflow Observation: Reviewing how telephone complaints are currently
-   written down and passed to line crews.
+Data will be collected through qualitative and quantitative methods:
+1. Semi-Structured Interviews: Interviews will be conducted with residents,
+   barangay leaders, and linemen to understand common reporting delays and
+   verbal communication difficulties during blackouts.
+2. Workflow Observation: The researchers will review how telephone complaints
+   are currently written down and passed to line crews.
 3. Standardized Evaluation Questionnaire: After using the working prototype,
-   respondents answered a survey based on the ISO/IEC 25010 Software Quality
-   Standard. The survey evaluated five core criteria:
+   respondents will be asked to answer a survey based on the ISO/IEC 25010
+   Software Quality Standard. The survey will evaluate five core criteria:
    - Functional Suitability: Whether the system provides the required reporting,
      verification, and dispatch capabilities.
    - Usability: How easy the system is to learn, navigate, and read on mobile
@@ -611,15 +615,16 @@ Data was collected through qualitative and quantitative methods:
    - Security: How effectively the system protects user passwords and restricts
      administrative pages to authorized personnel.
 
-All respondents participated voluntarily with signed consent forms, and all
-personal data was handled confidentially in accordance with Republic Act No. 10173
-(Data Privacy Act of 2012).
+Participation will be voluntary and based on informed consent. Personal data
+will be handled confidentially in accordance with Republic Act No. 10173
+(Data Privacy Act of 2012). These procedures and the proposed sample remain
+subject to the institution's research approval process.
 
 
 Statistical Treatment of Data
 
-Survey responses were tabulated and analyzed using basic descriptive statistics,
-specifically the Weighted Mean (\(\bar{x}\)):
+Once collected, survey responses will be tabulated and analyzed using basic
+descriptive statistics, specifically the Weighted Mean (\(\bar{x}\)):
 
 \[
 \bar{x} = \frac{\sum (f \cdot x)}{N}
@@ -629,10 +634,10 @@ Where:
 - \(\bar{x}\) = Weighted Mean
 - \(f\) = Frequency of responses for each rating
 - \(x\) = Scale value (1 to 5)
-- \(N\) = Total number of respondents (50)
+- \(N\) = Number of respondents who provide valid responses
 
-To interpret the results, the following 5-point Likert Scale continuum was
-used:
+To interpret the results, the following 5-point Likert Scale continuum will
+be used:
 
 | Scale | Mean Range  | Qualitative Description  | Verbal Interpretation                 |
 |:-----:|:-----------:|:-------------------------|:--------------------------------------|
@@ -645,11 +650,11 @@ used:
 
 System Development Methodology
 
-The project followed the Agile Scrum Development Methodology. Agile was
+The project will follow the Agile Scrum Development Methodology. Agile was
 chosen because civic web applications benefit from frequent iterations, quick
 testing, and continuous feedback from target users.
 
-Work was organized into four 2-week sprints:
+Development is planned in four two-week sprints:
 - Sprint 1 (Core Foundation): Database design, user registration, scrypt password
   security, and base administrative views.
 - Sprint 2 (Citizen Reporting & Mapping): Resident portal, GPS coordinate
@@ -657,8 +662,9 @@ Work was organized into four 2-week sprints:
 - Sprint 3 (Field Dispatch & Alerts): Mobile staff portal, job stage tracking
   (En Route, Inspecting, Repairing), on-site photo evidence, and Semaphore SMS.
 - Sprint 4 (Incident Linking, Chatbot & Polish): Grouping reports into master
-  incidents, deterministic ETR calculation, Cebuano chatbot, automated unit tests
-  (96 tests passing), and cloud deployment on Render.com.
+  incidents, deterministic ETR calculation, Cebuano chatbot, automated testing,
+  and deployment to Render.com. The final test count and deployment status will
+  be reported from verified test and deployment records.
 
 --------------------------------------------------------------------------------
 |              INSERT YOUR SYSTEM DEVELOPMENT METHODOLOGY DIAGRAM              |
@@ -669,20 +675,20 @@ Figure 2. Proposed Agile System Development Methodology
 
 Methodology Phase Guide
 
-| Phase                  | What the Team Did                                                                                           | Deliverable Produced                                                  |
+| Phase                  | Planned Activity                                                                                           | Expected Deliverable                                                   |
 |------------------------|-------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------|
-| 1. Planning            | Defined project objectives, stakeholder roles, project schedule, and user stories.                         | Approved Proposal, Project Charter, and Sprint Backlog.               |
-| 2. Analysis            | Interviewed residents and linemen; analyzed phone hotline bottlenecks and documented system requirements.   | Software Requirements Specification (SRS) and Data Dictionary.        |
-| 3. Design              | Created system flowcharts, DFDs, ERD, and wireframe layouts for the three user portals.                     | System Architecture Diagram, UI Mockups, and Database Schemas.       |
-| 4. Development         | Programmed Node.js backend REST APIs, SQLite/Neon dual database, Leaflet maps, and responsive PWA shells.   | Working Software Prototype Deployed on Render.com Cloud.              |
-| 5. Testing             | Executed 96 automated tests covering auth, reports, staff workflow, and responsiveness.                    | Test Execution Reports, Bug Tracker, and Performance Logs.            |
-| 6. Evaluation / Deploy | Administered ISO/IEC 25010 surveys to 50 respondents, analyzed data, and finalized manuscript documentation.| Evaluation Results, Statistical Analysis, and Capstone Manuscript.    |
+| 1. Planning            | Define project objectives, stakeholder roles, project schedule, and user stories.                            | Project Charter and Sprint Backlog.                                    |
+| 2. Analysis            | Plan stakeholder interviews and workflow observation; document requirements after data gathering.           | Software Requirements Specification (SRS) and Data Dictionary.        |
+| 3. Design              | Prepare system flowcharts, DFDs, ERD, and wireframe layouts for the three user portals.                       | System Architecture Diagram, UI Mockups, and Database Design.         |
+| 4. Development         | Develop Node.js REST APIs, SQLite-backed operations, Neon persistence integrations, Leaflet maps, and PWAs. | Working software prototype and deployment record.                     |
+| 5. Testing             | Run automated functional tests and document their verified results.                                          | Test Execution Reports, Bug Tracker, and Performance Logs.             |
+| 6. Evaluation / Deploy | After approval, administer the ISO/IEC 25010 survey to the proposed respondents and analyze valid responses.  | Evaluation Results, Statistical Analysis, and Capstone Manuscript.     |
 
 
 System Flow
 
-The operational flow of Valencia PowerWatch follows a straightforward sequence
-from report submission to resolution:
+The proposed operational flow of Valencia PowerWatch follows a sequence from
+report submission to resolution:
 
 1. Submitting a Report: A resident opens the Community Portal on their mobile
    phone or computer, selects their barangay, indicates their purok, marks their
@@ -693,18 +699,21 @@ from report submission to resolution:
 3. Grouping into Incidents: The dispatcher reviews incoming tickets on the Admin
    Dashboard. If several reports come from the same neighborhood or line feeder,
    the dispatcher links them under a single master Incident (`OUT-XXXX`). The
-   system's ETR algorithm automatically calculates an estimated repair time based
-   on current weather and fault type.
+   system can calculate an estimated restoration time using its configured
+   estimation inputs; the estimate is informational and is not a utility
+   commitment.
 4. Field Crew Dispatch: The dispatcher assigns a field repair team to the
-   incident. The system automatically sends an SMS notification to the lead
-   lineman.
+   incident. Assignment and alert delivery depend on the configured notification
+   service and successful provider delivery.
 5. Field Repair Tracking: The linemen open the Staff Portal on their phones, check
-   the location and attached photos, confirm arrival via GPS, and advance the
+   the location and attached photos, share location information when available,
+   and advance the
    job status (En Route -> Inspecting -> Repairing).
 6. Completion and Citizen Feedback: Once repairs are done, the crew uploads an
    after-repair photo and marks the job complete. The dispatcher marks the master
-   incident as "Resolved," which automatically triggers text messages and in-app
-   alerts to all reporting residents. Residents can then open their portal to
+   incident as "Resolved," after which the system can issue in-app alerts and,
+   when SMS is configured and delivery succeeds, text messages to reporting
+   residents. Residents can then open their portal to
    submit a 1 to 5 star rating confirming that their electricity is back on.
 
 --------------------------------------------------------------------------------
@@ -716,43 +725,55 @@ Figure 3. Proposed System Flow Diagram
 
 System Architecture
 
-Valencia PowerWatch is built on a 3-tier client-server architecture with a
-hybrid data storage setup:
+Valencia PowerWatch uses a three-tier client-server architecture. Its deployed
+implementation uses SQLite for operational records and Neon PostgreSQL for
+specific persistence and resident-authentication functions; Neon is not the
+primary database for the application's operational CRUD routes.
 
 1. Presentation Tier (Client Portals):
-   - Community Portal (`community.html`): Mobile-friendly interface for residents
-     featuring a report wizard, Leaflet outage map, weather widget, and bilingual
-     chatbot.
-   - Admin SCADA Dashboard (`admin.html`): Full desktop dashboard for dispatchers
-     with real-time alert sounds, incident grouping queues, user management, and
-     analytics.
-   - Staff Field Portal (`staff.html`): Lightweight, standalone mobile PWA for
-     linemen with offline shell caching and fast touch controls.
+   - Community Portal: A responsive resident interface for report submission
+     and tracking, outage information, maps, announcements, and account features.
+   - Admin Dashboard: A role-restricted interface for report review, incident
+     management, dispatch, user and system administration, and analytics.
+   - Staff Field Portal: A separate mobile-oriented interface for assignments,
+     incident details, field updates, evidence, and navigation.
+   - The Community and Staff portals retain separate PWA configurations. Static
+     frontend files are organized under the project's client and assets paths,
+     while the existing portal URLs are retained.
 2. Application Tier (Node.js & Express Server):
-   - Hosted in production on Render.com.
-   - Manages secure user authentication using `scryptSync` password hashing and
-     SHA-256 session token hashes.
+   - The Node.js and Express backend is configured for deployment on Render.com.
+   - Manages password authentication using `scryptSync` password hashing and
+     stores session-token hashes rather than raw session tokens.
    - Enforces Role-Based Access Control (`requireRole`) across all private API
      routes.
    - Runs the deterministic ETR calculation module (`etr.js`).
    - Handles address matching against the 31 official Valencia barangays
      (`location-geocoder.js`).
    - Drives the rule-based Cebuano and English chatbot (`chatbot.js`).
-3. Data and Persistence Tier (Hybrid Dual-Store):
-   - Local Transactional Database: High-speed local SQLite database running in
-     Write-Ahead Logging (WAL) mode for fast reads and writes.
-   - Cloud Durability Engine: An automated background process (`persistence.js`)
-     that regularly compresses SQLite snapshots and uploads them to a Neon
-     Serverless PostgreSQL database. This ensures no data is lost when cloud
-     server containers restart.
+3. Data and Persistence Tier:
+   - Operational database: SQLite, accessed by the Node.js backend, is the
+     system of record for operational CRUD data such as reports, incidents,
+     assignments, announcements, settings, and audit records. The SQLite
+     database uses Write-Ahead Logging (WAL) where configured.
+   - Neon PostgreSQL: Neon is used for resident account/session persistence
+     functions and, when snapshot persistence is enabled in the deployment
+     environment, storage of compressed SQLite snapshots and related files.
+     Snapshot persistence is a recovery mechanism; it does not make the
+     normalized PostgreSQL migration schema the active operational CRUD store.
+   - The repository contains PostgreSQL migration definitions for a normalized
+     schema, but those definitions are separate from the live SQLite operational
+     schema and must not be described as synchronized or applied unless verified.
 4. External Service Integrations:
-   - Semaphore SMS API: Sends automated text alerts to Philippine mobile numbers.
-   - OpenStreetMap & Leaflet: Delivers map tiles and geographic markers.
-   - Open-Meteo Weather API: Supplies live weather data for ETR calculations.
+   - Semaphore SMS API: Supports text-alert delivery when credentials and
+     provider service are configured and delivery succeeds.
+   - OpenStreetMap and Leaflet: Provide map tiles and browser-based geographic
+     visualization.
+   - Open-Meteo Weather API: Provides weather data when available to the ETR
+     calculation.
 
 --------------------------------------------------------------------------------
 |                     INSERT SYSTEM ARCHITECTURE DIAGRAM                       |
-|           (Client Layer -> Express Node.js -> Hybrid SQLite/Neon DB)         |
+|     (Client Portals -> Express/Node.js -> SQLite CRUD + Neon persistence)    |
 --------------------------------------------------------------------------------
 Figure 4. Proposed System Architecture Diagram
 
@@ -765,7 +786,7 @@ Hardware Requirements
 |-------------------------------|-------------------------------------------------------|--------------------------------------------------------------------------------------|
 | Development Workstation       | AMD Ryzen 5 / Intel Core i5 (6 cores), 16GB RAM, SSD  | Used for programming, running local test servers, and automated testing.             |
 | Cloud Web Server              | Render.com Web Service (Node.js 22 LTS, 512MB RAM)    | Hosts the live web application and REST API endpoints accessible 24/7 online.        |
-| Cloud Database Instance       | Neon Serverless PostgreSQL Cloud Database             | Stores durable compressed database snapshots and preserves registered accounts.     |
+| Cloud Persistence Service     | Neon Serverless PostgreSQL                           | Supports resident account/session persistence and optional SQLite snapshot storage. |
 | Mobile Test Devices           | Android Smartphone (Android 11+) & iPhone (iOS 15+)   | Used to test responsive layouts, PWA installation, and mobile GPS reporting.         |
 | Desktop Test Workstation      | Windows 11 / macOS Desktop PC (1080p Monitor)         | Used to test the multi-column Admin SCADA dashboard, data tables, and GIS map views. |
 
@@ -775,8 +796,8 @@ Software Requirements
 |---------------------|--------------------------------------------------------|-------------------------------------------------------------------------------------|
 | Operating System    | Windows 11 Pro (Dev) / Linux Ubuntu 22.04 LTS (Prod)   | Development environment and live cloud server operating system.                     |
 | Backend Platform    | Node.js (v22+) with Express.js (v4.21)                 | Executes backend business logic, API routes, and cryptographic functions.           |
-| Local Database      | SQLite3 (`node:sqlite` DatabaseSync) in WAL Mode       | Fast, zero-setup local database for instant reads and writes during web operations. |
-| Cloud Database      | PostgreSQL (Neon Serverless v16) via `pg` (v8.23)      | Cloud storage for automated database snapshots and account persistence.             |
+| Operational Database| SQLite (`node:sqlite` DatabaseSync), WAL where configured | Primary store used by backend operational CRUD routes.                            |
+| Cloud Persistence   | Neon PostgreSQL accessed by backend persistence services | Resident account/session persistence and optional SQLite snapshot storage; not the primary CRUD store. |
 | Frontend Core       | Standard HTML5, CSS3, and JavaScript (ES6+)            | Lightweight, framework-free frontend ensuring fast loading and broad compatibility.|
 | Mapping Tools       | Leaflet.js (v1.9.4) & Leaflet.heat (v0.2.0)            | Renders interactive map pins, layers, and outage heatmaps in the browser.           |
 | File Upload Handling| Multer (v2.4.0) with magic-byte verification           | Securely processes and validates uploaded photo and video evidence.                 |
@@ -825,18 +846,22 @@ Figure 5. Data Flow Diagram (DFD) of Valencia PowerWatch
 
 Entity Relationship Diagram (ERD)
 
-The system uses 26 relational tables in SQLite, which are mapped to an expanded
-35-table schema in Neon PostgreSQL for long-term scalability. The main entities
-and their relationships are:
+The operational application uses a SQLite schema for its CRUD workflows.
+Separate PostgreSQL migration files define a normalized 35-table schema, but
+that schema is not the active operational CRUD database and should not be
+presented as a table-for-table mapping or synchronized copy of SQLite. Neon is
+used for resident authentication/session persistence and, when enabled, durable
+SQLite snapshots. The ERD for this study should distinguish the operational
+SQLite entities from the Neon persistence entities rather than combine them as
+one live schema. The principal operational entities include:
 
-1. `users`: Stores user accounts, encrypted passwords (`password_hash`), contact
+1. `users`: Stores user accounts, password hashes (`password_hash`), contact
    numbers, and user roles (`resident`, `personnel`, `utility`, `administrator`).
    - One user can have multiple active `sessions`.
    - One user can file multiple `outage_reports` as `reporter_id`.
    - One user can perform multiple actions recorded in `audit_logs`.
-2. `barangays`: Contains the 31 official barangays of Valencia City with their
-   center geographic coordinates (latitude and longitude).
-   - Referenced by reports, incidents, and staff territory permissions.
+2. `barangays`: Contains reference data for Valencia City's barangays and their
+   geographic coordinates where available.
 3. `outage_reports`: Stores individual citizen complaints with unique codes
    (`VPR-XXXX`), GPS coordinates, barangay, purok, reported fault type, and
    verification status.
@@ -857,8 +882,13 @@ and their relationships are:
    - Has a one-to-many relationship with `repair_assignment_updates`.
 7. `citizen_feedback`: Records post-repair satisfaction ratings (1 to 5 stars)
    tied to specific reports and users.
-8. `sms_logs`: Maintains an audit trail of all text messages sent through the
-   Semaphore API.
+8. `sms_logs`: Maintains an audit trail of SMS notification attempts and
+   provider results where that integration is configured.
+
+The Neon persistence schema contains separate resident-account/session and
+snapshot-related entities. The normalized PostgreSQL migration definitions are
+not represented as active operational tables unless their deployment and
+application integration are independently verified.
 
 --------------------------------------------------------------------------------
 |                 INSERT ENTITY RELATIONSHIP DIAGRAM (ERD) HERE                |

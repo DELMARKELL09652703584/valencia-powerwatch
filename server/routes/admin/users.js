@@ -9,6 +9,7 @@ const router = express.Router();
 
 const userPublic = (u) => ({
   id: u.id, full_name: u.full_name, username: u.username || null, email: u.email, contact_number: u.contact_number,
+  recovery_email: u.recovery_email || null, is_built_in_admin: isBuiltInAdmin(u),
   address: u.address, barangay: u.barangay, role: u.role, status: u.status,
   created_at: u.created_at, last_login: u.last_login,
 });

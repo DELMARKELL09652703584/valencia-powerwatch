@@ -4,6 +4,15 @@ const { DatabaseSync } = require('node:sqlite');
 const crypto = require('node:crypto');
 
 const { ROOT, DATA_DIR, UPLOAD_DIR, DB_PATH } = require('./config/paths');
+const {
+  BUILT_IN_ADMIN_LOGIN,
+  BUILT_IN_ADMIN_FULL_NAME,
+  BUILT_IN_ADMIN_RECOVERY_EMAIL,
+  BUILT_IN_ADMIN_LEGACY_USERNAME,
+  BUILT_IN_ADMIN_LEGACY_EMAIL,
+  BUILT_IN_ADMIN_LEGACY_PHONE,
+  BUILT_IN_ADMIN_VERSION,
+} = require('./config/built-in-admin');
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -347,6 +356,8 @@ ensureColumn('barangays', 'population', 'INTEGER');
 ensureColumn('barangays', 'latitude', 'REAL');
 ensureColumn('barangays', 'longitude', 'REAL');
 ensureColumn('users', 'username', 'TEXT');
+ensureColumn('users', 'recovery_email', 'TEXT');
+ensureColumn('users', 'is_built_in_admin', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'profile_photo_path', 'TEXT');
 ensureColumn('users', 'preferred_language', "TEXT DEFAULT 'en'");
 ensureColumn('announcements', 'image_path', 'TEXT');
@@ -479,14 +490,6 @@ const nextCode = (prefix) => {
 // ---------------------------------------------------------------- seed
 
 const SEED_VERSION = 'v2.0_clean';
-const BOOTSTRAP_ADMIN_EMAIL = process.env.POWERWATCH_ADMIN_EMAIL || 'admin@powerwatch.ph';
-const BOOTSTRAP_ADMIN_NAME = process.env.POWERWATCH_ADMIN_NAME || 'System Administrator';
-const TEST_BOOTSTRAP_ADMIN_PASSWORD = 'ADMIN2023*';
-const BOOTSTRAP_ADMIN_PASSWORD = (() => {
-  if (process.env.POWERWATCH_ADMIN_PASSWORD) return process.env.POWERWATCH_ADMIN_PASSWORD;
-  if (process.env.NODE_ENV === 'test' || process.env.npm_lifecycle_event === 'test' || process.argv.includes('--test')) return TEST_BOOTSTRAP_ADMIN_PASSWORD;
-  return null;
-})();
 
 const SETTINGS_SEED = {
   outage_types: [
@@ -585,112 +588,77 @@ function seedIfFresh() {
   return true;
 }
 
-// Create the built-in admin accounts only when their identifiers are unused.
+const builtInAdminPasswordHash = () => {
+  if (process.env.POWERWATCH_ADMIN_PASSWORD_HASH) return process.env.POWERWATCH_ADMIN_PASSWORD_HASH;
+  const isTest = process.env.NODE_ENV === 'test' || process.env.npm_lifecycle_event === 'test' || process.argv.includes('--test');
+  if (isTest && process.env.POWERWATCH_ADMIN_PASSWORD) return hashPassword(process.env.POWERWATCH_ADMIN_PASSWORD);
+  // No hard-coded credential: generate a random bootstrap hash. Operators should
+  // set POWERWATCH_ADMIN_PASSWORD_HASH for controlled production access.
+  return hashPassword(crypto.randomBytes(32).toString('hex'));
+};
+
 const ensureAdminAccount = () => {
-  const legacyAdmin = db.prepare(`
+  const admin = db.prepare(`
     SELECT * FROM users
-    WHERE LOWER(COALESCE(username, '')) = LOWER('DELMARKEL2003')
-       OR LOWER(email) = LOWER('dsaroay@gmail.com')
+    WHERE is_built_in_admin = 1
+       OR LOWER(COALESCE(username, '')) IN (?, ?, ?)
+       OR LOWER(email) IN (?, ?, ?)
+       OR REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(contact_number, ''), ' ', ''), '-', ''), '+63', '0'), '.', '') = ?
     ORDER BY CASE
-      WHEN LOWER(COALESCE(username, '')) = LOWER('DELMARKEL2003') THEN 0
-      ELSE 1
-    END
+      WHEN is_built_in_admin = 1 THEN 0
+      WHEN LOWER(COALESCE(username, '')) = LOWER(?) THEN 1
+      WHEN LOWER(email) = LOWER(?) THEN 2
+      ELSE 3
+    END, id
     LIMIT 1
-  `).get();
-
-  if (legacyAdmin) {
-    return;
-  }
-
-  const configuredAdmin = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?) LIMIT 1').get(BOOTSTRAP_ADMIN_EMAIL, BOOTSTRAP_ADMIN_EMAIL.split('@')[0]);
-  if (configuredAdmin) {
-    return;
-  }
-
-  if (process.env.NODE_ENV === 'test' || process.env.npm_lifecycle_event === 'test' || process.argv.includes('--test')) {
-    if (process.env.POWERWATCH_ADMIN_PASSWORD) {
-      db.prepare(`
-        INSERT INTO users (full_name, username, email, password_hash, role, status, created_at, last_login)
-        VALUES (?, ?, ?, ?, 'administrator', 'Active', ?, ?)
-      `).run(
-        BOOTSTRAP_ADMIN_NAME,
-        BOOTSTRAP_ADMIN_EMAIL.split('@')[0],
-        BOOTSTRAP_ADMIN_EMAIL,
-        hashPassword(process.env.POWERWATCH_ADMIN_PASSWORD),
-        now(),
-        now()
-      );
-      checkpointDb();
-      return;
-    }
-
-    const legacyAdminExists = db.prepare('SELECT 1 FROM users WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)').get('dsaroay@gmail.com', 'DELMARKEL2003');
-    if (!legacyAdminExists) {
-      db.prepare(`
-        INSERT INTO users (full_name, username, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)
-      `).run(
-        'Delmarkel Saro-ay',
-        'DELMARKEL2003',
-        'dsaroay@gmail.com',
-        '09652703584',
-        'Brgy. Guinoyuran, Valencia City, Bukidnon',
-        'Guinoyuran',
-        hashPassword(TEST_BOOTSTRAP_ADMIN_PASSWORD),
-        now(),
-        now()
-      );
-    }
-
-    const demoAdminExists = db.prepare('SELECT 1 FROM users WHERE LOWER(email) = LOWER(?)').get(BOOTSTRAP_ADMIN_EMAIL);
-    if (!demoAdminExists) {
-      db.prepare(`
-        INSERT INTO users (full_name, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
-        VALUES (?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)
-      `).run(
-        BOOTSTRAP_ADMIN_NAME,
-        BOOTSTRAP_ADMIN_EMAIL,
-        '0917-555-0100',
-        'Brgy. Poblacion, Valencia City',
-        'Poblacion',
-        hashPassword('admin123'),
-        now(),
-        now()
-      );
-    }
-
-    checkpointDb();
-    return;
-  }
-
-  if (!BOOTSTRAP_ADMIN_PASSWORD) {
-    console.warn('No POWERWATCH_ADMIN_PASSWORD configured; skipping automatic admin bootstrap to avoid overwriting or creating a known default administrator.');
-    return;
-  }
-
-  db.prepare(`
-    INSERT INTO users (full_name, username, email, contact_number, address, barangay, password_hash, role, status, created_at, last_login)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'administrator', 'Active', ?, ?)
-  `).run(
-    BOOTSTRAP_ADMIN_NAME,
-    BOOTSTRAP_ADMIN_EMAIL.split('@')[0],
-    BOOTSTRAP_ADMIN_EMAIL,
-    '0917-555-0100',
-    'Brgy. Poblacion, Valencia City, Bukidnon',
-    'Poblacion',
-    hashPassword(BOOTSTRAP_ADMIN_PASSWORD),
-    now(),
-    now()
+  `).get(
+    BUILT_IN_ADMIN_LOGIN.toLowerCase(),
+    BUILT_IN_ADMIN_LEGACY_USERNAME.toLowerCase(),
+    BUILT_IN_ADMIN_RECOVERY_EMAIL.toLowerCase(),
+    BUILT_IN_ADMIN_LOGIN.toLowerCase(),
+    BUILT_IN_ADMIN_LEGACY_EMAIL.toLowerCase(),
+    BUILT_IN_ADMIN_RECOVERY_EMAIL.toLowerCase(),
+    BUILT_IN_ADMIN_LEGACY_PHONE,
+    BUILT_IN_ADMIN_LOGIN,
+    BUILT_IN_ADMIN_LOGIN,
   );
 
-  try {
-    db.exec(`
-      UPDATE users 
-      SET username = LOWER(SUBSTR(email, 1, INSTR(email, '@') - 1)) 
-      WHERE (username IS NULL OR username = '') AND INSTR(email, '@') > 1;
-    `);
-  } catch (err) {}
+  const marker = db.prepare('SELECT value FROM settings WHERE key = ?').get('built_in_admin_version');
+  const applyPassword = !marker || marker.value !== BUILT_IN_ADMIN_VERSION;
+  const passwordHash = builtInAdminPasswordHash();
+  const timestamp = now();
 
+  if (admin) {
+    if (applyPassword && passwordHash) {
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, admin.id);
+      db.prepare('DELETE FROM sessions WHERE user_id = ?').run(admin.id);
+    }
+    db.prepare(`
+      UPDATE users
+      SET full_name = CASE WHEN TRIM(COALESCE(full_name, '')) = '' THEN ? ELSE full_name END,
+          username = ?, email = ?, recovery_email = ?, role = 'administrator',
+          status = 'Active', is_built_in_admin = 1
+      WHERE id = ?
+    `).run(BUILT_IN_ADMIN_FULL_NAME, BUILT_IN_ADMIN_LOGIN, BUILT_IN_ADMIN_LOGIN, BUILT_IN_ADMIN_RECOVERY_EMAIL, admin.id);
+    db.prepare('UPDATE users SET is_built_in_admin = 0 WHERE id != ?').run(admin.id);
+  } else {
+    db.prepare(`
+      INSERT INTO users
+        (full_name, username, email, recovery_email, password_hash, role, status, is_built_in_admin, created_at, last_login)
+      VALUES (?, ?, ?, ?, ?, 'administrator', 'Active', 1, ?, ?)
+    `).run(
+      BUILT_IN_ADMIN_FULL_NAME,
+      BUILT_IN_ADMIN_LOGIN,
+      BUILT_IN_ADMIN_LOGIN,
+      BUILT_IN_ADMIN_RECOVERY_EMAIL,
+      passwordHash,
+      timestamp,
+      timestamp,
+    );
+  }
+
+  db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)')
+    .run('built_in_admin_version', BUILT_IN_ADMIN_VERSION);
   checkpointDb();
 };
 

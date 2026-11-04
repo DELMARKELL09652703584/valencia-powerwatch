@@ -9,7 +9,7 @@
  *   - the four legacy generic repair teams (TEAM-01 .. TEAM-04) when they
  *     still match their original seed values and have no dependencies
  *
- * The real administrator (dsaroay@gmail.com), real residents, reports,
+ * The real administrator (DELMARKEL SARO-AY), real residents, reports,
  * incidents, settings and all 31 barangays are preserved.
  *
  * Usage:
@@ -24,7 +24,8 @@ const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 const { DB_PATH } = require('../../server/config/paths');
 
-const REAL_ADMIN_EMAIL = 'dsaroay@gmail.com';
+const REAL_ADMIN_EMAIL = 'DELMARKEL SARO-AY';
+const LEGACY_ADMIN_IDENTIFIERS = ['dsaroay@gmail.com', 'DELMARKEL2003'];
 const DEMO_ADMIN_EMAIL = 'admin@powerwatch.ph';
 const TEST_RESIDENT_NAME = 'Juan Test Resident';
 const CLEANUP_VERSION = '2026-10-demo-clean-v1';
@@ -75,8 +76,23 @@ function cleanDatabase(db, { apply = false, logger = console.log } = {}) {
 
   const realAdmin = db.prepare(`
     SELECT id, status FROM users
-    WHERE LOWER(email) = LOWER(?) AND role = 'administrator'
-  `).get(REAL_ADMIN_EMAIL);
+    WHERE role = 'administrator'
+      AND (
+        LOWER(email) = LOWER(?)
+        OR LOWER(COALESCE(username, '')) = LOWER(?)
+        OR LOWER(email) IN (?, ?)
+        OR LOWER(COALESCE(username, '')) IN (?, ?)
+      )
+    ORDER BY id
+    LIMIT 1
+  `).get(
+    REAL_ADMIN_EMAIL,
+    REAL_ADMIN_EMAIL,
+    LEGACY_ADMIN_IDENTIFIERS[0].toLowerCase(),
+    LEGACY_ADMIN_IDENTIFIERS[1].toLowerCase(),
+    LEGACY_ADMIN_IDENTIFIERS[0].toLowerCase(),
+    LEGACY_ADMIN_IDENTIFIERS[1].toLowerCase(),
+  );
   if (!realAdmin) {
     throw new Error('Refusing cleanup: the real administrator account was not found.');
   }

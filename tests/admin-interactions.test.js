@@ -64,10 +64,10 @@ test('Admin portal UX includes loading states and inline feedback for async acti
   assert.match(adminApp, /admin-inline-error/);
 });
 
-test('refreshConfig requests settings from /api/auth/settings, not /api/settings', () => {
+test('refreshConfig requests settings from /api/settings, not /api/auth/settings', () => {
   const mainApp = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
-  assert.match(mainApp, /api\('\/api\/auth\/settings'\)/);
-  assert.doesNotMatch(mainApp, /api\('\/api\/settings'\)/);
+  assert.match(mainApp, /api\('\/api\/settings'\)/);
+  assert.doesNotMatch(mainApp, /api\('\/api\/auth\/settings'\)/);
 });
 
 test('delete-announcement disables the delete-announcement button, not announcement-status', () => {

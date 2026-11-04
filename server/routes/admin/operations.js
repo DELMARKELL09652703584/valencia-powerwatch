@@ -117,12 +117,13 @@ router.post('/maintenance/clean-reset', requireAuth, requireRole('administrator'
   const confirmation = String(req.body?.confirmation || '');
   const expectedConfirmation = `RESET ALL EXCEPT ${keepEmail}`;
   const backupSha256 = String(req.body?.backup_sha256 || '').toLowerCase();
-  if (String(req.user.email || '').toLowerCase() !== 'dsaroay@gmail.com'
-    || !isBuiltInAdmin(req.user)
-    || keepEmail !== 'dsaroay@gmail.com') {
-    return res.status(403).json({ error: 'Sign in with the Delmarkel Saro-ay administrator account that you chose to preserve.' });
+  const retainedIdentifiers = [req.user.email, req.user.username, req.user.recovery_email]
+    .map((value) => String(value || '').trim().toLowerCase())
+    .filter(Boolean);
+  if (!isBuiltInAdmin(req.user) || !retainedIdentifiers.includes(keepEmail)) {
+    return res.status(403).json({ error: 'Sign in with the built-in administrator account that you chose to preserve.' });
   }
-  if (confirmation !== expectedConfirmation) {
+  if (confirmation.trim().toLowerCase() !== expectedConfirmation.toLowerCase()) {
     return res.status(400).json({ error: `Type "${expectedConfirmation}" exactly to confirm the reset.` });
   }
   if (!/^[a-f0-9]{64}$/.test(backupSha256)) {
