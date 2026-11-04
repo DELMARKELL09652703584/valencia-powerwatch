@@ -101,7 +101,7 @@ test('resident navigation exposes reporting, announcements, and outage history',
   assert.match(mainScript, /case 'open-announcements':\s*state\.mobileNotificationCategory = 'announcements';\s*await goToTab\('notifications'\)/);
   assert.match(mainScript, /data-action="retry-current-tab"/);
   assert.match(mainScript, /case 'retry-current-tab':\s*await goToTab\(state\.mobileTab\)/);
-  assert.match(communityPage, /portal-polish\.css\?v=88/);
+  assert.match(communityPage, /portal-polish\.css\?v=89/);
   assert.match(communityPage, /community\.js\?v=48/);
   assert.match(communityPage, /main\.js\?v=48/);
   assert.match(mainScript, /coordinates shown above will be included with your location description/);
@@ -210,11 +210,11 @@ test('community report location method buttons retain their theme colors', () =>
   assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
 });
 
-test('community home greeting stays legible over the Night Ops header', () => {
+test('community home greeting stays legible in Light and Night Ops themes', () => {
   const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
 
-  assert.match(portalStyles, /body\.community-body \.mobile-home-greeting > span\s*\{[^}]*color:\s*#e4f0fc !important;/s);
-  assert.match(portalStyles, /body\.community-body \.mobile-home-greeting strong\s*\{[^}]*color:\s*#fff !important;/s);
+  assert.match(portalStyles, /body\.community-body:not\(\.dark-mode\) \.mobile-home-greeting > span\s*\{[^}]*color:\s*#5c7185 !important;/s);
+  assert.match(portalStyles, /body\.community-body:not\(\.dark-mode\) \.mobile-home-greeting strong\s*\{[^}]*color:\s*#173752 !important;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-home-greeting > span\s*\{[^}]*color:\s*#d3e6f5\s*!important;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-home-greeting strong\s*\{[^}]*color:\s*#fff\s*!important;/s);
 });
@@ -402,7 +402,7 @@ test('Community account creation uses the light mobile form design and preserves
   assert.match(portalStyles, /body\.community-body \.community-register-form > label > input,[\s\S]*?border-radius:\s*13px;[\s\S]*?background:\s*#fff;/s);
   assert.match(portalStyles, /body\.community-body \.community-register-form \.mobile-auth-submit\s*\{[^}]*background:\s*linear-gradient\(135deg, #1688ed, #0864c4\);/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.community-register-page/);
-  assert.match(communityPage, /portal-polish\.css\?v=88/);
+  assert.match(communityPage, /portal-polish\.css\?v=89/);
   assert.match(communityPage, /shared\/main\.js\?v=48/);
 });
 
