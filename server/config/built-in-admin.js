@@ -4,7 +4,7 @@ const BUILT_IN_ADMIN_RECOVERY_EMAIL = 'dsaro-ay@aclcbukidnon.com';
 const BUILT_IN_ADMIN_LEGACY_USERNAME = 'DELMARKEL2003';
 const BUILT_IN_ADMIN_LEGACY_EMAIL = 'dsaroay@gmail.com';
 const BUILT_IN_ADMIN_LEGACY_PHONE = '09652703584';
-const BUILT_IN_ADMIN_VERSION = '2';
+const BUILT_IN_ADMIN_VERSION = '3';
 
 const normalizePhone = (value) => String(value || '')
   .replace(/[\s\-\(\)\.]/g, '')

@@ -588,10 +588,19 @@ function seedIfFresh() {
   return true;
 }
 
-const builtInAdminPasswordHash = () => {
-  if (process.env.POWERWATCH_ADMIN_PASSWORD_HASH) return process.env.POWERWATCH_ADMIN_PASSWORD_HASH;
-  const isTest = process.env.NODE_ENV === 'test' || process.env.npm_lifecycle_event === 'test' || process.argv.includes('--test');
-  if (isTest && process.env.POWERWATCH_ADMIN_PASSWORD) return hashPassword(process.env.POWERWATCH_ADMIN_PASSWORD);
+const isTestRuntime = () => process.env.NODE_ENV === 'test'
+  || process.env.npm_lifecycle_event === 'test'
+  || process.argv.includes('--test');
+
+const configuredBuiltInAdminPasswordHash = () => {
+  if (isTestRuntime() && process.env.POWERWATCH_ADMIN_PASSWORD) {
+    return hashPassword(process.env.POWERWATCH_ADMIN_PASSWORD);
+  }
+  return process.env.POWERWATCH_ADMIN_PASSWORD_HASH || null;
+};
+
+const builtInAdminPasswordHash = (configuredHash = configuredBuiltInAdminPasswordHash()) => {
+  if (configuredHash) return configuredHash;
   // No hard-coded credential: generate a random bootstrap hash. Operators should
   // set POWERWATCH_ADMIN_PASSWORD_HASH for controlled production access.
   return hashPassword(crypto.randomBytes(32).toString('hex'));
@@ -624,8 +633,10 @@ const ensureAdminAccount = () => {
   );
 
   const marker = db.prepare('SELECT value FROM settings WHERE key = ?').get('built_in_admin_version');
-  const applyPassword = !marker || marker.value !== BUILT_IN_ADMIN_VERSION;
-  const passwordHash = builtInAdminPasswordHash();
+  const configuredPasswordHash = configuredBuiltInAdminPasswordHash();
+  const applyPassword = (!marker || marker.value !== BUILT_IN_ADMIN_VERSION)
+    && Boolean(configuredPasswordHash);
+  const passwordHash = builtInAdminPasswordHash(configuredPasswordHash);
   const timestamp = now();
 
   if (admin) {

@@ -212,6 +212,23 @@ test('database startup migrates the built-in administrator once without overwrit
     assert.equal(recovered.username, BUILT_IN_ADMIN_LOGIN);
     assert.equal(recovered.status, 'Active');
     assert.equal(verifyPassword('recovered-admin-password', recovered.password_hash), true);
+
+    process.env.NODE_ENV = 'production';
+    delete process.env.POWERWATCH_ADMIN_PASSWORD;
+    process.env.POWERWATCH_ADMIN_PASSWORD_HASH = hashPassword('configured-admin-password');
+    db.prepare("UPDATE settings SET value = '2' WHERE key = 'built_in_admin_version'").run();
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = 9').run(hashPassword('pre-upgrade-admin-password'));
+    ensureAdminAccount();
+    const upgraded = db.prepare('SELECT * FROM users WHERE id = 9').get();
+    assert.equal(verifyPassword('configured-admin-password', upgraded.password_hash), true);
+    assert.equal(db.prepare('SELECT COUNT(*) AS count FROM users WHERE is_built_in_admin = 1').get().count, 1);
+
+    delete process.env.POWERWATCH_ADMIN_PASSWORD_HASH;
+    db.prepare("UPDATE settings SET value = '2' WHERE key = 'built_in_admin_version'").run();
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = 9').run(hashPassword('recovered-password-without-seed-secret'));
+    ensureAdminAccount();
+    const preserved = db.prepare('SELECT * FROM users WHERE id = 9').get();
+    assert.equal(verifyPassword('recovered-password-without-seed-secret', preserved.password_hash), true);
     assert.equal(db.prepare('SELECT COUNT(*) AS count FROM users WHERE is_built_in_admin = 1').get().count, 1);
   `;
 
