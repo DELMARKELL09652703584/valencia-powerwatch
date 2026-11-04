@@ -1024,6 +1024,51 @@ test('Staff account limit is administrator-configurable and enforced by the serv
   await createPersonnel('Unlimited Test Staff', `unlimited-${Date.now()}@example.test`);
 });
 
+test('Admin can create and sign in a phone-only staff account with barangay scope', { timeout: TEST_TIMEOUT_MS }, async () => {
+  const phone = `+63917${String(Date.now()).slice(-7)}`;
+  const formattedPhone = `+63 (${phone.slice(3, 6)}) ${phone.slice(6, 9)}-${phone.slice(9)}`;
+  const creation = await jsonRequest('/api/admin/users', adminCookie, 'POST', {
+    full_name: 'Phone Login Field Staff',
+    contact_number: phone,
+    password: 'phone-field-password-123',
+    confirm_password: 'phone-field-password-123',
+    role: 'personnel',
+    team_ids: [],
+    barangay_names: ['Poblacion'],
+  });
+  assert.equal(creation.status, 201);
+  const created = (await creation.json()).user;
+  assert.equal(created.email, null);
+  assert.equal(created.contact_number, phone);
+  assert.equal(created.role, 'personnel');
+
+  const loginResult = await login(formattedPhone, 'phone-field-password-123', 'staff');
+  assert.equal(loginResult.user.role, 'personnel');
+  assert.equal(loginResult.user.portal_path, '/staff');
+  assert.equal((await jsonRequest('/api/auth/me', loginResult.cookie)).status, 200);
+  assert.equal((await jsonRequest('/api/admin/users', loginResult.cookie)).status, 403);
+  assert.equal((await jsonRequest('/api/auth/logout', loginResult.cookie, 'POST')).status, 200);
+
+  const repeatLogin = await login(phone, 'phone-field-password-123', 'staff');
+  assert.equal(repeatLogin.user.role, 'personnel');
+  const membershipResponse = await jsonRequest('/api/admin/staff-memberships', adminCookie);
+  const memberships = await membershipResponse.json();
+  const createdMembership = memberships.staff.find((member) => Number(member.id) === Number(created.id));
+  assert.deepEqual(createdMembership.barangay_names, ['Poblacion']);
+  assert.deepEqual(createdMembership.team_ids, []);
+
+  const duplicatePhone = await jsonRequest('/api/admin/users', adminCookie, 'POST', {
+    full_name: 'Duplicate Phone Staff',
+    contact_number: formattedPhone,
+    password: 'phone-field-password-123',
+    confirm_password: 'phone-field-password-123',
+    role: 'personnel',
+    team_ids: [],
+    barangay_names: ['Poblacion'],
+  });
+  assert.equal(duplicatePhone.status, 409);
+});
+
 test('clean reset requires a verified backup, keeps only the selected admin, and allows fresh workflows', { timeout: TEST_TIMEOUT_MS }, async () => {
   const wrongConfirmation = await jsonRequest('/api/admin/maintenance/clean-reset', adminCookie, 'POST', {
     keep_email: testAdminEmail,

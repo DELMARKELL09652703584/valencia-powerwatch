@@ -268,8 +268,8 @@ from blocking a future backfill.
 ## 7. Current source mapping notes
 
 
-- SQLite `users` is the staff/admin source; Neon `resident_accounts` supplies
-  resident accounts when `POWERWATCH_SOURCE_NEON_URL` is configured.
+- SQLite `users` remains the operational source for staff/admin profiles and staff assignments. Neon `resident_accounts` and `resident_sessions` provide persistent credentials and sessions for residents and provisioned staff; the `role` column distinguishes personnel accounts.
+- The normalized Neon `users` table is not the active CRUD store for staff workflows. No schema migration is required for staff provisioning because the existing persistent account/session tables already have role, contact, and session fields.
 - Resident session UUIDs are mapped through `users.legacy_resident_uuid`, which
   is foreign-keyed to `resident_accounts(id)`. The link is only written when the
   target branch contains the referenced resident account (a branch created from

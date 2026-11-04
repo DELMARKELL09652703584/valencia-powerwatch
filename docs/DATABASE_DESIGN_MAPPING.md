@@ -7,7 +7,7 @@
 This document maps the proposed 24-table domain model to the current Valencia PowerWatch implementation. It is the required bridge between the proposed design and any future migration. The production system remains a hybrid:
 
 - SQLite is the operational database for reports, incidents, staff, announcements, audit logs, and settings.
-- Neon stores compressed SQLite snapshots, uploaded files, resident accounts, and resident sessions.
+- Neon stores compressed SQLite snapshots, uploaded files, and persistent resident/staff authentication identities and sessions. SQLite remains the source for staff operational profiles and assignments.
 - Neon currently has five pre-existing application tables: `app_snapshots`, `app_snapshots_backup`, `app_snapshot_files`, `resident_accounts`, and `resident_sessions`, plus the 35-table normalized schema deployed on 2026-10-23 (see `DATABASE_RELATIONSHIPS.md`). The `playing_with_neon` sample table was dropped on 2026-10-23.
 
 ---
@@ -87,7 +87,7 @@ The proposal lists only Resident, Staff, and Admin. Dropping `utility` would bre
 | Current | Target |
 |---|---|
 | `users` — email, mobile/contact, password hash, status, role, timestamps | `users` + `user_profiles` + `user_roles` |
-| `resident_accounts` — Neon UUID account | Existing row retained until cutover; add `legacy_uuid` to `users` for mapping |
+| `resident_accounts` — Neon UUID account and persistent credential store for residents and provisioned staff | Existing row retained until cutover; add `legacy_uuid` to `users` for mapping |
 | `sessions` — SQLite admin/staff sessions | `user_sessions` |
 | `resident_sessions` — Neon resident sessions | `user_sessions` |
 | `password_reset_tokens` | Retained supporting table |

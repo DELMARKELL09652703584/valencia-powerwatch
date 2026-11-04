@@ -2709,7 +2709,7 @@ async function renderAdminUsers() {
   const atStaffLimit = staffSummary.account_limit !== null && staffSummary.total >= staffSummary.account_limit;
   const rows = pageRows.map((user) => `<tr>
     <td class="user-name-cell"><strong>${escapeHtml(user.full_name)}</strong>${user.contact_number ? `<span>${escapeHtml(user.contact_number)}</span>` : ''}</td>
-    <td class="user-email-cell">${escapeHtml(user.email)}</td>
+    <td class="user-email-cell">${escapeHtml(user.email || (user.contact_number ? 'Phone login' : '—'))}</td>
     <td>${escapeHtml(roles[user.role] || roleLabel(user.role))}</td>
     <td><span class="user-status-badge ${user.status === 'Active' ? 'active' : 'inactive'}">${escapeHtml(user.status)}</span></td>
     <td><div class="user-row-actions">
@@ -2729,13 +2729,13 @@ async function renderAdminUsers() {
   adminShell(`<section class="user-management-page">
     <header class="user-management-heading">
       <label class="user-management-search" aria-label="Search users"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input type="search" data-filter="userSearch" value="${escapeHtml(f.userSearch || '')}" placeholder="Search name, email, contact..."></label>
-      <button type="button" class="user-add-button" data-action="new-user" ${atStaffLimit ? 'disabled title="Configured staff account limit reached"' : ''}><span aria-hidden="true">+</span>Add Staff</button>
+      <button type="button" class="user-add-button" data-action="new-user" data-limit-reached="${atStaffLimit}" ${atStaffLimit ? 'title="Configured staff account limit reached"' : ''}><span aria-hidden="true">+</span>Add Staff</button>
     </header>
     <div class="user-table-tools" aria-label="Staff account summary"><span class="user-result-count">Staff: ${staffSummary.total} total · ${staffSummary.active} active · ${staffSummary.inactive} inactive</span><span class="muted small">${staffSummary.assigned_teams} teams · ${staffSummary.assigned_barangays} authorized barangays · ${staffSummary.account_limit === null ? 'No account limit configured' : `Limit: ${staffSummary.account_limit}`}</span></div>
     <div class="user-management-tabs" role="tablist" aria-label="Filter users by role">${groupTabs}</div>
     <div class="user-table-tools"><label class="user-status-filter" aria-label="Filter users by account status"><span>Status</span><select data-filter="userStatus"><option value="all" ${!f.userStatus || f.userStatus === 'all' ? 'selected' : ''}>All Statuses</option><option value="Active" ${f.userStatus === 'Active' ? 'selected' : ''}>Active</option><option value="Inactive" ${f.userStatus === 'Inactive' ? 'selected' : ''}>Inactive</option></select></label><span class="user-result-count">${visibleUsers.length} user${visibleUsers.length === 1 ? '' : 's'}</span></div>
     <div class="user-table-wrap"><div class="table-scroll"><table class="user-management-table">
-      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Name</th><th>Email / Login</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>${rows || `<tr><td colspan="5" class="user-table-empty">${emptyState('No users found', 'Adjust the search or role filters to see accounts.', '👥')}</td></tr>`}</tbody>
     </table></div></div>
     ${visibleUsers.length ? `<nav class="user-pagination" aria-label="User pages"><button type="button" class="user-page-arrow" data-action="admin-user-page" data-value="${Math.max(1, page - 1)}" aria-label="Previous page" ${page === 1 ? 'disabled' : ''}>‹</button>${pageButtons}<button type="button" class="user-page-arrow" data-action="admin-user-page" data-value="${Math.min(totalPages, page + 1)}" aria-label="Next page" ${page === totalPages ? 'disabled' : ''}>›</button></nav>` : ''}
@@ -2984,7 +2984,7 @@ async function renderAdminProfile() {
   const u = state.user;
   adminShell(`<div class="panel-row wrap">
     ${u.is_built_in_admin ? `<div class="panel"><div class="panel-head"><h2>Permanent Admin account</h2></div>
-      <div class="detail-grid"><div><span>Username / login</span><strong>${escapeHtml(u.username || u.email || '')}</strong></div><div><span>Account status</span><strong>${escapeHtml(u.status || 'Active')}</strong></div><div><span>Role</span><strong>${escapeHtml(roleLabel(u.role))}</strong></div><div><span>Last login</span><strong>${escapeHtml(formatDateTime(u.last_login))}</strong></div></div>
+      <div class="detail-grid"><div><span>Username / login</span><strong>${escapeHtml(u.username || u.email || u.contact_number || '')}</strong></div><div><span>Account status</span><strong>${escapeHtml(u.status || 'Active')}</strong></div><div><span>Role</span><strong>${escapeHtml(roleLabel(u.role))}</strong></div><div><span>Last login</span><strong>${escapeHtml(formatDateTime(u.last_login))}</strong></div></div>
       <p class="muted">This built-in account is managed by system configuration. Its identity and profile cannot be edited here.</p>
     </div><div class="panel"><div class="panel-head"><h2>Password recovery</h2></div>
       <p class="muted">Password changes are disabled in account settings for the built-in Admin. Request a secure recovery link from the Admin sign-in page.</p>
@@ -2993,7 +2993,7 @@ async function renderAdminProfile() {
       <div class="panel-head"><h2>Profile details</h2></div>
       <form class="form-stack" data-form="profile">
         <label>Full name<input class="input" name="full_name" value="${escapeHtml(u.full_name || '')}" required></label>
-        <label>Email<input class="input" value="${escapeHtml(u.email || '')}" disabled></label>
+        <label>Email<input class="input" value="${escapeHtml(u.email || (u.contact_number ? 'Not provided; login uses mobile' : ''))}" disabled></label>
         <label>Contact number<input class="input" name="contact_number" value="${escapeHtml(u.contact_number || '')}"></label>
         <label>Barangay<select class="input" name="barangay"><option value="">None</option>${state.barangays.map((b) => `<option ${u.barangay === b ? 'selected' : ''}>${escapeHtml(b)}</option>`).join('')}</select></label>
         <label class="wide-field">Address<input class="input" name="address" value="${escapeHtml(u.address || '')}"></label>

@@ -1,13 +1,18 @@
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const net = require('node:net');
 const os = require('node:os');
 const path = require('node:path');
 const { after, before, test } = require('node:test');
+const { BUILT_IN_ADMIN_LOGIN } = require('../server/config/built-in-admin');
 
 const ROOT = path.resolve(__dirname, '..');
 const TEST_TIMEOUT_MS = 30_000;
+const testAdminPassword = crypto.randomBytes(24).toString('hex');
+const adminPasswordSalt = crypto.randomBytes(16).toString('hex');
+const testAdminPasswordHash = `${adminPasswordSalt}:${crypto.scryptSync(testAdminPassword, adminPasswordSalt, 64).toString('hex')}`;
 
 let runtimeDirectory;
 let dataDirectory;
@@ -50,6 +55,7 @@ const startServer = async () => {
       NEON_MOCK_STORAGE: mockStorage,
       NEON_MOCK_MODULE: path.join(ROOT, 'tests', 'fixtures', 'neon-pg-mock.js'),
       PERSISTENT_AUTH_REQUIRED: 'true',
+      POWERWATCH_ADMIN_PASSWORD_HASH: testAdminPasswordHash,
       NODE_PATH: path.join(ROOT, 'node_modules'),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -81,6 +87,18 @@ const stopServer = async () => {
 const postJson = async (route, body, cookie) => {
   const response = await fetch(`${baseUrl}${route}`, {
     method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...(cookie ? { cookie } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  return { response, body: await response.json() };
+};
+
+const putJson = async (route, body, cookie) => {
+  const response = await fetch(`${baseUrl}${route}`, {
+    method: 'PUT',
     headers: {
       'content-type': 'application/json',
       ...(cookie ? { cookie } : {}),
@@ -144,6 +162,91 @@ test('resident can register, logout, log in again after restart, and avoid dupli
   const firstLoginCookie = cookieFrom(firstLogin.response);
   assert.ok(firstLoginCookie);
 
+  const adminLogin = await postJson('/api/auth/login', {
+    email: BUILT_IN_ADMIN_LOGIN,
+    password: testAdminPassword,
+    portal: 'admin',
+  });
+  assert.equal(adminLogin.response.status, 200);
+  const adminCookie = cookieFrom(adminLogin.response);
+  const staffPhone = `+63917${String(Date.now()).slice(-7)}`;
+  const staffCreation = await postJson('/api/admin/users', {
+    full_name: 'Neon Persistent Field Staff',
+    contact_number: staffPhone,
+    password: 'neon-staff-password',
+    confirm_password: 'neon-staff-password',
+    role: 'personnel',
+    team_ids: [],
+    barangay_names: ['Poblacion'],
+  }, adminCookie);
+  assert.equal(staffCreation.response.status, 201);
+  assert.equal(staffCreation.body.user.email, null);
+  assert.equal(staffCreation.body.user.role, 'personnel');
+  const staffId = staffCreation.body.user.id;
+  const persistedStaff = JSON.parse(fs.readFileSync(mockStorage, 'utf8')).accounts
+    .find((account) => account.contact_number === staffPhone);
+  assert.equal(persistedStaff.role, 'personnel');
+  assert.notEqual(persistedStaff.password_hash, 'neon-staff-password');
+  assert.match(persistedStaff.password_hash, /^[0-9a-f]{32}:[0-9a-f]{128}$/);
+
+  const staffLogin = await postJson('/api/auth/login', {
+    email: staffPhone,
+    password: 'neon-staff-password',
+    portal: 'staff',
+  });
+  assert.equal(staffLogin.response.status, 200);
+  assert.equal(staffLogin.body.user.role, 'personnel');
+  const staffCookie = cookieFrom(staffLogin.response);
+  assert.equal((await fetch(`${baseUrl}/api/admin/users`, { headers: { cookie: staffCookie } })).status, 403);
+  assert.equal((await postJson('/api/auth/logout', {}, staffCookie)).response.status, 200);
+
+  const updatedPhone = `+63918${String(Date.now()).slice(-7)}`;
+  const edited = await putJson(`/api/admin/users/${staffId}`, {
+    full_name: 'Neon Persistent Field Staff',
+    email: '',
+    contact_number: updatedPhone,
+    address: '',
+    barangay: 'Poblacion',
+  }, adminCookie);
+  assert.equal(edited.response.status, 200);
+  assert.equal(edited.body.user.email, null);
+  assert.equal((await postJson('/api/auth/login', {
+    email: staffPhone,
+    password: 'neon-staff-password',
+    portal: 'staff',
+  })).response.status, 401);
+  assert.equal((await postJson('/api/auth/login', {
+    email: updatedPhone,
+    password: 'neon-staff-password',
+    portal: 'staff',
+  })).response.status, 200);
+
+  const deactivated = await putJson(`/api/admin/users/${staffId}/status`, { status: 'Inactive' }, adminCookie);
+  assert.equal(deactivated.response.status, 200);
+  assert.equal((await postJson('/api/auth/login', {
+    email: updatedPhone,
+    password: 'neon-staff-password',
+    portal: 'staff',
+  })).response.status, 403);
+  assert.equal((await putJson(`/api/admin/users/${staffId}/status`, { status: 'Active' }, adminCookie)).response.status, 200);
+
+  assert.equal((await putJson(`/api/admin/users/${staffId}/reset`, {
+    new_password: 'neon-staff-password-updated',
+  }, adminCookie)).response.status, 200);
+  assert.equal((await postJson('/api/auth/login', {
+    email: updatedPhone,
+    password: 'neon-staff-password',
+    portal: 'staff',
+  })).response.status, 401);
+  const finalStaffLogin = await postJson('/api/auth/login', {
+    email: updatedPhone,
+    password: 'neon-staff-password-updated',
+    portal: 'staff',
+  });
+  assert.equal(finalStaffLogin.response.status, 200);
+  const finalStaffCookie = cookieFrom(finalStaffLogin.response);
+  assert.ok(finalStaffCookie);
+
   await stopServer();
   for (const filename of ['powerwatch.db', 'powerwatch.db-shm', 'powerwatch.db-wal']) {
     fs.rmSync(path.join(dataDirectory, filename), { force: true });
@@ -154,6 +257,16 @@ test('resident can register, logout, log in again after restart, and avoid dupli
   assert.equal(secondLogin.response.status, 200);
   const secondLoginCookie = cookieFrom(secondLogin.response);
   assert.ok(secondLoginCookie);
+  const staffAfterRestart = await postJson('/api/auth/login', {
+    email: updatedPhone,
+    password: 'neon-staff-password-updated',
+    portal: 'staff',
+  });
+  assert.equal(staffAfterRestart.response.status, 200);
+  assert.equal(staffAfterRestart.body.user.role, 'personnel');
+  const restoredStaffSession = await fetch(`${baseUrl}/api/auth/me`, { headers: { cookie: finalStaffCookie } });
+  assert.equal(restoredStaffSession.status, 200);
+  assert.equal((await restoredStaffSession.json()).user.role, 'personnel');
 
   const meResponse = await fetch(`${baseUrl}/api/auth/me`, { headers: { cookie: secondLoginCookie } });
   assert.equal(meResponse.status, 200);

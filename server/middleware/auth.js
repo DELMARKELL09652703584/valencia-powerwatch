@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const { db, now } = require('../db');
 const { hashSessionToken } = require('./session-token');
+const { isStaffContactEmail } = require('../services/staff-account-identity');
 const {
   residentStore,
   persistentAuthConfigured,
@@ -69,7 +70,7 @@ const cleanupPersistentSessions = async () => {
   if (residentStore) {
     await residentStore.cleanupExpiredSessions(now());
   } else if (persistentAuthRequired) {
-    const error = new Error('Persistent resident authentication is not configured.');
+    const error = new Error('Persistent account storage is not configured.');
     error.status = 503;
     throw error;
   }
@@ -79,7 +80,7 @@ let legacyResidentMigration;
 const migrateLegacyResidents = async () => {
   if (!residentStore) {
     if (persistentAuthRequired) {
-      const error = new Error('Persistent resident authentication is not configured.');
+      const error = new Error('Persistent account storage is not configured.');
       error.status = 503;
       throw error;
     }
@@ -169,7 +170,7 @@ const publicUser = (u) => ({
   id: u.id,
   full_name: u.full_name,
   username: u.username || null,
-  email: u.email,
+  email: isStaffContactEmail(u.email) ? null : u.email,
   contact_number: u.contact_number,
   address: u.address,
   barangay: u.barangay,

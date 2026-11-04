@@ -209,7 +209,7 @@ router.post('/auth/login', async (req, res, next) => {
   }
 
   const raw = String(email).trim();
-  const cleanPhone = raw.replace(/[\s\-\(\)\.]/g, '').replace(/^\+63/, '0');
+  const cleanPhone = raw.replace(/[\s().-]/g, '').replace(/^\+63/, '0');
 
   const candidates = db.prepare(`
     SELECT * FROM users 
@@ -218,24 +218,43 @@ router.post('/auth/login', async (req, res, next) => {
       OR LOWER(COALESCE(username, '')) = LOWER(?) 
       OR LOWER(full_name) = LOWER(?) 
       OR contact_number = ?
-      OR REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(contact_number, ''), ' ', ''), '-', ''), '+63', '0'), '.', '') = ?
+      OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(contact_number, ''), ' ', ''), '-', ''), '+63', '0'), '.', ''), '(', ''), ')', '') = ?
     )
   `).all(raw, raw, raw, raw, cleanPhone);
 
   try {
     const isResidentPortal = !portal || portal === 'community';
-    if (isResidentPortal && persistentAuthRequired && !persistentAuthConfigured) {
+    const isStaffPortal = portal === 'staff';
+    if ((isResidentPortal || isStaffPortal) && persistentAuthRequired && !persistentAuthConfigured) {
       return res.status(503).json({ error: 'Persistent account storage is not configured. Please try again later.' });
     }
     if (isResidentPortal && residentStore) await migrateLegacyResidents();
 
-    const persistentCandidates = isResidentPortal && residentStore
+    const persistentCandidates = (isResidentPortal || isStaffPortal) && residentStore
       ? await residentStore.findByIdentifier(raw, cleanPhone)
       : [];
-    let persistentUser = persistentCandidates.find((candidate) => verifyPassword(password, candidate.password_hash));
+    const matchingPersistentCandidates = persistentCandidates
+      .filter((candidate) => verifyPassword(password, candidate.password_hash));
+    const allowedPortalRoles = PORTAL_ROLES[portal || 'community'];
+    let persistentUser = matchingPersistentCandidates.find((candidate) => allowedPortalRoles.includes(candidate.role))
+      || matchingPersistentCandidates[0];
     let user = persistentUser
       ? mirrorPersistentResident(persistentUser)
       : candidates.find((candidate) => verifyPassword(password, candidate.password_hash));
+
+    if (isStaffPortal && residentStore && !persistentUser && user?.role === 'personnel') {
+      let persistentAccount = await residentStore.findByEmail(user.email);
+      if (!persistentAccount) persistentAccount = await residentStore.saveLegacyAccount(user);
+      if (!persistentAccount) {
+        return res.status(503).json({ error: 'The staff account could not be synchronized to persistent storage.' });
+      }
+      if (!verifyPassword(password, persistentAccount.password_hash)) {
+        user = null;
+      } else {
+        persistentUser = persistentAccount;
+        user = mirrorPersistentResident(persistentAccount);
+      }
+    }
 
     if (!user) {
       if (!candidates.length && !persistentCandidates.length) {

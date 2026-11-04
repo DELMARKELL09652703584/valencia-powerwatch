@@ -78,3 +78,21 @@ test('delete-announcement disables the delete-announcement button, not announcem
   assert.match(deleteBlock, /data-action="delete-announcement"\]\[data-id/);
   assert.doesNotMatch(deleteBlock, /data-action="announcement-status"\]\[data-id/);
 });
+
+test('Add Staff remains actionable at the account cap and opens without active teams', () => {
+  const adminPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'admin.html'), 'utf8');
+  const adminApp = fs.readFileSync(path.join(ROOT, 'client', 'js', 'admin', 'admin.js'), 'utf8');
+  const mainApp = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
+  const addButton = adminApp.match(/<button[^>]*class="user-add-button"[^>]*>[\s\S]*?Add Staff<\/button>/)?.[0];
+  const addHandler = mainApp.match(/case 'new-user':\s*\{[\s\S]*?case 'view-user':/)?.[0];
+
+  assert.ok(addButton);
+  assert.match(addButton, /data-action="new-user"/);
+  assert.match(addButton, /data-limit-reached="\$\{atStaffLimit\}"/);
+  assert.doesNotMatch(addButton, /\sdisabled(?:\s|>)/);
+  assert.match(adminPage, /admin\.js\?v=39/);
+  assert.match(adminPage, /shared\/main\.js\?v=38/);
+  assert.ok(addHandler);
+  assert.match(addHandler, /No active teams are available/);
+  assert.doesNotMatch(addHandler, /if \(!activeTeams\.length \|\| !barangays\.length\)/);
+});

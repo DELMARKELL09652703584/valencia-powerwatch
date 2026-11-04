@@ -59,17 +59,19 @@ const createResidentStore = (pool) => {
     async createAccount(account) {
       const result = await query(`
         INSERT INTO resident_accounts
-          (full_name, username, email, contact_number, address, barangay, password_hash, status, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, 'Active', $8)
+          (full_name, username, email, role, contact_number, address, barangay, password_hash, status, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *
       `, [
         account.full_name,
         account.username,
         account.email,
+        account.role || 'resident',
         account.contact_number,
         account.address,
         account.barangay,
         account.password_hash,
+        account.status || 'Active',
         account.created_at,
       ]);
       return result.rows[0];

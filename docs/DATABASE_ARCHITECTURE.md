@@ -24,12 +24,12 @@ Resident / Staff / Admin browser
               │      compressed SQLite snapshots + uploaded files
               │
               └── Neon: resident_accounts / resident_sessions
-                     resident authentication
+                     persistent resident + staff identity and sessions
 ```
 
 - **Render** runs the Node.js/Express application.
 - **SQLite** is the operational database used by the application routes.
-- **Neon PostgreSQL** stores the durable SQLite snapshots and resident authentication records.
+- **Neon PostgreSQL** stores durable SQLite snapshots and persistent resident/staff authentication records.
 - Render's free service has no persistent disk; Neon is what makes data survive restarts, sleep, and redeploys.
 
 ### Neon connection used in production
@@ -59,7 +59,7 @@ At the time of this audit, Neon contains exactly five application tables:
 | `app_snapshots` | 1 | Latest compressed SQLite snapshot |
 | `app_snapshots_backup` | 1 | Rolling fallback snapshot |
 | `app_snapshot_files` | 0 | Uploaded files stored as `bytea` |
-| `resident_accounts` | 1 | Resident accounts used for resident login |
+| `resident_accounts` | 1 | Resident accounts and provisioned staff credentials |
 | `resident_sessions` | 0 | Resident login sessions |
 
 The only foreign key is:
@@ -149,8 +149,11 @@ The snapshot pool uses `pg.Pool` with `max: 1`. Resident authentication uses a s
 
 ### Admin, staff, and utility users
 
-- Accounts and sessions are stored in SQLite `users` and `sessions`.
-- Session lookup is handled by `getUserByToken`.
+- Admin and utility accounts remain in SQLite `users` and their sessions in SQLite `sessions`.
+- Staff operational profiles and team/barangay assignments remain in SQLite so existing report and dispatch workflows continue to work.
+- Staff credentials and sessions are also stored in Neon `resident_accounts` and `resident_sessions`. The legacy table names are retained; `role = 'personnel'` distinguishes staff. SQLite mirrors those identities for operational joins and role checks.
+- Because the legacy account table requires an email value, phone-only staff use a deterministic reserved `.invalid` internal identifier; public APIs hide it and authentication uses the assigned mobile number.
+- New staff creation fails closed when persistent authentication is required but Neon is unavailable. Passwords are hashed with `crypto.scryptSync`; raw session tokens are never stored.
 - `requireRole` enforces role access on protected routes.
 
 ### Roles
@@ -170,7 +173,7 @@ The reference allows a custom Node.js authentication implementation. The project
 - `Secure` is set whenever the request is HTTPS. The app trusts one Render proxy hop (`app.set('trust proxy', 1)`), so `req.secure` reflects `X-Forwarded-Proto`; local HTTP development still works without `Secure`.
 - Session tokens are 256-bit random values. Only the browser cookie contains the raw token; SQLite `sessions.token` and Neon `resident_sessions.token` store its SHA-256 hash. Session lookup hashes the presented cookie value before querying.
 - The hardening deployment invalidates any pre-existing plaintext session rows. The production session count was 0 before this change, so no live user was signed out. If plaintext sessions ever need to be preserved, hash them before deploying this code.
-- `PERSISTENT_AUTH_REQUIRED` is not set in Render. When `NEON_DATABASE_URL` is absent, resident auth can fall back to SQLite; when Neon is configured but unreachable, resident login and session checks can fail until Neon returns. Admin/staff SQLite sessions continue to work. Setting `PERSISTENT_AUTH_REQUIRED=true` makes the missing-configuration case fail closed; it is not an automatic failover switch.
+- Render sets `PERSISTENT_AUTH_REQUIRED=true`. Resident and staff login therefore fail closed if persistent Neon authentication is not configured. Admin and utility accounts continue to use SQLite sessions.
 
 ---
 

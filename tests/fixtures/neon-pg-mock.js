@@ -47,14 +47,14 @@ class Pool {
           full_name: values[0],
           username: values[1],
           email: values[2],
-          role: 'resident',
-          contact_number: values[3],
-          address: values[4],
-          barangay: values[5],
-          password_hash: values[6],
-          status: 'Active',
+          role: values[3],
+          contact_number: values[4],
+          address: values[5],
+          barangay: values[6],
+          password_hash: values[7],
+          status: values[8],
           profile_photo_path: null,
-          created_at: values[7],
+          created_at: values[9],
           last_login: null,
         };
       const existing = state.accounts.find((row) => row.email.toLowerCase() === account.email.toLowerCase());
@@ -69,11 +69,6 @@ class Pool {
       return { rows: [account] };
     }
 
-    if (/SELECT \* FROM resident_accounts\s+WHERE LOWER\(email\)/i.test(sql)) {
-      const row = state.accounts.find((account) => account.email.toLowerCase() === String(values[0]).toLowerCase());
-      return { rows: row ? [row] : [] };
-    }
-
     if (/SELECT \* FROM resident_accounts/i.test(sql) && /regexp_replace/i.test(sql)) {
       const identifier = String(values[0]).toLowerCase();
       const phone = String(values[1]);
@@ -85,6 +80,11 @@ class Pool {
         || String(account.contact_number || '').replace(/[\s().-]/g, '').replace(/^\+63/, '0') === phone
       ));
       return { rows };
+    }
+
+    if (/SELECT \* FROM resident_accounts\s+WHERE LOWER\(email\)/i.test(sql)) {
+      const row = state.accounts.find((account) => account.email.toLowerCase() === String(values[0]).toLowerCase());
+      return { rows: row ? [row] : [] };
     }
 
     if (/UPDATE resident_accounts/i.test(sql)) {

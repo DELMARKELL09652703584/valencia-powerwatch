@@ -86,18 +86,18 @@ test('Neon resident account and session records survive store reinitialization',
       if (/^\s*CREATE TABLE|^\s*CREATE INDEX/i.test(sql)) return { rows: [] };
       if (/INSERT INTO resident_accounts/i.test(sql) && /RETURNING \*/i.test(sql)) {
         const row = {
-          id: '49a7a08f-7c2c-4a7a-b5c2-d0fb9f2b57d1',
+          id: crypto.randomUUID(),
           full_name: values[0],
           username: values[1],
           email: values[2],
-          role: 'resident',
-          contact_number: values[3],
-          address: values[4],
-          barangay: values[5],
-          password_hash: values[6],
-          status: 'Active',
+          role: values[3],
+          contact_number: values[4],
+          address: values[5],
+          barangay: values[6],
+          password_hash: values[7],
+          status: values[8],
           profile_photo_path: null,
-          created_at: values[7],
+          created_at: values[9],
           last_login: null,
         };
         if (accounts.has(row.email.toLowerCase())) {
@@ -108,9 +108,41 @@ test('Neon resident account and session records survive store reinitialization',
         accounts.set(row.email.toLowerCase(), row);
         return { rows: [row] };
       }
+      if (/SELECT \* FROM resident_accounts\s+WHERE LOWER\(email\)/i.test(sql) && /OR LOWER\(COALESCE\(username/i.test(sql)) {
+        const identifier = String(values[0]).toLowerCase();
+        const normalizedPhone = String(values[1]);
+        const rows = [...accounts.values()].filter((row) => (
+          row.email.toLowerCase() === identifier
+          || String(row.username || '').toLowerCase() === identifier
+          || row.full_name.toLowerCase() === identifier
+          || row.contact_number === values[0]
+          || String(row.contact_number || '').replace(/[\s().-]/g, '').replace(/^\+63/, '0') === normalizedPhone
+        ));
+        return { rows };
+      }
       if (/SELECT \* FROM resident_accounts WHERE LOWER\(email\)/i.test(sql)) {
         const row = accounts.get(String(values[0]).toLowerCase());
         return { rows: row ? [row] : [] };
+      }
+      if (/UPDATE resident_accounts/i.test(sql) && /RETURNING \*/i.test(sql)) {
+        const row = accounts.get(String(values[0]).toLowerCase());
+        if (!row) return { rows: [] };
+        const updated = {
+          ...row,
+          full_name: values[1],
+          email: values[2],
+          role: values[3],
+          contact_number: values[4],
+          address: values[5],
+          barangay: values[6],
+          profile_photo_path: values[7],
+          password_hash: values[8],
+          last_login: values[9],
+          status: values[10],
+        };
+        accounts.delete(row.email.toLowerCase());
+        accounts.set(updated.email.toLowerCase(), updated);
+        return { rows: [updated] };
       }
       if (/INSERT INTO resident_sessions/i.test(sql) && /VALUES/i.test(sql)) {
         sessions.set(values[0], {
@@ -127,6 +159,12 @@ test('Neon resident account and session records survive store reinitialization',
           ? [...accounts.values()].find((row) => row.id === session.user_id)
           : null;
         return { rows: account ? [account] : [] };
+      }
+      if (/DELETE FROM resident_sessions WHERE user_id/i.test(sql)) {
+        for (const [token, session] of sessions.entries()) {
+          if (session.user_id === values[0]) sessions.delete(token);
+        }
+        return { rows: [] };
       }
       throw new Error(`Unexpected resident-store query: ${sql}`);
     },
@@ -152,8 +190,34 @@ test('Neon resident account and session records survive store reinitialization',
   const restored = await restartedStore.findByEmail(account.email);
   const sessionUser = await restartedStore.findUserByToken('persistent-session-token', new Date().toISOString());
   assert.equal(restored.id, account.id);
+  assert.equal(restored.role, 'resident');
   assert.equal(restored.password_hash, passwordHash);
   assert.equal(sessionUser.email, account.email);
+
+  const phoneOnlyStaff = await restartedStore.createAccount({
+    full_name: 'Persisted Field Staff',
+    username: null,
+    email: 'staff-identity@noemail.invalid',
+    role: 'personnel',
+    contact_number: '+63 (917) 123-4567',
+    address: null,
+    barangay: 'Poblacion',
+    password_hash: passwordHash,
+    status: 'Active',
+    created_at: new Date().toISOString(),
+  });
+  await restartedStore.createSession('persistent-staff-session-token', phoneOnlyStaff.id, new Date().toISOString(), new Date(Date.now() + 60_000).toISOString());
+  const staffStoreAfterRestart = createResidentStore(pool);
+  const staffMatches = await staffStoreAfterRestart.findByIdentifier('09171234567', '09171234567');
+  const restoredStaffSession = await staffStoreAfterRestart.findUserByToken('persistent-staff-session-token', new Date().toISOString());
+  assert.equal(staffMatches[0].role, 'personnel');
+  assert.equal(staffMatches[0].contact_number, '+63 (917) 123-4567');
+  assert.equal(restoredStaffSession.id, phoneOnlyStaff.id);
+  assert.equal(restoredStaffSession.role, 'personnel');
+  await staffStoreAfterRestart.updateAccount({ ...phoneOnlyStaff, status: 'Inactive' });
+  await staffStoreAfterRestart.deleteUserSessions(phoneOnlyStaff.id);
+  assert.equal((await staffStoreAfterRestart.findByEmail(phoneOnlyStaff.email)).status, 'Inactive');
+  assert.equal(await staffStoreAfterRestart.findUserByToken('persistent-staff-session-token', new Date().toISOString()), null);
 });
 
 test('database startup migrates the built-in administrator once without overwriting a recovered password', () => {
