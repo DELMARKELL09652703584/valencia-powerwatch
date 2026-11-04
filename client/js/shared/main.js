@@ -1666,11 +1666,16 @@ async function handleClick(event) {
       case 'back-to-profile':
         await goToTab('profile');
         return;
-      case 'open-security':
+      case 'open-security': {
         state.mobileTab = 'profile';
         await render();
-        document.getElementById('account-security')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const accountSecurity = document.getElementById('account-security');
+        if (accountSecurity) {
+          accountSecurity.open = true;
+          accountSecurity.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
         return;
+      }
       case 'check-location': {
         const position = await captureLocation();
         setToast(position ? `Location available: ${position.latitude.toFixed(4)}, ${position.longitude.toFixed(4)}` : 'Location is unavailable. Check your device permission and try again.');

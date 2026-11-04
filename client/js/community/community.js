@@ -8,8 +8,9 @@ const MOBILE_TABS = [
   },
   {
     key: 'reports',
-    label: 'Reports',
-    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/><circle cx="12" cy="12" r="9"/></svg>',
+    label: 'My Reports',
+    labelKey: 'my_reports',
+    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M8 12h8M8 16h8"/></svg>',
   },
   {
     key: 'map',
@@ -354,11 +355,11 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
   }
 
   app.innerHTML = `<div class="mobile-shell">
-    ${!navigator.onLine ? '<div class="offline-banner" id="mobile-offline-banner"><span>Offline: reports are not saved or sent. Reconnect before submitting.</span></div>' : navigator.onLine ? '<div class="online-banner" id="mobile-online-banner"><span>Connection restored. Reports can now be submitted.</span></div>' : ''}
+    ${!navigator.onLine ? '<div class="offline-banner" id="mobile-offline-banner" role="status"><span>Offline: reports are not saved or sent. Reconnect before submitting.</span></div>' : ''}
     ${headerMarkup}
     <main class="mobile-content ${subpageHeader ? 'mobile-content-subpage' : ''}" id="mobile-content">${content}</main>
     ${showTabs ? `<nav class="mobile-tabs" aria-label="Main navigation">${MOBILE_TABS.map((tab) => `<button type="button" class="mobile-tab ${activeTab === tab.key ? 'active' : ''}" data-mobile-tab="${tab.key}" aria-current="${activeTab === tab.key ? 'page' : 'false'}">
-      <span class="mobile-tab-icon" aria-hidden="true">${tab.icon}</span><span class="mobile-tab-label">${escapeHtml(t(tab.key, tab.label))}</span>
+      <span class="mobile-tab-icon" aria-hidden="true">${tab.icon}</span><span class="mobile-tab-label">${escapeHtml(t(tab.labelKey || tab.key, tab.label))}</span>
     </button>`).join('')}</nav>` : ''}
     ${user.role === 'resident' ? `<section class="powerwatch-chatbot" id="powerwatch-chatbot">
       <section class="powerwatch-chat-panel" id="powerwatch-chat-panel" role="dialog" aria-label="PowerWatch assistant" aria-modal="false" hidden>
@@ -542,12 +543,23 @@ async function renderMobileHome() {
 
   mobileShell(`
     <section class="home-dashboard" aria-label="Community dashboard">
+      <section class="home-primary-actions" aria-label="Start a report">
+        <button type="button" class="home-report-action" data-action="compose-report" aria-label="${escapeHtml(t('report_power_outage', 'Report a power interruption'))}">
+          <span class="home-report-action-icon" aria-hidden="true">${mobileIcon('report', 22)}</span>
+          <span class="home-report-action-copy"><strong>${escapeHtml(t('report_power_outage', 'Report a power interruption'))}</strong><small>${escapeHtml(t('report_power_outage_hint', 'Tell us what happened in a few quick steps.'))}</small></span>
+          <span class="home-report-action-arrow" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+        </button>
+      </section>
       <div class="home-dashboard-context">
         <section class="mobile-weather" id="home-weather" aria-label="Current weather in Valencia City" aria-live="polite">
           ${weatherWidgetMarkup(cachedWeather?.data, !cachedWeather)}
         </section>
       </div>
+      ${barangayHeroMarkup}
       <section class="home-summary" aria-label="Outage and report summary">
+        <header class="home-section-head">
+          <div><h2>${escapeHtml(t('dashboard_overview', 'At a glance'))}</h2><p>${escapeHtml(userBarangay)} · Valencia City</p></div>
+        </header>
         <div class="home-summary-grid">
       ${dashboardCards.map((card) => `<button type="button" class="mobile-dashboard-card" data-dashboard-tone="${card.tone}" ${card.action ? `data-action="${card.action}"` : `data-mobile-tab="${card.tab}"`} aria-label="${escapeHtml(card.label)}: ${escapeHtml(String(card.value))}">
         <span class="dashboard-card-icon" aria-hidden="true">${card.icon}</span>
@@ -558,17 +570,16 @@ async function renderMobileHome() {
       <section class="recent-updates" aria-labelledby="home-recent-updates-title">
         <header class="recent-updates-head">
           <h2 id="home-recent-updates-title">${t('recent_updates', 'Recent Updates')}</h2>
-          <button type="button" class="link-button" data-action="view-all-mobile-notifications">${t('view_all', 'View All')}</button>
+          <button type="button" class="link-button" data-action="view-all-mobile-notifications">${t('view_all_updates', 'View all updates')}</button>
         </header>
         ${recentUpdates.length ? recentUpdates.map((item) => `<button type="button" class="recent-update-row" data-action="${item.action}" data-id="${escapeHtml(String(item.id))}" aria-label="${escapeHtml(item.title)}${item.detail ? `, ${escapeHtml(item.detail)}` : ''}${item.time ? `, ${escapeHtml(item.time)}` : ''}">
           <span class="recent-update-icon" data-update-tone="${item.tone}" aria-hidden="true">${item.icon}</span>
           <span class="recent-update-copy"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.detail)}</small>${item.time ? `<time>${escapeHtml(item.time)}</time>` : ''}</span>
           <span class="recent-update-arrow" aria-hidden="true">›</span>
-        </button>`).join('') : `<p class="recent-updates-empty">${t('no_recent_updates', 'No recent updates.')}</p>`}
+        </button>`).join('') : `<p class="recent-updates-empty">${t('no_recent_updates', 'Updates from your barangay will appear here.')}</p>`}
       </section>
-      ${barangayHeroMarkup}
       <details class="home-more-options">
-        <summary>More options</summary>
+        <summary>${escapeHtml(t('explore_outages', 'Explore outages and community info'))}</summary>
         <section class="home-shortcuts" aria-label="More options">
           ${shortcuts.map((shortcut) => `<button type="button" class="home-shortcut" ${shortcut.action ? `data-action="${shortcut.action}"` : `data-mobile-tab="${shortcut.tab}"`} aria-label="${escapeHtml(shortcut.label)}">
             <span class="home-shortcut-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${shortcut.icon}</svg></span>
@@ -634,8 +645,8 @@ async function renderMobileReportForm() {
     : 'Choose Map pin to place or adjust a marker. If location services are unavailable, continue with the address fields.';
 
   const stepNames = ['Details', 'Location', 'Evidence', 'Review'];
-  const stepper = `<div class="stepper">${stepNames.map((name, index) => `
-    <div class="step ${step === index + 1 ? 'active' : ''} ${step > index + 1 ? 'complete' : ''}"><span class="step-number">${step > index + 1 ? '✓' : index + 1}</span><span>${name}</span></div>
+  const stepper = `<div class="stepper" role="list" aria-label="Report steps, step ${step} of ${stepNames.length}">${stepNames.map((name, index) => `
+    <div class="step ${step === index + 1 ? 'active' : ''} ${step > index + 1 ? 'complete' : ''}" role="listitem" aria-current="${step === index + 1 ? 'step' : 'false'}"><span class="step-number">${step > index + 1 ? '✓' : index + 1}</span><span>${name}</span></div>
   `).join('')}</div>`;
   const hidden = ['barangay', 'location', 'purok', 'affected_area', 'date_time_noticed', 'possible_outage_type', 'description', 'latitude', 'longitude', 'location_source', 'location_accuracy_m', 'location_confirmed', 'remarks']
     .map((name) => `<input type="hidden" name="${name}" value="${escapeHtml(draft[name] || '')}">`).join('');
@@ -744,11 +755,12 @@ async function renderMobileReportForm() {
 
   mobileShell(`
     ${mobileHero('Report Power Interruption', 'Share accurate details so your report can be verified.')}
+    <p class="report-step-count" role="status">Step ${step} of ${stepNames.length}</p>
     ${stepper}
     <form class="mobile-form report-step-form ${step === 3 ? 'report-evidence-step' : ''} ${step === 2 ? `location-mode-${locationMode}` : ''}" data-form="report" ${step === 4 ? 'hidden' : ''}>${step === 4 ? '' : formBody}</form>
     ${step === 4 ? formBody : ''}
   `, {
-    activeTab: 'report',
+    activeTab: 'reports',
     showTabs: true,
   });
 
@@ -1068,17 +1080,16 @@ async function renderMobileProfile() {
   const feedbackRating = state.feedbackRating || 5;
 
   mobileShell(`
+    ${mobileHero(t('profile', 'Profile'), t('profile_intro', 'Manage your personal details and account security.'))}
     <section class="mobile-profile-head">
       ${u.profile_photo_path ? `<img class="avatar big profile-photo" src="${escapeHtml(u.profile_photo_path)}" alt="Profile photo of ${escapeHtml(u.full_name)}">` : `<div class="avatar big">${escapeHtml((u.full_name || '?').charAt(0).toUpperCase())}</div>`}
       <div><h1>${escapeHtml(u.full_name)}</h1><p class="muted small">${escapeHtml(u.email)}</p><span class="pill pill-neutral">${escapeHtml(roleLabel(u.role))}</span></div>
     </section>
-    <button class="button ghost block" data-action="open-settings">${mobileIcon('settings', 18)} Settings</button>
-    ${mobileCard('My reports', mine.reports.length ? mine.reports.slice(0, 6).map((r) => `
-      <div class="mobile-list-item">
-        <div class="mobile-list-main"><strong>${escapeHtml(r.report_code)}</strong><span class="muted small">${escapeHtml(r.barangay)} · ${escapeHtml(formatDateTime(r.date_time_noticed))}</span></div>
-        ${statusPill(r.status)}
-      </div>`).join('') : `<p class="muted small">You have not submitted any reports yet.</p>`)}
-    ${mobileCard('Edit details', `<form class="mobile-form" data-form="profile">
+    <button type="button" class="button ghost block" data-action="open-settings">${mobileIcon('settings', 18)} ${escapeHtml(t('settings_and_preferences', 'Settings and preferences'))}</button>
+    ${mobileCard(t('my_reports', 'My Reports'), `<div class="profile-report-summary"><strong>${escapeHtml(String(mine.reports.length))}</strong><span>${escapeHtml(t('reports_submitted', 'reports submitted'))}</span></div><p class="muted small">${escapeHtml(t('profile_reports_hint', 'Follow review and restoration progress in My Reports.'))}</p><button type="button" class="button ghost block" data-mobile-tab="reports">${escapeHtml(t('view_my_reports', 'View My Reports'))}</button>`)}
+    <details class="profile-disclosure">
+      <summary>${escapeHtml(t('edit_personal_details', 'Edit your personal details'))}</summary>
+    ${mobileCard(t('personal_information', 'Personal information'), `<form class="mobile-form" data-form="profile">
       <label class="mobile-photo-field">Profile photo<input type="file" data-profile-photo accept="image/png,image/jpeg,image/webp"></label>
       <label>Full name<input name="full_name" value="${escapeHtml(u.full_name || '')}" required></label>
       <label>Contact number<input name="contact_number" value="${escapeHtml(u.contact_number || '')}"></label>
@@ -1086,19 +1097,26 @@ async function renderMobileProfile() {
       <label>Address<input name="address" value="${escapeHtml(u.address || '')}"></label>
       <button class="button primary block" type="submit">Save</button>
     </form>`)}
-    <div id="account-security">${mobileCard('Change password', `<form class="mobile-form" data-form="password">
+    </details>
+    <details id="account-security" class="profile-disclosure">
+      <summary>${escapeHtml(t('password_security', 'Password and security'))}</summary>
+    ${mobileCard('Change password', `<form class="mobile-form" data-form="password">
       <label>Current password<input type="password" name="current_password" required></label>
       <label>New password<input type="password" name="new_password" minlength="6" required></label>
       <label>Confirm password<input type="password" name="confirm_password" minlength="6" required></label>
       <button class="button primary block" type="submit">Update password</button>
-    </form>`)}</div>
-    ${mobileCard('Rate the app', `<form class="mobile-form" data-form="feedback">
+    </form>`)}
+    </details>
+    <details class="profile-disclosure">
+      <summary>${escapeHtml(t('rate_app', 'Rate the app'))}</summary>
+    ${mobileCard('Feedback', `<form class="mobile-form" data-form="feedback">
       <div class="feedback-star-control"><span>Rate your experience</span><div class="feedback-stars" role="group" aria-label="Choose a rating">
         ${[1, 2, 3, 4, 5].map((rating) => `<button type="button" class="feedback-star ${rating <= feedbackRating ? 'selected' : ''}" data-action="feedback-star" data-value="${rating}" aria-label="${rating} star${rating === 1 ? '' : 's'}" aria-pressed="${rating === feedbackRating}">★</button>`).join('')}
       </div><input type="hidden" name="rating" value="${feedbackRating}"></div>
       <label>Comments<textarea name="comments" rows="3" maxlength="1000"></textarea></label>
       <button class="button primary block" type="submit">Send feedback</button>
     </form>`)}
+    </details>
     <div class="mobile-card">
       <div class="mobile-list-item"><div class="mobile-list-main"><span>Alerts received</span></div><strong>${escapeHtml(String(notifications.notifications.length))}</strong></div>
       <button class="button danger block" data-action="logout">${mobileIcon('logout', 18)} Sign out</button>
@@ -1148,13 +1166,9 @@ async function renderMobileReports() {
 
   mobileShell(`
     ${mobileHero(t('my_reports', 'My Reports'), t('my_reports_sub', 'Track reports you have submitted and their verification status.'))}
-    <div class="mobile-report-actions">
-      <button class="button primary block" data-action="compose-report">${t('report_interruption', '＋ Report an interruption')}</button>
-      <button class="button ghost block" data-mobile-tab="history">${t('outage_history', 'View outage history')}</button>
-    </div>
-    <div class="mobile-segments" role="group" aria-label="Filter reports">
+    <div class="mobile-segments" role="group" aria-label="Filter your reports">
       ${['', 'pending', 'Verified', 'In Progress', 'Resolved'].map((status) => `
-        <button class="mobile-segment ${selectedStatus === status ? 'active' : ''}" data-action="filter-my-reports" data-value="${escapeHtml(status)}">${escapeHtml(status === 'pending' ? 'Pending' : status || 'All')}</button>
+        <button type="button" class="mobile-segment ${selectedStatus === status ? 'active' : ''}" aria-pressed="${selectedStatus === status}" data-action="filter-my-reports" data-value="${escapeHtml(status)}">${escapeHtml(status === 'pending' ? 'Pending' : status || 'All')}</button>
       `).join('')}
     </div>
     ${reportsForStatus.length ? reportsForStatus.map((report) => {
@@ -1185,7 +1199,7 @@ async function renderMobileReports() {
           </div>
         </div>
       </button>`;
-    }).join('') : `<div class="mobile-card">${emptyState('No reports yet', 'Your submitted interruption reports will appear here.', mobileIcon('report'))}</div>`}
+    }).join('') : `<div class="mobile-card">${emptyState('No reports yet', 'Reports you start from Home will appear here so you can follow their status.', mobileIcon('report'))}</div>`}
     ${history.length ? `<section class="mobile-card mobile-history-summary">
       <header class="mobile-card-head"><h2>Recent outage history</h2><button class="link-button" data-mobile-tab="history">View all</button></header>
       <div class="mobile-card-body">${history.slice(0, 2).map((incident) => `
@@ -1733,6 +1747,7 @@ function filterMobileNotifications(notifications) {
 function mobileNotificationCategoryMatches(notice, category) {
   const text = `${notice.title || ''} ${notice.message || ''}`.toLowerCase();
   if (category === 'notifications') return true;
+  if (category === 'other') return !['report', 'incident', 'scheduled', 'announcement'].includes(notice.type);
   if (category === 'verification') return /verif|verified|rejected|pending review/i.test(text);
   if (category === 'repairs') return /dispatch|repair|crew|team|arrived|technician/i.test(text);
   if (category === 'restoration') return /restor|resolved|power restored|service resumed/i.test(text);
@@ -1752,14 +1767,11 @@ async function renderMobileNotifications() {
   const visibleAnnouncements = preferences.announcements ? announcements : [];
   const category = state.mobileNotificationCategory || 'all';
   const categories = [
-    ['all', 'All updates'],
-    ['announcements', 'Announcements'],
-    ['notifications', 'Notifications'],
-    ['reports', 'Reports'],
-    ['outages', 'Outage updates'],
-    ['verification', 'Verification'],
-    ['repairs', 'Dispatch / repair'],
-    ['restoration', 'Restoration'],
+    ['all', t('all_updates', 'All updates')],
+    ['announcements', t('announcements', 'Announcements')],
+    ['reports', t('my_reports', 'My Reports')],
+    ['outages', t('outages', 'Outages')],
+    ['other', t('other_updates', 'Other updates')],
   ];
   const items = [
     ...(category === 'all' || category === 'announcements'
@@ -1835,7 +1847,8 @@ async function renderMobileScheduled() {
   const allSchedules = Boolean(state.mobileScheduleAll);
   const { scheduled } = await api(allSchedules ? '/api/scheduled' : '/api/scheduled/upcoming');
   mobileShell(`
-    <div class="mobile-segments"><button class="mobile-segment ${allSchedules ? '' : 'active'}" data-action="show-upcoming-schedules">Upcoming</button><button class="mobile-segment ${allSchedules ? 'active' : ''}" data-action="show-all-schedules">All</button></div>
+    <p class="mobile-page-note">${escapeHtml(t('scheduled_intro', 'Check planned maintenance and any schedule changes.'))}</p>
+    <div class="mobile-segments" role="group" aria-label="Filter scheduled outages"><button type="button" class="mobile-segment ${allSchedules ? '' : 'active'}" aria-pressed="${!allSchedules}" data-action="show-upcoming-schedules">Upcoming</button><button type="button" class="mobile-segment ${allSchedules ? 'active' : ''}" aria-pressed="${allSchedules}" data-action="show-all-schedules">All</button></div>
     ${scheduled.length ? scheduled.map((item) => `
       <section class="mobile-outage-card"><header><div><h3>${escapeHtml(item.barangay)}</h3><p>${escapeHtml(formatSystemDate(item.outage_date))} · ${escapeHtml(String(item.start_time || '').slice(0, 5))}–${escapeHtml(String(item.expected_end_time || '').slice(0, 5) || '?')}</p></div>${statusPill(item.status)}</header>
       <p>${escapeHtml(item.reason || item.title || 'Scheduled maintenance')}</p><button type="button" class="button ghost block" data-action="view-schedule-details" data-id="${item.id}">View Details</button></section>
@@ -1874,7 +1887,8 @@ async function renderMobileHistory() {
     : filter === 'completed' ? completedItems
       : [...completedItems, ...cancelledItems];
   mobileShell(`
-    <div class="mobile-segments"><button class="mobile-segment ${filter === 'all' ? 'active' : ''}" data-action="filter-history" data-value="all">All</button><button class="mobile-segment ${filter === 'completed' ? 'active' : ''}" data-action="filter-history" data-value="completed">Completed</button><button class="mobile-segment ${filter === 'cancelled' ? 'active' : ''}" data-action="filter-history" data-value="cancelled">Cancelled</button></div>
+    <p class="mobile-page-note">${escapeHtml(t('history_intro', 'Browse completed and cancelled outage records.'))}</p>
+    <div class="mobile-segments" role="group" aria-label="Filter outage history"><button type="button" class="mobile-segment ${filter === 'all' ? 'active' : ''}" aria-pressed="${filter === 'all'}" data-action="filter-history" data-value="all">All</button><button type="button" class="mobile-segment ${filter === 'completed' ? 'active' : ''}" aria-pressed="${filter === 'completed'}" data-action="filter-history" data-value="completed">Completed</button><button type="button" class="mobile-segment ${filter === 'cancelled' ? 'active' : ''}" aria-pressed="${filter === 'cancelled'}" data-action="filter-history" data-value="cancelled">Cancelled</button></div>
     ${items.length ? items.map((item) => `
       <button type="button" class="mobile-history-item" data-action="${item.historyStatus === 'Cancelled' ? 'view-schedule-details' : 'view-incident-details'}" data-id="${item.id}"><span class="mobile-report-pin">${mobileIcon('location', 16)}</span><span class="mobile-list-main"><strong>${escapeHtml(item.barangay)}</strong><span>${escapeHtml(item.historyCode)} · ${escapeHtml(item.historyDuration)}</span><span>${escapeHtml(formatDateTime(item.historyDate))}</span></span>${statusPill(item.historyStatus)}</button>
     `).join('') : `<div class="mobile-card">${emptyState('No outage history', 'Resolved and closed outages will appear here.', '↻')}</div>`}
@@ -1903,6 +1917,7 @@ function renderMobileSettings() {
   };
 
   mobileShell(`
+    <p class="mobile-page-note">${escapeHtml(t('settings_intro', 'Manage account security, alerts, language, and support.'))}</p>
     <div class="mobile-settings-card">
       <button type="button" class="mobile-settings-row" data-action="open-security">
         <span class="mobile-settings-icon-wrap">${icons.security}</span>
@@ -1972,6 +1987,7 @@ function renderMobileNotificationSettings() {
   ];
   mobileShell(`
     <form class="notification-preferences-list" data-form="notification-preferences">
+      <p class="mobile-page-note">${escapeHtml(t('notification_settings_intro', 'Choose the updates you want to receive on this device.'))}</p>
       <div class="mobile-settings-card">
         ${options.map(([name, label, description]) => `
           <label class="notification-preference-row">
@@ -1980,7 +1996,7 @@ function renderMobileNotificationSettings() {
           </label>
         `).join('')}
       </div>
-      <button class="button primary block" type="submit" style="margin-top:16px;">Save Preferences</button>
+      <button class="button primary block" type="submit" style="margin-top:16px;">${escapeHtml(t('save_notification_preferences', 'Save notification preferences'))}</button>
     </form>
   `, {
     activeTab: 'profile',

@@ -29,6 +29,37 @@ test('community dashboard shows public updates without exposing personal notific
   assert.match(portalStyles, /body\.community-body \.mobile-home-header \.mobile-header-actions\s*\{[^}]*width:\s*auto;[^}]*flex-wrap:\s*nowrap;/s);
 });
 
+test('community shell only shows connection feedback when the connection changes', () => {
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const shellStart = communityScript.indexOf('function mobileShell(');
+  const shellEnd = communityScript.indexOf('\nfunction ', shellStart + 1);
+  const shellRenderer = communityScript.slice(shellStart, shellEnd);
+
+  assert.ok(shellStart >= 0);
+  assert.ok(shellEnd > shellStart);
+  assert.match(shellRenderer, /!navigator\.onLine[^\n]*offline-banner/);
+  assert.doesNotMatch(shellRenderer, /online-banner/);
+  assert.match(communityScript, /window\.addEventListener\('online',[\s\S]*?className = 'online-banner'/);
+  assert.match(communityScript, /window\.addEventListener\('offline',[\s\S]*?mobile-offline-banner/);
+});
+
+test('scheduled outages and history explain the page and expose accessible filters', () => {
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const scheduledStart = communityScript.indexOf('async function renderMobileScheduled()');
+  const scheduledEnd = communityScript.indexOf('\nasync function renderMobileHistory()', scheduledStart);
+  const scheduledRenderer = communityScript.slice(scheduledStart, scheduledEnd);
+  const historyStart = communityScript.indexOf('async function renderMobileHistory()');
+  const historyEnd = communityScript.indexOf('\nfunction renderMobileSettings()', historyStart);
+  const historyRenderer = communityScript.slice(historyStart, historyEnd);
+
+  assert.match(scheduledRenderer, /scheduled_intro/);
+  assert.match(scheduledRenderer, /role="group" aria-label="Filter scheduled outages"/);
+  assert.match(scheduledRenderer, /aria-pressed="\$\{!allSchedules\}"/);
+  assert.match(historyRenderer, /history_intro/);
+  assert.match(historyRenderer, /role="group" aria-label="Filter outage history"/);
+  assert.match(historyRenderer, /aria-pressed="\$\{filter === 'cancelled'\}"/);
+});
+
 test('community outage list keeps barangay scope and supports an explicit city-wide view', () => {
   const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
   const mainScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
@@ -76,19 +107,27 @@ test('report submission announces progress and errors without discarding the dra
   assert.ok(reportSubmit.indexOf("await api('/api/reports'") < reportSubmit.indexOf('state.mobileReportDraft = null;'));
 });
 
-test('home report action shows a visible label and retains an accessible name', () => {
+test('Home has the single report entry point and My Reports remains a tracking page', () => {
   const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
   const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
+  const homeStart = communityScript.indexOf('async function renderMobileHome()');
+  const homeEnd = communityScript.indexOf('\nasync function renderMobileReportForm()', homeStart);
+  const homeRenderer = communityScript.slice(homeStart, homeEnd);
   const reportsStart = communityScript.indexOf('async function renderMobileReports()');
   const reportsEnd = communityScript.indexOf('\nasync function renderMobileReportDetail()', reportsStart);
   const reportsRenderer = communityScript.slice(reportsStart, reportsEnd);
 
+  assert.ok(homeStart >= 0);
+  assert.ok(homeEnd > homeStart);
   assert.ok(reportsStart >= 0);
   assert.ok(reportsEnd > reportsStart);
-  assert.match(reportsRenderer, /<button[^>]*data-action="compose-report"[^>]*>/);
-  assert.match(reportsRenderer, /Report an interruption/);
-  assert.match(portalStyles, /body\.community-body \.home-report-label\s*\{[^}]*font-size:\s*15px;[^}]*font-weight:\s*750;/s);
-  assert.match(portalStyles, /body\.community-body \.home-report-icon\s*\{[^}]*width:\s*28px;[^}]*height:\s*28px;[^}]*stroke:\s*currentColor;/s);
+  assert.equal((communityScript.match(/data-action="compose-report"/g) || []).length, 1);
+  assert.match(homeRenderer, /<button[^>]*class="home-report-action"[^>]*data-action="compose-report"[^>]*>/);
+  assert.match(homeRenderer, /report_power_outage_hint/);
+  assert.doesNotMatch(reportsRenderer, /data-action="compose-report"/);
+  assert.match(reportsRenderer, /Reports you start from Home will appear here/);
+  assert.match(portalStyles, /body\.community-body \.mobile-content \.home-report-action\s*\{[^}]*min-height:\s*74px;[^}]*grid-template-columns:\s*42px minmax\(0, 1fr\) 22px;/s);
+  assert.match(portalStyles, /body\.community-body \.home-report-action-copy strong\s*\{[^}]*font-size:\s*1rem;[^}]*font-weight:\s*760;/s);
 });
 
 test('resident navigation exposes reporting, announcements, and outage history', () => {
@@ -96,15 +135,15 @@ test('resident navigation exposes reporting, announcements, and outage history',
   const mainScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'shared', 'main.js'), 'utf8');
   const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
 
-  assert.match(communityScript, /key: 'reports',\s*label: 'Reports'/);
+  assert.match(communityScript, /key: 'reports',\s*label: 'My Reports',\s*labelKey: 'my_reports'/);
   assert.match(communityScript, /label: 'Announcements'.*action: 'open-announcements'/);
   assert.match(communityScript, /label: 'Outage history'.*tab: 'history'/);
   assert.match(mainScript, /case 'open-announcements':\s*state\.mobileNotificationCategory = 'announcements';\s*await goToTab\('notifications'\)/);
   assert.match(mainScript, /data-action="retry-current-tab"/);
   assert.match(mainScript, /case 'retry-current-tab':\s*await goToTab\(state\.mobileTab\)/);
-  assert.match(communityPage, /portal-polish\.css\?v=91/);
-  assert.match(communityPage, /community\.js\?v=48/);
-  assert.match(communityPage, /main\.js\?v=48/);
+  assert.match(communityPage, /portal-polish\.css\?v=92/);
+  assert.match(communityPage, /community\.js\?v=49/);
+  assert.match(communityPage, /main\.js\?v=49/);
   assert.match(mainScript, /coordinates shown above will be included with your location description/);
   assert.match(mainScript, /case 'open-notification-settings':\s*state\.mobileNotificationSettingsReturnTab = state\.mobileTab;/);
   assert.match(mainScript, /case 'back-from-notification-settings':\s*await goToTab\(state\.mobileNotificationSettingsReturnTab \|\| 'settings'\)/);
@@ -123,7 +162,7 @@ test('report form starts with a text location and offers the map as an alternati
   assert.match(communityScript, /const stepNames = \['Details', 'Location', 'Evidence', 'Review'\];/);
   assert.match(communityScript, /if \(step === 1\) \{\s*formBody = `<h2>Interruption Details<\/h2>/);
   assert.match(communityScript, /if \(step === 2\) \{\s*formBody = `<h2>Location<\/h2>/);
-  assert.match(communityScript, /activeTab: 'report',\s*showTabs: true/);
+  assert.match(communityScript, /activeTab: 'reports',\s*showTabs: true/);
   assert.match(communityScript, /Tell us when the interruption started and what you noticed\./);
   assert.match(communityScript, /Specific purok or sitio <span class="muted small">\(optional\)<\/span>/);
   assert.match(communityScript, /Choose your barangay and describe the location\./);
@@ -403,8 +442,8 @@ test('Community account creation uses the light mobile form design and preserves
   assert.match(portalStyles, /body\.community-body \.community-register-form > label > input,[\s\S]*?border-radius:\s*13px;[\s\S]*?background:\s*#fff;/s);
   assert.match(portalStyles, /body\.community-body \.community-register-form \.mobile-auth-submit\s*\{[^}]*background:\s*linear-gradient\(135deg, #1688ed, #0864c4\);/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.community-register-page/);
-  assert.match(communityPage, /portal-polish\.css\?v=91/);
-  assert.match(communityPage, /shared\/main\.js\?v=48/);
+  assert.match(communityPage, /portal-polish\.css\?v=92/);
+  assert.match(communityPage, /shared\/main\.js\?v=49/);
 });
 
 test('User Portal provides an accessible PWA install button', () => {
