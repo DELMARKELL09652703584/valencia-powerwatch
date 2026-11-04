@@ -7,6 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { after, before, test } = require('node:test');
 const { DatabaseSync } = require('node:sqlite');
+const { publicBaseUrl } = require('../server/config/public-base-url');
 
 const ROOT = path.resolve(__dirname, '..');
 const TEST_TIMEOUT_MS = 30000;
@@ -1199,6 +1200,13 @@ test('built-in administrator recovers a password through the protected recovery 
   const recoveredLogin = await login(testAdminEmail, newAdminPassword, 'admin');
   assert.equal(recoveredLogin.user.email, testAdminEmail);
   assert.equal(recoveredLogin.user.is_built_in_admin, true);
+});
+
+test('public URL prefers explicit configuration and falls back to Render service URLs', () => {
+  assert.equal(publicBaseUrl({ PUBLIC_BASE_URL: 'https://custom.example/', RENDER_EXTERNAL_URL: 'https://render.example' }), 'https://custom.example');
+  assert.equal(publicBaseUrl({ RENDER_EXTERNAL_URL: 'https://render.example/' }), 'https://render.example');
+  assert.equal(publicBaseUrl({ RENDER_EXTERNAL_HOSTNAME: 'render.example' }), 'https://render.example');
+  assert.equal(publicBaseUrl({ PORT: '4321' }), 'http://localhost:4321');
 });
 
 test('Staff portal UX includes loading states, inline feedback, and scannable assignment cards', () => {

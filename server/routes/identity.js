@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const express = require('express');
 const nodemailer = require('nodemailer');
 const { db, now } = require('../db');
+const { publicBaseUrl } = require('../config/public-base-url');
 const {
   hashPassword, createSession, createPersistentSession, publicUser, audit, COOKIE_NAME,
   isBuiltInAdmin, hasBuiltInAdminIdentifier, BUILT_IN_ADMIN_RECOVERY_EMAIL,
@@ -15,8 +16,6 @@ const RESET_LIFETIME_MS = 30 * 60 * 1000;
 const OAUTH_LIFETIME_MS = 10 * 60 * 1000;
 
 const hashToken = (value) => crypto.createHash('sha256').update(value).digest('hex');
-const publicBaseUrl = () => (process.env.PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || 4000}`).replace(/\/$/, '');
-
 const providerConfig = (provider) => {
   if (provider === 'google') return {
     clientId: process.env.GOOGLE_CLIENT_ID,
