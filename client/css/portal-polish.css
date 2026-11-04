@@ -2129,6 +2129,49 @@ body.dark-mode.community-body :is(.map-hotspot-row, .mobile-settings-row) {
   color: #c1d0e4;
 }
 
+body.dark-mode.community-body .mobile-map-help {
+  color: #d2deee !important;
+}
+
+body.dark-mode.community-body .mobile-map-legend span[style*="color:#c93b2b"] {
+  color: #ff9f91 !important;
+}
+
+body.dark-mode.community-body .mobile-map-legend span[style*="color:#64748b"] {
+  color: #c1d0e4 !important;
+}
+
+body.dark-mode.community-body .mobile-content .mobile-card {
+  color: #d2deee !important;
+}
+
+body.dark-mode.community-body .mobile-content .mobile-card .mobile-card-head h2 {
+  color: #f1f5ff !important;
+}
+
+body.dark-mode.community-body .mobile-content .mobile-card .mobile-card-body,
+body.dark-mode.community-body .mobile-content .mobile-card .mobile-form {
+  background: transparent !important;
+  color: #d2deee !important;
+}
+
+body.dark-mode.community-body .mobile-content .mobile-card .mobile-card-body :where(p, small, label, span:not([class]), strong, b, time) {
+  color: #d2deee !important;
+}
+
+body.dark-mode.community-body .mobile-content .mobile-card .mobile-card-body .mobile-form label {
+  background: transparent !important;
+  color: #e2eaf5 !important;
+}
+
+body.dark-mode.community-body .mobile-content .mobile-profile-head :where(p, small, span:not(.pill)) {
+  color: #d2deee !important;
+}
+
+body.dark-mode.community-body .mobile-content .mobile-settings-row :where(span, strong, small) {
+  color: #d2deee !important;
+}
+
 
 body.dark-mode.community-body :is(.report-status.pending, .verification-status-badge.pending, .status-tag.pending, .pill-warn) {
   border-color: rgba(251, 191, 36, .32);
