@@ -2956,7 +2956,7 @@ async function renderAdminSettings() {
   </div>` : ''}
   ${selectedTab === 'security' ? `<div class="panel settings-security-panel"><div class="panel-head"><h2>Security</h2></div>
     <div class="detail-grid"><div><span>Account role</span><strong>${escapeHtml(roleLabel(state.user.role))}</strong></div><div><span>Password recovery</span><strong>${state.passwordRecoveryEnabled ? 'Email recovery configured' : 'SMTP not configured'}</strong></div><div><span>Access control</span><strong>Role-based permissions enabled</strong></div><div><span>Password policy</span><strong>Minimum 6 characters</strong></div></div>
-    <button class="button ghost" data-page="profile">Manage account password</button>
+    ${state.user.is_built_in_admin ? '<p class="muted">The built-in Admin password is managed by system configuration. Use the secure recovery link from the Admin sign-in page to reset it.</p>' : '<button class="button ghost" data-page="profile">Manage account password</button>'}
   </div>` : ''}`);
 
   if (selectedTab === 'notifications') {
@@ -2983,7 +2983,13 @@ async function renderAdminSettings() {
 async function renderAdminProfile() {
   const u = state.user;
   adminShell(`<div class="panel-row wrap">
-    <div class="panel">
+    ${u.is_built_in_admin ? `<div class="panel"><div class="panel-head"><h2>Permanent Admin account</h2></div>
+      <div class="detail-grid"><div><span>Username / login</span><strong>${escapeHtml(u.username || u.email || '')}</strong></div><div><span>Account status</span><strong>${escapeHtml(u.status || 'Active')}</strong></div><div><span>Role</span><strong>${escapeHtml(roleLabel(u.role))}</strong></div><div><span>Last login</span><strong>${escapeHtml(formatDateTime(u.last_login))}</strong></div></div>
+      <p class="muted">This built-in account is managed by system configuration. Its identity and profile cannot be edited here.</p>
+    </div><div class="panel"><div class="panel-head"><h2>Password recovery</h2></div>
+      <p class="muted">Password changes are disabled in account settings for the built-in Admin. Request a secure recovery link from the Admin sign-in page.</p>
+      <p class="muted small">${state.passwordRecoveryEnabled ? 'Email recovery is configured.' : 'Email recovery is unavailable until SMTP is configured on the server.'}</p>
+    </div>` : `<div class="panel">
       <div class="panel-head"><h2>Profile details</h2></div>
       <form class="form-stack" data-form="profile">
         <label>Full name<input class="input" name="full_name" value="${escapeHtml(u.full_name || '')}" required></label>
@@ -3003,6 +3009,6 @@ async function renderAdminProfile() {
         <button class="button primary" type="submit">Update password</button>
       </form>
       <div class="danger-zone"><strong>Signed in as</strong><p class="muted small">${escapeHtml(roleLabel(u.role))} · last login ${escapeHtml(formatDateTime(u.last_login))}</p></div>
-    </div>
+    </div>`}
   </div>`);
 }

@@ -134,7 +134,7 @@ test('Admin dashboard report charts use live data and remain responsive in both 
   assert.match(styles, /@media \(max-width: 600px\)\s*\{[\s\S]*?\.report-status-chart-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/);
   assert.match(styles, /body\.dark-mode\.admin-body \.report-distribution-panel/);
   assert.match(adminPage, /\/client\/css\/admin-theme\.css\?v=16/);
-  assert.match(adminPage, /\/client\/js\/admin\/admin\.js\?v=37/);
+  assert.match(adminPage, /\/client\/js\/admin\/admin\.js\?v=38/);
 });
 
 test('Analytics & Reports charts use matching HUD styling in both themes', () => {
@@ -224,7 +224,7 @@ test('Admin map removes the top barangay finder and keeps sidebar map focus', ()
 
   assert.doesNotMatch(adminScript, /Find a barangay|data-map-focus|power-map-focus/);
   assert.match(adminScript, /id="map-fly-select"/);
-  assert.match(adminPage, /\/client\/js\/admin\/admin\.js\?v=37/);
+  assert.match(adminPage, /\/client\/js\/admin\/admin\.js\?v=38/);
 });
 
 test('Admin notifications use readable theme-specific unread colors', () => {

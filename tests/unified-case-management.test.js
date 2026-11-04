@@ -35,7 +35,7 @@ test('Report verification updates the authoritative report without creating a du
   assert.match(mainSource, /status: 'Verified'/);
   assert.doesNotMatch(mainSource, /type === 'verify-create-incident'/);
   assert.match(adminSource, /Verify Report/);
-  assert.match(adminHtml, /client\/js\/admin\/admin\.js\?v=37/);
+  assert.match(adminHtml, /client\/js\/admin\/admin\.js\?v=38/);
   assert.match(adminHtml, /client\/js\/shared\/main\.js\?v=37/);
   assert.match(adminHtml, /admin-theme\.css\?v=16/);
 });
@@ -55,4 +55,14 @@ test('Admin login does not expose seeded credentials and hides unconfigured OAut
   assert.match(mainSource, /app\.innerHTML = `<main class="login-page">[\s\S]*?syncOAuthProviderControls\(\);\s*\}/);
   assert.match(styles, /\.social-row\[hidden\],[\s\S]*?\.social-btn\[hidden\],[\s\S]*?\.auth-divider\[hidden\]\s*\{\s*display:\s*none\s*!important;/);
   assert.match(communityHtml, /\/style\.css\?v=51/);
+});
+
+test('built-in Admin settings hide ordinary profile and password editing', () => {
+  assert.match(adminSource, /u\.is_built_in_admin \? `<div class="panel">/);
+  assert.match(adminSource, /Permanent Admin account/);
+  assert.match(adminSource, /This built-in account is managed by system configuration/);
+  assert.match(adminSource, /state\.user\.is_built_in_admin \? '<p class="muted">The built-in Admin password is managed by system configuration/);
+  assert.match(adminSource, /Use the secure recovery link from the Admin sign-in page/);
+  assert.match(adminSource, /Email recovery is unavailable until SMTP is configured on the server/);
+  assert.match(adminHtml, /client\/js\/admin\/admin\.js\?v=38/);
 });
