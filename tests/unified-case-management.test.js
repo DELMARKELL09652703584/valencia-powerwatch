@@ -36,7 +36,7 @@ test('Report verification updates the authoritative report without creating a du
   assert.doesNotMatch(mainSource, /type === 'verify-create-incident'/);
   assert.match(adminSource, /Verify Report/);
   assert.match(adminHtml, /client\/js\/admin\/admin\.js\?v=40/);
-  assert.match(adminHtml, /client\/js\/shared\/main\.js\?v=39/);
+  assert.match(adminHtml, /client\/js\/shared\/main\.js\?v=40/);
   assert.match(adminHtml, /admin-theme\.css\?v=16/);
 });
 
@@ -49,7 +49,10 @@ test('Admin can create a response team and assign an existing staff account befo
   assert.match(adminSource, /data-action="open-create-repair-team"/);
   assert.match(adminSource, /state\.dispatchStaffAccessOpen \? 'open' : ''/);
   assert.match(mainSource, /no_repair_teams: 'No response teams have been set up yet/);
-  assert.match(mainSource, /In Manage Staff Team Access, assign the staff member to both the response team and this barangay/);
+  assert.match(mainSource, /Assign the staff member to both the response team and this barangay/);
+  assert.match(mainSource, /data-action="refresh-dispatch-eligibility"/);
+  assert.match(mainSource, /case 'refresh-dispatch-eligibility'/);
+  assert.match(mainSource, /active_assignment_code/);
 });
 
 test('Staff account form requires matching initial and confirmation passwords', () => {

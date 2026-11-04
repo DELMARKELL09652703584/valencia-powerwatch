@@ -210,8 +210,11 @@ router.get('/repair/dispatch-eligibility', requireAuth, requireRole('administrat
   const barangay = incident?.barangay || report?.barangay;
   const areaStaffCount = activeStaffForBarangayCount(barangay);
   const allTeams = db.prepare(`
-    SELECT id, name, status, active_assignment_id
-    FROM repair_teams ORDER BY name COLLATE NOCASE
+    SELECT t.id, t.name, t.status, t.active_assignment_id,
+           a.assignment_code AS active_assignment_code, a.status AS active_assignment_status
+    FROM repair_teams t
+    LEFT JOIN repair_assignments a ON a.id = t.active_assignment_id
+    ORDER BY t.name COLLATE NOCASE
   `).all();
   const teams = allTeams.map((team) => {
     const staffCount = eligibleStaffCount(team.id, barangay);
@@ -220,6 +223,11 @@ router.get('/repair/dispatch-eligibility', requireAuth, requireRole('administrat
       ...team,
       eligible_staff_count: staffCount,
       eligible: available && staffCount > 0,
+      unavailable_reason: !available
+        ? 'unavailable'
+        : staffCount === 0
+          ? 'staff_not_assigned'
+          : null,
     };
   });
   const availableTeams = teams.filter((team) => team.status === 'Available' && !team.active_assignment_id);

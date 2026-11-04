@@ -343,7 +343,13 @@ before(async () => {
     priority: 'Critical',
   });
   assert.equal(dispatchResponse.status, 201);
-  assignmentId = (await dispatchResponse.json()).assignment.id;
+  const createdAssignment = (await dispatchResponse.json()).assignment;
+  assignmentId = createdAssignment.id;
+  const activeTeamEligibility = await jsonRequest(`/api/repair/dispatch-eligibility?report_id=${report.id}`, adminCookie);
+  const activeTeamState = (await activeTeamEligibility.json()).teams.find((team) => Number(team.id) === Number(teamId));
+  assert.equal(activeTeamState.active_assignment_code, createdAssignment.assignment_code);
+  assert.equal(activeTeamState.active_assignment_status, 'Dispatched');
+  assert.equal(activeTeamState.unavailable_reason, 'unavailable');
   portalLoginEmails.staff = staff.email;
   const staffLogin = await login(staff.email, 'field-password-123', 'staff');
   staffCookie = staffLogin.cookie;

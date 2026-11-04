@@ -936,6 +936,30 @@ async function submitForm(form) {
   throw new Error(`Unknown form: ${type}`);
 }
 
+function getRepairDispatchEligibilityView(report, eligibility) {
+  const eligibleTeams = eligibility.teams.filter((team) => team.eligible);
+  const messages = {
+    no_repair_teams: 'No response teams have been set up yet. Staff accounts are separate from response teams. Create a team, then assign the staff member to that team and this report’s barangay.',
+    no_available_team: 'No response team is currently available. Check the team status below; an assigned team is released when Admin marks its assignment Resolved or Cancelled.',
+    no_staff_coverage: `No active Staff account has ${escapeHtml(report.barangay)} in its assigned coverage areas. In Manage Staff Team Access, assign an active staff member to this barangay.`,
+    staff_not_assigned_to_team: `There are ${eligibility.active_staff_in_barangay} active Staff account(s) covering ${escapeHtml(report.barangay)}, but none is linked to an available response team. Assign the staff member to both the response team and this barangay.`,
+  };
+  const teamDetails = !eligibleTeams.length && eligibility.teams.length
+    ? `<ul style="margin:6px 0 0;padding-left:20px;">${eligibility.teams.map((team) => {
+      const state = team.eligible_staff_count
+        ? `${escapeHtml(team.status)}${team.active_assignment_code ? ` · ${escapeHtml(team.active_assignment_code)} (${escapeHtml(team.active_assignment_status)})` : ''}`
+        : `${escapeHtml(team.status)} · no active staff assigned to ${escapeHtml(report.barangay)}`;
+      return `<li><strong>${escapeHtml(team.name)}</strong>: ${state}</li>`;
+    }).join('')}</ul>`
+    : '';
+  return {
+    eligibleTeams,
+    message: messages[eligibility.reason] || (eligibleTeams.length ? 'Select an available team with staff assigned to this report’s barangay.' : ''),
+    teamDetails,
+    verified: ['Verified', 'Officially Confirmed'].includes(report.verification_status),
+  };
+}
+
 async function handleClick(event) {
   const pageButton = event.target.closest('[data-page]');
   if (pageButton) {
@@ -1996,23 +2020,16 @@ async function handleClick(event) {
           api(`/api/reports/${reportId}`),
           api(`/api/repair/dispatch-eligibility?report_id=${encodeURIComponent(reportId)}`),
         ]);
-        const eligibleTeams = eligibility.teams.filter((team) => team.eligible);
-        const teamOptions = eligibleTeams.map((team) => `
+        const dispatchView = getRepairDispatchEligibilityView(report, eligibility);
+        const teamOptions = dispatchView.eligibleTeams.map((team) => `
           <option value="${team.id}" ${Number(team.id) === Number(report.assigned_team_id) ? 'selected' : ''}>
             ${escapeHtml(team.name)} · Available · ${team.eligible_staff_count} eligible staff
           </option>`).join('');
-        const verified = ['Verified', 'Officially Confirmed'].includes(report.verification_status);
-        const eligibilityMessage = {
-          no_repair_teams: 'No response teams have been set up yet. Staff accounts are separate from response teams. Create a team, then assign the staff member to that team and this report’s barangay.',
-          no_available_team: 'All response teams are currently assigned or unavailable. Create another response team or try again when one becomes available.',
-          no_staff_coverage: `No active Staff account has ${escapeHtml(report.barangay)} in its assigned coverage areas. In Manage Staff Team Access, assign an active staff member to this barangay.`,
-          staff_not_assigned_to_team: `There are ${eligibility.active_staff_in_barangay} active Staff account(s) covering ${escapeHtml(report.barangay)}, but none is linked to an available response team. In Manage Staff Team Access, assign the staff member to both the response team and this barangay.`,
-        }[eligibility.reason];
 
         openDialog(`🚒 Dispatch Repair Crew — ${escapeHtml(report.report_code)}`, `
           <div class="form-stack">
             <input type="hidden" name="report_id" value="${report.id}">
-            <p class="muted small">${verified ? 'Verified report' : 'Verify this report before dispatch.'} · Response assignment is for Valencia PowerWatch coordination and does not confirm an external utility crew dispatch.</p>
+            <p class="muted small">${dispatchView.verified ? 'Verified report' : 'Verify this report before dispatch.'} · Response assignment is for Valencia PowerWatch coordination and does not confirm an external utility crew dispatch.</p>
             <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px;margin-bottom:8px;">
               <p style="margin:0 0 6px 0;font-size:0.86rem;font-weight:700;color:#0369a1;">📍 Incident Location &amp; Details</p>
               <div style="font-size:0.83rem;color:#1e293b;line-height:1.5;">
@@ -2025,15 +2042,16 @@ async function handleClick(event) {
 
             <div class="wide-field">
               <label for="repair-team-select">Select Emergency Response Crew <strong style="color:#ef4444;">*</strong></label>
-              <select class="input" id="repair-team-select" name="team_id" required ${!verified || !eligibleTeams.length ? 'disabled' : ''}>
+              <select class="input" id="repair-team-select" name="team_id" data-dispatch-team-select required ${!dispatchView.verified || !dispatchView.eligibleTeams.length ? 'disabled' : ''}>
                 <option value="">-- Choose Emergency Crew --</option>
                 ${teamOptions}
               </select>
-              ${eligibilityMessage ? `<div class="muted small">${eligibilityMessage}</div>` : ''}
-              ${['no_repair_teams', 'no_available_team'].includes(eligibility.reason)
-                ? '<button type="button" class="button secondary small" data-action="open-create-repair-team">Create response team</button>'
-                : ''}
-              ${!verified ? '<div class="muted small">Verify this report before dispatch.</div>' : ''}
+              <div class="muted small" data-dispatch-eligibility-message ${dispatchView.message || dispatchView.teamDetails ? '' : 'hidden'}>
+                ${dispatchView.message ? `<div>${dispatchView.message}</div>` : ''}${dispatchView.teamDetails}
+              </div>
+              <button type="button" class="button ghost small" data-action="refresh-dispatch-eligibility" data-id="${report.id}">Refresh team availability</button>
+              <button type="button" class="button secondary small" data-action="open-create-repair-team" ${['no_repair_teams', 'no_available_team'].includes(eligibility.reason) ? '' : 'hidden'}>Create response team</button>
+              ${!dispatchView.verified ? '<div class="muted small">Verify this report before dispatch.</div>' : ''}
               ${['no_staff_coverage', 'staff_not_assigned_to_team'].includes(eligibility.reason)
                 ? '<button type="button" class="button ghost small" data-action="open-staff-access">Open Manage Staff Team Access</button>'
                 : ''}
@@ -2214,6 +2232,46 @@ async function handleClick(event) {
         state.filters.dispatchStatus = value;
         await render();
         return;
+      case 'refresh-dispatch-eligibility': {
+        const form = document.getElementById('dialog-form');
+        const reportId = form?.elements.report_id?.value;
+        if (!reportId) throw new Error('The report for this dispatch window could not be found.');
+        const [{ report }, eligibility] = await Promise.all([
+          api(`/api/reports/${encodeURIComponent(reportId)}`),
+          api(`/api/repair/dispatch-eligibility?report_id=${encodeURIComponent(reportId)}`),
+        ]);
+        const view = getRepairDispatchEligibilityView(report, eligibility);
+        const teamSelect = form.querySelector('[data-dispatch-team-select]');
+        const previousTeamId = teamSelect?.value;
+        if (teamSelect) {
+          teamSelect.innerHTML = `<option value="">-- Choose Emergency Crew --</option>${view.eligibleTeams.map((team) => `
+            <option value="${team.id}">${escapeHtml(team.name)} · Available · ${team.eligible_staff_count} eligible staff</option>`).join('')}`;
+          teamSelect.disabled = !view.verified || !view.eligibleTeams.length;
+          if (view.eligibleTeams.some((team) => String(team.id) === previousTeamId)) teamSelect.value = previousTeamId;
+        }
+        const message = form.querySelector('[data-dispatch-eligibility-message]');
+        if (message) {
+          message.innerHTML = `${view.message ? `<div>${view.message}</div>` : ''}${view.teamDetails}`;
+          message.hidden = !view.message && !view.teamDetails;
+        }
+        const createTeamButton = form.querySelector('[data-action="open-create-repair-team"]');
+        if (createTeamButton) {
+          createTeamButton.hidden = !['no_repair_teams', 'no_available_team'].includes(eligibility.reason);
+        }
+        const staffAccessButton = form.querySelector('[data-action="open-staff-access"]');
+        if (['no_staff_coverage', 'staff_not_assigned_to_team'].includes(eligibility.reason)) {
+          if (!staffAccessButton) {
+            form.querySelector('[data-dispatch-eligibility-message]')?.insertAdjacentHTML(
+              'afterend',
+              '<button type="button" class="button ghost small" data-action="open-staff-access">Open Manage Staff Team Access</button>',
+            );
+          }
+        } else {
+          staffAccessButton?.remove();
+        }
+        setToast(view.eligibleTeams.length ? 'Available response teams refreshed.' : 'No eligible response team yet. Check the current team status and staff access.');
+        return;
+      }
       case 'dispatch-refresh':
         await render();
         setToast('Dispatch and fleet state refreshed.');
