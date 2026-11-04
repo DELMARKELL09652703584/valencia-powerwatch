@@ -27,7 +27,8 @@ test('community colors follow the app theme toggle instead of system dark mode',
 test('community dashboard weather card follows the resident mobile reference layout', () => {
   const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
 
-  assert.match(portalStyles, /body\.community-body \.home-dashboard \.mobile-weather\s*\{[^}]*min-height:\s*126px;[^}]*width:\s*100%;[^}]*background:\s*#fff;/s);
+  assert.match(portalStyles, /body\.community-body \.home-dashboard \.mobile-weather\s*\{[^}]*min-height:\s*88px;[^}]*width:\s*100%;[^}]*padding:\s*10px 16px;[^}]*background:\s*#fff;/s);
+  assert.match(portalStyles, /body\.community-body \.home-dashboard \.mobile-weather-icon\s*\{[^}]*width:\s*46px;[^}]*height:\s*46px;/s);
   assert.match(portalStyles, /body\.community-body \.home-dashboard \.mobile-weather-copy\s*\{[^}]*display:\s*grid;/s);
   assert.match(portalStyles, /body\.community-body \.mobile-tab\[data-mobile-tab="notifications"\] \.mobile-tab-label/);
 });
@@ -162,9 +163,10 @@ test('Admin dashboard right-side command actions stay compact and usable on mobi
 test('home weather widget stays compact in Light Mode and Night Ops', () => {
   const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
 
-  assert.match(styles, /body\.community-body \.home-dashboard \.mobile-weather\s*\{[^}]*min-height:\s*0;[^}]*gap:\s*7px;[^}]*padding:\s*6px 10px;[^}]*border-radius:\s*999px;/s);
-  assert.match(styles, /body\.community-body \.home-dashboard \.mobile-weather-copy\s*\{[^}]*display:\s*flex;[^}]*align-items:\s*baseline;/s);
-  assert.match(styles, /body\.community-body \.home-dashboard \.mobile-weather-copy small\s*\{\s*display:\s*none;/s);
+  assert.match(styles, /body\.community-body \.home-dashboard \.mobile-weather\s*\{[^}]*min-height:\s*88px;[^}]*gap:\s*14px;[^}]*padding:\s*10px 16px;[^}]*border-radius:\s*18px;/s);
+  assert.match(styles, /body\.community-body \.home-dashboard \.mobile-weather-copy\s*\{[^}]*display:\s*grid;[^}]*gap:\s*2px;/s);
+  assert.match(styles, /body\.community-body \.home-dashboard \.mobile-weather-copy small:first-of-type\s*\{\s*display:\s*block;/s);
+  assert.match(styles, /body\.community-body \.home-dashboard \.mobile-weather-copy small:last-of-type\s*\{\s*display:\s*none;/s);
   assert.match(styles, /body\.dark-mode\.community-body \.home-dashboard \.mobile-weather\s*\{[^}]*background:\s*var\(--pw-panel\)\s*!important;/s);
 });
 

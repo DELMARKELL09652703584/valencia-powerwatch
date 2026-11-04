@@ -7684,51 +7684,54 @@ body.community-body .home-dashboard-context {
 }
 
 body.community-body .home-dashboard .mobile-weather {
-  min-height: 126px;
+  min-height: 88px;
   width: 100%;
   flex: 0 0 auto;
-  gap: 18px;
-  padding: 20px 22px;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
   border: 1px solid #dce8f1;
-  border-radius: 20px;
+  border-radius: 18px;
   background: #fff;
   box-shadow: 0 5px 18px rgba(21, 52, 78, .055);
 }
 
 body.community-body .home-dashboard .mobile-weather-icon {
-  width: 58px;
-  height: 58px;
-  flex: 0 0 58px;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
   display: grid;
   place-items: center;
-  font-size: 3.1rem;
+  font-size: 2.35rem;
   line-height: 1;
 }
 
 body.community-body .home-dashboard .mobile-weather-copy {
   display: grid;
   align-items: start;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
 }
 
 body.community-body .home-dashboard .mobile-weather-copy strong {
   color: #142d4c;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   line-height: 1.1;
 }
 
 body.community-body .home-dashboard .mobile-weather-copy span {
   max-width: none;
   color: #243d55;
-  font-size: .95rem;
+  font-size: .86rem;
+  line-height: 1.15;
   white-space: normal;
 }
 
 body.community-body .home-dashboard .mobile-weather-copy small:first-of-type {
   display: block;
   color: #607487;
-  font-size: .83rem;
+  font-size: .75rem;
+  line-height: 1.2;
 }
 
 body.community-body .home-dashboard .mobile-weather-copy small:last-of-type {
