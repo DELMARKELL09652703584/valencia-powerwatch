@@ -5,7 +5,7 @@ let evidencePreviewUrl = null;
 const activeStages = ['Dispatched', 'En Route', 'Arrived On Site', 'In Progress'];
 const stages = ['Assigned', 'Acknowledged', 'On the Way', 'Arrived', 'Inspecting', 'Repairing', 'Completed'];
 const pages = [
-  ['home', 'home', 'Today'],
+  ['home', 'home', 'Home'],
   ['tasks', 'clipboard', 'Tasks'],
   ['map', 'map', 'Map'],
   ['alerts', 'bell', 'Updates'],
@@ -204,6 +204,11 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
   const statusClassName = statusClass(assignment.status)
     ? (assignment.status === 'Resolved' || assignment.status === 'Completed' ? 'staff-key-status-done' : activeStages.includes(assignment.status) ? 'staff-key-status-active' : 'staff-key-status-normal')
     : 'staff-key-status-normal';
+  const actionMarkup = `<div class="staff-assignment-actions">
+    ${compact
+      ? `<button class="staff-btn staff-btn-quiet" type="button" data-action="view-assignment" data-id="${assignment.id}">Review assignment</button>`
+      : `${destination ? `<div class="staff-assignment-map-action"><a class="staff-btn staff-btn-route" href="${escapeHtml(destination)}" target="_blank" rel="noopener">${icon('route')}Navigate to site</a></div>` : '<span class="staff-muted staff-no-pin">No GPS pin provided.</span>'}${isTerminal ? '' : stageButtons(assignment)}`}
+  </div>`;
   return `<article class="staff-card staff-assignment ${compact ? 'staff-assignment-compact' : ''} ${priorityTone}">
     ${!compact ? `<div class="staff-assignment-key-info">
       <div>
@@ -231,6 +236,7 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
       <span class="staff-status staff-team-pill">${icon('user')}${escapeHtml(assignment.team_name || 'Assigned crew')}</span>
     </div>
     <div class="staff-place">${icon('pin')}<span>${escapeHtml(locationText || 'Location details not supplied')}</span></div>
+    ${actionMarkup}
     ${!compact ? `<hr class="staff-section-divider">` : ''}
     ${!compact ? `<section class="staff-incident-summary">
       <div class="staff-detail-grid">
@@ -280,11 +286,6 @@ const assignmentCard = (assignment, { compact = false } = {}) => {
       ${renderStageProgress(assignment)}
       ${assignment.updates?.[0] ? `<div class="staff-latest-update"><span>Latest update · ${escapeHtml(assignment.updates[0].stage)}</span><p>${escapeHtml(assignment.updates[0].notes || 'No field note attached.')}</p></div>` : ''}
     </section>` : ''}
-    <div class="staff-assignment-actions">
-      ${compact ? `<button class="staff-btn staff-btn-quiet" type="button" data-action="view-assignment" data-id="${assignment.id}">View details</button>` : ''}
-      ${destination ? `<div class="staff-assignment-map-action"><a class="staff-btn staff-btn-route" href="${escapeHtml(destination)}" target="_blank" rel="noopener">${icon('route')}Navigate to site</a></div>` : '<span class="staff-muted staff-no-pin">No GPS pin provided.</span>'}
-      ${isTerminal ? '' : stageButtons(assignment)}
-    </div>
     ${!compact && !isTerminal ? `<div data-stage-feedback class="staff-inline-feedback" hidden></div>` : ''}
     ${compact ? '' : renderEvidence(assignment, { readOnly: isTerminal })}
     ${compact ? '' : renderUpdateForm(assignment, { readOnly: isTerminal })}
@@ -377,11 +378,11 @@ const renderStats = () => {
   const resolvedReports = state.reports.filter((report) =>
     ['Resolved', 'Closed'].includes(report.status)).length;
   return `<div class="staff-stats">
-    <div class="staff-stat staff-stat-new"><span>New</span><strong>${awaiting}</strong></div>
-    <div class="staff-stat staff-stat-active"><span>Active</span><strong>${active.length}</strong></div>
+    <div class="staff-stat staff-stat-new"><span>Needs acknowledgment</span><strong>${awaiting}</strong></div>
+    <div class="staff-stat staff-stat-active"><span>Active assignments</span><strong>${active.length}</strong></div>
     <div class="staff-stat"><span>Verified reports</span><strong>${verified}</strong></div>
-    <div class="staff-stat staff-stat-repair"><span>Repairing</span><strong>${repairing}</strong></div>
-    <div class="staff-stat staff-stat-critical"><span>Critical</span><strong>${critical}</strong></div>
+    <div class="staff-stat staff-stat-repair"><span>In repair</span><strong>${repairing}</strong></div>
+    <div class="staff-stat staff-stat-critical"><span>Critical priority</span><strong>${critical}</strong></div>
     <div class="staff-stat staff-stat-done"><span>Resolved reports</span><strong>${resolvedReports}</strong></div>
   </div><button class="staff-completed-summary" type="button" data-action="open-history" aria-label="View completed assignments">
     <span>${icon('check')} Completed assignments</span><strong>${completed}<span aria-hidden="true">›</span></strong>
@@ -445,40 +446,35 @@ const renderHome = () => {
     const rank = (value) => String(value).toLowerCase() === 'critical' ? 0 : String(value).toLowerCase() === 'high' ? 1 : 2;
     return rank(a.priority) - rank(b.priority) || stageIndex(a) - stageIndex(b);
   });
-  const awaitingCount = state.assignments.filter((assignment) => assignment.latest_stage === 'Assigned').length;
+  const awaitingAssignments = prioritySorted.filter((assignment) => assignment.latest_stage === 'Assigned');
+  const awaitingCount = awaitingAssignments.length;
   return `<header class="staff-page-heading staff-home-hero">
     <div>
-      <div class="staff-duty-pill"><span class="staff-pulse-dot"></span> Field Operations Active</div>
+      <div class="staff-duty-pill"><span class="staff-pulse-dot"></span> Ready for dispatch</div>
       <h1>Good day, ${escapeHtml((state.user.full_name || 'Team').split(' ')[0])}</h1>
       <p>${active.length ? `${active.length} active assignment${active.length === 1 ? '' : 's'} · ${awaitingCount} awaiting your acknowledgment.` : 'No active assignments. New dispatches will appear here.'}</p>
     </div>
   </header>
-  <div class="staff-quick-actions" aria-label="Quick Navigation">
-    <button class="staff-quick-action" type="button" data-action="navigate" data-page="tasks">
-      <span class="staff-quick-icon">${icon('clipboard')}</span>
-      <span class="staff-quick-label">My assignments</span>
-      <span class="staff-quick-count">${active.length}</span>
+  <section class="staff-work-focus" aria-labelledby="staff-work-focus-title">
+    <div class="staff-work-focus-copy">
+      <span class="staff-section-kicker">${awaitingCount ? 'Next step' : 'Your queue'}</span>
+      <h2 id="staff-work-focus-title">${awaitingCount ? 'Review new assignments' : 'Open your assignments'}</h2>
+      <p>${awaitingCount
+        ? `${awaitingCount} dispatch${awaitingCount === 1 ? '' : 'es'} waiting for your acknowledgment.`
+        : active.length ? `${active.length} assignment${active.length === 1 ? '' : 's'} in progress.` : 'Check your queue for new work from dispatch.'}</p>
+    </div>
+    <button class="staff-work-focus-action" type="button" data-action="navigate" data-page="tasks">
+      ${icon('clipboard')}<span>Open assignments</span><strong>${awaitingCount || active.length}</strong>
     </button>
-    <button class="staff-quick-action" type="button" data-action="navigate" data-page="map">
-      <span class="staff-quick-icon">${icon('map')}</span>
-      <span class="staff-quick-label">Navigate to site</span>
-      <span class="staff-quick-count">${active.filter((a) => routeUrl(a)).length}</span>
-    </button>
-    <button class="staff-quick-action" type="button" data-action="navigate" data-page="alerts">
-      <span class="staff-quick-icon">${icon('bell')}${state.unreadNotifications ? `<span class="staff-pill-badge">${state.unreadNotifications}</span>` : ''}</span>
-      <span class="staff-quick-label">Updates</span>
-      <span class="staff-quick-count">${state.unreadNotifications || '0'}</span>
-    </button>
-    <button class="staff-quick-action" type="button" data-action="navigate" data-page="profile">
-      <span class="staff-quick-icon">${icon('user')}</span>
-      <span class="staff-quick-label">Profile</span>
-      <span class="staff-quick-count">${state.teams.length}</span>
-    </button>
-  </div>
-  ${awaitingCount > 0 ? `<div class="staff-home-section"><div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Needs your attention</span><h2>New assignments</h2></div></div>
-  <div class="staff-assignment-list">${active.slice(0, 4).map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div></div>` : ''}
-  ${prioritySorted.length > 0 ? `<div class="staff-home-section"><div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">In progress</span><h2>Active assignments</h2></div></div>
-  <div class="staff-assignment-list">${prioritySorted.slice(0, 4).map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div></div>` : ''}
+  </section>
+  <section class="staff-home-overview" aria-labelledby="staff-home-overview-title">
+    <div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">At a glance</span><h2 id="staff-home-overview-title">Response overview</h2></div></div>
+    ${renderStats()}
+  </section>
+  ${awaitingCount > 0 ? `<section class="staff-home-section"><div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Needs your attention</span><h2>New assignments</h2></div></div>
+  <div class="staff-assignment-list">${awaitingAssignments.slice(0, 4).map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div></section>` : ''}
+  ${prioritySorted.length > 0 ? `<section class="staff-home-section"><div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">In progress</span><h2>Active assignments</h2></div></div>
+  <div class="staff-assignment-list">${prioritySorted.slice(0, 4).map((assignment) => assignmentCard(assignment, { compact: true })).join('')}</div></section>` : ''}
   ${renderRecentUpdates()}
   <div class="staff-home-section"><div class="staff-section-heading staff-priority-heading"><div><span class="staff-section-kicker">Resident reports</span><h2>Reports from your barangays</h2></div></div>
   ${renderAreaReports()}</div>`;
@@ -563,6 +559,7 @@ const renderProfile = () => `<header class="staff-page-heading"><div><p class="s
   <section class="staff-card staff-profile staff-settings-card">
     <div class="staff-section-heading"><div><span class="staff-section-kicker">Preferences</span><h2>App settings</h2></div></div>
     <p class="staff-muted">Device alerts can notify you about new assignments while the Staff App is open. The app checks for new work every 30 seconds.</p>
+    <button class="staff-btn staff-btn-quiet" type="button" data-action="install" aria-controls="staff-install-help" aria-expanded="false">${icon('phone')} Install Staff App</button>
     <button class="staff-btn staff-btn-quiet" type="button" data-action="enable-notifications">${icon('bell')} Enable device alerts</button>
     <button class="staff-btn staff-btn-quiet" type="button" data-action="check-updates">${icon('refresh')} Check for app updates</button>
   </section>`;
@@ -576,7 +573,7 @@ const renderDetail = () => {
   return `<header class="staff-page-heading staff-detail-heading">
     <div>
       <p class="staff-eyebrow">Field assignment</p>
-      <h1>Incident details</h1>
+      <h1>Assignment details</h1>
       <p>Review the dispatch information and submit response updates.</p>
     </div>
     <button class="staff-btn staff-btn-quiet staff-back-btn" type="button" data-action="back">← Back</button>
@@ -597,7 +594,6 @@ const renderShell = () => {
         <div><strong>Valencia PowerWatch</strong><span>Field response · ${escapeHtml(title)}</span></div>
       </div>
       <div class="staff-topbar-actions">
-        <button class="staff-btn staff-install-topbar-btn" type="button" data-action="install" aria-controls="staff-install-help" aria-expanded="false">Install Staff App</button>
         <button class="staff-btn staff-icon-button" type="button" data-action="${state.page === 'alerts' ? 'refresh-notifications' : 'refresh'}" aria-label="${state.page === 'alerts' ? 'Refresh notifications' : 'Refresh assignments'}">${icon('refresh')}</button>
       </div>
     </header>

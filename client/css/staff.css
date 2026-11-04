@@ -2189,3 +2189,492 @@ body.dark-mode.staff-app .staff-confirm-foot {
   border-top-color: var(--staff-line-subtle);
   background: var(--staff-panel-subtle);
 }
+
+/* Mobile field workflow: one clear queue action, a scannable overview, and early access to navigation. */
+body.staff-app {
+  --staff-bg: #f2f6fa;
+  --staff-panel: #fff;
+  --staff-panel-subtle: #f7f9fc;
+  --staff-ink: #142c43;
+  --staff-muted: #51677c;
+  --staff-line: #d7e2ec;
+  --staff-line-subtle: #eaf0f5;
+  --staff-blue: #1267ad;
+  --staff-blue-dark: #0b4f87;
+  --staff-blue-light: #edf6fd;
+  --staff-shadow: 0 5px 18px rgba(20, 44, 67, .055), 0 1px 2px rgba(20, 44, 67, .035);
+  --staff-radius: 17px;
+  --staff-radius-lg: 20px;
+}
+
+body.staff-app .staff-shell {
+  background: var(--staff-bg);
+  padding-bottom: 0;
+}
+
+body.staff-app .staff-topbar {
+  min-height: 62px;
+  gap: 8px;
+  padding: 8px 12px;
+  background: linear-gradient(125deg, #0a3459, #0b6390);
+}
+
+body.staff-app .staff-topbar-brand img {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+}
+
+body.staff-app .staff-topbar-brand strong {
+  font-size: .88rem;
+}
+
+body.staff-app .staff-topbar-brand span {
+  font-size: .62rem;
+  letter-spacing: .045em;
+}
+
+body.staff-app .staff-icon-button {
+  width: 46px;
+  min-width: 46px;
+  min-height: 46px;
+  border-radius: 14px !important;
+}
+
+body.staff-app .staff-main {
+  width: min(100%, 480px);
+  gap: 14px;
+  padding: 14px 14px 22px;
+  color: var(--staff-ink);
+}
+
+body.staff-app .staff-page-heading {
+  margin: 0;
+}
+
+body.staff-app .staff-page-heading h1 {
+  font-size: clamp(1.35rem, 5vw, 1.65rem);
+  line-height: 1.2;
+  letter-spacing: -.025em;
+}
+
+body.staff-app .staff-page-heading p:not(.staff-eyebrow) {
+  font-size: .9rem;
+  line-height: 1.5;
+}
+
+body.staff-app .staff-home-hero {
+  padding: 17px;
+  border: 1px solid #d4e5f1;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #eaf5fc, #fff 78%);
+  box-shadow: var(--staff-shadow);
+}
+
+body.staff-app .staff-duty-pill {
+  margin-bottom: 9px;
+  padding: 5px 10px;
+  font-size: .68rem;
+}
+
+body.staff-app .staff-home-hero p:not(.staff-eyebrow) {
+  margin-top: 7px;
+}
+
+body.staff-app .staff-work-focus,
+body.staff-app .staff-home-overview {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid var(--staff-line);
+  border-radius: 18px;
+  background: var(--staff-panel);
+  box-shadow: var(--staff-shadow);
+}
+
+body.staff-app .staff-work-focus-copy {
+  display: grid;
+  gap: 4px;
+}
+
+body.staff-app .staff-work-focus-copy h2,
+body.staff-app .staff-home-overview h2 {
+  margin: 0;
+  color: var(--staff-ink);
+  font-size: 1.02rem;
+  font-weight: 820;
+  letter-spacing: -.015em;
+}
+
+body.staff-app .staff-work-focus-copy p {
+  margin: 0;
+  color: var(--staff-muted);
+  font-size: .86rem;
+  line-height: 1.45;
+}
+
+body.staff-app .staff-section-kicker {
+  color: var(--staff-blue);
+  font-size: .68rem;
+  font-weight: 850;
+  letter-spacing: .09em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+body.staff-app .staff-work-focus-action {
+  width: 100%;
+  min-height: 50px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 13px;
+  border: 1px solid var(--staff-blue);
+  border-radius: 13px;
+  background: linear-gradient(115deg, var(--staff-blue), #0c7e8b);
+  color: #fff;
+  font-size: .9rem;
+  font-weight: 780;
+  text-align: left;
+  cursor: pointer;
+}
+
+body.staff-app .staff-work-focus-action .staff-icon {
+  width: 21px;
+  height: 21px;
+}
+
+body.staff-app .staff-btn > .staff-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+body.staff-app .staff-work-focus-action strong {
+  min-width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .18);
+  color: #fff;
+  font-size: .82rem;
+}
+
+body.staff-app .staff-home-overview > .staff-section-heading {
+  margin: 0 1px 1px;
+}
+
+body.staff-app .staff-home-overview > .staff-section-heading > div {
+  display: grid;
+  align-items: start;
+  gap: 3px;
+}
+
+body.staff-app .staff-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+body.staff-app .staff-stat {
+  min-height: 74px;
+  align-content: center;
+  gap: 7px;
+  padding: 11px 12px 11px 15px;
+  border-color: var(--staff-line);
+  border-radius: 14px;
+  background: var(--staff-panel-subtle);
+  box-shadow: none;
+}
+
+body.staff-app .staff-stat span {
+  color: var(--staff-muted);
+  font-size: .75rem;
+  line-height: 1.25;
+}
+
+body.staff-app .staff-stat strong {
+  font-size: 1.45rem;
+}
+
+body.staff-app .staff-completed-summary {
+  min-height: 50px;
+  border-radius: 13px;
+  font-size: .86rem;
+}
+
+body.staff-app .staff-home-section,
+body.staff-app .staff-recent-updates,
+body.staff-app .staff-area-reports {
+  display: grid;
+  gap: 11px;
+  min-width: 0;
+  margin: 0;
+}
+
+body.staff-app .staff-home-section > .staff-section-heading,
+body.staff-app .staff-recent-updates > .staff-section-heading,
+body.staff-app .staff-area-reports > .staff-section-heading {
+  margin: 0 2px;
+}
+
+body.staff-app .staff-section-heading h2,
+body.staff-app .staff-section-heading h3 {
+  color: var(--staff-ink);
+  font-size: 1.04rem;
+  line-height: 1.3;
+}
+
+body.staff-app .staff-assignment-list {
+  gap: 11px;
+}
+
+body.staff-app .staff-card,
+body.staff-app .staff-assignment {
+  border-color: var(--staff-line);
+  border-radius: 17px;
+  background: var(--staff-panel);
+  box-shadow: var(--staff-shadow);
+}
+
+body.staff-app .staff-assignment-compact {
+  gap: 11px;
+  padding: 14px;
+}
+
+body.staff-app .staff-assignment h2 {
+  color: var(--staff-ink);
+  font-size: .98rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+body.staff-app .staff-assignment-meta {
+  gap: 7px;
+}
+
+body.staff-app .staff-status,
+body.staff-app .staff-priority {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: .73rem;
+}
+
+body.staff-app .staff-place {
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid #dceaf4;
+  border-radius: 12px;
+  background: #f2f8fc;
+  overflow-wrap: anywhere;
+}
+
+body.staff-app .staff-assignment-actions {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+
+body.staff-app .staff-assignment-actions .staff-btn,
+body.staff-app .staff-assignment-actions .staff-btn-primary {
+  width: 100%;
+  min-height: 48px;
+  grid-column: auto;
+  border-radius: 13px;
+  font-size: .86rem;
+}
+
+body.staff-app .staff-assignment-map-action {
+  width: 100%;
+  margin: 0;
+}
+
+body.staff-app .staff-assignment-actions .staff-btn-route {
+  border-color: #b9d8ec;
+  background: #eaf5fd;
+  color: #0b5792;
+}
+
+body.staff-app .staff-filter-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid var(--staff-line);
+  border-radius: 15px;
+  background: var(--staff-panel);
+}
+
+body.staff-app .staff-filter {
+  min-height: 46px;
+  padding: 8px 6px;
+  border-radius: 11px;
+  font-size: .8rem;
+  font-weight: 750;
+}
+
+body.staff-app .staff-bottom-nav {
+  min-height: 68px;
+  gap: 3px;
+  padding: 5px 7px calc(5px + env(safe-area-inset-bottom));
+  border-color: var(--staff-line);
+  background: rgba(255, 255, 255, .98);
+}
+
+body.staff-app .staff-tab {
+  min-height: 58px;
+  gap: 3px;
+  border-radius: 12px;
+  color: #526a80;
+}
+
+body.staff-app .staff-tab-icon {
+  width: 32px;
+  height: 27px;
+}
+
+body.staff-app .staff-tab-icon .staff-icon {
+  width: 23px;
+  height: 23px;
+}
+
+body.staff-app .staff-tab-label {
+  font-size: .67rem;
+  line-height: 1.15;
+}
+
+body.staff-app .staff-tab[aria-current="page"] {
+  background: #edf6fd;
+  color: var(--staff-blue);
+}
+
+body.staff-app .staff-tab[aria-current="page"]::before {
+  top: 0;
+  right: 29%;
+  left: 29%;
+  height: 3px;
+}
+
+body.staff-app .staff-field {
+  gap: 7px;
+  color: var(--staff-ink);
+  font-size: .87rem;
+  line-height: 1.4;
+}
+
+body.staff-app .staff-field :is(input, textarea, select),
+body.staff-app .staff-upload-input {
+  width: 100%;
+  min-height: 48px;
+  border-color: var(--staff-line);
+  border-radius: 12px;
+  font: inherit;
+}
+
+body.staff-app .staff-field textarea {
+  min-height: 100px;
+}
+
+body.staff-app .staff-note-form .staff-btn,
+body.staff-app .staff-confirm-form .staff-btn,
+body.staff-app .staff-upload-drop {
+  min-height: 48px;
+}
+
+body.staff-app .staff-evidence-list img,
+body.staff-app .staff-evidence-list video {
+  width: min(100%, 220px);
+  max-height: 260px;
+  object-fit: cover;
+  border-radius: 13px;
+}
+
+body.staff-app .staff-map-frame {
+  min-height: 290px;
+  border-radius: 15px;
+}
+
+body.staff-app .staff-toast {
+  bottom: calc(78px + env(safe-area-inset-bottom));
+  min-height: 48px;
+  line-height: 1.4;
+}
+
+body.staff-app :is(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid rgba(18, 103, 173, .4);
+  outline-offset: 2px;
+}
+
+@media (max-width: 559px) {
+  body.staff-app .staff-main {
+    overflow: visible;
+    padding-bottom: 20px;
+  }
+
+  body.staff-app .staff-shell {
+    min-height: 100svh;
+  }
+}
+
+@media (max-width: 380px) {
+  body.staff-app .staff-main {
+    padding-right: 11px;
+    padding-left: 11px;
+  }
+
+  body.staff-app .staff-topbar {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  body.staff-app .staff-topbar-brand strong {
+    font-size: .82rem;
+  }
+
+  body.staff-app .staff-topbar-brand span {
+    font-size: .58rem;
+  }
+
+  body.staff-app .staff-work-focus,
+  body.staff-app .staff-home-overview {
+    padding: 12px;
+  }
+
+  body.staff-app .staff-stat {
+    padding-right: 9px;
+    padding-left: 12px;
+  }
+
+  body.staff-app .staff-stat span {
+    font-size: .7rem;
+  }
+
+  body.staff-app .staff-tab-label {
+    font-size: .61rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.staff-app .staff-pulse-dot {
+    animation: none;
+  }
+}
+
+body.dark-mode.staff-app .staff-home-hero {
+  border-color: var(--staff-line);
+  background: linear-gradient(135deg, #142b44, #121a2c 78%);
+}
+
+body.dark-mode.staff-app .staff-assignment-actions .staff-btn-route {
+  border-color: #2a4a6b;
+  background: #122a42;
+  color: #a9d6f5;
+}
+
+body.dark-mode.staff-app .staff-tab[aria-current="page"] {
+  background: #1a2a43;
+  color: #9bc9f4;
+}
