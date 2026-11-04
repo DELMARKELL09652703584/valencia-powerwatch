@@ -24,6 +24,15 @@ test('community colors follow the app theme toggle instead of system dark mode',
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-card\s*\{[^}]*background:\s*#0f172a;/s);
 });
 
+test('resident report detail and live tracking cards grow to fit on mobile', () => {
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
+
+  assert.match(portalStyles, /#app > \.mobile-shell:has\(\.report-detail-card\)\s*\{[^}]*height:\s*auto;[^}]*flex:\s*0 0 auto;/s);
+  assert.match(portalStyles, /#app > \.mobile-shell:has\(\.report-detail-card\) > \.mobile-content\s*\{[^}]*flex:\s*0 0 auto;[^}]*grid-auto-rows:\s*max-content;/s);
+  assert.match(portalStyles, /\.report-detail-card,\s*body\.community-body \.resident-tracking-card\s*\{[^}]*max-height:\s*none;[^}]*overflow:\s*visible;/s);
+  assert.match(portalStyles, /body\.community-body \.resident-tracking-map\s*\{[^}]*height:\s*clamp\(250px, 42vh, 340px\);[^}]*min-height:\s*250px;/s);
+});
+
 test('community dashboard weather card follows the resident mobile reference layout', () => {
   const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
 

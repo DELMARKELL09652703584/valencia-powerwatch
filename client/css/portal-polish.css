@@ -8781,3 +8781,55 @@ body.dark-mode.community-body .mobile-content :is(.mobile-form, .mobile-auth-for
     transition-duration: .01ms !important;
   }
 }
+
+body.community-body #app > .mobile-shell:has(.report-detail-card) {
+  height: auto;
+  flex: 0 0 auto;
+}
+
+body.community-body #app > .mobile-shell:has(.report-detail-card) > .mobile-content {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: max-content;
+  align-content: start;
+}
+
+body.community-body .report-detail-card,
+body.community-body .resident-tracking-card {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+body.community-body .report-detail-card {
+  padding: clamp(14px, 4vw, 20px);
+}
+
+body.community-body .mobile-report-timeline {
+  min-width: 0;
+}
+
+body.community-body .report-timeline-content {
+  overflow-wrap: anywhere;
+}
+
+body.community-body .resident-tracking-card .mobile-card-body {
+  min-width: 0;
+  gap: 10px;
+}
+
+body.community-body .resident-tracking-status {
+  padding: 10px 12px;
+  border: 1px solid var(--pw-line);
+  border-radius: 12px;
+  background: var(--pw-soft);
+}
+
+body.community-body .resident-tracking-map {
+  height: clamp(250px, 42vh, 340px);
+  min-height: 250px;
+  overflow: hidden;
+}
