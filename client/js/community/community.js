@@ -13,8 +13,13 @@ const MOBILE_TABS = [
   },
   {
     key: 'map',
-    label: 'Outages',
+    label: 'Map',
     icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
+  },
+  {
+    key: 'notifications',
+    label: 'Notifications',
+    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M10 21h4"/></svg>',
   },
   {
     key: 'profile',
@@ -156,10 +161,15 @@ const showConfirm = (title, message, onConfirm, onCancel, confirmLabel = 'Confir
 
 function weatherWidgetMarkup(weather, loading = false) {
   const code = weather?.current?.weather_code;
-  const icon = weather ? ([95, 96, 99].includes(code) ? mobileIcon('outage', 14) : [61, 63, 65, 80, 81, 82].includes(code) ? mobileIcon('outage', 14) : [1, 2, 3].includes(code) ? mobileIcon('crew', 14) : mobileIcon('crew', 14)) : mobileIcon('crew', 14);
+  const icon = !weather ? '🌤️'
+    : [95, 96, 99].includes(code) ? '⛈️'
+      : [61, 63, 65, 66, 67, 80, 81, 82].includes(code) ? '🌧️'
+        : [45, 48].includes(code) ? '🌫️'
+          : code === 0 ? '☀️'
+            : [1, 2, 3].includes(code) ? '🌤️' : '☁️';
   const temperature = weather ? `${Math.round(weather.current.temperature_2m)}°C` : '—°C';
   const description = weather ? weatherDescription(code) : loading ? 'Loading local weather…' : 'Weather unavailable';
-  return `<span class="mobile-weather-icon">${icon}</span><span class="mobile-weather-copy"><strong>${temperature}</strong><span>Valencia City · ${description}</span><small>Weather by Open-Meteo</small></span>`;
+  return `<span class="mobile-weather-icon" aria-hidden="true">${icon}</span><span class="mobile-weather-copy"><strong>${temperature}</strong><span>Valencia City</span><small>${description}</small><small>Weather by Open-Meteo</small></span>`;
 }
 
 async function requestCurrentWeather() {
@@ -325,11 +335,6 @@ function mobileShell(content, { activeTab = state.mobileTab, showTabs = true, ho
           <span class="mobile-home-greeting"><span>${greeting}</span><strong>${escapeHtml(user.full_name || 'Resident')}</strong></span>
         </div>
         <div class="mobile-header-actions">
-          ${mobileThemeToggle()}
-          ${mobileInstallButton()}
-          <button type="button" class="mobile-lang-chip" data-action="toggle-mobile-language" title="English / Sinugbuanong Binisaya">
-            <span>${getLanguage() === 'ceb' ? '🇵🇭 CEB' : '🇺🇸 EN'}</span>
-          </button>
           ${mobileNotificationBell()}
         </div>
         ${mobileNotificationPanelMarkup()}
@@ -419,11 +424,12 @@ function formatRelativeTime(value) {
 
 async function renderMobileHome() {
   const cachedWeather = readWeatherCache();
-  const [{ stats }, { incidents = [] }, { scheduled = [] }, outageInsights] = await Promise.all([
+  const [{ stats }, { incidents = [] }, { scheduled = [] }, outageInsights, { announcements = [] }] = await Promise.all([
     api('/api/analytics/dashboard'),
     api('/api/incidents').catch(() => ({ incidents: [] })),
     api('/api/scheduled/upcoming').catch(() => ({ scheduled: [] })),
     api('/api/analytics/insights'),
+    api('/api/announcements').catch(() => ({ announcements: [] })),
   ]);
 
   const userBarangay = state.user?.barangay || 'Poblacion';
@@ -471,7 +477,10 @@ async function renderMobileHome() {
   }
 
   const dashboardCards = [
-    { label: 'Active outages', value: stats.active_incidents, icon: mobileIcon('dashboard'), tone: 'danger', action: 'open-current-outages' },
+    { label: t('active_outages', 'Active Outages'), value: stats.active_incidents ?? 0, icon: mobileIcon('outage'), tone: 'danger', action: 'open-current-outages' },
+    { label: t('pending_reports', 'Pending Reports'), value: stats.reports_pending ?? 0, icon: mobileIcon('report'), tone: 'warning', action: 'dashboard-pending-reports' },
+    { label: t('resolved_today', 'Resolved Today'), value: stats.resolved_today ?? 0, icon: mobileIcon('verify'), tone: 'success', tab: 'history' },
+    { label: t('total_reports', 'Total Reports'), value: stats.reports_total ?? 0, icon: mobileIcon('evidence'), tone: 'primary', tab: 'reports' },
   ];
   const shortcuts = [
     { label: 'Current outages', icon: '<path d="M13 2 4 14h7l-1 8 10-12h-7z"/>', action: 'open-current-outages' },
@@ -490,31 +499,88 @@ async function renderMobileHome() {
   const forecastCopy = outageInsights.projection.status === 'available'
     ? `Baseline estimate: about ${outageInsights.projection.next_month_unexpected_incidents} confirmed unexpected incidents next month, using the average of six complete months (${outageInsights.projection.sample_incidents} incidents across ${outageInsights.projection.sample_months} active months). This is not an official outage notice.`
     : `No forecast yet. Six complete months contain ${outageInsights.projection.sample_incidents} confirmed unexpected incidents across ${outageInsights.projection.sample_months} active months; the baseline requires at least 12 incidents across 3 months.`;
+  const recentUpdates = [
+    ...announcements.map((item) => {
+      const timestamp = item.published_at || item.created_at || item.updated_at;
+      return {
+        id: item.id,
+        action: 'view-announcement',
+        title: item.title || 'Community announcement',
+        detail: item.category || 'Announcement',
+        time: timestamp ? formatRelativeTime(timestamp) : '',
+        sortTime: Number.isFinite(new Date(timestamp || '').getTime()) ? new Date(timestamp).getTime() : 0,
+        tone: 'info',
+        icon: notificationTypeIcon('announcement'),
+      };
+    }),
+    ...incidents.map((item) => {
+      const status = String(item.status || 'Outage update');
+      const restored = ['Restored', 'Resolved', 'Closed'].includes(status);
+      const barangays = (item.affected_barangays || [item.barangay]).filter(Boolean);
+      const area = barangays.length > 1 ? `${barangays[0]} + ${barangays.length - 1} more` : barangays[0] || 'Valencia City';
+      const timestamp = item.updated_at || item.closed_at || item.end_time || item.start_time || item.created_at;
+      return {
+        id: item.id,
+        action: 'view-incident-details',
+        title: restored ? `Power restored in ${area}` : ['Reported', 'Under Verification'].includes(status) ? `New outage reported in ${area}` : `Outage update in ${area}`,
+        detail: status,
+        time: timestamp ? formatRelativeTime(timestamp) : '',
+        sortTime: Number.isFinite(new Date(timestamp || '').getTime()) ? new Date(timestamp).getTime() : 0,
+        tone: restored ? 'success' : 'danger',
+        icon: notificationTypeIcon('incident'),
+      };
+    }),
+    ...scheduled.map((item) => {
+      const timestamp = item.updated_at || item.created_at;
+      return {
+        id: item.id,
+        action: 'view-schedule-details',
+        title: `Scheduled outage in ${item.barangay || 'Valencia City'}`,
+        detail: `${formatSystemDate(item.outage_date)}${item.start_time ? ` · ${String(item.start_time).slice(0, 5)}` : ''}`,
+        time: timestamp ? formatRelativeTime(timestamp) : 'Upcoming',
+        sortTime: Number.isFinite(new Date(timestamp || '').getTime()) ? new Date(timestamp).getTime() : 0,
+        tone: 'info',
+        icon: notificationTypeIcon('scheduled'),
+      };
+    }),
+  ].sort((a, b) => b.sortTime - a.sortTime).slice(0, 3);
 
   mobileShell(`
     <section class="home-dashboard" aria-label="Community dashboard">
       <div class="home-dashboard-context">
-        <span class="home-area-label">YOUR AREA · BRGY. ${escapeHtml(userBarangay)}</span>
         <section class="mobile-weather" id="home-weather" aria-label="Current weather in Valencia City" aria-live="polite">
           ${weatherWidgetMarkup(cachedWeather?.data, !cachedWeather)}
         </section>
       </div>
-      ${barangayHeroMarkup}
-      <section class="home-shortcuts" aria-label="More options">
-        ${shortcuts.map((shortcut) => `<button type="button" class="home-shortcut" ${shortcut.action ? `data-action="${shortcut.action}"` : `data-mobile-tab="${shortcut.tab}"`} aria-label="${shortcut.label}">
-          <span class="home-shortcut-icon" aria-hidden="true">${mobileIcon('dashboard', 20)}</span>
-          <span>${shortcut.label}</span>${shortcut.count ? `<span class="home-shortcut-count">${shortcut.count > 99 ? '99+' : shortcut.count}</span>` : ''}
-        </button>`).join('')}
-      </section>
-      <section class="home-summary" aria-labelledby="home-summary-title">
-        <h2 id="home-summary-title">Overview</h2>
+      <section class="home-summary" aria-label="Outage and report summary">
         <div class="home-summary-grid">
-      ${dashboardCards.map((card) => `<button type="button" class="mobile-dashboard-card" data-dashboard-tone="${card.tone}" ${card.action ? `data-action="${card.action}"` : `data-mobile-tab="${card.tab}"`} aria-label="${card.label}: ${card.value}">
+      ${dashboardCards.map((card) => `<button type="button" class="mobile-dashboard-card" data-dashboard-tone="${card.tone}" ${card.action ? `data-action="${card.action}"` : `data-mobile-tab="${card.tab}"`} aria-label="${escapeHtml(card.label)}: ${escapeHtml(String(card.value))}">
         <span class="dashboard-card-icon" aria-hidden="true">${card.icon}</span>
         <div class="dashboard-card-text"><span class="dashboard-card-label">${card.label}</span><strong>${escapeHtml(String(card.value))}</strong></div>
       </button>`).join('')}
         </div>
       </section>
+      <section class="recent-updates" aria-labelledby="home-recent-updates-title">
+        <header class="recent-updates-head">
+          <h2 id="home-recent-updates-title">${t('recent_updates', 'Recent Updates')}</h2>
+          <button type="button" class="link-button" data-action="view-all-mobile-notifications">${t('view_all', 'View All')}</button>
+        </header>
+        ${recentUpdates.length ? recentUpdates.map((item) => `<button type="button" class="recent-update-row" data-action="${item.action}" data-id="${escapeHtml(String(item.id))}" aria-label="${escapeHtml(item.title)}${item.detail ? `, ${escapeHtml(item.detail)}` : ''}${item.time ? `, ${escapeHtml(item.time)}` : ''}">
+          <span class="recent-update-icon" data-update-tone="${item.tone}" aria-hidden="true">${item.icon}</span>
+          <span class="recent-update-copy"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.detail)}</small>${item.time ? `<time>${escapeHtml(item.time)}</time>` : ''}</span>
+          <span class="recent-update-arrow" aria-hidden="true">›</span>
+        </button>`).join('') : `<p class="recent-updates-empty">${t('no_recent_updates', 'No recent updates.')}</p>`}
+      </section>
+      ${barangayHeroMarkup}
+      <details class="home-more-options">
+        <summary>More options</summary>
+        <section class="home-shortcuts" aria-label="More options">
+          ${shortcuts.map((shortcut) => `<button type="button" class="home-shortcut" ${shortcut.action ? `data-action="${shortcut.action}"` : `data-mobile-tab="${shortcut.tab}"`} aria-label="${escapeHtml(shortcut.label)}">
+            <span class="home-shortcut-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${shortcut.icon}</svg></span>
+            <span>${escapeHtml(shortcut.label)}</span>${shortcut.count ? `<span class="home-shortcut-count">${shortcut.count > 99 ? '99+' : shortcut.count}</span>` : ''}
+          </button>`).join('')}
+        </section>
+      </details>
     <details class="bi-insights-panel home-trends">
       <summary><span>Local outage trends</span><small>Barangay · last 90 days</small></summary>
       <div class="home-trends-content">
@@ -1745,7 +1811,7 @@ async function renderMobileNotifications() {
         : '')}
     </div>
   `, {
-    activeTab: 'home',
+    activeTab: 'notifications',
     showTabs: true,
     subpageHeader: {
       title: 'Notifications',

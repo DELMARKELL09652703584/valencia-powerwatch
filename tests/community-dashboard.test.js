@@ -6,7 +6,7 @@ const { test } = require('node:test');
 
 const ROOT = path.resolve(__dirname, '..');
 
-test('community dashboard keeps personal notifications out of the home feed', () => {
+test('community dashboard shows public updates without exposing personal notifications', () => {
   const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
   const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
   const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
@@ -16,12 +16,13 @@ test('community dashboard keeps personal notifications out of the home feed', ()
 
   assert.ok(homeRendererStart >= 0);
   assert.ok(homeRendererEnd > homeRendererStart);
-  assert.doesNotMatch(homeRenderer, /\/api\/(?:notifications|announcements)/);
-  assert.doesNotMatch(communityScript, /class="recent-updates"/);
+  assert.doesNotMatch(homeRenderer, /\/api\/notifications/);
+  assert.match(homeRenderer, /\/api\/announcements/);
+  assert.match(homeRenderer, /class="recent-updates"/);
   assert.match(communityPage, /\/client\/js\/community\/community\.js\?v=\d+/);
   assert.match(communityPage, /\/client\/js\/shared\/main\.js\?v=\d+/);
   assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
-  assert.match(communityPage, /\/style\.css\?v=50/);
+  assert.match(communityPage, /\/style\.css\?v=51/);
   assert.match(portalStyles, /body\.community-body \.home-report-action\s*\{/);
   assert.match(portalStyles, /body\.community-body \.home-track-action svg\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;[^}]*fill:\s*none;/s);
   assert.match(portalStyles, /@media \(max-width: 600px\)\s*\{\s*body\.community-body \.mobile-home-header\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
@@ -100,8 +101,8 @@ test('resident navigation exposes reporting, announcements, and outage history',
   assert.match(mainScript, /case 'open-announcements':\s*state\.mobileNotificationCategory = 'announcements';\s*await goToTab\('notifications'\)/);
   assert.match(mainScript, /data-action="retry-current-tab"/);
   assert.match(mainScript, /case 'retry-current-tab':\s*await goToTab\(state\.mobileTab\)/);
-  assert.match(communityPage, /portal-polish\.css\?v=85/);
-  assert.match(communityPage, /community\.js\?v=46/);
+  assert.match(communityPage, /portal-polish\.css\?v=86/);
+  assert.match(communityPage, /community\.js\?v=47/);
   assert.match(communityPage, /main\.js\?v=47/);
   assert.match(mainScript, /coordinates shown above will be included with your location description/);
   assert.match(mainScript, /case 'open-notification-settings':\s*state\.mobileNotificationSettingsReturnTab = state\.mobileTab;/);
@@ -231,7 +232,7 @@ test('report details activity, ETR, and feedback remain readable in Night Ops mo
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-report-timeline\s*\{[^}]*background:\s*var\(--pw-panel\);/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-etr-badge\.is-restored\s*\{[^}]*background:\s*#0d302b;/s);
   assert.match(portalStyles, /body\.dark-mode\.community-body \.report-feedback-question,\s*body\.dark-mode\.community-body \.report-feedback-rating-label\s*\{[^}]*color:\s*var\(--pw-text\);/s);
-  assert.match(communityPage, /\/style\.css\?v=50/);
+  assert.match(communityPage, /\/style\.css\?v=51/);
   assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
 });
 
@@ -280,6 +281,9 @@ test('community bottom navigation shows accessible icon and text labels', () => 
   assert.match(navigationMarkup, /aria-current="\$\{activeTab === tab\.key \? 'page' : 'false'\}"/);
   assert.match(navigationMarkup, /class="mobile-tab-icon" aria-hidden="true"/);
   assert.match(navigationMarkup, /class="mobile-tab-label"/);
+  assert.match(communityScript, /key: 'map',\s*label: 'Map'/);
+  assert.match(communityScript, /key: 'notifications',\s*label: 'Notifications'/);
+  assert.match(portalStyles, /body\.community-body #app > \.mobile-shell \.mobile-tabs\s*\{[^}]*grid-template-columns:\s*repeat\(5, minmax\(0, 1fr\)\);/s);
   assert.match(portalStyles, /body\.community-body \.mobile-tab\s*\{[^}]*grid-template-rows:\s*24px auto;[^}]*font-size:\s*0\.75rem;/s);
   assert.match(portalStyles, /body\.community-body \.mobile-tab\s*\{[^}]*background:\s*transparent !important;[^}]*box-shadow:\s*none !important;/s);
   assert.match(portalStyles, /body\.community-body \.mobile-tab\.active\s*\{[^}]*border-color:\s*transparent !important;[^}]*background:\s*transparent !important;[^}]*box-shadow:\s*none !important;[^}]*color:\s*#0b74d1 !important;/s);
@@ -295,6 +299,25 @@ test('community bottom navigation shows accessible icon and text labels', () => 
   assert.match(portalStyles, /body\.community-body \.mobile-tab-icon,\s*body\.community-body \.mobile-tab-icon svg\s*\{[^}]*width:\s*22px;[^}]*height:\s*22px;/s);
   assert.match(communityPage, /\/client\/js\/community\/community\.js\?v=\d+/);
   assert.match(communityPage, /\/client\/css\/portal-polish\.css\?v=\d+/);
+});
+
+test('resident dashboard shows live summary counts and recent public updates', () => {
+  const communityScript = fs.readFileSync(path.join(ROOT, 'client', 'js', 'community', 'community.js'), 'utf8');
+  const homeStart = communityScript.indexOf('async function renderMobileHome()');
+  const homeEnd = communityScript.indexOf('\nasync function renderMobileReportForm()', homeStart);
+  const homeRenderer = communityScript.slice(homeStart, homeEnd);
+
+  assert.ok(homeStart >= 0);
+  assert.ok(homeEnd > homeStart);
+  assert.match(homeRenderer, /stats\.active_incidents/);
+  assert.match(homeRenderer, /stats\.reports_pending/);
+  assert.match(homeRenderer, /stats\.resolved_today/);
+  assert.match(homeRenderer, /stats\.reports_total/);
+  assert.match(homeRenderer, /api\('\/api\/announcements'\)/);
+  assert.match(homeRenderer, /class="recent-updates"/);
+  assert.match(homeRenderer, /data-action="view-all-mobile-notifications"/);
+  assert.match(homeRenderer, /view-incident-details/);
+  assert.match(homeRenderer, /view-schedule-details/);
 });
 
 test('Community login preserves the Valencia panorama backdrop and caches it for offline launch', () => {
@@ -388,7 +411,7 @@ test('User Portal PWA is distinct from Staff and preserves its own cache during 
   assert.ok(manifest.icons.every((icon) => !icon.src.includes('powerwatch-field-icon')));
   assert.ok(staffManifest.icons.every((icon) => icon.src.includes('powerwatch-field-icon')));
   assert.match(communityPage, /href="\/manifest\.json"/);
-  assert.match(communityPage, /\/style\.css\?v=50/);
+  assert.match(communityPage, /\/style\.css\?v=51/);
   assert.match(staffPage, /href="\/staff-manifest\.json"/);
   assert.match(staffPage, /rel="icon" type="image\/png" sizes="192x192" href="\/assets\/powerwatch-field-icon-192\.png"/);
   assert.match(staffPage, /rel="apple-touch-icon" sizes="180x180" href="\/assets\/powerwatch-field-icon-180\.png"/);

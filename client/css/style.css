@@ -2698,7 +2698,7 @@ body.dark-mode.admin-body .admin-notification-panel .notification-panel-open tim
   right: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   max-width: 460px;
   margin: 0 auto;
   background: #fff;
@@ -4011,7 +4011,7 @@ body.dark-mode.admin-body .admin-notification-panel .notification-panel-open tim
   width: min(100%, 430px);
   min-height: 68px;
   padding-bottom: env(safe-area-inset-bottom);
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   border-top: 1px solid #e0eaf2;
   background: #ffffff;
   box-shadow: 0 -5px 18px rgba(20, 55, 85, .08);

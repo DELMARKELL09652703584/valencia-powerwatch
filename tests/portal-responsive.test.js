@@ -24,6 +24,14 @@ test('community colors follow the app theme toggle instead of system dark mode',
   assert.match(portalStyles, /body\.dark-mode\.community-body \.mobile-card\s*\{[^}]*background:\s*#0f172a;/s);
 });
 
+test('community dashboard weather card follows the resident mobile reference layout', () => {
+  const portalStyles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
+
+  assert.match(portalStyles, /body\.community-body \.home-dashboard \.mobile-weather\s*\{[^}]*min-height:\s*126px;[^}]*width:\s*100%;[^}]*background:\s*#fff;/s);
+  assert.match(portalStyles, /body\.community-body \.home-dashboard \.mobile-weather-copy\s*\{[^}]*display:\s*grid;/s);
+  assert.match(portalStyles, /body\.community-body \.mobile-tab\[data-mobile-tab="notifications"\] \.mobile-tab-label/);
+});
+
 test('portal layouts remain constrained on narrow mobile screens', () => {
   const styles = fs.readFileSync(path.join(ROOT, 'client', 'css', 'portal-polish.css'), 'utf8');
   const communityPage = fs.readFileSync(path.join(ROOT, 'client', 'pages', 'community.html'), 'utf8');
