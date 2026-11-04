@@ -705,14 +705,14 @@ async function submitForm(form) {
     const barangay_names = formData.getAll('barangay_names').map(String);
     if (!values.password || !values.confirm_password) throw new Error('Enter and confirm an initial password.');
     if (values.password !== values.confirm_password) throw new Error('Passwords do not match.');
-    if (!team_ids.length) throw new Error('Select at least one assigned field team.');
+    if (!values.email && !values.contact_number) throw new Error('Provide either a staff email address or mobile number.');
     if (!barangay_names.length) throw new Error('Select at least one authorized barangay or operational area.');
     await send('/api/admin/users', 'POST', {
       full_name: values.full_name, email: values.email, contact_number: values.contact_number,
       address: values.address, role: values.role, password: values.password,
       confirm_password: values.confirm_password, team_ids, barangay_names,
     });
-    setToast('Staff account created with assigned teams and barangays.');
+    setToast('Staff account created with assigned barangays.');
     closeDialog();
     await render();
     return;
@@ -2630,24 +2630,29 @@ async function handleClick(event) {
           api('/api/barangays'),
         ]);
         const activeTeams = teams.filter((team) => team.status !== 'Inactive');
-        if (!activeTeams.length || !barangays.length) {
-          throw new Error('Create an active repair team and ensure at least one active barangay exists before adding staff.');
-        }
+        const limitWarning = actionButton.dataset.limitReached === 'true'
+          ? '<p class="wide-field" role="alert">The configured staff account limit has been reached. You can review this form, but increase the limit in Admin Settings before creating another account.</p>'
+          : '';
         openDialog('Add staff account', `
           <div class="form-stack">
             <label class="wide-field">Full name<input class="input" name="full_name" autocomplete="name" required></label>
-            <label class="wide-field">Staff email<input class="input" type="email" name="email" autocomplete="email" required></label>
-            <label class="wide-field">Contact number<input class="input" name="contact_number" autocomplete="tel" placeholder="For field coordination"></label>
+            <label class="wide-field">Staff email<input class="input" type="email" name="email" autocomplete="email" placeholder="Optional if a mobile number is provided"></label>
+            <label class="wide-field">Mobile number<input class="input" type="tel" name="contact_number" autocomplete="tel" placeholder="Optional if an email is provided"></label>
             <label class="wide-field">Address<input class="input" name="address" autocomplete="street-address"></label>
             <label class="wide-field">Initial password<input class="input" type="password" name="password" minlength="6" autocomplete="new-password" required></label>
             <label class="wide-field">Confirm password<input class="input" type="password" name="confirm_password" minlength="6" autocomplete="new-password" required><span>Both password fields must match. Give the initial password securely to the staff member.</span></label>
             <input type="hidden" name="role" value="personnel">
             <p class="wide-field muted small">Role: Staff · Account status: Active. Passwords are securely hashed and never stored as plain text.</p>
-            <fieldset class="wide-field staff-account-assignment"><legend>Assigned field teams <span aria-hidden="true">*</span></legend>
-              ${activeTeams.map((team) => `<label><input type="checkbox" name="team_ids" value="${Number(team.id)}"> <span>${escapeHtml(team.name)}</span></label>`).join('')}
+            ${limitWarning}
+            <fieldset class="wide-field staff-account-assignment"><legend>Assigned field teams</legend>
+              ${activeTeams.length
+                ? activeTeams.map((team) => `<label><input type="checkbox" name="team_ids" value="${Number(team.id)}"> <span>${escapeHtml(team.name)}</span></label>`).join('')
+                : '<p class="muted small">No active teams are available. You can create the staff account and assign a team later.</p>'}
             </fieldset>
             <fieldset class="wide-field staff-account-assignment"><legend>Authorized barangays / areas <span aria-hidden="true">*</span></legend>
-              ${barangays.map((barangay) => `<label><input type="checkbox" name="barangay_names" value="${escapeHtml(barangay)}"> <span>${escapeHtml(barangay)}</span></label>`).join('')}
+              ${barangays.length
+                ? barangays.map((barangay) => `<label><input type="checkbox" name="barangay_names" value="${escapeHtml(barangay)}"> <span>${escapeHtml(barangay)}</span></label>`).join('')
+                : '<p class="muted small">No active barangays are available. Add or activate a barangay before creating a staff account.</p>'}
             </fieldset>
             <p class="wide-field muted small">Only administrators create Staff accounts. Residents register themselves through the User Portal.</p>
           `, 'Create account', { form: 'new-user' });
@@ -2659,7 +2664,7 @@ async function handleClick(event) {
         if (!user) throw new Error('User not found.');
         openDialog(user.full_name, `
           <div class="detail-grid">
-            <div><span>Login / email</span><strong>${escapeHtml(user.email)}</strong></div>
+            <div><span>Login / email</span><strong>${escapeHtml(user.email || user.contact_number || '—')}</strong></div>
             ${user.is_built_in_admin ? `<div><span>Recovery email</span><strong>${escapeHtml(user.recovery_email || 'Not configured')}</strong></div>` : ''}
             <div><span>Role</span><strong>${escapeHtml(roleLabel(user.role))}</strong></div>
             <div><span>Status</span><strong>${statusPill(user.status)}</strong></div>
@@ -2679,7 +2684,7 @@ async function handleClick(event) {
         openDialog(`Edit ${user.full_name}`, `
           <div class="form-stack">
             <label>Full name<input class="input" name="full_name" value="${escapeHtml(user.full_name)}" required></label>
-            <label>Email<input class="input" type="email" name="email" value="${escapeHtml(user.email)}" required></label>
+            <label>Email<input class="input" type="email" name="email" value="${escapeHtml(user.email || '')}" placeholder="Optional if a mobile number is provided"></label>
             <label>Contact number<input class="input" name="contact_number" value="${escapeHtml(user.contact_number || '')}"></label>
             <label>Address<input class="input" name="address" value="${escapeHtml(user.address || '')}"></label>
             <label>Barangay<select class="input" name="barangay"><option value="">None</option>${state.barangays.map((b) => `<option ${user.barangay === b ? 'selected' : ''}>${escapeHtml(b)}</option>`).join('')}</select></label>
@@ -2851,6 +2856,72 @@ async function handleClick(event) {
         state.user = null;
         renderLogin(resetMessage);
         return;
+      case 'new-user': {
+        if (!IS_ADMIN || state.user?.role !== 'administrator') return;
+        closeDialog();
+        await openNewUserDialog();
+        return;
+      }
+      case 'save-new-user': {
+        const dialog = document.getElementById('action-dialog');
+        if (!dialog) return;
+        const form = dialog.querySelector('#new-user-form');
+        if (!form) return;
+
+        const full_name = form.full_name?.value?.trim();
+        const email = form.email?.value?.trim().toLowerCase();
+        const password = form.password?.value || '';
+        const confirm_password = form.confirm_password?.value || '';
+        const contact_number = form.contact_number?.value?.trim() || null;
+        const address = form.address?.value?.trim() || null;
+        const barangay_names = [...form.querySelectorAll('select[name="barangay_names"] option:checked')].map((o) => o.value).filter(Boolean);
+        const team_ids = [...form.querySelectorAll('select[name="team_ids"] option:checked')].map((o) => Number(o.value)).filter(Boolean);
+
+        if (!full_name || !email || !password) {
+          setToast('Name, email, and password are required.');
+          return;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          setToast('Please provide a valid email address.');
+          return;
+        }
+        if (password.length < 6) {
+          setToast('Password must be at least 6 characters.');
+          return;
+        }
+        if (password !== confirm_password) {
+          setToast('Passwords do not match.');
+          return;
+        }
+        if (barangay_names.length < 1) {
+          setToast('Assign at least one barangay.');
+          return;
+        }
+        if (team_ids.length < 1) {
+          setToast('Assign at least one field team.');
+          return;
+        }
+
+        const submitBtn = dialog.querySelector('[data-action="save-new-user"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating account…';
+
+        try {
+          await send('/api/admin/users', 'POST', {
+            full_name, email, contact_number, address,
+            role: 'personnel', password, confirm_password,
+            team_ids, barangay_names,
+          });
+          setToast('Staff account created successfully.');
+          closeDialog();
+          await render();
+        } catch (error) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Create Account';
+          setToast(error.message || 'Could not create staff account.');
+        }
+        return;
+      }
       default:
         return;
     }
@@ -2862,6 +2933,87 @@ async function handleClick(event) {
     }
     setToast(error.message);
   }
+}
+
+async function openNewUserDialog() {
+  let teams = [], barangays = [];
+  try {
+    const [teamsRes, barangaysRes] = await Promise.all([
+      api('/api/repair-teams'),
+      api('/api/barangays/locations'),
+    ]);
+    teams = teamsRes.teams || teamsRes || [];
+    barangays = barangaysRes.barangays || barangaysRes || [];
+  } catch (error) {
+    setToast('Could not load teams or barangays: ' + (error.message || 'unknown error'));
+    return;
+  }
+
+  const teamsHtml = teams.length
+    ? teams.map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')
+    : '<option disabled>No teams available</option>';
+  const barangaysHtml = barangays.length
+    ? barangays.map((b) => `<option value="${escapeHtml(b.name)}">${escapeHtml(b.name)}</option>`).join('')
+    : '<option disabled>No barangays available</option>';
+
+  const dialog = document.getElementById('action-dialog');
+  const dialogTitle = document.getElementById('dialog-title');
+  const dialogBody = document.getElementById('dialog-body');
+  const dialogFoot = document.getElementById('dialog-foot');
+
+  dialogTitle.textContent = 'Add Staff Account';
+  dialogBody.innerHTML = `
+    <form id="new-user-form" style="display:grid;gap:12px;max-width:560px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="field">
+          <label>Full Name <span class="required" style="color:#dc2626;">*</span></label>
+          <input type="text" name="full_name" required placeholder="Juan Dela Cruz">
+        </div>
+        <div class="field">
+          <label>Email Address <span class="required" style="color:#dc2626;">*</span></label>
+          <input type="email" name="email" required placeholder="juan.delacruz@example.com">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="field">
+          <label>Password <span class="required" style="color:#dc2626;">*</span></label>
+          <input type="password" name="password" required minlength="6" placeholder="••••••••">
+        </div>
+        <div class="field">
+          <label>Confirm Password <span class="required" style="color:#dc2626;">*</span></label>
+          <input type="password" name="confirm_password" required minlength="6" placeholder="••••••••">
+        </div>
+      </div>
+      <div class="field">
+        <label>Contact Number</label>
+        <input type="tel" name="contact_number" placeholder="+63 9xx xxx xxxx">
+      </div>
+      <div class="field">
+        <label>Address</label>
+        <input type="text" name="address" placeholder="Purok, Barangay, Valencia City">
+      </div>
+      <div class="field">
+        <label>Assigned Barangays <span class="required" style="color:#dc2626;">*</span></label>
+        <select name="barangay_names" multiple size="5" required>
+          ${barangaysHtml}
+        </select>
+        <p class="muted small">Hold Ctrl/Cmd to select multiple barangays.</p>
+      </div>
+      <div class="field">
+        <label>Assigned Field Teams <span class="required" style="color:#dc2626;">*</span></label>
+        <select name="team_ids" multiple size="5" required>
+          ${teamsHtml}
+        </select>
+        <p class="muted small">Hold Ctrl/Cmd to select multiple teams.</p>
+      </div>
+    </form>
+  `;
+  dialogFoot.innerHTML = `
+    <button type="button" class="button ghost" data-action="close-dialog">Cancel</button>
+    <button type="button" class="button primary" data-action="save-new-user">Create Account</button>
+  `;
+
+  dialog.showModal();
 }
 
 function startOAuthFlow(provider) {
