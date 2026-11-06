@@ -1230,6 +1230,12 @@ document.addEventListener('click', async (event) => {
     } else if (action === 'back') {
       state.page = 'tasks';
       renderShell();
+    } else if (action === 'save-note') {
+      const form = button.closest('form');
+      if (form) {
+        if (typeof form.requestSubmit === 'function') form.requestSubmit(button);
+        else form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+      }
     } else if (action === 'advance-stage') {
       const assignment = state.assignments.find((item) => String(item.id) === String(button.dataset.id));
       if (!assignment) throw new Error('This assignment is no longer available. Refresh the list.');

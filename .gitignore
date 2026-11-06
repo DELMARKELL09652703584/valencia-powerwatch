@@ -11,3 +11,4 @@ public-url.txt
 *.db-wal
 # Local operational database contains user data and must never be published.
 data/*.db
+Microsoft/
